@@ -6,7 +6,7 @@
 #include "skysun/SunLocation.h"
 
 namespace IG {
-CIELight::CIELight(CIEType classification, const std::string& name, const std::shared_ptr<Parser::Object>& light)
+CIELight::CIELight(CIEType classification, const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mClassification(classification)
     , mLight(light)
@@ -15,14 +15,15 @@ CIELight::CIELight(CIEType classification, const std::string& name, const std::s
     mHasGround    = mLight->property("has_ground").getBool(true);
 }
 
-float CIELight::computeFlux(const ShadingTree& tree) const
+float CIELight::computeFlux(ShadingTree& tree) const
 {
-    // TODO: Better approximation?
-    const float radius = tree.context().Environment.SceneDiameter / 2;
+    // TODO: Use new bake system!
+    const float radius = tree.context().SceneDiameter / 2;
     const float zenith = tree.computeNumber("zenith", *mLight, 1.0f);
     return zenith * Pi * radius * radius * (mHasGround ? 1.0f : 0.5f);
 }
 
+// TODO: Map this to Artic
 static inline float skylight_normalization_factor(float altitude, bool clear)
 {
     constexpr std::array<float, 5> ClearApprox  = { 2.766521f, 0.547665f, -0.369832f, 0.009237f, 0.059229f };
@@ -40,10 +41,10 @@ void CIELight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
-    input.Tree.addColor("zenith", *mLight, Vector3f::Ones(), true);
-    input.Tree.addColor("ground", *mLight, Vector3f::Ones(), true);
-    input.Tree.addNumber("ground_brightness", *mLight, 0.2f, true);
+    input.Tree.addColor("scale", *mLight, Vector3f::Ones());
+    input.Tree.addColor("zenith", *mLight, Vector3f::Ones());
+    input.Tree.addColor("ground", *mLight, Vector3f::Ones());
+    input.Tree.addNumber("ground_brightness", *mLight, 0.2f);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
@@ -69,6 +70,7 @@ void CIELight::serialize(const SerializationInput& input) const
 
         const float turbidity = mLight->property("turbidity").getNumber(2.45f);
 
+        // TODO: Map this to Artic
         constexpr float SkyIllum = 203;
         float zenithbrightness   = (1.376f * turbidity - 1.81f) * std::tan(ea.Elevation) + 0.38f;
         if (mClassification == CIEType::Intermediate)
@@ -95,13 +97,12 @@ void CIELight::serialize(const SerializationInput& input) const
                      << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                      << ", " << input.Tree.getInline("scale")
                      << ", " << input.Tree.getInline("zenith")
-                     << ", " << zenithbrightness
+                     << ", " << zenithbrightness / factor
                      << ", " << input.Tree.getInline("ground")
                      << ", " << input.Tree.getInline("ground_brightness")
                      << ", " << (mClassification == CIEType::Clear ? "true" : "false")
                      << ", " << (mHasGround ? "true" : "false")
                      << ", " << LoaderUtils::inlineVector(mSunDirection)
-                     << ", " << factor
                      << ", " << c2
                      << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
     }

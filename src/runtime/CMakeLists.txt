@@ -1,6 +1,5 @@
 set(SRC
   IG_Config.h
-  CameraOrientation.h
   CDF.cpp
   CDF.h
   Color.h
@@ -15,17 +14,71 @@ set(SRC
   RuntimeInfo.cpp
   RuntimeInfo.h
   RuntimeSettings.h
+  RuntimeStructs.cpp
   RuntimeStructs.h
+  Scene.cpp
+  Scene.h
   SceneObject.h
+  SceneObjectProxy.h
+  SceneProperty.h
   SHA256.cpp
   SHA256.h
   Statistics.cpp
   Statistics.h
+  StringUtils.cpp
+  StringUtils.h
   Timer.h
+  bsdf/BlendBSDF.cpp
+  bsdf/BlendBSDF.h
+  bsdf/BSDF.cpp
+  bsdf/BSDF.h
+  bsdf/ConductorBSDF.cpp
+  bsdf/ConductorBSDF.h
+  bsdf/DielectricBSDF.cpp
+  bsdf/DielectricBSDF.h
+  bsdf/DiffuseBSDF.cpp
+  bsdf/DiffuseBSDF.h
+  bsdf/DJMeasuredBSDF.cpp
+  bsdf/DJMeasuredBSDF.h
+  bsdf/DoubleSidedBSDF.cpp
+  bsdf/DoubleSidedBSDF.h
+  bsdf/ErrorBSDF.cpp
+  bsdf/ErrorBSDF.h
+  bsdf/IgnoreBSDF.cpp
+  bsdf/IgnoreBSDF.h
+  bsdf/KlemsBSDF.cpp
+  bsdf/KlemsBSDF.h
+  bsdf/MapBSDF.cpp
+  bsdf/MapBSDF.h
+  bsdf/MaskBSDF.cpp
+  bsdf/MaskBSDF.h
+  bsdf/PassthroughBSDF.cpp
+  bsdf/PassthroughBSDF.h
+  bsdf/PhongBSDF.cpp
+  bsdf/PhongBSDF.h
+  bsdf/PlasticBSDF.cpp
+  bsdf/PlasticBSDF.h
+  bsdf/PrincipledBSDF.cpp
+  bsdf/PrincipledBSDF.h
+  bsdf/TensorTreeBSDF.cpp
+  bsdf/TensorTreeBSDF.h
+  bsdf/TransformBSDF.cpp
+  bsdf/TransformBSDF.h
   bvh/BvhNAdapter.h
   bvh/NArityBvh.h
   bvh/SceneBVHAdapter.h
   bvh/TriBVHAdapter.h
+  camera/Camera.cpp
+  camera/Camera.h
+  camera/CameraOrientation.h
+  camera/FishLensCamera.cpp
+  camera/FishLensCamera.h
+  camera/NullCamera.cpp
+  camera/NullCamera.h
+  camera/OrthogonalCamera.cpp
+  camera/OrthogonalCamera.h
+  camera/PerspectiveCamera.cpp
+  camera/PerspectiveCamera.h
   config/Build.cpp
   config/Build.h
   config/Git.h.in
@@ -74,13 +127,11 @@ set(SRC
   loader/LoaderContext.h
   loader/LoaderEntity.cpp
   loader/LoaderEntity.h
-  loader/LoaderEnvironment.cpp
-  loader/LoaderEnvironment.h
   loader/LoaderLight.cpp
   loader/LoaderLight.h
   loader/LoaderMedium.cpp
   loader/LoaderMedium.h
-  loader/LoaderResult.h
+  loader/LoaderOptions.h
   loader/LoaderShape.cpp
   loader/LoaderShape.h
   loader/LoaderTechnique.cpp
@@ -93,8 +144,6 @@ set(SRC
   loader/Parser.h
   loader/ShadingTree.cpp
   loader/ShadingTree.h
-  loader/TechniqueInfo.h
-  loader/TechniqueVariant.h
   loader/Transpiler.cpp
   loader/Transpiler.h
   log/ConsoleLogListener.cpp
@@ -114,6 +163,12 @@ set(SRC
   measured/powitacq_rgb.h
   measured/djmeasured.cpp
   measured/djmeasured.h
+  medium/HomogeneousMedium.cpp
+  medium/HomogeneousMedium.h
+  medium/Medium.cpp
+  medium/Medium.h
+  medium/VacuumMedium.cpp
+  medium/VacuumMedium.h
   mesh/MtsSerializedFile.cpp
   mesh/MtsSerializedFile.h
   mesh/ObjFile.cpp
@@ -124,6 +179,22 @@ set(SRC
   mesh/Triangulation.h
   mesh/TriMesh.cpp
   mesh/TriMesh.h
+  pattern/BrickPattern.cpp
+  pattern/BrickPattern.h
+  pattern/CheckerBoardPattern.cpp
+  pattern/CheckerBoardPattern.h
+  pattern/ExprPattern.cpp
+  pattern/ExprPattern.h
+  pattern/ImagePattern.cpp
+  pattern/ImagePattern.h
+  pattern/InvalidPattern.cpp
+  pattern/InvalidPattern.h
+  pattern/NoisePattern.cpp
+  pattern/NoisePattern.h
+  pattern/Pattern.cpp
+  pattern/Pattern.h
+  pattern/TransformPattern.cpp
+  pattern/TransformPattern.h
   serialization/BufferSerializer.cpp
   serialization/BufferSerializer.h
   serialization/FileSerializer.cpp
@@ -152,6 +223,8 @@ set(SRC
   skysun/model/ArHosekSkyModelData_Spectral.h
   shader/AdvancedShadowShader.cpp
   shader/AdvancedShadowShader.h
+  shader/BakeShader.cpp
+  shader/BakeShader.h
   shader/DeviceShader.cpp
   shader/DeviceShader.h
   shader/HitShader.cpp
@@ -180,6 +253,32 @@ set(SRC
   table/DynTable.h
   table/FixTable.h
   table/SceneDatabase.h
+  technique/AOTechnique.cpp
+  technique/AOTechnique.h
+  technique/CameraCheckTechnique.cpp
+  technique/CameraCheckTechnique.h
+  technique/DebugMode.cpp
+  technique/DebugMode.h
+  technique/DebugTechnique.cpp
+  technique/DebugTechnique.h
+  technique/InfoBufferTechnique.cpp
+  technique/InfoBufferTechnique.h
+  technique/LightTracerTechnique.cpp
+  technique/LightTracerTechnique.h
+  technique/LightVisibilityTechnique.cpp
+  technique/LightVisibilityTechnique.h
+  technique/PathTechnique.cpp
+  technique/PathTechnique.h
+  technique/PhotonMappingTechnique.cpp
+  technique/PhotonMappingTechnique.h
+  technique/Technique.cpp
+  technique/Technique.h
+  technique/TechniqueInfo.h
+  technique/TechniqueVariant.h
+  technique/VolumePathTechnique.cpp
+  technique/VolumePathTechnique.h
+  technique/WireframeTechnique.cpp
+  technique/WireframeTechnique.h
 )
 
 # ##########################################################
@@ -206,6 +305,13 @@ target_include_directories(ig_lib_runtime PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS}
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>" PRIVATE $<BUILD_INTERFACE:"IG_BUILD_LIB">)
 add_dependencies(ig_lib_runtime artic_c_interface)
+
+# There is a weird behaviour in multi-config generators and the git checker. It is fixed with the following line
+get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+
+if(is_multi_config)
+  add_dependencies(ig_lib_runtime check_git)
+endif()
 
 if(IG_WITH_ASSERTS)
   target_compile_definitions(ig_lib_runtime PUBLIC "IG_WITH_ASSERTS")

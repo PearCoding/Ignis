@@ -1,0 +1,275 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 10.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.9999999403953552,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -3.029462618542311e-07,
+      0.9999999403953552,
+      -5.0,
+      0.0,
+      0.9999999403953552,
+      3.7140330277907196e-07,
+      1.000001311302185,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      1000.0,
+      1000.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "Ground",
+      "filename": "meshes/Ground.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Sponge",
+      "filename": "meshes/Sponge.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Gem",
+      "filename": "meshes/Gem.ply"
+    },
+    {
+      "type": "ply",
+      "name": "LampSheet",
+      "filename": "meshes/LampSheet.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Lamp",
+      "filename": "meshes/Lamp.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "diffuse",
+      "name": "LampSheet",
+      "reflectance": "color(0.03251763433218002, 0.03251763433218002, 0.03251763433218002, 1.0)"
+    },
+    {
+      "type": "diffuse",
+      "name": "Lamp",
+      "reflectance": 0
+    },
+    {
+      "type": "principled",
+      "name": "Ground",
+      "base_color": "select(checkerboard(uvw * 10.0) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0))",
+      "metallic": 0.0,
+      "roughness": 0.7749999761581421,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "principled",
+      "name": "Sponge",
+      "base_color": "color(0.8000000715255737, 0.6344760656356812, 0.24440854787826538, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    },
+    {
+      "type": "dielectric",
+      "name": "Gem",
+      "specular_reflectance": "color(1.0, 1.0, 1.0, 1.0)",
+      "specular_transmittance": "color(1.0, 1.0, 1.0, 1.0)",
+      "int_ior": 2.200000047683716
+    }
+  ],
+  "entities": [
+    {
+      "name": "Ground-Ground",
+      "shape": "Ground",
+      "bsdf": "Ground",
+      "transform": [
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Sponge-Sponge",
+      "shape": "Sponge",
+      "bsdf": "Sponge",
+      "transform": [
+        0.4687190353870392,
+        0.37456974387168884,
+        0.0,
+        0.0,
+        -0.37456974387168884,
+        0.4687190353870392,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.6000000238418579,
+        0.30000001192092896,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Gem-Gem",
+      "shape": "Gem",
+      "bsdf": "Gem",
+      "transform": [
+        0.32139381766319275,
+        -0.30836012959480286,
+        0.227200448513031,
+        -0.046393994241952896,
+        0.3830221891403198,
+        0.25874489545822144,
+        -0.19064383208751678,
+        0.02755703590810299,
+        -6.58560175556338e-17,
+        0.2965891361236572,
+        0.4025355577468872,
+        0.9200000166893005,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "LampSheet-LampSheet",
+      "shape": "LampSheet",
+      "bsdf": "LampSheet",
+      "transform": [
+        -0.26327046751976013,
+        -0.2867881655693054,
+        -0.31375348567962646,
+        -1.600000023841858,
+        0.18434388935565948,
+        -0.40957605838775635,
+        0.21969249844551086,
+        1.100000023841858,
+        -0.3830222487449646,
+        2.399731791058457e-08,
+        0.32139384746551514,
+        2.4000000953674316,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Lamp-Lamp",
+      "shape": "Lamp",
+      "bsdf": "Lamp",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -1.600000023841858,
+        0.0,
+        1.0,
+        0.0,
+        1.100000023841858,
+        0.0,
+        0.0,
+        1.0,
+        2.4000000953674316,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "Lamp-Lamp",
+      "entity": "Lamp-Lamp",
+      "radiance": "(color(1.0, 1.0, 1.0, 1.0) * 100.0)"
+    },
+    {
+      "type": "env",
+      "name": "__scene_world",
+      "radiance": "color(0.05087608844041824, 0.05087608844041824, 0.05087608844041824, 1.0)",
+      "transform": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

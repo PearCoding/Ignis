@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"bsdfs": [
-		{"type":"roughdielectric", "name": "mat-Sphere", "alpha": 0.1}
+		{"type":"dielectric", "name": "mat-Sphere", "roughness": 0.1}
 	]
 }

@@ -1,0 +1,153 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 12,
+    "clamp": 0.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.6859207153320312,
+      -0.32401347160339355,
+      -0.6515582203865051,
+      5.582485198974609,
+      -0.7276763319969177,
+      0.3054208755493164,
+      0.6141703724861145,
+      -5.251318454742432,
+      4.011331711240018e-09,
+      0.8953956365585327,
+      -0.44527146220207214,
+      3.7443222999572754,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "GroundSun",
+      "filename": "meshes/GroundSun.ply"
+    },
+    {
+      "type": "ply",
+      "name": "Cone",
+      "filename": "meshes/Cone.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "diffuse",
+      "name": "Ground",
+      "reflectance": "select(checkerboard(uvw * 5.0) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0))"
+    },
+    {
+      "type": "principled",
+      "name": "Cone",
+      "base_color": "color(0.23790551722049713, 0.5817709565162659, 0.8000000715255737, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.5
+    }
+  ],
+  "entities": [
+    {
+      "name": "GroundSun-GroundSun",
+      "shape": "GroundSun",
+      "bsdf": "Ground",
+      "transform": [
+        5.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        5.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        5.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "Cone-Cone",
+      "shape": "Cone",
+      "bsdf": "Cone",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "sun",
+      "name": "Light",
+      "direction": [
+        -0.8549205660820007,
+        -0.13264977931976318,
+        -0.5015125870704651
+      ],
+      "irradiance": [
+        100.0,
+        74.08868670463562,
+        33.32301378250122
+      ],
+      "angle": 11.421186198001447
+    }
+  ]
+}

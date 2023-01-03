@@ -102,8 +102,6 @@ class IgnisRender(bpy.types.RenderEngine):
                 layer.passes["Combined"].rect = buffer
                 self.update_result(result)
 
-            update_image()
-
             while runtime.SampleCount < spp:
                 if self.test_break():
                     break

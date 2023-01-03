@@ -13,8 +13,6 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContext& ctx)
 {
     std::stringstream stream;
@@ -23,7 +21,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
 
     stream << "#[export] fn ig_advanced_shadow_shader(settings: &Settings, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << std::endl;
 
@@ -37,7 +35,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
     }
 
     if (ctx.CurrentTechniqueVariantInfo().UsesMedia)
-        stream << LoaderMedium::generate(tree) << std::endl;
+        stream << ctx.Media->generate(tree) << std::endl;
 
     if (ctx.CurrentTechniqueVariantInfo().ShadowHandlingMode == ShadowHandlingMode::AdvancedWithMaterials) {
         stream << ShaderUtils::generateMaterialShader(tree, mat_id, ctx.CurrentTechniqueVariantInfo().UsesLights, "shader") << std::endl;
@@ -48,12 +46,12 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
-        stream << LoaderCamera::generate(ctx) << std::endl;
+        stream << ctx.Camera->generate(ctx) << std::endl;
 
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     // Will define technique
-    stream << LoaderTechnique::generate(ctx) << std::endl
+    stream << ctx.Technique->generate(ctx) << std::endl
            << std::endl;
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl

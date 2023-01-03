@@ -7,7 +7,7 @@
 
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
-static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continous", SPPMode::Continous } };
+static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuos", SPPMode::Continuos } };
 
 class MyTransformer : public CLI::Validator {
 public:
@@ -152,16 +152,24 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_option("--cpu-threads", threadCount, "Number of threads used on a CPU target. Set to 0 to detect automatically")->default_val(threadCount);
     app.add_option("--cpu-vectorwidth", vectorWidth, "Number of vector lanes used on a CPU target. Set to 0 to detect automatically")->default_val(vectorWidth);
 
-    app.add_option("--spp", SPP, "Enables benchmarking mode and sets the number of iterations based on the given spp");
+    app.add_option("--spp", SPP, "Number of samples per pixel a frame contains");
     app.add_option("--spi", SPI, "Number of samples per iteration. This is only considered a hint for the underlying technique");
-    if (type == ApplicationType::View)
+    if (type == ApplicationType::View) {
         app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(MyTransformer(SPPModeMap, CLI::ignore_case))->default_str("fixed");
+        app.add_flag_callback(
+            "--realtime", [&]() { this->SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
+            "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
+    }
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
     app.add_flag("--stats-full", AcquireFullStats, "Acquire all stats alongside rendering. Will be dumped at the end of the rendering session");
 
+    app.add_flag("--debug-trace", DebugTrace, "Dump information regarding calls on the device. Will slow down execution and produce a lot of output!");
+
     app.add_flag("--dump-shader", DumpShader, "Dump produced shaders to files in the current working directory");
     app.add_flag("--dump-shader-full", DumpFullShader, "Dump produced shaders with standard library to files in the current working directory");
+    app.add_flag("--dump-registry", DumpRegistry, "Dump global registry to standard output");
+    app.add_flag("--dump-registry-full", DumpFullRegistry, "Dump global and internal constructed registry to standard output");
 
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
 
@@ -192,6 +200,91 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     } else {
         app.add_option("-o,--output", Output, "Writes the output image to a file");
     }
+
+    // Add user entries
+    app.add_option(
+           "--Pi,--parameter-int", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 2)
+                   return false;
+               const std::string name  = r.at(0);
+               const std::string val_s = r.at(1);
+
+               try {
+                   const int value                 = std::stoi(val_s);
+                   UserEntries.IntParameters[name] = value;
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set integer value in global registry")
+        ->expected(2);
+
+    app.add_option(
+           "--Pn,--parameter-num", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 2)
+                   return false;
+               const std::string name  = r.at(0);
+               const std::string val_s = r.at(1);
+
+               try {
+                   const float value                 = std::stof(val_s);
+                   UserEntries.FloatParameters[name] = value;
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set number value in global registry")
+        ->expected(2);
+
+    app.add_option(
+           "--Pv,--parameter-vec", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 4)
+                   return false;
+               const std::string name    = r.at(0);
+               const std::string val_X_s = r.at(1);
+               const std::string val_Y_s = r.at(2);
+               const std::string val_Z_s = r.at(3);
+
+               try {
+                   const float x = std::stof(val_X_s);
+                   const float y = std::stof(val_Y_s);
+                   const float z = std::stof(val_Z_s);
+
+                   UserEntries.VectorParameters[name] = Vector3f(x, y, z);
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set vector value in global registry")
+        ->expected(4);
+
+    app.add_option(
+           "--Pc,--parameter-col", [&](const CLI::results_t& r) -> bool {
+               if (r.size() != 4 && r.size() != 5)
+                   return false;
+               const std::string name    = r.at(0);
+               const std::string val_R_s = r.at(1);
+               const std::string val_G_s = r.at(2);
+               const std::string val_B_s = r.at(3);
+               const std::string val_A_s = r.size() > 4 ? r.at(4) : "1";
+
+               try {
+                   const float col_r = std::stof(val_R_s);
+                   const float col_g = std::stof(val_G_s);
+                   const float col_b = std::stof(val_B_s);
+                   const float col_a = std::stof(val_A_s);
+
+                   UserEntries.ColorParameters[name] = Vector4f(col_r, col_g, col_b, col_a);
+                   return true;
+               } catch (...) {
+                   return false;
+               }
+           },
+           "Set color value in global registry")
+        ->expected(4, 5);
 
     // Add some hidden commandline parameters
     bool listPExprVariables = false;
@@ -258,17 +351,20 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 void ProgramOptions::populate(RuntimeOptions& options) const
 {
     IG_LOGGER.setQuiet(Quiet);
-    IG_LOGGER.setVerbosity(VerbosityLevel);
+    IG_LOGGER.setVerbosity((DebugTrace || DumpRegistry || DumpFullRegistry) ? IG::L_DEBUG : VerbosityLevel);
     IG_LOGGER.enableAnsiTerminal(!NoColor);
 
     options.IsTracer      = Type == ApplicationType::Trace;
     options.IsInteractive = Type == ApplicationType::View;
 
-    options.Target         = Target;
-    options.AcquireStats   = AcquireStats || AcquireFullStats;
-    options.DumpShader     = DumpShader;
-    options.DumpShaderFull = DumpFullShader;
-    options.SPI            = SPI.value_or(0);
+    options.Target           = Target;
+    options.AcquireStats     = AcquireStats || AcquireFullStats;
+    options.DebugTrace       = DebugTrace;
+    options.DumpShader       = DumpShader || DumpFullShader;
+    options.DumpShaderFull   = DumpFullShader;
+    options.DumpRegistry     = DumpRegistry || DumpFullRegistry;
+    options.DumpRegistryFull = DumpFullRegistry;
+    options.SPI              = SPI.value_or(0);
 
     options.OverrideTechnique = TechniqueType;
     options.OverrideCamera    = CameraType;

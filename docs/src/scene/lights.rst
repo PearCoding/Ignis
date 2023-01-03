@@ -31,12 +31,16 @@ Point Light (:monosp:`point`)
     - :code:`(0,0,0)`
     - No
     - Position of the point light.
-    
   * - intensity
     - |color|
     - :code:`1`
     - Yes
-    - Intensity of the point light.
+    - Intensity of the point light given in radiometric [W/sr] or photometric [lm/sr] units. Can not be specified with :paramtype:`power`.
+  * - power
+    - |color|
+    - *None*
+    - Yes
+    - Power of the point light given in radiometric [W] or photometric [lm] units. Can not be specified with :paramtype:`intensity`.
 
 .. subfigstart::
   
@@ -63,10 +67,11 @@ Spot Light (:monosp:`spot`)
     - |number|
     - :code:`20`
     - No
-    - Falloff angle in degree. Greater angles will linearly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.
+    - Falloff angle in degree. Greater angles will smoothly falloff towards the cutoff angle. Falloff angle should be less or equal to the cutoff angle.
   * - position
     - |vector|
     - :code:`(0,0,0)`
+    - No
     - Position of the light.
   * - direction
     - |vector|
@@ -87,7 +92,12 @@ Spot Light (:monosp:`spot`)
     - |color|
     - :code:`1`
     - Yes
-    - Intensity of the light.
+    - Intensity of the light given in radiometric [W/sr] or photometric [lm/sr] units. Can not be specified with :paramtype:`power`.
+  * - power
+    - |color|
+    - *None*
+    - Yes
+    - Power of the point light given in radiometric [W] or photometric [lm] units. Can not be specified with :paramtype:`intensity`. The actual emitted intensity scales with the :paramtype:`falloff` and :paramtype:`cutoff` angle. 
    
 .. subfigstart::
   
@@ -124,7 +134,7 @@ Directional Light (:monosp:`directional`)
     - |color|
     - :code:`1`
     - Yes
-    - Output of the directional light.
+    - Output of the directional light in radiometric [W/m^2] or photometric [lm/m^2] units.
 
 .. subfigstart::
   
@@ -151,14 +161,19 @@ Area Light (:monosp:`area`)
     - |color|
     - :code:`1`
     - Yes
-    - Output of the area light.
+    - Output of the area light in radiometric [W/sr/m^2] or photometric [lm/sr/m^2] units. Can not be specified with :paramtype:`power`. This means if the entity is scaled up, the emitted energy increases!
+  * - power
+    - |color|
+    - *None*
+    - Yes
+    - Output of the area light in radiometric [W] or photometric [lm] units. Can not be specified with :paramtype:`intensity`.  This means if the entity is scaled up, the emitted energy remains the same!
    
 .. subfigstart::
   
 .. figure:: images/light_area.jpg
   :width: 90%
 
-  Area light
+  Area light emitting light over the entire surface area in all directions.
 
 .. subfigend::
   :width: 0.6
@@ -184,16 +199,21 @@ Sun Light (:monosp:`sun`)
     - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
     - No
     - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
-  * - sun_scale
+  * - irradiance
     - |number|
     - :code:`1`
     - Yes
-    - Scale of the sun power in the sky.
-  * - sun_radius_scale
+    - Output of the sun in radiometric [W/m^2] or photometric [lm/m^2] units.
+  * - radius
     - |number|
     - :code:`1`
     - No
-    - Scale of the sun radius in the sky.
+    - Radius of the sun seen from the earth. Can not be specified together with :paramtype:`angle`.
+  * - angle
+    - |number|
+    - :code:`11.4`
+    - No
+    - Angular diameter of the sun seen from the earth. Can not be specified together with :paramtype:`radius`.
 
 .. subfigstart::
   
@@ -522,7 +542,7 @@ Environment Light (:monosp:`env`)
     - |bool|
     - |true|
     - No
-    - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is an :monosp:`image` texture (without PExpr and other terms)
+    - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is resembling a texture
 
 .. subfigstart::
   

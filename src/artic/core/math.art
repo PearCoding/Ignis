@@ -71,7 +71,9 @@ fn @gamma(x: f32)        = math_builtins::exp(abgam(x + 5)) / (x*(x + 1)*(x + 2)
 fn @beta(m: f32, n: f32) = gamma(m) * gamma(n) / gamma(m + n);
 
 fn @trunc(x: f32) = (x as i32) as f32;
-fn @fract(x: f32)  = x - math_builtins::floor(x);
+fn @fract(x: f32) = x - math_builtins::floor(x);
+fn @sign(x: i32)  = all::select(x == 0, 0:i32, all::select(math_builtins::signbit(x), -1:i32, 1:i32));
+fn @signf(x: f32) = all::select(x == 0, 0:f32, all::select(math_builtins::signbit(x), -1:f32, 1:f32));
 
 // It would be great to have this as a builtin in math_builtins
 fn @fmod(x: f32, n: f32) = x - trunc(x / n) * n;
@@ -115,7 +117,10 @@ fn @lookup_curve(count: i32, t: f32, x: fn (i32)->f32, y: fn (i32)->f32, interpo
 }
 
 // Simple function used in nodes
-fn @fresnel_dielectric(eta: f32, cos_i: f32)     = all::fresnel(eta, cos_i).factor;
+fn @fresnel_dielectric(eta: f32, cos_i: f32)     = match all::fresnel(eta, cos_i) {
+                                                        all::Option[all::FresnelTerm]::Some(x) => x.factor,
+                                                        _ => 1
+                                                   };
 fn @fresnel_conductor(n: f32, k:f32, cos_i: f32) = all::conductor_factor(n, k, cos_i);
 
 // An approximative blackbody function returning a color tone

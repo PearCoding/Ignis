@@ -4,8 +4,8 @@
 
 #include <algorithm>
 #include <string_view>
-#include <unordered_set>
 
+IG_BEGIN_IGNORE_WARNINGS
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/rapidjson.h>
@@ -20,6 +20,7 @@
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
+IG_END_IGNORE_WARNINGS
 
 [[maybe_unused]] constexpr std::string_view KHR_lights_punctual             = "KHR_lights_punctual";
 [[maybe_unused]] constexpr std::string_view KHR_materials_clearcoat         = "KHR_materials_clearcoat";
@@ -45,7 +46,7 @@ static const std::vector<std::string_view> gltf_supported_extensions = {
 // Uncomment this to map unlit materials to area lights. This can explode shading complexity and is therefore not really recommended
 // #define IG_GLTF_MAP_UNLIT_AS_LIGHT
 
-namespace IG::Parser {
+namespace IG {
 static bool imageLoader(tinygltf::Image* img, const int, std::string*,
                         std::string*, int, int,
                         const unsigned char* ptr, int size, void*)
@@ -420,9 +421,9 @@ std::string handleTexture(const tinygltf::TextureInfo& info, Scene& scene, const
         return getTextureName(tex);
     } else {
         const std::string original_tex = getTextureName(tex);
-        auto obj                       = std::make_shared<Object>(OT_TEXTURE, "transform", directory);
-        obj->setProperty("texture", Property::fromString(original_tex));
-        obj->setProperty("transform", Property::fromTransform(transform));
+        auto obj                       = std::make_shared<SceneObject>(SceneObject::OT_TEXTURE, "transform", directory);
+        obj->setProperty("texture", SceneProperty::fromString(original_tex));
+        obj->setProperty("transform", SceneProperty::fromTransform(transform));
 
         const std::string new_name = "__transform_tex_" + std::to_string(scene.textures().size());
         scene.addTexture(new_name, obj);
@@ -445,9 +446,9 @@ std::string handleTexture(const tinygltf::Value& parent, const std::string& name
         return getTextureName(tex);
     } else {
         const std::string original_tex = getTextureName(tex);
-        auto obj                       = std::make_shared<Object>(OT_TEXTURE, "transform", directory);
-        obj->setProperty("texture", Property::fromString(original_tex));
-        obj->setProperty("transform", Property::fromTransform(transform));
+        auto obj                       = std::make_shared<SceneObject>(SceneObject::OT_TEXTURE, "transform", directory);
+        obj->setProperty("texture", SceneProperty::fromString(original_tex));
+        obj->setProperty("transform", SceneProperty::fromTransform(transform));
 
         const std::string new_name = "__transform_tex_" + std::to_string(scene.textures().size());
         scene.addTexture(new_name, obj);
@@ -475,19 +476,19 @@ static void addNodeMesh(Scene& scene, const tinygltf::Material& defaultMaterial,
 
         const bool hasMedium = material->extensions.count(KHR_materials_volume.data()) > 0; // TODO: Check if distance > 0
 
-        auto obj = std::make_shared<Object>(OT_ENTITY, "", baseDir);
-        obj->setProperty("shape", Property::fromString(name));
-        obj->setProperty("bsdf", Property::fromString(bsdfName));
+        auto obj = std::make_shared<SceneObject>(SceneObject::OT_ENTITY, "", baseDir);
+        obj->setProperty("shape", SceneProperty::fromString(name));
+        obj->setProperty("bsdf", SceneProperty::fromString(bsdfName));
         if (hasMedium)
-            obj->setProperty("inner_medium", Property::fromString(bsdfName)); // Shares the same name as the bsdf
-        obj->setProperty("transform", Property::fromTransform(transform));
+            obj->setProperty("inner_medium", SceneProperty::fromString(bsdfName)); // Shares the same name as the bsdf
+        obj->setProperty("transform", SceneProperty::fromTransform(transform));
 
         const std::string entity_name = node.name + std::to_string(scene.entities().size()) + "_" + name;
         scene.addEntity(entity_name, obj);
 
         if (isMaterialEmissive(*material)) {
-            auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
-            light->setProperty("entity", Property::fromString(entity_name));
+            auto light = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "area", baseDir);
+            light->setProperty("entity", SceneProperty::fromString(entity_name));
 
             float strength = 1;
             if (material->extensions.count(KHR_materials_emissive_strength.data())) {
@@ -499,12 +500,12 @@ static void addNodeMesh(Scene& scene, const tinygltf::Material& defaultMaterial,
 
             if (material->emissiveTexture.index >= 0) {
                 const std::string tex = handleTexture(material->emissiveTexture, scene, model, baseDir);
-                light->setProperty("radiance", Property::fromString(tex + "*color("
-                                                                    + std::to_string((float)material->emissiveFactor[0] * strength)
-                                                                    + ", " + std::to_string((float)material->emissiveFactor[1] * strength)
-                                                                    + ", " + std::to_string((float)material->emissiveFactor[2] * strength) + ")"));
+                light->setProperty("radiance", SceneProperty::fromString(tex + "*color("
+                                                                         + std::to_string((float)material->emissiveFactor[0] * strength)
+                                                                         + ", " + std::to_string((float)material->emissiveFactor[1] * strength)
+                                                                         + ", " + std::to_string((float)material->emissiveFactor[2] * strength) + ")"));
             } else {
-                light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->emissiveFactor[0], (float)material->emissiveFactor[1], (float)material->emissiveFactor[2]) * strength));
+                light->setProperty("radiance", SceneProperty::fromVector3(Vector3f((float)material->emissiveFactor[0], (float)material->emissiveFactor[1], (float)material->emissiveFactor[2]) * strength));
             }
 
             scene.addLight("_light_" + entity_name, light);
@@ -512,17 +513,17 @@ static void addNodeMesh(Scene& scene, const tinygltf::Material& defaultMaterial,
 #ifdef IG_GLTF_MAP_UNLIT_AS_LIGHT
         else if (isMaterialUnlit(*material)) {
             // Approximative unlit (which lits other parts)
-            auto light = std::make_shared<Object>(OT_LIGHT, "area", baseDir);
-            light->setProperty("entity", Property::fromString(entity_name));
+            auto light = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "area", baseDir);
+            light->setProperty("entity", SceneProperty::fromString(entity_name));
 
             if (material->pbrMetallicRoughness.baseColorTexture.index >= 0) {
                 const std::string tex = handleTexture(material->pbrMetallicRoughness.baseColorTexture, scene, model, baseDir);
-                light->setProperty("radiance", Property::fromString(tex + "*color("
-                                                                    + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[0])
-                                                                    + ", " + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[1])
-                                                                    + ", " + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[2]) + ")"));
+                light->setProperty("radiance", SceneProperty::fromString(tex + "*color("
+                                                                         + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[0])
+                                                                         + ", " + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[1])
+                                                                         + ", " + std::to_string((float)material->pbrMetallicRoughness.baseColorFactor[2]) + ")"));
             } else {
-                light->setProperty("radiance", Property::fromVector3(Vector3f((float)material->pbrMetallicRoughness.baseColorFactor[0], (float)material->pbrMetallicRoughness.baseColorFactor[1], (float)material->pbrMetallicRoughness.baseColorFactor[2])));
+                light->setProperty("radiance", SceneProperty::fromVector3(Vector3f((float)material->pbrMetallicRoughness.baseColorFactor[0], (float)material->pbrMetallicRoughness.baseColorFactor[1], (float)material->pbrMetallicRoughness.baseColorFactor[2])));
             }
 
             scene.addLight("_light_" + entity_name, light);
@@ -552,23 +553,23 @@ static void addNodeCamera(Scene& scene, const std::filesystem::path& baseDir, co
 
     const tinygltf::Camera& camera = model.cameras[node.camera];
     if (camera.type == "orthographic") {
-        auto obj = std::make_shared<Object>(OT_CAMERA, "orthographic", baseDir);
-        obj->setProperty("transform", Property::fromTransform(cameraTransform));
-        obj->setProperty("near_clip", Property::fromNumber((float)camera.orthographic.znear));
+        auto obj = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "orthographic", baseDir);
+        obj->setProperty("transform", SceneProperty::fromTransform(cameraTransform));
+        obj->setProperty("near_clip", SceneProperty::fromNumber((float)camera.orthographic.znear));
         if (camera.orthographic.zfar > 0)
-            obj->setProperty("far_clip", Property::fromNumber((float)camera.orthographic.zfar));
-        obj->setProperty("scale", Property::fromNumber((float)camera.orthographic.xmag));
-        obj->setProperty("aspect_ratio", Property::fromNumber(static_cast<float>(camera.orthographic.ymag / camera.orthographic.xmag)));
+            obj->setProperty("far_clip", SceneProperty::fromNumber((float)camera.orthographic.zfar));
+        obj->setProperty("scale", SceneProperty::fromNumber((float)camera.orthographic.xmag));
+        obj->setProperty("aspect_ratio", SceneProperty::fromNumber(static_cast<float>(camera.orthographic.ymag / camera.orthographic.xmag)));
         scene.setCamera(obj);
     } else {
-        auto obj = std::make_shared<Object>(OT_CAMERA, "perspective", baseDir);
-        obj->setProperty("transform", Property::fromTransform(cameraTransform));
-        obj->setProperty("vfov", Property::fromNumber((float)camera.perspective.yfov * Rad2Deg));
-        obj->setProperty("near_clip", Property::fromNumber((float)camera.perspective.znear));
+        auto obj = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "perspective", baseDir);
+        obj->setProperty("transform", SceneProperty::fromTransform(cameraTransform));
+        obj->setProperty("vfov", SceneProperty::fromNumber((float)camera.perspective.yfov * Rad2Deg));
+        obj->setProperty("near_clip", SceneProperty::fromNumber((float)camera.perspective.znear));
         if (camera.perspective.zfar > 0)
-            obj->setProperty("far_clip", Property::fromNumber((float)camera.perspective.zfar));
+            obj->setProperty("far_clip", SceneProperty::fromNumber((float)camera.perspective.zfar));
         if (camera.perspective.aspectRatio > 0)
-            obj->setProperty("aspect_ratio", Property::fromNumber((float)camera.perspective.aspectRatio));
+            obj->setProperty("aspect_ratio", SceneProperty::fromNumber((float)camera.perspective.aspectRatio));
         scene.setCamera(obj);
     }
 }
@@ -595,24 +596,24 @@ static void addNodePunctualLight(Scene& scene, const std::filesystem::path& base
 
     std::string type;
     if (light.type == "point") {
-        auto obj = std::make_shared<Object>(OT_LIGHT, "point", baseDir);
-        obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
-        obj->setProperty("intensity", Property::fromVector3(color));
+        auto obj = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "point", baseDir);
+        obj->setProperty("position", SceneProperty::fromVector3(transform * Vector3f::Zero()));
+        obj->setProperty("intensity", SceneProperty::fromVector3(color));
         scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
     } else if (light.type == "spot") {
         Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();
-        auto obj     = std::make_shared<Object>(OT_LIGHT, "spot", baseDir);
-        obj->setProperty("position", Property::fromVector3(transform * Vector3f::Zero()));
-        obj->setProperty("direction", Property::fromVector3(dir));
-        obj->setProperty("intensity", Property::fromVector3(color));
-        obj->setProperty("cutoff", Property::fromNumber((float)light.spot.outerConeAngle * Rad2Deg));
-        obj->setProperty("falloff", Property::fromNumber((float)light.spot.innerConeAngle * Rad2Deg));
+        auto obj     = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "spot", baseDir);
+        obj->setProperty("position", SceneProperty::fromVector3(transform * Vector3f::Zero()));
+        obj->setProperty("direction", SceneProperty::fromVector3(dir));
+        obj->setProperty("intensity", SceneProperty::fromVector3(color));
+        obj->setProperty("cutoff", SceneProperty::fromNumber((float)light.spot.outerConeAngle * Rad2Deg));
+        obj->setProperty("falloff", SceneProperty::fromNumber((float)light.spot.innerConeAngle * Rad2Deg));
         scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
     } else if (light.type == "directional") {
         Vector3f dir = (transform.linear().inverse().transpose() * Vector3f(0.0f, 0.0f, -1.0f)).normalized();
-        auto obj     = std::make_shared<Object>(OT_LIGHT, "directional", baseDir);
-        obj->setProperty("direction", Property::fromVector3(dir));
-        obj->setProperty("irradiance", Property::fromVector3(color));
+        auto obj     = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "directional", baseDir);
+        obj->setProperty("direction", SceneProperty::fromVector3(dir));
+        obj->setProperty("irradiance", SceneProperty::fromVector3(color));
         scene.addLight("_l_" + std::to_string(scene.lights().size()), obj);
     } else {
         IG_LOG(L_ERROR) << "Unknown glTF punctual light type '" << light.type << "'" << std::endl;
@@ -661,17 +662,17 @@ static void loadTextures(Scene& scene, const tinygltf::Model& model, const std::
             loaded_images[tex.source] = img_path;
         }
 
-        auto obj = std::make_shared<Object>(OT_TEXTURE, "image", directory);
-        obj->setProperty("filename", Property::fromString(std::filesystem::canonical(img_path).generic_u8string()));
+        auto obj = std::make_shared<SceneObject>(SceneObject::OT_TEXTURE, "image", directory);
+        obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(img_path).generic_u8string()));
 
         if (tex.sampler >= 0) {
             const tinygltf::Sampler& sampler = model.samplers[tex.sampler];
             switch (sampler.magFilter) {
             case TINYGLTF_TEXTURE_FILTER_NEAREST:
-                obj->setProperty("filter_type", Property::fromString("nearest"));
+                obj->setProperty("filter_type", SceneProperty::fromString("nearest"));
                 break;
             case TINYGLTF_TEXTURE_FILTER_LINEAR:
-                obj->setProperty("filter_type", Property::fromString("bilinear"));
+                obj->setProperty("filter_type", SceneProperty::fromString("bilinear"));
                 break;
             default:
                 // Nothing
@@ -681,26 +682,26 @@ static void loadTextures(Scene& scene, const tinygltf::Model& model, const std::
             switch (sampler.wrapS) {
             default:
             case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                obj->setProperty("wrap_mode_u", Property::fromString("repeat"));
+                obj->setProperty("wrap_mode_u", SceneProperty::fromString("repeat"));
                 break;
             case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                obj->setProperty("wrap_mode_u", Property::fromString("clamp"));
+                obj->setProperty("wrap_mode_u", SceneProperty::fromString("clamp"));
                 break;
             case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-                obj->setProperty("wrap_mode_u", Property::fromString("mirror"));
+                obj->setProperty("wrap_mode_u", SceneProperty::fromString("mirror"));
                 break;
             }
 
             switch (sampler.wrapT) {
             default:
             case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                obj->setProperty("wrap_mode_v", Property::fromString("repeat"));
+                obj->setProperty("wrap_mode_v", SceneProperty::fromString("repeat"));
                 break;
             case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                obj->setProperty("wrap_mode_v", Property::fromString("clamp"));
+                obj->setProperty("wrap_mode_v", SceneProperty::fromString("clamp"));
                 break;
             case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-                obj->setProperty("wrap_mode_v", Property::fromString("mirror"));
+                obj->setProperty("wrap_mode_v", SceneProperty::fromString("mirror"));
                 break;
             }
         }
@@ -714,34 +715,34 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
     size_t matCounter = 0;
     for (const auto& mat : model.materials) {
         std::string name = getMaterialName(mat, matCounter);
-        auto bsdf        = std::make_shared<Object>(OT_BSDF, "principled", directory);
+        auto bsdf        = std::make_shared<SceneObject>(SceneObject::OT_BSDF, "principled", directory);
 
         if (mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
             const std::string tex = handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory);
-            bsdf->setProperty("base_color", Property::fromString(tex + "*color("
-                                                                 + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[0])
-                                                                 + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[1])
-                                                                 + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[2]) + ")"));
+            bsdf->setProperty("base_color", SceneProperty::fromString(tex + "*color("
+                                                                      + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[0])
+                                                                      + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[1])
+                                                                      + ", " + std::to_string((float)mat.pbrMetallicRoughness.baseColorFactor[2]) + ")"));
         } else {
-            bsdf->setProperty("base_color", Property::fromVector3(Vector3f((float)mat.pbrMetallicRoughness.baseColorFactor[0], (float)mat.pbrMetallicRoughness.baseColorFactor[1], (float)mat.pbrMetallicRoughness.baseColorFactor[2])));
+            bsdf->setProperty("base_color", SceneProperty::fromVector3(Vector3f((float)mat.pbrMetallicRoughness.baseColorFactor[0], (float)mat.pbrMetallicRoughness.baseColorFactor[1], (float)mat.pbrMetallicRoughness.baseColorFactor[2])));
         }
 
         if (mat.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0) {
             const std::string mrtex = handleTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture, scene, model, directory);
-            bsdf->setProperty("metallic", Property::fromString(mrtex + ".b*" + std::to_string((float)mat.pbrMetallicRoughness.metallicFactor)));
-            bsdf->setProperty("roughness", Property::fromString(mrtex + ".g*" + std::to_string((float)mat.pbrMetallicRoughness.roughnessFactor)));
+            bsdf->setProperty("metallic", SceneProperty::fromString(mrtex + ".b*" + std::to_string((float)mat.pbrMetallicRoughness.metallicFactor)));
+            bsdf->setProperty("roughness", SceneProperty::fromString(mrtex + ".g*" + std::to_string((float)mat.pbrMetallicRoughness.roughnessFactor)));
         } else {
-            bsdf->setProperty("metallic", Property::fromNumber((float)mat.pbrMetallicRoughness.metallicFactor));
-            bsdf->setProperty("roughness", Property::fromNumber((float)mat.pbrMetallicRoughness.roughnessFactor));
+            bsdf->setProperty("metallic", SceneProperty::fromNumber((float)mat.pbrMetallicRoughness.metallicFactor));
+            bsdf->setProperty("roughness", SceneProperty::fromNumber((float)mat.pbrMetallicRoughness.roughnessFactor));
         }
 
         // Extensions
         if (mat.extensions.count(KHR_materials_ior.data()) > 0) {
             const auto& ext = mat.extensions.at(KHR_materials_ior.data());
             if (ext.Has("ior") && ext.Get("ior").IsNumber())
-                bsdf->setProperty("ior", Property::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
+                bsdf->setProperty("ior", SceneProperty::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
         } else {
-            bsdf->setProperty("ior", Property::fromNumber(1.5));
+            bsdf->setProperty("ior", SceneProperty::fromNumber(1.5));
         }
 
         if (mat.extensions.count(KHR_materials_sheen.data()) > 0) {
@@ -754,9 +755,9 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
 
             // No support for colored sheen
             if (!tex.empty())
-                bsdf->setProperty("sheen", Property::fromString("avg(" + tex + ")*" + std::to_string(factor)));
+                bsdf->setProperty("sheen", SceneProperty::fromString("avg(" + tex + ")*" + std::to_string(factor)));
             else
-                bsdf->setProperty("sheen", Property::fromNumber(factor));
+                bsdf->setProperty("sheen", SceneProperty::fromNumber(factor));
         }
 
         // Only support for transmissionFactor & transmissionTexture
@@ -769,9 +770,9 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
                 factor = static_cast<float>(ext.Get("transmissionFactor").GetNumberAsDouble());
 
             if (!tex.empty())
-                bsdf->setProperty("specular_transmission", Property::fromString(tex + ".r*" + std::to_string(factor)));
+                bsdf->setProperty("specular_transmission", SceneProperty::fromString(tex + ".r*" + std::to_string(factor)));
             else
-                bsdf->setProperty("specular_transmission", Property::fromNumber(factor));
+                bsdf->setProperty("specular_transmission", SceneProperty::fromNumber(factor));
 
             bool is_thin = true;
             if (mat.extensions.count(KHR_materials_volume.data()) > 0) {
@@ -784,7 +785,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
                 is_thin = thickness <= FltEps;
             }
 
-            bsdf->setProperty("thin", Property::fromBool(is_thin));
+            bsdf->setProperty("thin", SceneProperty::fromBool(is_thin));
         }
 
         // Not ratified yet, but who cares
@@ -797,9 +798,9 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
                 factor = static_cast<float>(ext.Get("translucencyFactor").GetNumberAsDouble());
 
             if (!tex.empty())
-                bsdf->setProperty("diffuse_transmission", Property::fromString(tex + ".r*" + std::to_string(factor)));
+                bsdf->setProperty("diffuse_transmission", SceneProperty::fromString(tex + ".r*" + std::to_string(factor)));
             else
-                bsdf->setProperty("diffuse_transmission", Property::fromNumber(factor));
+                bsdf->setProperty("diffuse_transmission", SceneProperty::fromNumber(factor));
         }
 
         // No support for thickness as this is a raytracer
@@ -817,9 +818,9 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             if (distance > FltEps && thickness > FltEps) {
                 Vector3f color   = extractVector<3>(ext, "attenuationColor", Vector3f::Ones());
                 Vector3f sigma_a = -color.array().log() / distance;
-                auto medium      = std::make_shared<Object>(OT_MEDIUM, "homogeneous", directory);
-                medium->setProperty("sigma_s", Property::fromVector3(Vector3f::Zero()));
-                medium->setProperty("sigma_a", Property::fromVector3(sigma_a));
+                auto medium      = std::make_shared<SceneObject>(SceneObject::OT_MEDIUM, "homogeneous", directory);
+                medium->setProperty("sigma_s", SceneProperty::fromVector3(Vector3f::Zero()));
+                medium->setProperty("sigma_a", SceneProperty::fromVector3(sigma_a));
 
                 scene.addMedium(name, medium);
             }
@@ -835,9 +836,9 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
                 factor = static_cast<float>(ext.Get("clearcoatFactor").GetNumberAsDouble());
 
             if (!tex.empty())
-                bsdf->setProperty("clearcoat", Property::fromString(tex + ".r*" + std::to_string(factor)));
+                bsdf->setProperty("clearcoat", SceneProperty::fromString(tex + ".r*" + std::to_string(factor)));
             else
-                bsdf->setProperty("clearcoat", Property::fromNumber(factor));
+                bsdf->setProperty("clearcoat", SceneProperty::fromNumber(factor));
 
             const std::string rtex = handleTexture(ext, "clearcoatRoughnessTexture", scene, model, directory);
             float rfactor          = 0;
@@ -845,11 +846,11 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
                 rfactor = static_cast<float>(ext.Get("clearcoatRoughnessFactor").GetNumberAsDouble());
 
             if (!rtex.empty())
-                bsdf->setProperty("clearcoat_roughness", Property::fromString(rtex + ".g*" + std::to_string(rfactor)));
+                bsdf->setProperty("clearcoat_roughness", SceneProperty::fromString(rtex + ".g*" + std::to_string(rfactor)));
             else
-                bsdf->setProperty("clearcoat_roughness", Property::fromNumber(rfactor));
+                bsdf->setProperty("clearcoat_roughness", SceneProperty::fromNumber(rfactor));
 
-            bsdf->setProperty("clearcoat_top_only", Property::fromBool(!mat.doubleSided));
+            bsdf->setProperty("clearcoat_top_only", SceneProperty::fromBool(!mat.doubleSided));
             // TODO: Apply factor to emission for "darkening" by the cosine term
         }
 
@@ -857,38 +858,38 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
             scene.addBSDF(name + "_normal_inner", bsdf);
             const tinygltf::Texture& tex = model.textures[mat.normalTexture.index];
 
-            bsdf = std::make_shared<Object>(OT_BSDF, "normalmap", directory);
-            bsdf->setProperty("bsdf", Property::fromString(name + "_normal_inner"));
-            bsdf->setProperty("map", Property::fromString(getTextureName(tex)));
+            bsdf = std::make_shared<SceneObject>(SceneObject::OT_BSDF, "normalmap", directory);
+            bsdf->setProperty("bsdf", SceneProperty::fromString(name + "_normal_inner"));
+            bsdf->setProperty("map", SceneProperty::fromString(getTextureName(tex)));
         }
 
         if (mat.alphaMode == "MASK") {
             scene.addBSDF(name + "_blend_inner", bsdf);
 
-            bsdf = std::make_shared<Object>(OT_BSDF, "cutoff", directory);
-            bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
-            bsdf->setProperty("inverted", Property::fromBool(true));
+            bsdf = std::make_shared<SceneObject>(SceneObject::OT_BSDF, "cutoff", directory);
+            bsdf->setProperty("bsdf", SceneProperty::fromString(name + "_blend_inner"));
+            bsdf->setProperty("inverted", SceneProperty::fromBool(true));
 
             auto factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
             if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-                bsdf->setProperty("weight", Property::fromString(handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory) + ".a"));
-                bsdf->setProperty("cutoff", Property::fromNumber((float)mat.alphaCutoff / factor));
+                bsdf->setProperty("weight", SceneProperty::fromString(handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory) + ".a"));
+                bsdf->setProperty("cutoff", SceneProperty::fromNumber((float)mat.alphaCutoff / factor));
             } else {
-                bsdf->setProperty("weight", Property::fromNumber(factor));
-                bsdf->setProperty("cutoff", Property::fromNumber((float)mat.alphaCutoff));
+                bsdf->setProperty("weight", SceneProperty::fromNumber(factor));
+                bsdf->setProperty("cutoff", SceneProperty::fromNumber((float)mat.alphaCutoff));
             }
         } else if (mat.alphaMode == "BLEND") {
             scene.addBSDF(name + "_blend_inner", bsdf);
 
-            bsdf = std::make_shared<Object>(OT_BSDF, "mask", directory);
-            bsdf->setProperty("bsdf", Property::fromString(name + "_blend_inner"));
-            bsdf->setProperty("inverted", Property::fromBool(true));
+            bsdf = std::make_shared<SceneObject>(SceneObject::OT_BSDF, "mask", directory);
+            bsdf->setProperty("bsdf", SceneProperty::fromString(name + "_blend_inner"));
+            bsdf->setProperty("inverted", SceneProperty::fromBool(true));
 
             auto factor = static_cast<float>(mat.pbrMetallicRoughness.baseColorFactor[3]);
             if (factor > 0 && mat.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-                bsdf->setProperty("weight", Property::fromString(handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory) + ".a"));
+                bsdf->setProperty("weight", SceneProperty::fromString(handleTexture(mat.pbrMetallicRoughness.baseColorTexture, scene, model, directory) + ".a"));
             } else {
-                bsdf->setProperty("weight", Property::fromNumber(factor));
+                bsdf->setProperty("weight", SceneProperty::fromNumber(factor));
             }
         }
 
@@ -897,7 +898,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
     }
 }
 
-Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
+std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const std::filesystem::path& path)
 {
     std::filesystem::path directory = path.parent_path();
     std::filesystem::path cache_dir = directory / (std::string("_ignis_cache_") + path.stem().generic_u8string());
@@ -913,6 +914,7 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
     loader.SetImageLoader(imageLoader, nullptr);
 
+    bool ok = false;
     if (path.extension() == ".glb")
         ok = loader.LoadBinaryFromFile(&model, &err, &warn, path.generic_u8string());
     else
@@ -934,14 +936,14 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             IG_LOG(L_WARNING) << "glTF '" << path << "': Required extension '" << ext << "' is yet not supported." << std::endl;
     }
 
-    Scene scene;
-    loadTextures(scene, model, directory, cache_dir);
+    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+    loadTextures(*scene, model, directory, cache_dir);
 
     tinygltf::Material defaultMaterial;
     tinygltf::ParseMaterial(&defaultMaterial, nullptr, {}, false);
     model.materials.push_back(defaultMaterial);
 
-    loadMaterials(scene, model, directory);
+    loadMaterials(*scene, model, directory);
 
     size_t meshCount = 0;
     for (const auto& mesh : model.meshes) {
@@ -951,9 +953,9 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
             const std::filesystem::path ply_path = cache_dir / "meshes" / (name + ".ply");
 
             exportMeshPrimitive(ply_path, model, prim);
-            auto obj = std::make_shared<Object>(OT_SHAPE, "ply", directory);
-            obj->setProperty("filename", Property::fromString(std::filesystem::canonical(ply_path).generic_u8string()));
-            scene.addShape(name, obj);
+            auto obj = std::make_shared<SceneObject>(SceneObject::OT_SHAPE, "ply", directory);
+            obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(ply_path).generic_u8string()));
+            scene->addShape(name, obj);
 
             ++primCount;
         }
@@ -962,8 +964,8 @@ Scene glTFSceneParser::loadFromFile(const std::filesystem::path& path, bool& ok)
 
     const tinygltf::Scene& gltf_scene = model.scenes[model.defaultScene];
     for (int nodeId : gltf_scene.nodes)
-        addNode(scene, defaultMaterial, directory, model, model.nodes[nodeId], Transformf::Identity());
+        addNode(*scene, defaultMaterial, directory, model, model.nodes[nodeId], Transformf::Identity());
 
     return scene;
 }
-} // namespace IG::Parser
+} // namespace IG

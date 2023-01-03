@@ -3,13 +3,14 @@ type PayloadInitializer = fn (/*payload:*/ RayPayload, /*sample:*/ i32, /*coord:
 fn @make_simple_payload_initializer(f: fn(RayPayload)->()) = @|p: RayPayload, _:i32, _:PixelCoord| f(p);
 fn @empty_payload_initializer(_: RayPayload, _:i32, _:PixelCoord) -> () {}
 
-fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, sampler: PixelSampler, initState: PayloadInitializer) -> RayEmitter {
+fn @make_camera_emitter(camera: Camera, iter: i32, spi: i32, frame: i32, sampler: PixelSampler, initState: PayloadInitializer) -> RayEmitter {
     @ |sample, x, y, width, height, payload| {
         let mut hash = fnv_init();
         hash = fnv_hash(hash, sample as u32);
         hash = fnv_hash(hash, iter as u32);
         hash = fnv_hash(hash, x as u32);
         hash = fnv_hash(hash, y as u32);
+        hash = fnv_hash(hash, frame as u32);
         let mut rnd = hash /*as RndState*/;
         let (rx, ry) = sampler(&mut rnd, iter * spi + sample, x, y);
         let coord = make_pixelcoord_from_xy(x, y, width, height, rx, ry);

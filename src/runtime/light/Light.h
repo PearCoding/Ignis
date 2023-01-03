@@ -1,19 +1,16 @@
 #pragma once
 
-#include "SceneObject.h"
+#include "SceneObjectProxy.h"
 
 namespace IG {
 class ShadingTree;
 class VectorSerializer;
+class SceneObject;
 
-namespace Parser {
-class Object;
-}
-
-class Light : public SceneObject {
+class Light : public SceneObjectProxy {
 public:
     inline Light(const std::string& name, const std::string& type)
-        : SceneObject(name, type)
+        : SceneObjectProxy(name, type)
         , mID(0)
     {
     }
@@ -26,7 +23,7 @@ public:
     virtual std::optional<Vector3f> direction() const { return std::nullopt; }
     virtual std::optional<std::string> entity() const { return std::nullopt; }
 
-    virtual float computeFlux(const ShadingTree&) const { return 0; }
+    virtual float computeFlux(ShadingTree&) const { return 0; }
 
     struct SerializationInput {
         size_t ID;

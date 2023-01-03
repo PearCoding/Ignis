@@ -10,7 +10,7 @@ struct EmissionSample {
 
 // Result from sampling direct lighting from a light source
 struct DirectLightSample {
-    pos:       Vec3,  // Position on the light source
+    pos:       Vec3,  // Position on the light source. If infinite this can be undefined and should not be used
     dir:       Vec3,  // Normalized direction towards the light source
     intensity: Color, // Intensity along the direction, already divided by the generating pdf
     pdf:       Pdf,   // Probability to sample the light. If the light is infinite the pdf has to be given in solid angle!
@@ -47,7 +47,7 @@ struct Light {
     pdf_direct: fn (Ray, SurfaceElement) -> Pdf,
     // Returns the pdf properties of the light at a given point on its surface for emission. The SurfaceElement is only valid if delta & infinite is false
     pdf_emission: fn (Ray, SurfaceElement) -> EmissivePdf,
-    // true if the light is a delta light (can not be hit by a ray)
+    // true if the light is a delta light (can not be hit by a ray). This only relates to `sample_direct`, not `sample_emission`
     delta: bool,
     // true if the light is infinite
     infinite: bool

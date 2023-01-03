@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "CameraProxy.h"
 #include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"
@@ -97,6 +97,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    runtime->mergeParametersFrom(cmd.UserEntries);
     timer_loading.stop();
 
     auto orientation = runtime->initialCameraOrientation();

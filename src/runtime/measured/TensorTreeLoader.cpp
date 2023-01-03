@@ -312,9 +312,9 @@ bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::f
     }
 
     // Make sure both transmission parts are equal if not specified otherwise
-    if (!transmissionBack)
+    if (!transmissionBack || (transmissionFront && transmissionBack->total() <= FltEps))
         transmissionBack = transmissionFront;
-    if (!transmissionFront)
+    if (!transmissionFront || (transmissionBack && transmissionFront->total() <= FltEps))
         transmissionFront = transmissionBack;
 
     if (!transmissionFront && !transmissionBack) {

@@ -1,6 +1,8 @@
 #include "Runtime.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
+#include "StringUtils.h"
+#include "loader/LoaderCamera.h"
 #include "loader/Parser.h"
 
 #include <chrono>
@@ -12,7 +14,7 @@ static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& o
 {
     std::string tech_type;
     if (opts.OverrideTechnique.empty()) {
-        const auto technique = lopts.Scene.technique();
+        const auto technique = lopts.Scene->technique();
         if (technique)
             tech_type = technique->pluginType();
         else
@@ -26,7 +28,7 @@ static inline void setup_technique(LoaderOptions& lopts, const RuntimeOptions& o
 static inline void setup_film(LoaderOptions& lopts, const RuntimeOptions& opts)
 {
     Vector2f filmSize = Vector2f(800, 600);
-    const auto film   = lopts.Scene.film();
+    const auto film   = lopts.Scene->film();
     if (film)
         filmSize = film->property("size").getVector2(filmSize);
 
@@ -48,7 +50,7 @@ static inline void setup_camera(LoaderOptions& lopts, const RuntimeOptions& opts
     if (!opts.OverrideCamera.empty()) {
         camera_type = opts.OverrideCamera;
     } else {
-        const auto camera = lopts.Scene.camera();
+        const auto camera = lopts.Scene->camera();
         if (camera)
             camera_type = camera->pluginType();
     }
@@ -75,17 +77,16 @@ static inline void dumpShader(const std::string& filename, const std::string& sh
 Runtime::Runtime(const RuntimeOptions& opts)
     : mOptions(opts)
     , mDatabase()
-    , mParameterSet()
+    , mGlobalRegistry()
     , mSamplesPerIteration(0)
-    , mTarget(opts.Target)
     , mCurrentIteration(0)
     , mCurrentSampleCount(0)
     , mCurrentFrame(0)
     , mFilmWidth(0)
     , mFilmHeight(0)
+    , mHasSceneParameters(false)
     , mCameraName()
     , mInitialCameraOrientation()
-    , mAcquireStats(opts.AcquireStats)
     , mTechniqueName()
     , mTechniqueInfo()
     , mTechniqueVariants()
@@ -98,17 +99,25 @@ Runtime::Runtime(const RuntimeOptions& opts)
     mCompiler.setVerbose(IG_LOGGER.verbosity() == L_DEBUG);
 
     // Check configuration
-    if (!mTarget.isValid())
+    if (!mOptions.Target.isValid())
         throw std::runtime_error("Could not pick a suitable target");
 
     // Load interface
-    IG_LOG(L_INFO) << "Using target " << mTarget.toString() << std::endl;
+    IG_LOG(L_INFO) << "Using target " << mOptions.Target.toString() << std::endl;
 
     // Load standard library if necessary
     if (!mOptions.ScriptDir.empty()) {
         IG_LOG(L_INFO) << "Loading standard library from " << mOptions.ScriptDir << std::endl;
         mCompiler.loadStdLibFromDirectory(mOptions.ScriptDir);
     }
+
+    Device::SetupSettings settings;
+    settings.target        = mOptions.Target;
+    settings.acquire_stats = mOptions.AcquireStats;
+    settings.debug_trace   = mOptions.DebugTrace;
+
+    IG_LOG(L_DEBUG) << "Init device" << std::endl;
+    mDevice = std::make_unique<Device>(settings);
 }
 
 Runtime::~Runtime()
@@ -136,17 +145,16 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
     IG_LOG(L_DEBUG) << "Parsing scene file" << std::endl;
     try {
         const auto startParser = std::chrono::high_resolution_clock::now();
-        Parser::SceneParser parser;
-        bool ok    = false;
-        auto scene = parser.loadFromFile(path, ok);
+        SceneParser parser;
+        auto scene = parser.loadFromFile(path);
         IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
-        if (!ok)
+        if (scene == nullptr)
             return false;
 
         if (mOptions.AddExtraEnvLight)
-            scene.addConstantEnvLight();
+            scene->addConstantEnvLight();
 
-        return load(path, std::move(scene));
+        return load(path, scene);
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
@@ -159,34 +167,50 @@ bool Runtime::loadFromString(const std::string& str, const std::filesystem::path
     try {
         IG_LOG(L_DEBUG) << "Parsing scene string" << std::endl;
         const auto startParser = std::chrono::high_resolution_clock::now();
-        Parser::SceneParser parser;
-        bool ok    = false;
-        auto scene = parser.loadFromString(str, dir, ok);
+        SceneParser parser;
+        auto scene = parser.loadFromString(str, dir);
         IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
-        if (!ok)
+        if (scene == nullptr)
             return false;
 
         if (mOptions.AddExtraEnvLight)
-            scene.addConstantEnvLight();
+            scene->addConstantEnvLight();
 
-        return load({}, std::move(scene));
+        return load({}, scene);
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
     }
 }
 
-bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
+bool Runtime::loadFromScene(const std::shared_ptr<Scene>& scene)
+{
+    try {
+        if (mOptions.AddExtraEnvLight)
+            scene->addConstantEnvLight();
+
+        return load({}, scene);
+    } catch (const std::runtime_error& err) {
+        IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
+        return false;
+    }
+}
+
+bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scene>& scene)
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;
-    lopts.Target              = mTarget;
+    lopts.Target              = mOptions.Target;
     lopts.IsTracer            = mOptions.IsTracer;
-    lopts.Scene               = std::move(scene);
+    lopts.Scene               = scene;
     lopts.ForceSpecialization = mOptions.ForceSpecialization;
     lopts.EnableTonemapping   = mOptions.EnableTonemapping;
     lopts.Denoiser            = mOptions.Denoiser;
     lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
+    lopts.Compiler            = &mCompiler;
+    lopts.Device              = mDevice.get();
+
+    mHasSceneParameters = !scene->parameters().empty();
 
     // Print a warning if denoiser was requested but none is available
     if (mOptions.Denoiser.Enabled && !lopts.Denoiser.Enabled && !mOptions.IsTracer && hasDenoiser())
@@ -207,7 +231,7 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
     setup_camera(lopts, mOptions);
 
     if (mOptions.SPI == 0)
-        mSamplesPerIteration = recommendSPI(mTarget, mFilmWidth, mFilmHeight, mOptions.IsInteractive);
+        mSamplesPerIteration = recommendSPI(mOptions.Target, mFilmWidth, mFilmHeight, mOptions.IsInteractive);
     else
         mSamplesPerIteration = mOptions.SPI;
 
@@ -216,25 +240,39 @@ bool Runtime::load(const std::filesystem::path& path, Parser::Scene&& scene)
 
     IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
     const auto startLoader = std::chrono::high_resolution_clock::now();
-    LoaderResult result;
-    if (!Loader::load(lopts, result))
+
+    auto ctx = Loader::load(lopts);
+    if (!ctx)
         return false;
-    mDatabase = std::move(result.Database);
+    mDatabase = std::move(ctx->Database);
     IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startLoader).count() / 1000.0f << " seconds" << std::endl;
 
-    mCameraName               = lopts.CameraType;
-    mTechniqueName            = lopts.TechniqueType;
-    mTechniqueInfo            = result.TechniqueInfo;
-    mInitialCameraOrientation = result.CameraOrientation;
-    mTechniqueVariants        = std::move(result.TechniqueVariants);
-    mResourceMap              = std::move(result.ResourceMap);
+    mCameraName               = ctx->Options.CameraType;
+    mTechniqueName            = ctx->Options.TechniqueType;
+    mTechniqueInfo            = ctx->Technique->info();
+    mInitialCameraOrientation = ctx->Camera->getOrientation(*ctx);
+    mTechniqueVariants        = std::move(ctx->TechniqueVariants);
+    mResourceMap              = ctx->generateResourceMap();
 
-    if (lopts.Denoiser.Enabled)
+    if (ctx->Technique->hasDenoiserEnabled())
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
+
+    // Setup array of number of entities per material
+    mEntityPerMaterial.clear();
+    mEntityPerMaterial.reserve(ctx->Materials.size());
+    for (const auto& mat : ctx->Materials) {
+        mEntityPerMaterial.emplace_back((int)mat.Count);
+    }
+
+    // Merge global registry
+    mGlobalRegistry.mergeFrom(ctx->GlobalRegistry);
+
+    // Free memory from loader context
+    ctx.reset();
 
     // Preload camera orientation
     setCameraOrientationParameter(mInitialCameraOrientation);
-    return setup();
+    return setupScene();
 }
 
 void Runtime::step(bool ignoreDenoiser)
@@ -246,11 +284,6 @@ void Runtime::step(bool ignoreDenoiser)
 
     if (mTechniqueVariants.empty()) {
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return;
-    }
-
-    if (!mDevice) {
-        IG_LOG(L_ERROR) << "Device not setup!" << std::endl;
         return;
     }
 
@@ -281,17 +314,17 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
         ignoreDenoiser = true;
 
     Device::RenderSettings settings;
-    settings.rays           = nullptr; // No artificial ray streams
-    settings.apply_denoiser = mOptions.Denoiser.Enabled && !ignoreDenoiser;
-    settings.spi            = info.GetSPI(mSamplesPerIteration);
-    settings.work_width     = info.GetWidth(mFilmWidth);
-    settings.work_height    = info.GetHeight(mFilmHeight);
-    settings.info           = info;
-    settings.iteration      = mCurrentIteration;
-    settings.frame          = mCurrentFrame;
+    settings.rays      = nullptr; // No artificial ray streams
+    settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser;
+    settings.spi       = info.GetSPI(mSamplesPerIteration);
+    settings.width     = info.GetWidth(mFilmWidth);
+    settings.height    = info.GetHeight(mFilmHeight);
+    settings.info      = info;
+    settings.iteration = mCurrentIteration;
+    settings.frame     = mCurrentFrame;
 
     setParameter("__spi", (int)settings.spi);
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mParameterSet);
+    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -306,11 +339,6 @@ void Runtime::trace(const std::vector<Ray>& rays)
 
     if (mTechniqueVariants.empty()) {
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return;
-    }
-
-    if (!mDevice) {
-        IG_LOG(L_ERROR) << "Device not setup!" << std::endl;
         return;
     }
 
@@ -344,17 +372,17 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
     Device::RenderSettings settings;
-    settings.rays           = rays.data();
-    settings.apply_denoiser = false;
-    settings.spi            = info.GetSPI(mSamplesPerIteration);
-    settings.work_width     = rays.size();
-    settings.work_height    = 1;
-    settings.info           = info;
-    settings.iteration      = mCurrentIteration;
-    settings.frame          = mCurrentFrame;
+    settings.rays      = rays.data();
+    settings.denoise   = false;
+    settings.spi       = info.GetSPI(mSamplesPerIteration);
+    settings.width     = rays.size();
+    settings.height    = 1;
+    settings.info      = info;
+    settings.iteration = mCurrentIteration;
+    settings.frame     = mCurrentFrame;
 
     setParameter("__spi", (int)settings.spi);
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mParameterSet);
+    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -362,35 +390,25 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
 
 void Runtime::resizeFramebuffer(size_t width, size_t height)
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
     mFilmWidth  = width;
     mFilmHeight = height;
-    if (mDevice)
-        mDevice->resize(width, height);
+    mDevice->resize(width, height);
     reset();
 }
 
 AOVAccessor Runtime::getFramebuffer(const std::string& name) const
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        return mDevice->getFramebuffer(name);
-    else
-        return AOVAccessor{ nullptr, 0 };
+    return mDevice->getFramebuffer(name);
 }
 
 void Runtime::clearFramebuffer()
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        mDevice->clearAllFramebuffer();
+    mDevice->clearAllFramebuffer();
 }
 
 void Runtime::clearFramebuffer(const std::string& name)
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        mDevice->clearFramebuffer(name);
+    mDevice->clearFramebuffer(name);
 }
 
 void Runtime::reset()
@@ -403,25 +421,58 @@ void Runtime::reset()
 
 const Statistics* Runtime::getStatistics() const
 {
-    IG_ASSERT(mDevice, "Expected device to be available");
-    return mAcquireStats && mDevice ? mDevice->getStatistics() : nullptr;
+    return mOptions.AcquireStats ? mDevice->getStatistics() : nullptr;
 }
 
-bool Runtime::setup()
+static void dumpRegistries(std::ostream& stream, const std::string& name, const ShaderOutput<void*>& shader)
 {
-    Device::SetupSettings settings;
-    settings.target             = mTarget;
-    settings.database           = &mDatabase;
-    settings.framebuffer_width  = (uint32)mFilmWidth;
-    settings.framebuffer_height = (uint32)mFilmHeight;
-    settings.acquire_stats      = mAcquireStats;
-    settings.aov_map            = &mTechniqueInfo.EnabledAOVs;
-    settings.resource_map       = &mResourceMap;
+    if (shader.Exec == nullptr || shader.LocalRegistry.empty())
+        return;
 
-    IG_LOG(L_DEBUG) << "Init device" << std::endl;
-    mDevice = std::make_unique<Device>(settings);
+    stream << "Registry '" << name << "' at setup:" << std::endl
+           << shader.LocalRegistry.dump();
+}
+
+static void dumpRegistries(std::ostream& stream, const TechniqueVariantBase<void*>& variant)
+{
+    dumpRegistries(stream, "Device", variant.DeviceShader);
+    dumpRegistries(stream, "Tonemap", variant.TonemapShader);
+    dumpRegistries(stream, "Imageinfo", variant.ImageinfoShader);
+    dumpRegistries(stream, "PrimaryTraversal", variant.PrimaryTraversalShader);
+    dumpRegistries(stream, "SecondaryTraversal", variant.SecondaryTraversalShader);
+    dumpRegistries(stream, "RayGeneration", variant.RayGenerationShader);
+    dumpRegistries(stream, "Miss", variant.MissShader);
+    for (size_t i = 0; i < variant.HitShaders.size(); ++i)
+        dumpRegistries(stream, "Hit[" + std::to_string(i) + "]", variant.HitShaders.at(i));
+    for (size_t i = 0; i < variant.AdvancedShadowHitShaders.size(); ++i)
+        dumpRegistries(stream, "AdvancedShadowHit[" + std::to_string(i) + "]", variant.AdvancedShadowHitShaders.at(i));
+    for (size_t i = 0; i < variant.AdvancedShadowMissShaders.size(); ++i)
+        dumpRegistries(stream, "AdvancedShadowMiss[" + std::to_string(i) + "]", variant.AdvancedShadowMissShaders.at(i));
+    for (size_t i = 0; i < variant.CallbackShaders.size(); ++i)
+        dumpRegistries(stream, "Callback[" + std::to_string(i) + "]", variant.CallbackShaders.at(i));
+}
+
+bool Runtime::setupScene()
+{
+    Device::SceneSettings settings;
+    settings.database            = &mDatabase;
+    settings.aov_map             = &mTechniqueInfo.EnabledAOVs;
+    settings.resource_map        = &mResourceMap;
+    settings.entity_per_material = &mEntityPerMaterial;
+
+    IG_LOG(L_DEBUG) << "Assign scene to device" << std::endl;
+    mDevice->assignScene(settings);
 
     if (IG_LOGGER.verbosity() <= L_DEBUG) {
+        if (mOptions.DumpRegistry) {
+            if (mGlobalRegistry.empty()) {
+                IG_LOG(L_DEBUG) << "Global registry at setup: None" << std::endl;
+            } else {
+                IG_LOG(L_DEBUG) << "Global registry at setup:" << std::endl
+                                << mGlobalRegistry.dump();
+            }
+        }
+
         if (mResourceMap.empty()) {
             IG_LOG(L_DEBUG) << "Registered resources: None" << std::endl;
         } else {
@@ -450,13 +501,18 @@ bool Runtime::setup()
     if (!compileShaders())
         return false;
 
+    if (IG_LOGGER.verbosity() <= L_DEBUG) {
+        if (mOptions.DumpRegistryFull) {
+            for (size_t i = 0; i < mTechniqueVariantShaderSets.size(); ++i) {
+                auto& stream = IG_LOG_UNSAFE(L_DEBUG);
+                stream << "Local Variant [" << i << "] Registries:" << std::endl;
+                dumpRegistries(stream, mTechniqueVariantShaderSets.at(i));
+            }
+        }
+    }
+
     clearFramebuffer();
     return true;
-}
-
-void Runtime::shutdown()
-{
-    mDevice.reset();
 }
 
 bool Runtime::compileShaders()
@@ -551,9 +607,7 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
         return;
     }
 
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        mDevice->tonemap(out_pixels, settings);
+    mDevice->tonemap(out_pixels, settings);
 }
 
 void Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& settings) {
@@ -574,31 +628,32 @@ ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)
         return ImageInfoOutput{};
     }
 
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        return mDevice->imageinfo(settings);
-    else
-        return ImageInfoOutput{};
+    return mDevice->imageinfo(settings);
 }
 
 void Runtime::setParameter(const std::string& name, int value)
 {
-    mParameterSet.IntParameters[name] = value;
+    mGlobalRegistry.IntParameters[name] = value;
 }
 
 void Runtime::setParameter(const std::string& name, float value)
 {
-    mParameterSet.FloatParameters[name] = value;
+    mGlobalRegistry.FloatParameters[name] = value;
 }
 
 void Runtime::setParameter(const std::string& name, const Vector3f& value)
 {
-    mParameterSet.VectorParameters[name] = value;
+    mGlobalRegistry.VectorParameters[name] = value;
 }
 
 void Runtime::setParameter(const std::string& name, const Vector4f& value)
 {
-    mParameterSet.ColorParameters[name] = value;
+    mGlobalRegistry.ColorParameters[name] = value;
+}
+
+void Runtime::mergeParametersFrom(const ParameterSet& other)
+{
+    mGlobalRegistry.mergeFrom(other, true);
 }
 
 std::vector<std::string> Runtime::getAvailableTechniqueTypes()

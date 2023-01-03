@@ -2,7 +2,7 @@
 fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specularBsdf: Bsdf) -> Bsdf {
    
     // Layered BSDF
-    let diffuse = make_diffuse_bsdf(surf, kd);
+    let diffuse = make_lambertian_bsdf(surf, kd);
 
     let N   = surf.local.col(2);
     let eta = n1 / n2; // Some systems use n2 / n1 for eta
@@ -11,8 +11,8 @@ fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specula
 
     // Diffuse inner scattering term
     let diff_scattering = @|cos_i : f32| {
-        let fi = fresnel(eta, cos_i);
-         (1 - fi.factor) * eta * eta / (1 - fdr)
+        let fi = math::fresnel_dielectric(eta, cos_i);
+         (1 - fi) * eta * eta / (1 - fdr)
     };
 
     // Apply inner scattering term to diffuse bsdf
@@ -33,8 +33,8 @@ fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specula
     // Fresnel based mix function
     let mix_f = @|out_dir : Vec3| -> f32 {
         let cos_o = absolute_cos(out_dir, N);
-        let fo    = fresnel(eta, cos_o);
-        fo.factor
+        let fo    = math::fresnel_dielectric(eta, cos_o);
+        fo
     };
 
     make_variadic_mix_bsdf(diffuse_extra, specularBsdf, mix_f)

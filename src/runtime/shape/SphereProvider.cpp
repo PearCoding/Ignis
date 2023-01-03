@@ -1,6 +1,5 @@
 #include "SphereProvider.h"
 
-#include "loader/LoaderResult.h"
 #include "loader/LoaderShape.h"
 #include "serialization/VectorSerializer.h"
 #include "shader/ShaderUtils.h"
@@ -8,7 +7,7 @@
 #include "Logger.h"
 
 namespace IG {
-void SphereProvider::handle(LoaderContext& ctx, LoaderResult& result, const std::string& name, const Parser::Object& elem)
+void SphereProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, const SceneObject& elem)
 {
     float radius    = 1;
     Vector3f origin = Vector3f::Zero();
@@ -37,9 +36,9 @@ void SphereProvider::handle(LoaderContext& ctx, LoaderResult& result, const std:
     bbox.inflate(1e-5f); // Make sure it has a volume
 
     // Make sure the id used in shape is same as in the dyntable later
-    result.DatabaseAccessMutex.lock();
+    acc.DatabaseAccessMutex.lock();
 
-    auto& table         = result.Database.DynTables["shapes"];
+    auto& table         = ctx.Database.DynTables["shapes"];
     auto& data          = table.addLookup((uint32)this->id(), 0, DefaultAlignment);
     const size_t offset = table.currentOffset();
 
@@ -50,7 +49,7 @@ void SphereProvider::handle(LoaderContext& ctx, LoaderResult& result, const std:
 
     ctx.Shapes->addSphereShape(id, SphereShape{ origin, radius });
 
-    result.DatabaseAccessMutex.unlock();
+    acc.DatabaseAccessMutex.unlock();
 }
 
 std::string SphereProvider::generateShapeCode(const LoaderContext& ctx)

@@ -60,7 +60,16 @@ Perspective Camera (:monosp:`perspective`)
     - :code:`0`
     - No
     - Aperture radius in scene units. 0 disables depth of field.
-   
+  
+.. subfigstart::
+
+.. subfigure::  images/camera_perspective.jpg  
+  
+  Perspective camera
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-perspective-camera
 
 Orthogonal Camera (:monosp:`orthogonal`)
 ----------------------------------------
@@ -83,6 +92,15 @@ Orthogonal Camera (:monosp:`orthogonal`)
     - No
     - Aspect ratio (width over height). If not specified the current viewport will be used.
 
+.. subfigstart::
+
+.. subfigure::  images/camera_orthogonal.jpg  
+  
+  Orthogonal camera
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-orthogonal-camera
 
 Fisheye Camera (:monosp:`fisheye`, :monosp:`fishlens`)
 ------------------------------------------------------
@@ -99,3 +117,13 @@ Fisheye Camera (:monosp:`fisheye`, :monosp:`fishlens`)
     - :code:`"circular"`
     - No
     - Clipping mode. Must be one of :code:`"circular"`, :code:`"cropped"` or :code:`"full"`.
+
+.. subfigstart::
+
+.. subfigure::  images/camera_fishlens.jpg  
+  
+  Fishlens camera
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-fishlens-camera

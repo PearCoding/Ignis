@@ -59,6 +59,8 @@ Statistics::SectionStats& Statistics::SectionStats::operator+=(const Statistics:
 void Statistics::add(const Statistics& other)
 {
     mDeviceStats += other.mDeviceStats;
+    mPrimaryTraversalStats += other.mPrimaryTraversalStats;
+    mSecondaryTraversalStats += other.mSecondaryTraversalStats;
     mRayGenerationStats += other.mRayGenerationStats;
     mMissStats += other.mMissStats;
     for (const auto& pair : other.mHitStats)
@@ -252,6 +254,9 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     if (mTonemapStats.count > 0)
         dumpStats("  |-Tonemap", mTonemapStats);
 
+    if (mBakeStats.count > 0)
+        dumpStats("  |-Bake", mBakeStats);
+
     table.addRow({ "  Sections:" });
     dumpSectionStats("  |-ImageLoading", mSections[(size_t)SectionType::ImageLoading]);
     dumpSectionStats("  |-PackedImageLoading", mSections[(size_t)SectionType::PackedImageLoading]);
@@ -299,6 +304,8 @@ Statistics::ShaderStats* Statistics::getStats(ShaderType type, size_t id)
         return &mTonemapStats;
     case ShaderType::ImageInfo:
         return &mImageInfoStats;
+    case ShaderType::Bake:
+        return &mBakeStats;
     }
 }
 } // namespace IG

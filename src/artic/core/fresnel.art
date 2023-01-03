@@ -1,6 +1,5 @@
 // Result of sampling a BSDF
 struct FresnelTerm {
-    total:  bool,
     cos_t:  f32,
     factor: f32
 }
@@ -13,22 +12,17 @@ fn @fresnel_factor(eta: f32, cos_i: f32, cos_t: f32) -> f32 {
 
 fn @snell(eta: f32, cos_i: f32) = 1 - (1 - cos_i * cos_i) * eta * eta;
 
-fn @fresnel(eta: f32, cos_i: f32) -> FresnelTerm {
+fn @fresnel(eta: f32, cos_i: f32) -> Option[FresnelTerm] {
     let eta2 = if cos_i < 0 { 1 / eta } else { eta };
     let cos2_t = snell(eta2, cos_i);
     if cos2_t <= 0.0 {
-        FresnelTerm {
-            total  = true,
-            cos_t  = 0,
-            factor = 1
-        }
+        Option[FresnelTerm]::None
     } else {
         let cos_t = math_builtins::sqrt(cos2_t);
-        FresnelTerm {
-            total  = false,
+        make_option(FresnelTerm {
             cos_t  = if cos_i < 0 { -cos_t } else { cos_t },
             factor = fresnel_factor(eta2, math_builtins::fabs(cos_i), cos_t)
-        }
+        })
     }
 }
 
@@ -69,11 +63,6 @@ fn @fresnel_diffuse_factor(eta: f32) -> f32 {
     }
 }
 
-fn @schlick_approx(f: f32) -> f32{
-    let s = clampf(1 - f, 0, 1);
-    (s * s) * (s * s) * s
-}
-
 fn @dielectric(absHdotV: f32, eta_i: f32, eta_t: f32)-> f32{
     let mut cosThetaI = math_builtins::fmin[f32](1, math_builtins::fmax[f32](-1, absHdotV));
     let mut etaI = eta_i;
@@ -96,6 +85,11 @@ fn @dielectric(absHdotV: f32, eta_i: f32, eta_t: f32)-> f32{
     (Rparl * Rparl + Rperp * Rperp) / 2
 }
 
+fn @schlick_approx(f: f32) -> f32{
+    let s = clampf(1 - f, 0, 1);
+    (s * s) * (s * s) * s
+}
+
 fn @schlick(f0: Color, f90: Color, dot: f32)-> Color{
     let s = schlick_approx(dot);
     let snd = color_mulf(color_sub(f90, f0), s);
@@ -105,6 +99,6 @@ fn @schlick(f0: Color, f90: Color, dot: f32)-> Color{
 fn @schlick_f(f0: f32, f90: f32, dot: f32) = f0 + (f90 - f0) * schlick_approx(dot);
 
 fn @schlick_r0(eta: f32)-> f32{
-    let factor = clampf((eta - 1) / (eta + 1), 0, 1);
+    let factor = clampf((eta - 1) / (eta + 1), -1, 1);
     factor * factor
 }

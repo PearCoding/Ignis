@@ -1,11 +1,11 @@
 {
     "files.associations": {
-        "*.h": "cpp",
         "*.prc": "lisp",
         "*.artpp": "rust",
         "*.nvvm": "llvm",
         "*.llvm": "llvm",
         "*.art": "rust",
+        "*.h": "cpp",
         "*.impala": "rust",
         "cctype": "cpp",
         "clocale": "cpp",
@@ -158,21 +158,39 @@
         "xutility": "cpp",
         "queue": "cpp",
         "stack": "cpp",
+<<<<<<< HEAD
         "__nullptr": "cpp"
+=======
+        "iterativelinearsolvers": "cpp",
+        "orderingmethods": "cpp",
+        "alignedvector3": "cpp",
+        "bvh": "cpp",
+        "mprealsupport": "cpp",
+        "matrixfunctions": "cpp",
+        "*.rh": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp"
+>>>>>>> d6329f639f14905a458da14585e514f350cf811d
     },
     "cmake.configureOnOpen": false,
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
     "cSpell.words": [
         "bsdf",
         "bsdfs",
-        "Clearcoat",
+        "builtins",
+        "clearcoat",
+        "commandline",
         "denoiser",
+        "framebuffer",
         "klems",
         "microfacet",
         "pathtracer",
+        "pexpr",
         "raytracer",
         "signbit",
         "tensortree",
+        "tonemapping",
+        "vectorwidth",
         "wireframe"
     ],
 }

@@ -1,14 +1,13 @@
 #pragma once
 
+#include "Image.h"
 #include "Transpiler.h"
 #include <unordered_map>
 #include <unordered_set>
 
 namespace IG {
-namespace Parser {
-class Object;
-class Property;
-} // namespace Parser
+class SceneObject;
+class SceneProperty;
 
 namespace _details {
 // Embed behaviour for constant values. References to other nodes will us override the property embed type
@@ -36,6 +35,8 @@ struct ColorOptions {
 
     static constexpr ColorOptions Dynamic() { return ColorOptions{ EmbedType::Dynamic, false, false }; }
     static constexpr ColorOptions Structural() { return ColorOptions{ EmbedType::Structural, true, true }; }
+    static constexpr ColorOptions White() { return ColorOptions{ EmbedType::Default, false, true }; }
+    static constexpr ColorOptions Black() { return ColorOptions{ EmbedType::Default, true, false }; }
     static constexpr ColorOptions Full() { return ColorOptions{ EmbedType::Default, true, true }; }
     static constexpr ColorOptions None() { return ColorOptions{ EmbedType::Default, false, false }; }
 };
@@ -58,9 +59,15 @@ struct TextureOptions {
     static constexpr TextureOptions Structural() { return TextureOptions{ EmbedType::Structural }; }
     static constexpr TextureOptions Default() { return TextureOptions{ EmbedType::Default }; }
 };
+struct TextureBakeOptions {
+    size_t Width;
+    size_t Height;
+    bool SkipConstant; // Will not bake parameters which are simple constants
+    static constexpr TextureBakeOptions Default() { return TextureBakeOptions{ 1024, 1024, false }; }
+};
 } // namespace _details
 
-struct LoaderContext;
+class LoaderContext;
 class ShadingTree {
 private:
     struct Closure {
@@ -78,23 +85,24 @@ public:
     using VectorOptions  = _details::VectorOptions;
     using TextureOptions = _details::TextureOptions;
 
+    using TextureBakeOptions = _details::TextureBakeOptions;
+
     explicit ShadingTree(LoaderContext& ctx);
 
     /// Register new closure, can be empty if not a texture
-    bool beginClosure(const std::string& name);
+    void beginClosure(const std::string& name);
     void endClosure();
 
-    void addNumber(const std::string& name, const Parser::Object& obj, float def = 0, bool hasDef = true, const NumberOptions& options = NumberOptions::Full());
-    void addColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const ColorOptions& options = ColorOptions::Full());
-    void addVector(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero(), bool hasDef = true, const VectorOptions& options = VectorOptions::Full());
-    void addTexture(const std::string& name, const Parser::Object& obj, bool hasDef = true, const TextureOptions& options = TextureOptions::Default());
+    void addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0.0f), const NumberOptions& options = NumberOptions::Full());
+    void addColor(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const ColorOptions& options = ColorOptions::Full());
+    void addVector(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
+    void addTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
 
-    // Insert number, replacing previous definitions
-    void insertNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options = NumberOptions::Full());
+    float computeNumber(const std::string& name, const SceneObject& obj, float def = 0);
+    Vector3f computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero());
 
-    // Approximation
-    float computeNumber(const std::string& name, const Parser::Object& obj, float def = 0) const;
-    Vector3f computeColor(const std::string& name, const Parser::Object& obj, const Vector3f& def = Vector3f::Zero()) const;
+    using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
+    BakeOutputTexture bakeTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureBakeOptions& options = TextureBakeOptions::Default());
 
     inline std::string currentClosureID() const { return currentClosure().ID; }
     std::string getClosureID(const std::string& name);
@@ -102,7 +110,6 @@ public:
     void registerTextureUsage(const std::string& name);
     std::string pullHeader();
     std::string getInline(const std::string& name);
-    bool isPureTexture(const std::string& name);
     inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
 
     inline LoaderContext& context() { return mContext; }
@@ -115,11 +122,15 @@ public:
     void signalError();
 
 private:
-
     inline const Closure& currentClosure() const { return mClosures.back(); }
     inline Closure& currentClosure() { return mClosures.back(); }
 
-    std::string handlePropertyNumber(const std::string& name, const Parser::Property& prop, const NumberOptions& options);
+    void setupGlobalParameters();
+    float handleGlobalParameterNumber(const std::string& name, const SceneProperty& prop);
+    Vector3f handleGlobalParameterVector(const std::string& name, const SceneProperty& prop);
+    Vector4f handleGlobalParameterColor(const std::string& name, const SceneProperty& prop);
+
+    std::string handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options);
 
     std::string handleTexture(const std::string& prop_name, const std::string& expr, bool needColor);
     std::string acquireNumber(const std::string& prop_name, float number, const NumberOptions& options);
@@ -129,13 +140,16 @@ private:
     bool checkIfEmbed(const Vector3f& color, const ColorOptions& options) const;
     bool checkIfEmbed(const Vector3f& vec, const VectorOptions& options) const;
 
-    Vector3f approxTexture(const std::string& prop_name, const std::string& expr, const Vector3f& def) const;
+    BakeOutputTexture bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options);
+    Vector3f bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def);
+    Vector3f computeConstantColor(const std::string& name, const Transpiler::Result& result);
+    Image computeImage(const std::string& name, const Transpiler::Result& result, const TextureBakeOptions& options);
+    std::string loadTexture(const std::string& tex_name);
 
     LoaderContext& mContext;
 
     std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;
-    std::unordered_set<std::string> mPureTextures;
 
     std::vector<Closure> mClosures;
 

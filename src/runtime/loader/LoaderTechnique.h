@@ -1,13 +1,26 @@
 #pragma once
 
-#include "LoaderContext.h"
-#include "TechniqueInfo.h"
+#include "technique/TechniqueInfo.h"
 
 namespace IG {
-struct LoaderTechnique {
-    static std::optional<TechniqueInfo> getInfo(const LoaderContext& ctx);
-    static std::string generate(LoaderContext& ctx);
+class LoaderContext;
+class LoaderTechnique {
+public:
+    LoaderTechnique();
+    ~LoaderTechnique();
 
-    static std::vector<std::string> getAvailableTypes();
+    void setup(const LoaderContext& ctx);
+    [[nodiscard]] std::string generate(LoaderContext& ctx);
+
+    [[nodiscard]] inline const TechniqueInfo& info() const { return mInfo; }
+    [[nodiscard]] inline bool hasTechnique() const { return mTechnique != nullptr; }
+
+    [[nodiscard]] bool hasDenoiserEnabled() const;
+
+    [[nodiscard]] static std::vector<std::string> getAvailableTypes();
+
+private:
+    std::shared_ptr<class Technique> mTechnique;
+    TechniqueInfo mInfo;
 };
 } // namespace IG

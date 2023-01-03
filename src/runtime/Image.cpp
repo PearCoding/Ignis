@@ -1,6 +1,7 @@
 #include "Image.h"
 #include "ImageIO.h"
 #include "Logger.h"
+#include "StringUtils.h"
 
 IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_IMPLEMENTATION
@@ -83,13 +84,32 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
 
 void Image::flipY()
 {
-    const size_t slice = 4 * width;
+    const size_t slice = channels * width;
     for (size_t y = 0; y < height / 2; ++y) {
         float* s1 = &pixels[y * slice];
         float* s2 = &pixels[(height - y - 1) * slice];
         if (s1 != s2)
             std::swap_ranges(s1, s1 + slice, s2);
     }
+}
+
+Vector4f Image::computeAverage() const
+{
+    Vector4f sum = Vector4f::Zero();
+    if (channels == 1) {
+        for (size_t i = 0; i < width * height; ++i) {
+            const float v = pixels[i];
+            sum += Vector4f(v, v, v, 1);
+        }
+    } else if (channels == 3) {
+        for (size_t i = 0; i < width * height; ++i)
+            sum += Vector4f(pixels[i * 3 + 0], pixels[i * 3 + 1], pixels[i * 3 + 2], 1);
+    } else {
+        for (size_t i = 0; i < width * height; ++i)
+            sum += Vector4f(pixels[i * 4 + 0], pixels[i * 4 + 1], pixels[i * 4 + 2], pixels[i * 4 + 3]);
+    }
+
+    return sum / (float)(width * height);
 }
 
 static inline uint32 pack_rgba(uint8 r, uint8 g, uint8 b, uint8 a)
@@ -124,18 +144,11 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
     }
 }
 
-inline bool ends_with(std::string const& value, std::string const& ending)
-{
-    if (ending.size() > value.size())
-        return false;
-    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
-}
-
 bool Image::isPacked(const std::filesystem::path& path)
 {
     std::string ext   = path.extension().generic_u8string();
-    const bool useExr = ends_with(ext, ".exr");
-    const bool useHdr = ends_with(ext, ".hdr");
+    const bool useExr = string_ends_with(ext, ".exr");
+    const bool useHdr = string_ends_with(ext, ".hdr");
 
     return !useExr && !useHdr;
 }
@@ -174,8 +187,7 @@ static inline int getIntAttribute(const EXRAttribute& attr)
 Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
 {
     std::string ext   = path.extension().generic_u8string();
-    const bool useExr = ends_with(ext, ".exr");
-    const bool useHdr = ends_with(ext, ".hdr");
+    const bool useExr = string_ends_with(ext, ".exr");
 
     Image img;
 
@@ -348,9 +360,8 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
         stbi_image_free(data);
     }
 
-    // Do not flip hdr images (which are fixed to -Y N +X M resolution by stb)
-    if (!useHdr)
-        img.flipY();
+    // Flip images
+    img.flipY();
 
     return img;
 }
@@ -358,8 +369,8 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
 void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
 {
     std::string ext   = path.extension().generic_u8string();
-    const bool useExr = ends_with(ext, ".exr");
-    const bool useHdr = ends_with(ext, ".hdr");
+    const bool useExr = string_ends_with(ext, ".exr");
+    const bool useHdr = string_ends_with(ext, ".hdr");
 
     if (useExr || useHdr)
         throw ImageLoadException("Can not load EXR or HDR as packed", path);
@@ -455,7 +466,7 @@ bool Image::save(const std::filesystem::path& path)
 bool Image::save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
 {
     std::string ext = path.extension().generic_u8string();
-    bool useExr     = ends_with(ext, ".exr");
+    bool useExr     = string_ends_with(ext, ".exr");
 
     // We only support .exr output
     if (!useExr) {
@@ -509,6 +520,24 @@ bool Image::save(const std::filesystem::path& path, const float* data, size_t wi
         return ImageIO::save(path, width, height, image_ptrs,
                              skip_alpha ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A", "B", "G", "R" });
     }
+}
+
+Image Image::createSolidImage(const Vector4f& color, size_t width, size_t height)
+{
+    Image img;
+    img.width    = width;
+    img.height   = height;
+    img.channels = 4;
+
+    img.pixels.reset(new float[img.width * img.height * 4]);
+    for (size_t k = 0; k < width * height; ++k) {
+        img.pixels[k * 4 + 0] = color.x();
+        img.pixels[k * 4 + 1] = color.y();
+        img.pixels[k * 4 + 2] = color.z();
+        img.pixels[k * 4 + 3] = color.w();
+    }
+
+    return img;
 }
 
 } // namespace IG

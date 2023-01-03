@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"bsdfs": [
-		{"type":"roughdiffuse", "name": "mat-Sphere", "alpha": 0.5}
+		{"type":"diffuse", "name": "mat-Sphere", "roughness": 0.5}
 	]
 }

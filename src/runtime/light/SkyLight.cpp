@@ -6,7 +6,7 @@
 #include "skysun/SkyModel.h"
 
 namespace IG {
-SkyLight::SkyLight(const std::string& name, const std::shared_ptr<Parser::Object>& light)
+SkyLight::SkyLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
     , mLight(light)
 {
@@ -20,19 +20,19 @@ SkyLight::SkyLight(const std::string& name, const std::shared_ptr<Parser::Object
     mTotalFlux = model.computeTotal().average();
 }
 
-float SkyLight::computeFlux(const ShadingTree& tree) const
+float SkyLight::computeFlux(ShadingTree& tree) const
 {
-    const float radius = tree.context().Environment.SceneDiameter / 2;
+    const float radius = tree.context().SceneDiameter / 2;
     const float scale  = tree.computeNumber("scale", *mLight, 1.0f);
     return mTotalFlux * scale * radius * radius;
 }
 
-static std::string setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<Parser::Object>& light)
+static std::string setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<SceneObject>& light)
 {
     const std::string exported_id = "_sky_" + name;
 
-    const auto data = ctx.ExportedData.find(exported_id);
-    if (data != ctx.ExportedData.end())
+    const auto data = ctx.Cache->ExportedData.find(exported_id);
+    if (data != ctx.Cache->ExportedData.end())
         return std::any_cast<std::string>(data->second);
 
     auto ground    = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
@@ -44,7 +44,7 @@ static std::string setup_sky(LoaderContext& ctx, const std::string& name, const 
     SkyModel model(RGB(ground), ea, turbidity);
     model.save(path);
 
-    ctx.ExportedData[exported_id] = path;
+    ctx.Cache->ExportedData[exported_id] = path;
     return path;
 }
 
@@ -52,10 +52,10 @@ void SkyLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("scale", *mLight, Vector3f::Ones(), true);
+    input.Tree.addColor("scale", *mLight, Vector3f::Ones());
 
     const std::string path = setup_sky(input.Tree.context(), name(), mLight);
-    const auto cdf         = LoaderUtils::setup_cdf(input.Tree.context(), path);
+    const auto cdf         = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 

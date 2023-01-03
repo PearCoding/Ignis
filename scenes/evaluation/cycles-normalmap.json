@@ -1,0 +1,176 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 32,
+    "clamp": 100.0
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.9521293640136719,
+      -0.012801197357475758,
+      -0.30542710423469543,
+      1.3688405752182007,
+      -0.3056952655315399,
+      0.03987182304263115,
+      0.9512941837310791,
+      -4.263437271118164,
+      2.2472998750799889e-07,
+      0.9991227984428406,
+      -0.041876357048749924,
+      1.4294512271881104,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "GroundPlane",
+      "filename": "meshes/GroundPlane.ply"
+    },
+    {
+      "type": "ply",
+      "name": "IcosphereHQ",
+      "filename": "meshes/IcosphereHQ.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "__bsdf_black",
+      "reflectance": 0
+    },
+    {
+      "type": "diffuse",
+      "name": "__bsdf_error",
+      "reflectance": [
+        1,
+        0.75,
+        0.8
+      ]
+    },
+    {
+      "type": "diffuse",
+      "name": "Ground",
+      "reflectance": "select(checkerboard(uvw * 10.0) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0))"
+    },
+    {
+      "type": "principled",
+      "name": "Material_inner",
+      "base_color": "mix(_tex_0((uvw).xy), max(_tex_0((uvw).xy), color(0.0, 0.002233547391369939, 0.5, 1.0)), clamp(1.0,0,1))",
+      "metallic": 0.949999988079071,
+      "roughness": 0.1599999964237213,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "ior": 1.7887885053796064
+    },
+    {
+      "type": "transform",
+      "name": "Material",
+      "bsdf": "Material_inner",
+      "normal": "norm(Nx*((2*_tex_1((uvw).xy)-color(1)).xyz).x + Ny*((2*_tex_1((uvw).xy)-color(1)).xyz).y + N*((2*_tex_1((uvw).xy)-color(1)).xyz).z)"
+    }
+  ],
+  "entities": [
+    {
+      "name": "GroundPlane-GroundPlane",
+      "shape": "GroundPlane",
+      "bsdf": "Ground",
+      "transform": [
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    },
+    {
+      "name": "IcosphereHQ-IcosphereHQ",
+      "shape": "IcosphereHQ",
+      "bsdf": "Material",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "shadow_visible": true
+    }
+  ],
+  "lights": [
+    {
+      "type": "point",
+      "name": "Light",
+      "position": [
+        1.699600100517273,
+        -1.2251337766647339,
+        1.8338091373443604
+      ],
+      "power": [
+        1000.0,
+        1000.0,
+        1000.0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "../textures/grid_weight.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    },
+    {
+      "type": "image",
+      "name": "_tex_1",
+      "filename": "../textures/grid_normal.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": true
+    }
+  ]
+}

@@ -120,8 +120,8 @@ public:
         for (Eigen::Index row = 0; row < mMatrix.rows(); ++row) {
             Eigen::Index col = 0;
             for (size_t i = 0; i < thetas.size(); ++i) {
-                const float solid  = thetas[i].PhiSolidAngle;
-                const uint32 count = thetas[i].PhiCount;
+                const float solid  = thetas.at(i).PhiSolidAngle;
+                const uint32 count = thetas.at(i).PhiCount;
                 for (size_t j = 0; j < count; ++j) {
                     const float value    = mMatrix(row, col);
                     mCDFMatrix(row, col) = (col != 0 ? mCDFMatrix(row, col - 1) : 0) + value * solid;
@@ -132,7 +132,7 @@ public:
             IG_ASSERT(col == mMatrix.cols(), "Expected valid cdf loop generation");
 
             float mag = mCDFMatrix(row, col - 1); // Last entry
-            if (mag <= std::numeric_limits<float>::epsilon())
+            if (mag <= FltEps)
                 mag = 1;
 
             const float norm = 1 / mag;
@@ -149,8 +149,8 @@ public:
         for (Eigen::Index col = 0; col < mMatrix.cols(); ++col) {
             Eigen::Index row = 0;
             for (size_t i = 0; i < thetas.size(); ++i) {
-                const float solid  = thetas[i].PhiSolidAngle;
-                const uint32 count = thetas[i].PhiCount;
+                const float solid  = thetas.at(i).PhiSolidAngle;
+                const uint32 count = thetas.at(i).PhiCount;
                 for (size_t j = 0; j < count; ++j) {
                     const float value    = mMatrix(row, col);
                     mCDFMatrix(row, col) = (row != 0 ? mCDFMatrix(row - 1, col) : 0) + value * solid;
@@ -161,7 +161,7 @@ public:
             IG_ASSERT(row == mMatrix.rows(), "Expected valid cdf loop generation");
 
             float mag = mCDFMatrix(row - 1, col); // Last entry
-            if (mag <= std::numeric_limits<float>::epsilon())
+            if (mag <= FltEps)
                 mag = 1;
 
             const float norm = 1 / mag;
@@ -185,16 +185,18 @@ public:
 
         Eigen::Index row = 0;
         for (size_t i = 0; i < rowThetas.size(); ++i) {
-            const float rowScale     = rowThetas[i].PhiSolidAngle;
-            const uint32 rowPhiCount = rowThetas[i].PhiCount;
+            const float rowScale     = rowThetas.at(i).PhiSolidAngle;
+            const uint32 rowPhiCount = rowThetas.at(i).PhiCount;
             for (size_t ip = 0; ip < rowPhiCount; ++ip) {
-
                 Eigen::Index col = 0;
                 for (size_t j = 0; j < colThetas.size(); ++j) {
-                    const float colScale     = colThetas[i].PhiSolidAngle;
-                    const uint32 colPhiCount = colThetas[i].PhiCount;
+                    const float colScale     = colThetas.at(j).PhiSolidAngle;
+                    const uint32 colPhiCount = colThetas.at(j).PhiCount;
                     for (size_t jp = 0; jp < colPhiCount; ++jp) {
+                        IG_ASSERT(row < mMatrix.rows() && col < mMatrix.cols(), "Expected klems index to be in boundary of matrix");
                         const float value = mMatrix(row, col);
+                        IG_ASSERT(std::isfinite(value), "Expected Klems matrix to contain finite numbers only");
+
                         sum += value * rowScale * colScale;
                         ++col;
                     }
@@ -203,7 +205,58 @@ public:
             }
         }
 
+        IG_ASSERT(std::isfinite(sum), "Expected Klems total computation to return finite numbers");
         return sum;
+    }
+
+    [[nodiscard]] inline float computeMinimumProjectedSolidAngle() const
+    {
+        float minValue = Pi;
+        for (const auto& thetaBase : mRowBasis->thetaBasis())
+            minValue = std::min(minValue, thetaBase.PhiSolidAngle);
+
+        if (mRowBasis != mColumnBasis) {
+            for (const auto& thetaBase : mColumnBasis->thetaBasis())
+                minValue = std::min(minValue, thetaBase.PhiSolidAngle);
+        }
+
+        return minValue;
+    }
+
+    [[nodiscard]] inline float computeMaxHemisphericalScattering() const
+    {
+        const auto& colThetas = mColumnBasis->thetaBasis();
+
+        float maxHemi = 0;
+        for (Eigen::Index row = 0; row < mMatrix.rows(); ++row) {
+            float sum        = 0;
+            Eigen::Index col = 0;
+            for (size_t j = 0; j < colThetas.size(); ++j) {
+                const float colScale     = colThetas.at(j).PhiSolidAngle;
+                const uint32 colPhiCount = colThetas.at(j).PhiCount;
+                for (size_t jp = 0; jp < colPhiCount; ++jp) {
+                    const float value = mMatrix(row, col);
+
+                    sum += value * colScale;
+                    ++col;
+                }
+            }
+            maxHemi = std::max(maxHemi, sum);
+        }
+
+        return maxHemi;
+    }
+
+    [[nodiscard]] inline float extractDiffuse()
+    {
+        const float minValue = mMatrix.minCoeff();
+
+        if (minValue <= 0.01f)
+            return 0; // Not worth extracting diffuse part
+
+        mMatrix.array() -= minValue;
+
+        return Pi * minValue;
     }
 
     inline void write(Serializer& os)
@@ -227,8 +280,9 @@ private:
     KlemsMatrix mCDFMatrix;
 };
 
-static inline void assignSpecification(const KlemsComponent& component, KlemsComponentSpecification& spec)
+static inline void assignSpecification(KlemsComponent& component, KlemsComponentSpecification& spec)
 {
+    // IG_LOG(L_INFO) << "MinPSA: " << component.computeMinimumProjectedSolidAngle() << " MaxHemiS: " << component.computeMaxHemisphericalScattering() << " Diff: " << component.extractDiffuse() << std::endl;
     spec.total       = component.computeTotal();
     spec.theta_count = { component.row()->thetaCount(), component.column()->thetaCount() };
     spec.entry_count = { component.row()->entryCount(), component.column()->entryCount() };
@@ -284,7 +338,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
 
             const float solidA  = std::cos(basis.LowerTheta);
             const float solidB  = std::cos(basis.UpperTheta);
-            basis.PhiSolidAngle = Pi * (solidA * solidA - solidB * solidB) / basis.PhiCount;
+            basis.PhiSolidAngle = basis.PhiCount > 0 ? (Pi * (solidA * solidA - solidB * solidB) / basis.PhiCount) : 0.0f;
 
             const auto theta = child.child("Theta");
             if (theta)
@@ -355,16 +409,28 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
         char* end            = nullptr;
         Eigen::Index ind     = 0;
         bool did_warn_sign   = false;
+        bool did_warn_fin    = false;
         while (ind < component->matrix().size() && *scat_str) {
-            const float value = std::strtof(scat_str, &end);
+            float value = std::strtof(scat_str, &end);
             if (scat_str == end && value == 0) {
                 scat_str = scat_str + 1; // Skip entry
                 continue;
             }
 
-            if (std::signbit(value) && !did_warn_sign) {
-                IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Using absolute value instead" << std::endl;
-                did_warn_sign = true;
+            if (std::signbit(value)) {
+                value = 0;
+                if (!did_warn_sign) {
+                    IG_LOG(L_WARNING) << "Data contains negative values in " << in_xml << ": Using absolute value instead" << std::endl;
+                    did_warn_sign = true;
+                }
+            }
+
+            if (!std::isfinite(value)) {
+                value = 0;
+                if (!did_warn_fin) {
+                    IG_LOG(L_WARNING) << "Data contains non-finite values in " << in_xml << ": Replacing them with 0" << std::endl;
+                    did_warn_fin = true;
+                }
             }
 
             Eigen::Index row, col;
@@ -376,7 +442,7 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
                 col = ind % columnBasis->entryCount();
             }
 
-            component->matrix()(rowPerm.at(row), colPerm.at(col)) = std::abs(value);
+            component->matrix()(rowPerm.at(row), colPerm.at(col)) = value;
             ++ind;
             if (scat_str == end)
                 break;
@@ -404,22 +470,20 @@ bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesy
     }
 
     // If reflection components are not given, make them black
-    // See docs/notes/BSDFdirections.txt in Radiance for more information
+    // See doc/notes/BSDFdirections.txt in Radiance for more information
     if (!reflectionBack) {
         auto basis     = allbasis.begin()->second;
         reflectionBack = std::make_shared<KlemsComponent>(basis, basis);
-        reflectionBack->makeBlack();
     }
     if (!reflectionFront) {
         auto basis      = allbasis.begin()->second;
         reflectionFront = std::make_shared<KlemsComponent>(basis, basis);
-        reflectionFront->makeBlack();
     }
 
     // Make sure both transmission parts are equal if not specified otherwise
-    if (!transmissionBack)
+    if (!transmissionBack || (transmissionFront && transmissionBack->computeTotal() <= FltEps))
         transmissionBack = transmissionFront;
-    if (!transmissionFront)
+    if (!transmissionFront || (transmissionBack && transmissionFront->computeTotal() <= FltEps))
         transmissionFront = transmissionBack;
 
     // TODO: Weird behaviour in Radiance: Radiance expects reciprocity and keeps both transmission sides the same

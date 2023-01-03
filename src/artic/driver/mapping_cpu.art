@@ -447,8 +447,7 @@ fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool) -> AOVImage {
 }
 
 // Hit shader ------------------------------------------------------------------
-fn @cpu_hit_shade(entity_id: i32
-    , primary: &PrimaryStream
+fn @cpu_hit_shade(primary: &PrimaryStream
     , secondary: &SecondaryStream
     , shader: MaterialShader
     , scene: Scene
@@ -477,8 +476,12 @@ fn @cpu_hit_shade(entity_id: i32
     let on_hit    = technique.on_hit;
     let on_shadow = technique.on_shadow;
     let on_bounce = technique.on_bounce;
+
+    // In contrary to the GPU the hit shader is still called per entity
+    let entity_id = read_primary_hit(begin, 0).ent_id;
     let entity    = @entities(entity_id);
     let shape     = @shapes(entity.shape_id);
+
     for i, r_vector_width in vectorized_range(vector_width, begin, end) {
         let ray     = read_primary_ray(i, 0);
         let hit     = read_primary_hit(i, 0);
@@ -532,8 +535,7 @@ fn @cpu_hit_shade(entity_id: i32
     }
 }
 
-fn @cpu_hit_shade_handler(entity_id: i32
-    , shader: MaterialShader
+fn @cpu_hit_shade_handler(shader: MaterialShader
     , scene: Scene
     , technique: Technique
     , payload_info: PayloadInfo
@@ -550,7 +552,7 @@ fn @cpu_hit_shade_handler(entity_id: i32
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
 
     let framebuffer = cpu_get_framebuffer(spi, use_framebuffer);
-    cpu_hit_shade(entity_id, primary, secondary, shader, scene, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+    cpu_hit_shade(primary, secondary, shader, scene, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
 // Miss shader ------------------------------------------------------------------
@@ -726,13 +728,20 @@ fn @cpu_trace( scene_info: SceneInfo
                 current_size = cpu_sort_primary(primary, current_size, temp.ray_begins, temp.ray_ends, scene_info.num_entities, payload_info.primary_count, capacity, is_payload_soa);
 
                 // Perform (vectorized) shading
-                let mut begin = 0;
-                for ent_id in range(0, scene_info.num_entities) {
-                    let end = temp.ray_ends(ent_id);
-                    if begin < end {
-                        pipeline.on_hit_shade(ent_id, begin, end);
+                // In contrary to the GPU the hit shader is still called per entity,
+                // as the utilization is less a problem 
+                // and knowing the entity per call opens up for some optimization 
+                let mut begin  = 0;
+                let mut ent_id = 0;
+                for mat_id in range(0, scene_info.num_materials) {
+                    let n = temp.entity_per_material(mat_id);
+                    for _ in range(0, n) {
+                        let end = temp.ray_ends(ent_id++);
+                        if begin < end {
+                            pipeline.on_hit_shade(mat_id, begin, end);
+                        }
+                        begin = end;
                     }
-                    begin = end;
                 }
 
                 // Shade misses as well
@@ -839,8 +848,8 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
     handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
         cpu_miss_shade_handler(technique, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, payload_info, use_framebuffer, vector_width, is_payload_soa);
     },
-    handle_hit_shader = @ | entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
-        cpu_hit_shade_handler(entity_id, shader, scene, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, vector_width, is_payload_soa);
+    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
+        cpu_hit_shade_handler(shader, scene, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, vector_width, is_payload_soa);
     },
     handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
         cpu_advanced_shadow_handler(shader, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, is_hit, vector_width, is_payload_soa);
@@ -865,8 +874,9 @@ fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_
             }
         }
     },
-    parallel_reduce_i32 = @|n, elem, op| cpu_reduce[i32](n, elem, op),
-    parallel_reduce_f32 = @|n, elem, op| cpu_reduce[f32](n, elem, op),
+    parallel_reduce_i32     = @|n, elem, op| reduce[i32](make_cpu_parallel_reduce_handler(), n, elem, op),
+    parallel_reduce_f32     = @|n, elem, op| reduce[f32](make_cpu_parallel_reduce_handler(), n, elem, op),
+    parallel_reduce_handler = make_cpu_parallel_reduce_handler(),
     get_device_buffer_accessor = @|| { @|ptr| make_cpu_buffer(ptr, 0) },
     load_scene_bvh = @ |prim_type| {
         if vector_width >= 8 {

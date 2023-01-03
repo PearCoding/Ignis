@@ -2,9 +2,7 @@ import bpy
 import os
 
 from .utils import *
-
-
-TEXCOORD_UV = "uvw"
+from .addon_preferences import get_prefs
 
 
 class NodeContext:
@@ -13,7 +11,8 @@ class NodeContext:
         self.path = path
         self.depsgraph = depsgraph
         self.always_copy_images = always_copy_images
-        self.cache = {}
+        self._cache = {}
+        self.offset_texcoord = (0, 0, 0)
 
         self._stack = []
         self._cur = 0
@@ -40,9 +39,26 @@ class NodeContext:
     def scene(self):
         return self.depsgraph.scene
 
+    def shift_texcoord(self, dx=0, dy=0, dz=0):
+        self.offset_texcoord = (
+            self.offset_texcoord[0]+dx, self.offset_texcoord[1]+dy, self.offset_texcoord[2]+dz)
+
+    @property
+    def texcoord(self):
+        if self.offset_texcoord[0] == 0 and self.offset_texcoord[1] == 0 and self.offset_texcoord[2] == 0:
+            return "uvw"
+        else:
+            return f"(vec3({self.offset_texcoord[0]}, {self.offset_texcoord[1]}, {self.offset_texcoord[2]}) + uvw)"
+
+    def get_from_cache(self, socket):
+        return self._cache.get((socket, self.offset_texcoord))
+
+    def put_in_cache(self, socket, expr):
+        self._cache[(socket, self.offset_texcoord)] = expr
+
 
 def _export_default(socket):
-    default_value = getattr(socket, "default_value")
+    default_value = getattr(socket, "default_value", None)
     if default_value is None:
         print(f"Socket {socket.name} has no default value")
         if socket.type == 'VECTOR':
@@ -164,8 +180,7 @@ def _export_scalar_math(ctx, node):
     elif node.operation == "GREATER_THAN":
         ops = f"select({export_node(ctx, node.inputs[0])} > {export_node(ctx, node.inputs[1])}, 1, 0)"
     elif node.operation == "SIGN":
-        # TODO: If value is zero, zero should be returned!
-        ops = f"select({export_node(ctx, node.inputs[0])} < 0, -1, 1)"
+        ops = f"sign({export_node(ctx, node.inputs[0])})"
     elif node.operation == "COMPARE":
         ops = f"select(abs({export_node(ctx, node.inputs[0])} - {export_node(ctx, node.inputs[1])}) <= Eps, 1, 0)"
     elif node.operation == "ROUND":
@@ -230,12 +245,34 @@ def _export_rgb_value(ctx, node):
     return f"color({default_value[0]}, {default_value[1]}, {default_value[2]}, {default_value[3]})"
 
 
+def _export_mix(ctx, node):
+    # New ShaderNodeMix node (Blender 3.4)
+    if node.data_type == 'FLOAT':
+        return _export_scalar_mix(ctx, node)
+    elif node.data_type == 'VECTOR':
+        return _export_vector_mix(ctx, node)
+    elif node.data_type == 'RGBA':
+        return _export_rgb_math(ctx, node)
+    else:
+        print(f"Unknown data type {node.data_type} for ShaderNodeMix")
+        return None
+
+
 def _export_rgb_math(ctx, node):
     # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html
 
+    is_new_node = hasattr(node, "clamp_factor")
+
     fac = export_node(ctx, node.inputs[0])
-    col1 = export_node(ctx, node.inputs[1])  # Background (I)
-    col2 = export_node(ctx, node.inputs[2])  # Foreground (M)
+    # Background (I)
+    col1 = export_node(ctx, node.inputs[6 if is_new_node else 1])
+    # Foreground (M)
+    col2 = export_node(ctx, node.inputs[7 if is_new_node else 2])
+
+    # Support for new node ShaderNodeMix (Blender 3.4)
+    clamp_factor = getattr(node, "clamp_factor", False)
+    if clamp_factor:
+        fac = f"clamp({fac},0,1)"
 
     ops = ""
     if node.blend_type == "MIX":
@@ -279,10 +316,47 @@ def _export_rgb_math(ctx, node):
             f"Not supported rgb math operation type {node.operation} for node {node.name}")
         return "color(0)"
 
-    if node.use_clamp:
+    use_clamp = getattr(node, "use_clamp", getattr(
+        node, "clamp_result", False))
+    if use_clamp:
         return f"clamp({ops}, color(0), color(1))"
     else:
         return ops
+
+
+def _export_scalar_mix(ctx, node):
+    fac = export_node(ctx, node.inputs[0])
+    v1 = export_node(ctx, node.inputs[2])
+    v2 = export_node(ctx, node.inputs[3])
+
+    # Support for new node ShaderNodeMix (Blender 3.4)
+    clamp_factor = getattr(node, "clamp_factor", False)
+    if clamp_factor:
+        fac = f"clamp({fac},0,1)"
+
+    return f"mix({v1}, {v2}, {fac})"
+
+
+def _export_vector_mix(ctx, node):
+    is_uniform = getattr(node, "factor_mode", "UNIFORM") == 'UNIFORM'
+
+    fac = export_node(ctx, node.inputs[0 if is_uniform else 1])
+    v1 = export_node(ctx, node.inputs[4])
+    v2 = export_node(ctx, node.inputs[5])
+
+    # Support for new node ShaderNodeMix (Blender 3.4)
+    clamp_factor = getattr(node, "clamp_factor", False)
+
+    if is_uniform:
+        if clamp_factor:
+            fac = f"clamp({fac},0,1)"
+
+        return f"mix({v1}, {v2}, {fac})"
+    else:
+        if clamp_factor:
+            fac = f"clamp({fac},vec3(0),vec3(1))"
+
+        return f"(({v1}) *(vec3(1) - {fac}) + ({v2}) * ({fac}))"
 
 
 def _export_rgb_gamma(ctx, node):
@@ -366,6 +440,50 @@ def _export_separate_xyz(ctx, node, output_name):
         return f"{vec}.y"
     else:
         return f"{vec}.z"
+
+
+def _export_separate_color(ctx, node, output_name):
+    vec = export_node(ctx, node.inputs[0])
+    if node.mode == 'HSV':
+        if output_name == "Hue":
+            return f"rgbtohsv({vec}).x"
+        elif output_name == "Saturation":
+            return f"rgbtohsv({vec}).y"
+        elif output_name == "Value":
+            return f"rgbtohsv({vec}).z"
+        else:
+            return f"{vec}.w"
+    elif node.mode == 'HSL':
+        if output_name == "Hue":
+            return f"rgbtohsl({vec}).x"
+        elif output_name == "Saturation":
+            return f"rgbtohsl({vec}).y"
+        elif output_name == "Lightness":
+            return f"rgbtohsl({vec}).z"
+        else:
+            return f"{vec}.w"
+    else:
+        if output_name == "Red":
+            return f"{vec}.x"
+        elif output_name == "Green":
+            return f"{vec}.y"
+        elif output_name == "Blue":
+            return f"{vec}.z"
+        else:
+            return f"{vec}.w"
+
+
+def _export_combine_color(ctx, node):
+    x = export_node(ctx, node.inputs[0])
+    y = export_node(ctx, node.inputs[1])
+    z = export_node(ctx, node.inputs[2])
+
+    if node.mode == 'HSV':
+        return f"hsvtorgb(color({x}, {y}, {z}))"
+    elif node.mode == 'HSL':
+        return f"hsltorgb(color({x}, {y}, {z}))"
+    else:
+        return f"color({x}, {y}, {z})"
 
 
 def _export_hsv(ctx, node):
@@ -708,6 +826,7 @@ def _export_vector_transform(ctx, node):
 
     vec = export_node(ctx, node.inputs["Vector"])
     if node.convert_from == 'CAMERA' or node.convert_to == 'CAMERA':
+        # TODO: Add support for this as it is easy to implement if the orientation is exposed to PExpr
         print(
             f"Transforming from {node.convert_from} to {node.convert_to} is not supported")
     elif node.convert_from != node.convert_to:
@@ -732,26 +851,61 @@ def _export_normal(ctx, node, output_name):
 
 
 def _export_normalmap(ctx, node):
-    # Only supporting tangent space
-    if node.space != 'TANGENT' and node.space != 'WORLD':
-        print(
-            f"Only tangent and world space normal mapping supported")
-
     color = export_node(ctx, node.inputs["Color"])
     strength = export_node(ctx, node.inputs["Strength"])
 
     ln = f"(2*{color}-color(1)).xyz"
     if node.space == 'TANGENT':
         dn = f"norm(Nx*({ln}).x + Ny*({ln}).y + N*({ln}).z)"
+    elif node.space == 'OBJECT':
+        dn = f"norm(transform_normal({ln},\"object\",\"global\"))"
+    elif node.space == 'BLENDER_OBJECT':
+        dn = f"norm(transform_normal(({ln})*vec3(-1,-1,1),\"object\",\"global\"))"
+    elif node.space == 'BLENDER_WORLD':
+        dn = f"norm(({ln})*vec3(-1,-1,1))"
     else:
         dn = f"norm({ln})"
 
     if try_extract_node_value(strength) == 1:
         return dn
     elif try_extract_node_value(strength) == 0:
-        return "vec3(0)"
+        return "N"
     else:
         return f"norm(({dn} - N)*{strength} + N)"
+
+
+def _export_bumpmap(ctx, node):
+    strength = export_node(ctx, node.inputs["Strength"])
+    distance = export_node(ctx, node.inputs["Distance"])
+    normal = export_node(
+        ctx, node.inputs["Normal"]) if node.inputs["Normal"].is_linked else "N"
+
+    # Early exit if strength is zero
+    if try_extract_node_value(strength) == 0:
+        return normal
+
+    if node.invert:
+        distance = f"-({distance})"
+
+    # We do not support extracting gradients from expressions (yet), so just use forward difference
+    delta = 0.001  # TODO: This should be based on ray differentials
+    center = export_node(ctx, node.inputs["Height"])
+    ctx.shift_texcoord(delta, 0)
+    sample_x = export_node(ctx, node.inputs["Height"])
+    ctx.shift_texcoord(-delta, delta)
+    sample_y = export_node(ctx, node.inputs["Height"])
+    ctx.shift_texcoord(0, -delta)
+
+    dx = f"((({sample_x})-({center}))/{delta})"
+    dy = f"((({sample_y})-({center}))/{delta})"
+    func = f"bump({normal}, Nx, Ny, {distance}, {dx}, {dy})"
+
+    if try_extract_node_value(strength) == 1:
+        out = func
+    else:
+        out = f"norm(mix({normal},{func},{strength}))"
+
+    return f"ensure_valid_reflection(Ng, V, {out})"
 
 
 def _export_checkerboard(ctx, node, output_name):
@@ -760,7 +914,7 @@ def _export_checkerboard(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     raw = f"checkerboard({uv} * {scale})"
     if output_name == "Color":
@@ -797,10 +951,12 @@ def _export_image(image, path, is_f32=False, keep_format=False):
 
 
 def _handle_image(ctx, image):
+    tex_dir_name = get_prefs().tex_dir_name
+
     if image.source == 'GENERATED':
         img_name = image.name + \
             (".png" if not image.use_generated_float else ".exr")
-        img_path = os.path.join("Textures", img_name)
+        img_path = os.path.join(tex_dir_name, img_name)
         if img_name not in ctx.result["_images"]:
             _export_image(image, os.path.join(ctx.path, img_path),
                           is_f32=image.use_generated_float)
@@ -828,11 +984,11 @@ def _handle_image(ctx, image):
                 else:
                     is_f32 = False
                     extension = ".png"
-                img_path = os.path.join("Textures", image.name + extension)
+                img_path = os.path.join(tex_dir_name, image.name + extension)
             else:
                 keep_format = True
                 is_f32 = False  # Does not matter
-                img_path = os.path.join("Textures", img_name)
+                img_path = os.path.join(tex_dir_name, img_name)
 
             if img_name not in ctx.result["_images"]:
                 try:
@@ -840,9 +996,9 @@ def _handle_image(ctx, image):
                                   is_f32=is_f32, keep_format=keep_format)
                 except:
                     # Above failed, so give this a try
-                    img_path = os.path.join("Textures", img_name)
+                    img_path = os.path.join(tex_dir_name, img_name)
                     _export_image(image, os.path.join(ctx.path, img_path),
-                                  is_f32=False, keep_format=False)
+                                  is_f32=False, keep_format=True)
                 ctx.result["_images"].add(img_name)
         return img_path
     else:
@@ -850,7 +1006,7 @@ def _handle_image(ctx, image):
         return None
 
 
-def _export_image_texture(ctx, node):
+def _export_image_texture(ctx, node, output_name):
     id = len(ctx.result["textures"])
     tex_name = f"_tex_{id}"
 
@@ -906,14 +1062,17 @@ def _export_image_texture(ctx, node):
     else:
         tex_access = tex_name
 
-    return tex_access
+    if output_name == "Color":
+        return tex_access
+    else:
+        return f"{tex_access}.w"
 
 
 def _get_noise_vector(ctx, node):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     if node.noise_dimensions == '1D':
         w = export_node(ctx, node.inputs["W"])
@@ -952,7 +1111,7 @@ def _export_voronoi(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     ops = f"{uv}.xy"
     if node.voronoi_dimensions != '2D':
@@ -975,7 +1134,7 @@ def _export_musgrave(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     ops = f"{uv}.xy"
     if node.musgrave_dimensions != '2D':
@@ -992,7 +1151,7 @@ def _export_wave(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     scale = export_node(ctx, node.inputs["Scale"])
     uv = f"({uv}*{scale})"
@@ -1073,7 +1232,7 @@ def _export_gradient(ctx, node, output_name):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
-        uv = TEXCOORD_UV
+        uv = ctx.texcoord
 
     if node.gradient_type == "LINEAR":
         fac = f"{uv}.x"
@@ -1120,7 +1279,7 @@ def _export_surface_attributes(ctx, node, output_name):
 
 def _export_tex_coordinate(ctx, node, output_name):
     if output_name == 'UV':
-        return TEXCOORD_UV
+        return ctx.texcoord
     elif output_name == 'Generated':
         return "Np"
     elif output_name == 'Normal':
@@ -1133,14 +1292,14 @@ def _export_tex_coordinate(ctx, node, output_name):
     else:
         print(
             f"Given texture coordinate output '{output_name}' is not supported")
-        return TEXCOORD_UV
+        return ctx.texcoord
 
 
 def _export_uvmap(ctx, node):
     # TODO: Maybe support this with texture lookups?
     if node.uv_map != "":
         print(f"Additional UV Maps are not supported, default to first one")
-    return TEXCOORD_UV
+    return ctx.texcoord
 
 
 def _export_object_info(ctx, node, output_name):
@@ -1241,7 +1400,7 @@ def handle_node_implicit_mappings(socket, expr):
 
 def export_node(ctx, socket):
     # Missing:
-    # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeBump, ShaderNodeCameraData,
+    # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeCameraData,
     # ShaderNodeCustomGroup, ShaderNodeHairInfo, ShaderNodeLightFalloff,
     # ShaderNodeObjectInfo, ShaderNodeScript,
     # ShaderNodeShaderToRGB, ShaderNodeSubsurfaceScattering, ShaderNodeTangent,
@@ -1254,105 +1413,117 @@ def export_node(ctx, socket):
     # ShaderNodeParticleInfo, ShaderNodeOutputLineStyle, ShaderNodePointInfo, ShaderNodeHoldout
 
     if socket.is_linked:
-        if socket in ctx.cache:
-            return ctx.cache[socket]
+        cached_value = ctx.get_from_cache(socket)
+        if cached_value is not None:
+            return cached_value
 
         node = socket.links[0].from_node
         output_name = socket.links[0].from_socket.name
 
-        if isinstance(node, bpy.types.ShaderNodeTexImage):
-            expr = _export_image_texture(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeTexChecker):
+        def check_instance(typename):
+            return hasattr(bpy.types, typename) and isinstance(node, getattr(bpy.types, typename))
+
+        if check_instance("ShaderNodeTexImage"):
+            expr = _export_image_texture(ctx, node, output_name)
+        elif check_instance("ShaderNodeTexChecker"):
             expr = _export_checkerboard(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeTexCoord):
+        elif check_instance("ShaderNodeTexCoord"):
             expr = _export_tex_coordinate(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeTexNoise):
+        elif check_instance("ShaderNodeTexNoise"):
             expr = _export_noise(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeTexWhiteNoise):
+        elif check_instance("ShaderNodeTexWhiteNoise"):
             expr = _export_white_noise(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeTexVoronoi):
+        elif check_instance("ShaderNodeTexVoronoi"):
             expr = _export_voronoi(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeTexMusgrave):
+        elif check_instance("ShaderNodeTexMusgrave"):
             expr = _export_musgrave(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeTexWave):
+        elif check_instance("ShaderNodeTexWave"):
             expr = _export_wave(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeTexEnvironment):
+        elif check_instance("ShaderNodeTexEnvironment"):
             expr = _export_environment(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeTexGradient):
+        elif check_instance("ShaderNodeTexGradient"):
             expr = _export_gradient(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeNewGeometry):
+        elif check_instance("ShaderNodeNewGeometry"):
             expr = _export_surface_attributes(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeFresnel):
+        elif check_instance("ShaderNodeFresnel"):
             expr = _export_fresnel(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeLayerWeight):
+        elif check_instance("ShaderNodeLayerWeight"):
             expr = _export_layer_weight(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeMath):
+        elif check_instance("ShaderNodeMath"):
             expr = _export_scalar_math(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeValue):
+        elif check_instance("ShaderNodeValue"):
             expr = _export_scalar_value(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeClamp):
+        elif check_instance("ShaderNodeClamp"):
             expr = _export_scalar_clamp(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeMapRange):
+        elif check_instance("ShaderNodeMapRange"):
             expr = _export_maprange(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeMixRGB):
+        elif check_instance("ShaderNodeMixRGB"):
             expr = _export_rgb_math(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeInvert):
+        elif check_instance("ShaderNodeMix"):
+            expr = _export_mix(ctx, node)
+        elif check_instance("ShaderNodeInvert"):
             expr = _export_rgb_invert(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeGamma):
+        elif check_instance("ShaderNodeGamma"):
             expr = _export_rgb_gamma(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeBrightContrast):
+        elif check_instance("ShaderNodeBrightContrast"):
             expr = _export_rgb_brightcontrast(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeHueSaturation):
+        elif check_instance("ShaderNodeHueSaturation"):
             expr = _export_hsv(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeBlackbody):
+        elif check_instance("ShaderNodeBlackbody"):
             expr = _export_blackbody(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeRGB):
+        elif check_instance("ShaderNodeRGB"):
             expr = _export_rgb_value(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeValToRGB):
+        elif check_instance("ShaderNodeValToRGB"):
             expr = _export_val_to_rgb(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeRGBToBW):
+        elif check_instance("ShaderNodeRGBToBW"):
             expr = _export_rgb_to_bw(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeCombineHSV):
+        elif check_instance("ShaderNodeCombineHSV"):
             expr = _export_combine_hsv(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeCombineRGB):
+        elif check_instance("ShaderNodeCombineRGB"):
             expr = _export_combine_rgb(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeCombineXYZ):
+        elif check_instance("ShaderNodeCombineXYZ"):
             expr = _export_combine_xyz(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeSeparateHSV):
+        elif check_instance("ShaderNodeSeparateHSV"):
             expr = _export_separate_hsv(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeSeparateRGB):
+        elif check_instance("ShaderNodeSeparateRGB"):
             expr = _export_separate_rgb(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeSeparateXYZ):
+        elif check_instance("ShaderNodeSeparateXYZ"):
             expr = _export_separate_xyz(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeFloatCurve):
+        elif check_instance("ShaderNodeSeparateColor"):
+            expr = _export_separate_color(ctx, node, output_name)
+        elif check_instance("ShaderNodeCombineColor"):
+            expr = _export_combine_color(ctx, node)
+        elif check_instance("ShaderNodeFloatCurve"):
             expr = _export_float_curve(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeRGBCurve):
+        elif check_instance("ShaderNodeRGBCurve"):
             expr = _export_rgb_curve(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeVectorCurve):
+        elif check_instance("ShaderNodeVectorCurve"):
             expr = _export_vector_curve(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeMapping):
+        elif check_instance("ShaderNodeMapping"):
             expr = _export_vector_mapping(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeVectorMath):
+        elif check_instance("ShaderNodeVectorMath"):
             expr = _export_vector_math(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeVectorRotate):
+        elif check_instance("ShaderNodeVectorRotate"):
             expr = _export_vector_rotate(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeVectorTransform):
+        elif check_instance("ShaderNodeVectorTransform"):
             expr = _export_vector_transform(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeNormal):
+        elif check_instance("ShaderNodeNormal"):
             expr = _export_normal(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeNormalMap):
+        elif check_instance("ShaderNodeNormalMap"):
             expr = _export_normalmap(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeUVMap):
+        elif check_instance("ShaderNodeBump"):
+            expr = _export_bumpmap(ctx, node)
+        elif check_instance("ShaderNodeUVMap"):
             expr = _export_uvmap(ctx, node)
-        elif isinstance(node, bpy.types.ShaderNodeObjectInfo):
+        elif check_instance("ShaderNodeObjectInfo"):
             expr = _export_object_info(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeLightPath):
+        elif check_instance("ShaderNodeLightPath"):
             expr = _export_light_path(ctx, node, output_name)
-        elif isinstance(node, bpy.types.ShaderNodeGroup):
+        elif check_instance("ShaderNodeGroup"):
             expr = handle_node_group_begin(ctx, node, output_name, export_node)
-        elif isinstance(node, bpy.types.NodeGroupInput):
+        elif check_instance("NodeGroupInput"):
             expr = handle_node_group_end(ctx, node, output_name, export_node)
-        elif isinstance(node, bpy.types.NodeReroute):
+        elif check_instance("NodeReroute"):
             expr = handle_node_reroute(ctx, node, export_node)
         else:
             print(
@@ -1364,7 +1535,7 @@ def export_node(ctx, socket):
 
         full_expr = handle_node_implicit_mappings(socket, expr)
 
-        ctx.cache[socket] = full_expr
+        ctx.put_in_cache(socket, full_expr)
         return full_expr
     else:
         return _export_default(socket)

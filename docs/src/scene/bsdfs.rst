@@ -21,76 +21,52 @@ The type has to be one of the bsdfs listed at this section below.
 
 .. _bsdf-diffuse:
 
-Smooth diffuse (:monosp:`diffuse`)
+Diffuse (:monosp:`diffuse`)
 ----------------------------------
 
 .. objectparameters::
 
   * - reflectance
     - |color|
-    - :code:`0.5`
+    - :code:`0.8`
     - Yes
     - Albedo
-
-.. subfigstart::
-  
-.. figure:: images/mat_diffuse.jpg
-  :width: 90%
-
-  Diffuse
-
-.. subfigend::
-  :width: 0.6
-  :label: fig-diffuse
-
-.. _bsdf-roughdiffuse:
-
-Rough diffuse (:monosp:`roughdiffuse`)
---------------------------------------
-
-.. objectparameters::
-
-  * - reflectance
-    - |color|
-    - :code:`0.5`
-    - Yes
-    - Albedo
-
-  * - alpha
+  * - roughness
     - |number|
     - :code:`0`
     - Yes
-    - Isotropic roughness.
+    - Isotropic roughness. If :paramtype:`roughness` > 0, the Oren-Nayar model will be used.
 
 .. subfigstart::
+  
+.. subfigure:: images/bsdf_diffuse.jpg
 
-.. figure::  images/mat_roughdiffuse.jpg
-  :width: 90%
-  :align: center
+  Diffuse
+
+.. subfigure::  images/bsdf_roughdiffuse.jpg
   
   Rough diffuse, also called Oren-Nayar 
 
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-diffuse
+  :label: fig-diffuse
 
 .. _bsdf-dielectric:
 
-Smooth dielectric (:monosp:`dielectric`)
+Dielectric (:monosp:`dielectric`)
 ----------------------------------------
 
 .. objectparameters::
 
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
-    - TODO
+    - Reflectance factor. Should be less or equal to 1 for each component for physical correctness.
   * - specular_transmittance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
-    - TODO
+    - Transmittance factor. Should be less or equal to 1 for each component for physical correctness.
   * - ext_ior, int_ior
     - |number|
     - ~vacuum, ~bk7
@@ -105,100 +81,41 @@ Smooth dielectric (:monosp:`dielectric`)
     - |bool|
     - |false|
     - No
-    - True if the glass should be treated as a thin interface. :paramtype:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
-
+    - |true| if the glass should be treated as a thin interface. :paramtype:`int_ior` will be always the inside of the thin surface, regardless of the direction of the surface normal.
+  * - roughness_u, roughness_v
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness of the dielectric. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead. :paramtype:`thin` will be ignored if roughness is greater than zero.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution. :paramtype:`thin` will be ignored if roughness is greater than zero.
 
 .. subfigstart::
 
-.. figure::  images/mat_dielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_dielectric.jpg
   :align: center
   
-  Dielectric
+  Smooth dielectric
 
-.. figure::  images/mat_thindielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_thindielectric.jpg
   :align: center
   
-  Dielectric with thin approximation 
+  Smooth dielectric with thin approximation 
 
-.. subfigend::
-  :width: 0.30
-  :label: fig-dielectric 
-
-.. _bsdf-roughdielectric:
-
-Rough dielectric (:monosp:`roughdielectric`)
---------------------------------------------
-
-.. objectparameters::
-
-  * - specular_reflectance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - TODO
-  * - specular_transmittance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - TODO
-  * - ext_ior, int_ior
-    - |number|
-    - ~vacuum, ~bk7 
-    - Yes  
-    - Specifies exterior and interior index of refraction.
-  * - ext_ior_material, int_ior_material
-    - |string|
-    - *None*, *None*
-    - No
-    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
-  * - alpha_u, alpha_v
-    - |number|
-    - :code:`0.1`, :code:`0.1`
-    - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well. 
-
-.. subfigstart::
-
-.. figure::  images/mat_roughdielectric.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_roughdielectric.jpg
   :align: center
   
   Rough dielectric
 
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-dielectric
-
-.. _bsdf-mirror:
-
-Perfect smooth mirror (:monosp:`mirror`)
-----------------------------------------
-
-.. objectparameters::
-
-  * - specular_reflectance
-    - |texture|
-    - :code:`1.0`
-    - Yes
-    - TODO
-
-.. subfigstart::
-
-.. figure::  images/mat_mirror.jpg
-  :width: 90%
-  :align: center
-  
-  Mirror, or a perfect conductor
-
-.. subfigend::
-  :width: 0.6
-  :label: fig-mirror
+  :label: fig-dielectric 
 
 .. _bsdf-conductor:
 
-Smooth conductor (:monosp:`conductor`)
+Conductor (:monosp:`conductor`)
 --------------------------------------
 
 .. objectparameters::
@@ -212,84 +129,61 @@ Smooth conductor (:monosp:`conductor`)
     - |string|
     - *None*
     - No
-    - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
+    - Instead of :paramtype:`eta`, :paramtype:`k` a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
     - Optional factor that can be used to modulate the specular reflection component.
       Note that for physical realism, this parameter should never be touched. 
+  * - roughness_u, roughness_v
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
 
 .. subfigstart::
 
-.. figure::  images/mat_conductor.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_conductor.jpg
   :align: center
   
-  Gold conductor
+  Smooth gold conductor
 
-.. subfigend::
-  :width: 0.6
-  :label: fig-conductor
-
-.. _bsdf-roughconductor:
-
-Rough conductor (:monosp:`roughconductor`)
-------------------------------------------
-
-.. objectparameters::
-
-  * - eta, k
-    - |color|
-    - ~Gold
-    - Yes
-    - Real and imaginary components of the material's index of refraction.
-  * - material
-    - |string|
-    - *None*
-    - No
-    - Instead of eta, k a material name can be specified. Available presets are listed :ref:`here <bsdf-conductor-list>`.
-  * - specular_reflectance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - Optional factor that can be used to modulate the specular reflection component.
-      Note that for physical realism, this parameter should never be touched. 
-  * - alpha_u, alpha_v
-    - |number|
-    - :code:`0.1`, :code:`0.1`
-    - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well.
-   
-.. subfigstart::
-
-.. figure::  images/mat_roughconductor.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_roughconductor.jpg
   :align: center
   
   Rough gold conductor
 
+.. subfigure::  images/bsdf_mirror.jpg
+  :align: center
+  
+  A perfect conductor (also called a mirror), can be specified with :paramtype:`eta` = 0 and :paramtype:`k` = 1
+
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-conductor
+  :label: fig-conductor
 
 .. _bsdf-plastic:
 
-Smooth plastic (:monosp:`plastic`)
+Plastic (:monosp:`plastic`)
 ----------------------------------
 
 .. objectparameters::
 
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
-    - TODO
+    - Specular reflectance. Should be less or equal to 1 for each component for physical correctness.
   * - diffuse_reflectance
     - |color|
-    - :code:`0.5`
+    - :code:`0.8`
     - Yes
-    - TODO
+    - Diffuse reflectance. Should be less or equal to 1 for each component for physical correctness.
   * - ext_ior, int_ior
     - |number|
     - ~vacuum, ~bk7
@@ -300,63 +194,31 @@ Smooth plastic (:monosp:`plastic`)
     - *None*, *None*
     - No
     - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+  * - roughness_u, roughness_v
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead.
+  * - roughness, anisotropic
+    - |number|
+    - :code:`0`, :code:`0`
+    - Yes
+    - Roughness and anisotropic terms. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
 
 .. subfigstart::
 
-.. figure::  images/mat_plastic.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_plastic.jpg
   :align: center
   
-  Plastic
+  Smooth plastic
 
-.. subfigend::
-  :width: 0.6
-  :label: fig-plastic
-
-.. _bsdf-roughplastic:
-
-Rough plastic (:monosp:`roughplastic`)
---------------------------------------
-
-.. objectparameters::
-
-  * - specular_reflectance
-    - |color|
-    - :code:`1.0`
-    - Yes
-    - TODO
-  * - diffuse_reflectance
-    - |color|
-    - :code:`0.5`
-    - Yes
-    - TODO
-  * - ext_ior, int_ior
-    - |number| 
-    - ~vacuum, ~bk7   
-    - Yes
-    - Specifies exterior and interior index of refraction.
-  * - ext_ior_material, int_ior_material
-    - |string|
-    - *None*, *None*
-    - No
-    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
-  * - alpha_u, alpha_v
-    - |number|
-    - :code:`0.1`, :code:`0.1`
-    - Yes
-    - Roughness terms. Can be specified isotropic using :paramtype:`alpha` as well. 
-
-.. subfigstart::
-
-.. figure::  images/mat_roughplastic.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_roughplastic.jpg
   :align: center
   
   Rough plastic
 
 .. subfigend::
-  :width: 0.6
-  :label: fig-rough-plastic
+  :label: fig-plastic
 
 .. _bsdf-phong:
 
@@ -367,32 +229,30 @@ Phong (:monosp:`phong`)
 
   * - specular_reflectance
     - |color|
-    - :code:`1.0`
+    - :code:`1`
     - Yes
-    - TODO
+    - Reflectance factor. Should be less or equal to 1 for each component for physical correctness. See note below for PBR consideration.
   * - exponent
     - |number|
     - :code:`30`
     - Yes
-    - TODO
+    - Exponent of the lobe. Greater number results into a greater peak, therefore the visible peak spot will be smaller.
 
 .. subfigstart::
 
-.. figure::  images/mat_phong.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_phong.jpg
   :align: center
   
   Phong
 
 .. subfigend::
-  :width: 0.6
   :label: fig-phong
 
-.. NOTE:: It is not recommended to use this bsdf for new projects as it disregards some PBR principles and is only included for legacy purposes.
+.. NOTE:: It is not recommended to use this BSDF for new projects as it disregards some PBR principles and is only included for legacy purposes.
 
 .. _bsdf-principled:
 
-Disney *Principled* (:monosp:`principled`)
+Principled (:monosp:`principled`)
 ------------------------------------------
 
 .. objectparameters::
@@ -401,22 +261,22 @@ Disney *Principled* (:monosp:`principled`)
     - |color|
     - :code:`0.8`
     - Yes
-    - TODO
+    - Base color of the principled bsdf. Should be less or equal to 1 for each component for physical correctness.
   * - metallic
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
-  * - roughness
+    - A number between 0 and 1. A metallic value of 1 displays a full metallic (conductor), which can not transmit via refraction.
+  * - roughness_u, roughness_v
     - |number|
-    - :code:`0.5`
+    - :code:`0.5`, :code:`0.5`
     - Yes
-    - TODO
-  * - anisotropic
+    - Anisotropic microfacet roughness for specular, diffuse and sheen reflection terms. Can be specified implicitly using :paramtype:`roughness` and :paramtype:`anisotropic` instead. The roughness is computed via the GGX method.
+  * - roughness, anisotropic
     - |number|
-    - :code:`0.0`
+    - :code:`0.5`, :code:`0`
     - Yes
-    - TODO
+    - The microfacet roughness for specular, diffuse and sheen reflection and anisotropic terms. The roughness is computed via the GGX method. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
   * - ior
     - |number|
     - ~bk7   
@@ -431,42 +291,47 @@ Disney *Principled* (:monosp:`principled`)
     - |bool|
     - |false|
     - No
-    - TODO
+    - |true| if the bsdf should be treated as a thin interface, which affects the refraction and subsurface behavior.
   * - flatness
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
+    - Amount of subsurface approximation. Only available if :paramtype:`thin` is |true|.
   * - specular_transmission
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
+    - Amount of specular transmission. Should be less or equal to 1 for physical correctness.
   * - specular_tint
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
+    - Mix factor of white and :paramtype:`base_color` for specular reflections.
+  * - diffuse_transmission
+    - |number|
+    - :code:`0`
+    - Yes
+    - Amount of diffuse transmission. Should be less or equal to 1 for physical correctness. This is often named *translucency* in other applications.
   * - sheen
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
+    - Amount of soft velvet layer resulting into a soft reflection near the edges.
   * - sheen_tint
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
+    - Mix factor of white and :paramtype:`base_color` for sheen reflections.
   * - clearcoat
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
+    - Amount of white specular layer at the top.
   * - clearcoat_gloss
     - |number|
-    - :code:`0.0`
+    - :code:`0`
     - Yes
-    - TODO
+    - Amount of shininess of the clearcoat layer.
   * - clearcoat_top_only
     - |bool|
     - |true|
@@ -476,23 +341,16 @@ Disney *Principled* (:monosp:`principled`)
     - |number|
     - :code:`0.1`
     - Yes
-    - TODO
-  * - diffuse_transmission
-    - |number|
-    - :code:`0.0`
-    - Yes
-    - TODO
+    - The isotropic microfacet roughness for clearcoat. Higher values result into a rougher appearance. The roughness computed via the GGX method.
 
 .. subfigstart::
 
-.. figure::  images/mat_principled.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_principled.jpg
   :align: center
   
   Disney *Principled* 
 
 .. subfigend::
-  :width: 0.6
   :label: fig-principled
 
 .. _bsdf-blend:
@@ -506,23 +364,21 @@ Blend (:monosp:`blend`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The two bsdfs which should be blended.
   * - weight
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Amount of blend between the first and second bsdf.
 
 .. subfigstart::
 
-.. figure::  images/mat_blend.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_blend.jpg
   :align: center
   
   Blend of two bsdfs. One dielectric, one diffuse
 
 .. subfigend::
-  :width: 0.6
   :label: fig-blend
 
 .. _bsdf-mask:
@@ -536,28 +392,26 @@ Mask (:monosp:`mask`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf which should be masked out.
   * - weight
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Amount of masking. This is only useful if the weight is spatially varying, else it behaves like opacity.
   * - inverted
     - |bool|
     - |false|
     - No
-    - TODO
+    - |true| if the weight should be inverted.
 
 .. subfigstart::
 
-.. figure::  images/mat_mask.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_mask.jpg
   :align: center
   
   Mask with a uniform weight
 
 .. subfigend::
-  :width: 0.6
   :label: fig-mask
 
 .. _bsdf-cutoff:
@@ -571,33 +425,31 @@ Cutoff (:monosp:`cutoff`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf which should be cutoff.
   * - weight
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Weight factor for cutoff. This is only useful if the weight or :paramtype:`cutoff` is spatially varying.
   * - cutoff
     - |number|
     - :code:`0.5`
     - Yes
-    - TODO
+    - Threshold for cutoff. This is only useful if cutoff or :paramtype:`weight` is spatially varying.
   * - inverted
     - |bool|
     - |false|
     - No
-    - TODO
+    - |true| if the weight should be inverted. Keep in mind that :paramtype:`cutoff` is not inverted.
 
 .. subfigstart::
 
-.. figure::  images/mat_cutoff.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_cutoff.jpg
   :align: center
   
   Cutoff with a uniform weight
 
 .. subfigend::
-  :width: 0.6
   :label: fig-cutoff
 
 .. _bsdf-passthrough:
@@ -607,17 +459,15 @@ Passthrough (:monosp:`passthrough`)
 
 .. subfigstart::
 
-.. figure::  images/mat_passthrough.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_passthrough.jpg
   :align: center
   
   Passthrough
 
 .. subfigend::
-  :width: 0.6
   :label: fig-passthrough
 
-.. WARNING:: The :monosp:`passthrough` bsdf should be used carefully, as simple techniques like Next-Event Estimation still see the object geometry.
+.. WARNING:: The :monosp:`passthrough` bsdf should be used carefully, as simple techniques like Next-Event Estimation still intersect the object geometry.
 
 .. _bsdf-normalmap:
 
@@ -630,7 +480,7 @@ Normal mapping (:monosp:`normalmap`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf the new normal will be forwarded to.
   * - map
     - |color|
     - :code:`1`
@@ -640,18 +490,16 @@ Normal mapping (:monosp:`normalmap`)
     - |number|
     - :code:`1`
     - Yes
-    - TODO
+    - Interpolation factor between the old and new normal.
 
 .. subfigstart::
 
-.. figure::  images/mat_normalmap.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_normalmap.jpg
   :align: center
   
   Normal mapping
 
 .. subfigend::
-  :width: 0.6
   :label: fig-normalmap
 
 .. _bsdf-bumpmap:
@@ -665,7 +513,7 @@ Bump mapping (:monosp:`bumpmap`)
     - |bsdf|
     - *None*
     - No
-    - TODO
+    - The bsdf the new normal will be forwarded to.
   * - map
     - |texture|
     - *None*
@@ -675,18 +523,16 @@ Bump mapping (:monosp:`bumpmap`)
     - |number|
     - :code:`1`
     - Yes
-    - TODO
+    - Interpolation factor between the old and new normal.
 
 .. subfigstart::
 
-.. figure::  images/mat_bumpmap.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_bumpmap.jpg
   :align: center
   
   Bump mapping
 
 .. subfigend::
-  :width: 0.6
   :label: fig-bumpmap
 
 .. _bsdf-transform:
@@ -700,7 +546,7 @@ Transform (:monosp:`transform`)
     - |bsdf|
     - *None*
     - No
-    - Bsdf the normal transformation will be applied to.
+    - Bsdf the normal transformation will be forwarded to.
   * - normal
     - |vector|
     - :code:`(0,0,1)`
@@ -714,14 +560,12 @@ Transform (:monosp:`transform`)
 
 .. subfigstart::
 
-.. figure::  images/mat_transform.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_transform.jpg
   :align: center
   
   Normal transformed by a PExpr to mimic a normal map
 
 .. subfigend::
-  :width: 0.6
   :label: fig-transform
 
 .. _bsdf-djmeasured:
@@ -744,14 +588,12 @@ Dupuy & Jakob measured materials (:monosp:`djmeasured`)
 
 .. subfigstart::
 
-.. figure::  images/mat_djmeasured.jpg
-  :width: 90%
+.. subfigure::  images/bsdf_djmeasured.jpg
   :align: center
   
   Dupuy & Jakob based measured material. More information and measured data available at https://rgl.epfl.ch/materials
 
 .. subfigend::
-  :width: 0.6
   :label: fig-djmeasured
 
 .. _bsdf-klems:
@@ -773,11 +615,11 @@ Klems (:monosp:`klems`)
     - Tint.
   * - up
     - |vector|
-    - :code:`(0, 0, 1)`
+    - :code:`(0,0,1)`
     - Yes
     - Up vector
 
-.. WARNING:: The :monosp:`klems` bsdf is still experimental.
+.. WARNING:: The :monosp:`klems` bsdf is still experimental and has some issues.
 
 .. _bsdf-tensortree:
 
@@ -798,11 +640,9 @@ TensorTree (:monosp:`tensortree`)
     - Tint.
   * - up
     - |vector|
-    - :code:`(0, 0, 1)`
+    - :code:`(0,0,1)`
     - Yes
     - Up vector
-
-.. WARNING:: The :monosp:`tensortree` bsdf is still experimental.
 
 .. _bsdf-dielectric-list:
 

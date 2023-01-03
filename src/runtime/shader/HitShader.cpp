@@ -13,15 +13,13 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 {
     std::stringstream stream;
     
-    stream << "#[export] fn ig_hit_shader(settings: &Settings, entity_id: i32, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
+    stream << "#[export] fn ig_hit_shader(settings: &Settings, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << std::endl;
 
@@ -41,22 +39,22 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 
     const bool requireMedia = ctx.CurrentTechniqueVariantInfo().UsesMedia;
     if (requireMedia)
-        stream << LoaderMedium::generate(tree) << std::endl;
+        stream << ctx.Media->generate(tree) << std::endl;
 
     stream << ShaderUtils::generateMaterialShader(tree, mat_id, requireLights, "shader") << std::endl;
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
-        stream << LoaderCamera::generate(ctx) << std::endl;
+        stream << ctx.Camera->generate(ctx) << std::endl;
 
     stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
 
     // Will define technique
-    stream << LoaderTechnique::generate(ctx) << std::endl
+    stream << ctx.Technique->generate(ctx) << std::endl
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_hit_shader(entity_id, shader, scene, technique, payload_info, first, last, spi, use_framebuffer);" << std::endl
+           << "  device.handle_hit_shader(shader, scene, technique, payload_info, first, last, spi, use_framebuffer);" << std::endl
            << "}" << std::endl;
 
     return stream.str();

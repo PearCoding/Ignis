@@ -5,12 +5,12 @@ cd "tmp"
 # Get zip
 if (!(Test-Path "eigen3.zip")) {
     Invoke-WebRequest -Uri "$($Config.Eigen3_URL)" -OutFile "eigen3.zip"
-    Expand-Archive eigen3.zip -DestinationPath .
+    Expand-Archive eigen3.zip -DestinationPath . > $null
 }
 cd "eigen*/"
 
-If (!(test-path "build")) {
-    md "build"
+If (!(Test-Path "build")) {
+    md "build" > $null
 }
 cd "build"
 

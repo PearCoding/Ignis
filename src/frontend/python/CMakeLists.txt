@@ -9,7 +9,7 @@ CPMAddPackage(
 
 set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/api")
 
-add_library(pyignis MODULE api.cpp)
+add_library(pyignis MODULE api.cpp runtime.cpp scene.cpp)
 target_link_libraries(pyignis PRIVATE ig_lib_runtime pybind11::module pybind11::lto pybind11::windows_extras)
 target_compile_definitions(pyignis PRIVATE IGNIS_VERSION=${PROJECT_VERSION})
 set_target_properties(pyignis PROPERTIES 

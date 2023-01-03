@@ -54,6 +54,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/mapping_gpu.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/material.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/medium.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/driver/parallel_reduce.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/payload.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/pdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/phase.art
@@ -67,8 +68,8 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/streams.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/surface_element.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/technique.art
-    ${CMAKE_CURRENT_SOURCE_DIR}/driver/texture.art
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/tonemap.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/bake.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/imageinfo.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/render.art
     ${CMAKE_CURRENT_SOURCE_DIR}/entrypoints/tonemap.art
@@ -91,14 +92,17 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/shapes/sphere.art
     ${CMAKE_CURRENT_SOURCE_DIR}/shapes/trimesh.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/aotracer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/technique/camera_check.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/debugtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/infobuffer.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/technique/lighttracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/lightvisibility.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/pathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/photonmapper.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/volpathtracer.art
     ${CMAKE_CURRENT_SOURCE_DIR}/technique/wireframe.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/brick.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/texture/bump.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/checkerboard.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/texture/image.art

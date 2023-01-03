@@ -2,6 +2,7 @@
 #include "LoaderUtils.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "StringUtils.h"
 
 #include "PExpr.h"
 
@@ -19,10 +20,6 @@ using MapFunction = std::function<std::string(size_t&, const ParamArr&)>;
 inline std::string tex_name(const std::string& name)
 {
     return "tex_" + name;
-}
-inline std::string var_name(const std::string& name)
-{
-    return "var_tex_" + name;
 }
 
 inline static std::string typeConstant(float f, PExprType arithType)
@@ -259,32 +256,31 @@ static inline std::string_view dumpType(PExprType type)
 struct InternalVariable {
     std::string Map;
     PExprType Type;
-
-    inline const std::string& access() const { return Map; }
+    bool IsConstant;
 };
 static const std::unordered_map<std::string, InternalVariable> sInternalVariables = {
-    { "uv", { "vec3_to_2(ctx.uvw)", PExprType::Vec2 } },
-    { "uvw", { "ctx.uvw", PExprType::Vec3 } },
-    { "prim_coords", { "ctx.surf.prim_coords", PExprType::Vec2 } },
-    { "P", { "ctx.surf.point", PExprType::Vec3 } },
-    { "Np", { "ctx.coord.to_normalized_point(ctx.surf.point)", PExprType::Vec3 } },
-    { "V", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3 } },
-    { "Rd", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3 } },
-    { "Ro", { "ctx.ray.org", PExprType::Vec3 } },
-    { "N", { "ctx.surf.local.col(2)", PExprType::Vec3 } },
-    { "Ng", { "ctx.surf.face_normal", PExprType::Vec3 } },
-    { "Nx", { "ctx.surf.local.col(0)", PExprType::Vec3 } },
-    { "Ny", { "ctx.surf.local.col(1)", PExprType::Vec3 } },
-    { "frontside", { "ctx.surf.is_entering", PExprType::Boolean } },
-    { "entity_id", { "ctx.entity_id", PExprType::Integer } },
-    { "Ix", { "ctx.pixel.x", PExprType::Integer } },
-    { "Iy", { "ctx.pixel.y", PExprType::Integer } },
-    { "Pi", { "flt_pi", PExprType::Number } },
-    { "E", { "flt_e", PExprType::Number } },
-    { "Eps", { "flt_eps", PExprType::Number } },
-    { "NumMax", { "flt_max", PExprType::Number } },
-    { "NumMin", { "flt_min", PExprType::Number } },
-    { "Inf", { "flt_inf", PExprType::Number } }
+    { "uv", { "vec3_to_2(ctx.uvw)", PExprType::Vec2, false } },
+    { "uvw", { "ctx.uvw", PExprType::Vec3, false } },
+    { "prim_coords", { "ctx.surf.prim_coords", PExprType::Vec2, false } },
+    { "P", { "ctx.surf.point", PExprType::Vec3, false } },
+    { "Np", { "ctx.coord.to_normalized_point(ctx.surf.point)", PExprType::Vec3, false } },
+    { "V", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3, false } },
+    { "Rd", { "vec3_neg(ctx.ray.dir)", PExprType::Vec3, false } },
+    { "Ro", { "ctx.ray.org", PExprType::Vec3, false } },
+    { "N", { "ctx.surf.local.col(2)", PExprType::Vec3, false } },
+    { "Ng", { "ctx.surf.face_normal", PExprType::Vec3, false } },
+    { "Nx", { "ctx.surf.local.col(0)", PExprType::Vec3, false } },
+    { "Ny", { "ctx.surf.local.col(1)", PExprType::Vec3, false } },
+    { "frontside", { "ctx.surf.is_entering", PExprType::Boolean, false } },
+    { "entity_id", { "ctx.entity_id", PExprType::Integer, false } },
+    { "Ix", { "ctx.pixel.x", PExprType::Integer, false } },
+    { "Iy", { "ctx.pixel.y", PExprType::Integer, false } },
+    { "Pi", { "flt_pi", PExprType::Number, true } },
+    { "E", { "flt_e", PExprType::Number, true } },
+    { "Eps", { "flt_eps", PExprType::Number, true } },
+    { "NumMax", { "flt_max", PExprType::Number, true } },
+    { "NumMin", { "flt_min", PExprType::Number, true } },
+    { "Inf", { "flt_inf", PExprType::Number, true } }
 };
 
 // Dyn Functions
@@ -587,6 +583,10 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     _MF1A("cbrt", "math_builtins::cbrt"),
     _MF1A("abs", "math_builtins::fabs"),
     cF("abs", createFunction("abs"), PExprType::Integer, PExprType::Integer),
+    _MF1A("sign", "math::signf"),
+    cF("sign", createFunction("math::sign"), PExprType::Integer, PExprType::Integer),
+    cF("signbit", createFunction("math_builtins::signbit"), PExprType::Boolean, PExprType::Integer),
+    cF("signbit", createFunction("math_builtins::signbit"), PExprType::Boolean, PExprType::Number),
 
     _MF1A("rad", "rad"),
     _MF1A("deg", "deg"),
@@ -615,8 +615,8 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("luminance", createColorFunctionIn1("color_luminance"), PExprType::Number, PExprType::Vec4),
     cF("blackbody", createColorFunctionOut("math::blackbody"), PExprType::Vec4, PExprType::Number),
 
-    cF("checkerboard", createFunction("node_checkerboard2"), PExprType::Number, PExprType::Vec2),
-    cF("checkerboard", createFunction("node_checkerboard3"), PExprType::Number, PExprType::Vec3),
+    cF("checkerboard", createFunction("node_checkerboard2"), PExprType::Integer, PExprType::Vec2),
+    cF("checkerboard", createFunction("node_checkerboard3"), PExprType::Integer, PExprType::Vec3),
 
     _MF2A("min", "math_builtins::fmin"),
     cF("min", createFunction("min"), PExprType::Integer, PExprType::Integer, PExprType::Integer),
@@ -770,6 +770,10 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("select", handleSelect, PExprType::Vec4, PExprType::Boolean, PExprType::Vec4, PExprType::Vec4),
     cF("select", handleSelect, PExprType::String, PExprType::Boolean, PExprType::String, PExprType::String),
 
+    // Some special purpose functions
+    cF("bump", createFunction("node_bump"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Number, PExprType::Number, PExprType::Number),
+    cF("ensure_valid_reflection", createFunction("ensure_valid_reflection"), PExprType::Vec3, PExprType::Vec3, PExprType::Vec3, PExprType::Vec3),
+
     cFV("lookup", handleCurveLookup, PExprType::Number, PExprType::String, PExprType::Boolean, PExprType::Number, PExprType::Vec2)
 };
 #undef _MF1A
@@ -793,34 +797,43 @@ inline static std::string binaryCwise(const std::string& A, const std::string& B
 
 class ArticVisitor : public PExpr::TranspileVisitor<std::string> {
 private:
-    ShadingTree& mTree;
-    std::unordered_set<std::string> mUsedTextures;
+    std::unordered_set<std::string> mUsedTextures;  // Will count used textures
+    std::unordered_set<std::string> mUsedVariables; // Will count used internal variables, but not constants
     size_t mUUIDCounter;
+    const Transpiler* mParent;
 
 public:
-    inline explicit ArticVisitor(ShadingTree& tree)
-        : mTree(tree)
-        , mUUIDCounter(0)
+    inline explicit ArticVisitor(const Transpiler* parent)
+        : mUUIDCounter(0)
+        , mParent(parent)
     {
     }
 
     inline std::unordered_set<std::string>& usedTextures() { return mUsedTextures; }
+    inline std::unordered_set<std::string>& usedVariables() { return mUsedVariables; }
 
     std::string onVariable(const std::string& name, PExprType expectedType) override
     {
-        auto var = sInternalVariables.find(name);
-        if (var != sInternalVariables.end())
-            return var->second.access();
-
-        if (expectedType == PExprType::Vec4 && mTree.context().Scene.texture(name) != nullptr) {
-            mUsedTextures.insert(name);
-            return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(ctx))";
-        } else {
-            if (expectedType == PExprType::Vec4)
-                return "color_to_vec4(" + var_name(mTree.getClosureID(name)) + ")";
-            else
-                return var_name(mTree.getClosureID(name));
+        // Return internal variables if matched
+        if (auto var = sInternalVariables.find(name); var != sInternalVariables.end() && var->second.Type == expectedType) {
+            if (!var->second.IsConstant)
+                mUsedVariables.insert(var->first);
+            return var->second.Map;
         }
+
+        // Return custom variables if matched
+        if (auto var = mParent->mCustomVariableBool.find(name); expectedType == PExprType::Boolean && var != mParent->mCustomVariableBool.end())
+            return var->second;
+        if (auto var = mParent->mCustomVariableNumber.find(name); expectedType == PExprType::Number && var != mParent->mCustomVariableNumber.end())
+            return var->second;
+        if (auto var = mParent->mCustomVariableVector.find(name); expectedType == PExprType::Vec3 && var != mParent->mCustomVariableVector.end())
+            return var->second;
+        if (auto var = mParent->mCustomVariableColor.find(name); expectedType == PExprType::Vec4 && var != mParent->mCustomVariableColor.end())
+            return "color_to_vec4(" + var->second + ")";
+
+        IG_ASSERT(expectedType == PExprType::Vec4 && mParent->mTree.context().Options.Scene->texture(name) != nullptr, "Expected a valid texture name");
+        mUsedTextures.insert(name);
+        return "color_to_vec4(" + tex_name(mParent->mTree.getClosureID(name)) + "(ctx))";
     }
 
     std::string onInteger(PExpr::Integer v) override { return std::to_string(v) + ":i32"; }
@@ -828,10 +841,17 @@ public:
     std::string onBool(bool v) override { return v ? "true" : "false"; }
     std::string onString(const std::string& v) override { return "\"" + v + "\""; }
 
-    /// Implicit casts. Currently only int -> num
-    std::string onCast(const std::string& v, PExprType, PExprType) override
+    /// Implicit casts. Currently only int -> num, num -> int
+    std::string onCast(const std::string& v, PExprType fromType, PExprType toType) override
     {
-        return "((" + v + ") as f32)";
+        if (fromType == PExprType::Integer && toType == PExprType::Number) {
+            return "((" + v + ") as f32)";
+        } else if (fromType == PExprType::Number && toType == PExprType::Integer) {
+            return "((" + v + ") as i32)";
+        } else {
+            IG_ASSERT(false, "Only cast from int to num or back supported");
+            return "0";
+        }
     }
 
     /// +a, -a. Only called for arithmetic types
@@ -903,7 +923,7 @@ public:
     std::string onPow(PExprType aType, const std::string& a, const std::string& f) override
     {
         if (aType == PExprType::Integer)
-            return "(math_builtins::pow(" + a + " as f32, " + f + " as f32) as i32)";
+            return "(math_builtins::pow((" + a + ") as f32, (" + f + ") as f32) as i32)";
         else if (aType == PExprType::Number)
             return "math_builtins::pow(" + a + ", " + f + ")";
         else
@@ -970,9 +990,9 @@ public:
         }
 
         // Must be a texture
-        IG_ASSERT(mTree.context().Scene.texture(name) != nullptr, "Expected a valid texture name");
+        IG_ASSERT(mParent->mTree.context().Options.Scene->texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);
-        return "color_to_vec4(" + tex_name(mTree.getClosureID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
+        return "color_to_vec4(" + tex_name(mParent->mTree.getClosureID(name)) + "(" + (argumentPayloads.empty() ? std::string("ctx") : ("ctx.{uvw=vec2_to_3(" + argumentPayloads[0] + ", 0)}")) + "))";
     }
 
     /// a.xyz Access operator for vector types
@@ -1055,7 +1075,7 @@ public:
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         // Check for textures/nodes in the variable table
-        if (Parent->mTree.context().Scene.texture(lkp.name()))
+        if (Parent->mTree.context().Options.Scene->texture(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Vec4);
 
         return {};
@@ -1081,7 +1101,7 @@ public:
         }
 
         // Add all texture/nodes to the function table as well, such that the uv can be changed directly
-        if (Parent->mTree.context().Scene.texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
+        if (Parent->mTree.context().Options.Scene->texture(lkp.name()) && lkp.matchParameter({ PExprType::Vec2 }))
             return PExpr::FunctionDef(lkp.name(), PExprType::Vec4, { PExprType::Vec2 });
 
         return {};
@@ -1106,7 +1126,7 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
         return {};
 
     // Transpile
-    ArticVisitor visitor(mTree);
+    ArticVisitor visitor(this);
     std::string res = mInternal->Environment.transpile(ast, &visitor);
 
     // Patch output
@@ -1131,7 +1151,24 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
         break;
     }
 
-    return Result{ res, std::move(visitor.usedTextures()), scalar_output };
+    return Result{ res, std::move(visitor.usedTextures()), visitor.usedVariables(), scalar_output };
+}
+
+bool Transpiler::checkIfColor(const std::string& expr) const
+{
+    auto ast = mInternal->Environment.parse(expr);
+    if (!ast)
+        return true;
+
+    switch (ast->returnType()) {
+    default:
+    case PExprType::Vec3:
+    case PExprType::Vec4:
+        return true;
+    case PExprType::Number:
+    case PExprType::Integer:
+        return false;
+    }
 }
 
 std::string Transpiler::availableVariables()
@@ -1160,7 +1197,7 @@ std::string Transpiler::generateTestShader()
            << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray());" << std::endl;
 
     for (const auto& p : sInternalVariables)
-        stream << "  let _var_" << p.first << " = " << p.second.access() << ";" << std::endl;
+        stream << "  let _var_" << p.first << " = " << p.second.Map << ";" << std::endl;
     stream << "}" << std::endl
            << std::endl;
 
@@ -1205,7 +1242,7 @@ std::string Transpiler::generateTestShader()
         } else if (p.first == "lookup") {
             arguments[0] = "'linear'";
             for (size_t i = 1; i < def.Arguments.size(); ++i)
-                arguments[i] = "v" + std::to_string(i-1);
+                arguments[i] = "v" + std::to_string(i - 1);
         } else {
             for (size_t i = 0; i < def.Arguments.size(); ++i)
                 arguments[i] = "v" + std::to_string(i);

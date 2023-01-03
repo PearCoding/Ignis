@@ -18,6 +18,5 @@ struct SceneDatabase {
     float SceneRadius;
     BoundingBox SceneBBox;
     size_t MaterialCount;
-    std::vector<uint32> EntityToMaterial; // Map from Entity -> Material (It would be better to get rid of this, but sorting by entity is "better" than sorting for material)
 };
 } // namespace IG

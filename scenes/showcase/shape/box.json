@@ -1,0 +1,8 @@
+{
+	"externals": [
+        {"filename":"base.json"}
+    ],
+	"shapes": [
+		{"type":"box", "name":"Object"}
+	]
+}

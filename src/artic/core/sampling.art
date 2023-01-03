@@ -4,7 +4,12 @@ struct DirSample {
     pdf: f32
 }
 
-fn @make_dir_sample(c: f32, s: f32, phi: f32, pdf: f32) -> DirSample {
+fn @make_dir_sample(dir: Vec3, pdf: f32) = DirSample {
+    dir = dir,
+    pdf = pdf
+};
+
+fn @make_dir_sample_from_thetaphi(c: f32, s: f32, phi: f32, pdf: f32) -> DirSample {
     let x = s * math_builtins::cos(phi);
     let y = s * math_builtins::sin(phi);
     let z = c;
@@ -13,16 +18,6 @@ fn @make_dir_sample(c: f32, s: f32, phi: f32, pdf: f32) -> DirSample {
         pdf = pdf
     }
 }
-
-fn @scale_dir_sample(sample: DirSample, factor: f32) = DirSample {
-    dir = sample.dir,
-    pdf = sample.pdf * factor
-};
-
-fn @neg_dir_sample(sample: DirSample) = DirSample {
-    dir = vec3_neg(sample.dir),
-    pdf = sample.pdf
-};
 
 // Result of sampling a position
 struct PosSample {
@@ -48,7 +43,7 @@ fn @sample_uniform_sphere(u: f32, v: f32) -> DirSample {
     let c = 2 * v - 1;
     let s = safe_sqrt(1 - c * c);
     let phi = 2 * flt_pi * u;
-    make_dir_sample(c, s, phi, uniform_sphere_pdf())
+    make_dir_sample_from_thetaphi(c, s, phi, uniform_sphere_pdf())
 }
 
 // Probability density function for equal area sphere sampling
@@ -68,12 +63,16 @@ fn @cosine_hemisphere_pdf(c: f32) = c / flt_pi;
 
 // Samples a direction on a hemisphere proportionally to the cosine with the surface normal
 fn @sample_cosine_hemisphere(u: f32, v: f32) -> DirSample {
-    let p = square_to_concentric_disk(make_vec2(u, v));
-    let z = safe_sqrt(1 - vec2_len2(p));
-    DirSample {
-        dir = make_vec3(p.x, p.y, z),
-        pdf = cosine_hemisphere_pdf(z)
-    }
+    let c = safe_sqrt(v);
+    let s = safe_sqrt(1 - v);
+    let phi = 2 * flt_pi * u;
+    make_dir_sample_from_thetaphi(c, s, phi, cosine_hemisphere_pdf(c))
+    // let p = square_to_concentric_disk(make_vec2(u, v));
+    // let z = safe_sqrt(1 - vec2_len2(p));
+    // DirSample {
+    //     dir = make_vec3(p.x, p.y, z),
+    //     pdf = cosine_hemisphere_pdf(z)
+    // }
 }
 
 // Probability density function for cosine-power weighted hemisphere sampling
@@ -93,7 +92,7 @@ fn @sample_cosine_power_hemisphere(k: f32, u: f32, v: f32) -> DirSample {
     //           = v / c
     let pow_c_k = select(c != 0, v / c, 0:f32);
     let pdf = pow_c_k * (k + 1) * (1 / (2 * flt_pi));
-    make_dir_sample(c, s, phi, pdf)
+    make_dir_sample_from_thetaphi(c, s, phi, pdf)
 }
 
 fn @uniform_disk_pdf(radius: f32) = 1 / (flt_pi * radius * radius);
@@ -101,6 +100,19 @@ fn @uniform_disk_pdf(radius: f32) = 1 / (flt_pi * radius * radius);
 // Samples uniform concentric disk
 fn @sample_uniform_disk(u: f32, v: f32, radius: f32) -> PosSample {
     make_pos_sample(vec3_mulf(vec2_to_3(square_to_concentric_disk(make_vec2(u, v)), 0), radius), uniform_disk_pdf(radius))
+}
+
+// PDF is with respect to area
+fn @uniform_cone_pdf(cos_angle: f32) = safe_div_one(1, 2 * flt_pi * (1 - cos_angle));
+
+// Sample direction on an uniform cone around [0,0,1]
+fn @sample_uniform_cone(u: f32, v: f32, cos_angle: f32) -> DirSample {
+    let c1 = 1 - cos_angle;
+    let p  = square_to_concentric_disk(make_vec2(u, v));
+    let n2 = vec2_len2(p);
+    let z  = cos_angle + c1 * (1 - n2);
+    let np = vec2_mulf(p, safe_sqrt(c1 * (2 - c1 * n2)));
+    make_dir_sample(vec2_to_3(np, z), uniform_cone_pdf(cos_angle))
 }
 
 // From Blender Cycles

@@ -3,6 +3,6 @@
         {"filename":"base.json"}
     ],
 	"bsdfs": [
-		{"type":"thindielectric", "name": "mat-Sphere"}
+		{"type":"dielectric", "name": "mat-Sphere", "thin": true}
 	]
 }

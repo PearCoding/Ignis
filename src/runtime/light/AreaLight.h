@@ -3,16 +3,16 @@
 #include "Light.h"
 
 namespace IG {
-struct LoaderContext;
+class LoaderContext;
 
 class AreaLight : public Light {
 public:
-    AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<Parser::Object>& light);
+    AreaLight(const std::string& name, const LoaderContext& ctx, const std::shared_ptr<SceneObject>& light);
 
     virtual std::optional<Vector3f> position() const override { return mPosition; }
     virtual std::optional<Vector3f> direction() const override { return mRepresentation == RepresentationType::Plane ? std::make_optional(mDirection) : std::nullopt; }
     virtual std::optional<std::string> entity() const override { return mEntity; }
-    virtual float computeFlux(const ShadingTree&) const override;
+    virtual float computeFlux(ShadingTree&) const override;
 
     virtual void serialize(const SerializationInput& input) const override;
 
@@ -24,6 +24,7 @@ private:
     Vector3f mDirection; // ~ Normal
     float mArea;
     std::string mEntity;
+    bool mUsePower;
 
     enum class RepresentationType {
         None,
@@ -31,6 +32,6 @@ private:
         Sphere
     };
     RepresentationType mRepresentation;
-    std::shared_ptr<Parser::Object> mLight;
+    std::shared_ptr<SceneObject> mLight;
 };
 } // namespace IG

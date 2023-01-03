@@ -1,0 +1,8 @@
+{
+	"technique": {
+		"type": "debug"
+	},
+	"externals": [
+        {"filename":"base.json"}
+    ]
+}

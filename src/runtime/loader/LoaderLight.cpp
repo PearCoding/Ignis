@@ -3,6 +3,7 @@
 #include "Loader.h"
 #include "Logger.h"
 #include "ShadingTree.h"
+#include "StringUtils.h"
 #include "serialization/VectorSerializer.h"
 
 #include "light/AreaLight.h"
@@ -21,37 +22,37 @@
 #include <chrono>
 
 namespace IG {
-static std::shared_ptr<Light> light_point(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_point(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<PointLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_area(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext& ctx)
+static std::shared_ptr<Light> light_area(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext& ctx)
 {
     return std::make_shared<AreaLight>(name, ctx, light);
 }
 
-static std::shared_ptr<Light> light_directional(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_directional(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<DirectionalLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_spot(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_spot(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<SpotLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_sun(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_sun(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<SunLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_sky(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_sky(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<SkyLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_cie_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_cie_env(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     if (light->pluginType() == "cie_cloudy" || light->pluginType() == "ciecloudy")
         return std::make_shared<CIELight>(CIEType::Cloudy, name, light);
@@ -63,17 +64,17 @@ static std::shared_ptr<Light> light_cie_env(const std::string& name, const std::
         return std::make_shared<CIELight>(CIEType::Uniform, name, light);
 }
 
-static std::shared_ptr<Light> light_perez(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_perez(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<PerezLight>(name, light);
 }
 
-static std::shared_ptr<Light> light_env(const std::string& name, const std::shared_ptr<Parser::Object>& light, LoaderContext&)
+static std::shared_ptr<Light> light_env(const std::string& name, const std::shared_ptr<SceneObject>& light, LoaderContext&)
 {
     return std::make_shared<EnvironmentLight>(name, light);
 }
 
-using LightLoader = std::shared_ptr<Light> (*)(const std::string&, const std::shared_ptr<Parser::Object>&, LoaderContext&);
+using LightLoader = std::shared_ptr<Light> (*)(const std::string&, const std::shared_ptr<SceneObject>&, LoaderContext&);
 static const struct {
     const char* Name;
     LightLoader Loader;
@@ -212,7 +213,7 @@ std::string LoaderLight::generateFinite(ShadingTree& tree)
                 stream << "    if ";
 
             stream << "id < " << (offset + p.second) << " {" << std::endl
-                   << "      e_" << var_name << "(id - " << offset << ")" << std::endl
+                   << "      e_" << var_name << ".get(id - " << offset << ")" << std::endl
                    << "    }" << std::endl;
 
             offset += p.second;
@@ -252,7 +253,7 @@ void LoaderLight::findEmissiveEntities(const LoaderContext& ctx)
 {
     // Before we create the actual light objects, we need the entity loader to know the actual emissive entity names
     // to prevent having all the entities in the memory just in case they are flagged 'emissive' later-on.
-    const auto& lights = ctx.Scene.lights();
+    const auto& lights = ctx.Options.Scene->lights();
     for (auto pair : lights) {
         const auto light = pair.second;
 
@@ -277,7 +278,7 @@ void LoaderLight::setup(LoaderContext& ctx)
 
 void LoaderLight::loadLights(LoaderContext& ctx)
 {
-    const auto& lights = ctx.Scene.lights();
+    const auto& lights = ctx.Options.Scene->lights();
     for (auto pair : lights) {
         const auto light = pair.second;
 
@@ -392,10 +393,10 @@ void LoaderLight::embedLights(ShadingTree& tree)
         const auto embedClass = p.first;
 
         // Check if already loaded
-        if (tree.context().Database->FixTables.count(embedClass) > 0)
+        if (tree.context().Database.FixTables.count(embedClass) > 0)
             continue;
 
-        auto& tbl = tree.context().Database->FixTables[embedClass];
+        auto& tbl = tree.context().Database.FixTables[embedClass];
 
         IG_LOG(L_DEBUG) << "Embedding lights of class '" << embedClass << "'" << std::endl;
 
@@ -415,7 +416,7 @@ std::string LoaderLight::generateLightSelector(std::string type, ShadingTree& tr
 
     // If there is just a none or just a single light, do not bother with fancy selectors
     if (lightCount() <= 1)
-        return uniformSelector;
+        return uniformSelector + "\n";
 
     std::stringstream stream;
 
@@ -434,7 +435,7 @@ std::string LoaderLight::generateLightSelector(std::string type, ShadingTree& tr
             stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << cdf.u8string() << "\"), finite_lights.count, 0);" << std::endl
                    << "  let light_selector = make_cdf_light_selector(infinite_lights, finite_lights, light_cdf);" << std::endl;
         }
-    } else {
+    } else { // Default
         stream << uniformSelector << std::endl;
     }
 
@@ -445,8 +446,8 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
 {
     const std::string exported_id = "_light_cdf_";
 
-    const auto data = tree.context().ExportedData.find(exported_id);
-    if (data != tree.context().ExportedData.end())
+    const auto data = tree.context().Cache->ExportedData.find(exported_id);
+    if (data != tree.context().Cache->ExportedData.end())
         return std::any_cast<std::string>(data->second);
 
     if (lightCount() == 0)
@@ -462,7 +463,7 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
 
     CDF::computeForArray(estimated_powers, path);
 
-    tree.context().ExportedData[exported_id] = path;
+    tree.context().Cache->ExportedData[exported_id] = path;
     return path;
 }
 } // namespace IG

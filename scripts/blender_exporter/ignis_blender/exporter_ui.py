@@ -72,7 +72,7 @@ class ExportIgnis(bpy.types.Operator, ExportHelper):
 
     copy_images: BoolProperty(
         name="Copy all Images",
-        description="If true, copy all images to Textures/, not only Generated or Packed images.",
+        description="If true, copy all images next to the scene file, not only Generated or Packed images.",
         default=False,
     )
 

@@ -4,11 +4,35 @@
 #include "serialization/VectorSerializer.h"
 #include "table/SceneDatabase.h"
 
+// Include for constructor & deconstructor
+#include "LoaderBSDF.h"
+#include "LoaderCamera.h"
+#include "LoaderEntity.h"
+#include "LoaderLight.h"
+#include "LoaderMedium.h"
+#include "LoaderShape.h"
+#include "LoaderTechnique.h"
+#include "LoaderTexture.h"
+
 namespace IG {
 
-using namespace Parser;
+LoaderContext::LoaderContext()                           = default;
+LoaderContext::LoaderContext(LoaderContext&&)            = default;
+LoaderContext& LoaderContext::operator=(LoaderContext&&) = default;
+LoaderContext::~LoaderContext()                          = default;
 
-std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const Parser::Object& obj) const
+LoaderContext LoaderContext::copyForBake() const
+{
+    LoaderContext ctx;
+    ctx.Options  = Options;
+    ctx.Textures = Textures;
+    ctx.Cache    = Cache;
+
+    // TODO: Maybe copy more?
+    return ctx;
+}
+
+std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const SceneObject& obj) const
 {
     if (path.is_absolute())
         return path;
@@ -19,8 +43,8 @@ std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& pat
             return std::filesystem::canonical(p);
     }
 
-    if (!FilePath.empty()) {
-        const auto p = FilePath.parent_path() / path;
+    if (!Options.FilePath.empty()) {
+        const auto p = Options.FilePath.parent_path() / path;
         if (std::filesystem::exists(p))
             return std::filesystem::canonical(p);
     }

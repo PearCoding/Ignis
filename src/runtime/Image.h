@@ -53,6 +53,8 @@ struct IG_LIB Image {
     /// Flip image in y-axis
     void flipY();
 
+    [[nodiscard]] Vector4f computeAverage() const;
+
     /// Will format to packed format (RGBA or Mono, 8bit each)
     /// Use this only for byte formats, else image quality will be lost
     void copyToPackedFormat(std::vector<uint8>& dst) const;
@@ -82,5 +84,7 @@ struct IG_LIB Image {
     /// With height being the major axis.
     /// If channels == 4 and alpha channel is omitted as requested, the appointed format still is channels x width x height
     static bool save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha = false);
+
+    [[nodiscard]] static Image createSolidImage(const Vector4f& color, size_t width = 1, size_t height = 1);
 };
 } // namespace IG

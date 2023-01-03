@@ -1,7 +1,6 @@
-fn @make_point_light(id: i32, pos: Vec3, color: Color) = Light {
+fn @make_point_light(id: i32, pos: Vec3, intensity: Color) = Light {
     id = id,
     sample_direct = @ |_, from_surf| {
-        let intensity = color_mulf(color, 1 / (4 * flt_pi));
         let dir_ = vec3_sub(pos, from_surf.point);
         let dist = vec3_len(dir_);
         let dir  = vec3_mulf(dir_, safe_div(1, dist));
@@ -9,11 +8,10 @@ fn @make_point_light(id: i32, pos: Vec3, color: Color) = Light {
     },
     sample_emission = @ |rnd| {
         let sample    = sample_uniform_sphere(randf(rnd), randf(rnd));
-        let intensity = color_mulf(color, 1 / (4 * flt_pi * sample.pdf));
-        make_emission_sample(pos, sample.dir, intensity, 1, sample.pdf, 1)
+        make_emission_sample(pos, sample.dir, color_mulf(intensity, 1 / sample.pdf), 1, sample.pdf, 1)
     },
     emission     = @ |_|    color_builtins::black,
-    pdf_direct   = @ |_, _| make_area_pdf(0), // Does not matter
+    pdf_direct   = @ |_, _| make_delta_pdf(), // Does not matter
     pdf_emission = @ |_, _| make_emissive_pdf(1, uniform_sphere_pdf()),
     delta    = true,
     infinite = false

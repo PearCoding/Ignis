@@ -1,79 +1,146 @@
+struct ReduceOutputImageInfo {
+    min: f32,
+    max: f32,
+    sum: f32
+}
+
 fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height: i32, settings: &ImageInfoSettings, output: &mut ImageInfoOutput) {
     let size  = width * height;
     let scale = settings.scale;
 
     let buffer_in = device.make_buffer(in_pixels as &[u8], size * 3); 
     // Due to misalignment we can not make use of load_vec3
-    let get_elem = @|i:i32| srgb_to_xyY(color_mulf(make_color(buffer_in.load_f32(i * 3 + 0), buffer_in.load_f32(i * 3 + 1), buffer_in.load_f32(i * 3 + 2), 1), scale)).b; // Only luminance
+    let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
+    let get_elem  = @|i:i32| srgb_to_xyY(color_mulf(make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1), scale)).b; // Only luminance
 
-    output.min = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmin(a, b));
-    output.max = device.parallel_reduce_f32(size, get_elem, @|a, b| math_builtins::fmax(a, b));
-    output.avg = device.parallel_reduce_f32(size, get_elem, @|a, b| a + b) / size as f32;
+    let reduce_handler = device.parallel_reduce_handler;
+    let reduce_output  = reduce[ReduceOutputImageInfo](reduce_handler, size,
+        @|i:i32| { let a = get_elem(i); ReduceOutputImageInfo{ min=a, max=a, sum=a } },
+        @|a, b|  { ReduceOutputImageInfo{ min=math_builtins::fmin(a.min, b.min), max=math_builtins::fmax(a.max, b.max), sum=(a.sum + b.sum) } }
+    );
 
-    let global_data = device.request_buffer("__imageinfo_percentile", sizeof[f32]() as i32 * 4 , 0);
-    global_data.store_i32_host(0, bitcast[i32](flt_max));
-    global_data.store_i32_host(1, 0);
-    global_data.store_i32_host(2, 0);
+    output.min = reduce_output.min;
+    output.max = reduce_output.max;
+    output.avg = reduce_output.sum / size as f32;
 
-    // Window based percentile setup (which is just approximative)
-    let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
-    for (x, y) in device.parallel_range_2d(1, width - 1, 1, height - 1) {
-        // First get the window information
-        let mut window : [f32 * 9];
-        for i in unroll(0, 3) {
-            for j in unroll(0, 3) {
-                let ind = (y+i-1) * width + (x+j-1);
-                window(i*3+j) = @get_elem(ind);
+    let global_data = device.request_buffer("__imageinfo_stats", sizeof[f32]() as i32 * 8, 0);
+
+    global_data.store_i32_host(0, bitcast[i32](flt_max)); // Soft Min
+    global_data.store_i32_host(1, 0);                     // Soft Max
+    global_data.store_i32_host(2, 0);                     // Median
+    global_data.store_i32_host(3, 0);                     // Inf Counter
+    global_data.store_i32_host(4, 0);                     // NaN Counter
+    global_data.store_i32_host(5, 0);                     // Neg Counter
+
+    let do_soft = width > 10 && height > 10;
+    if do_soft {
+        // Window based percentile setup (which is just approximative)
+        let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
+        for (x, y) in device.parallel_range_2d(1, width - 1, 1, height - 1) {
+            // First get the window information
+            let mut window : [f32 * 9];
+            for i in unroll(0, 3) {
+                for j in unroll(0, 3) {
+                    let ind = (y+i-1) * width + (x+j-1);
+                    window(i*3+j) = @get_elem(ind);
+                }
             }
+            
+            // Sort the window
+            batcher_sort(9, @|i, j| {
+                if window(i) > window(j) {
+                    swap(&mut window(i), &mut window(j));
+                }
+            });
+
+            // Put percentile information
+            let soft_min = window(1);
+            let soft_max = window(7);
+            let median   = window(4);
+
+            if soft_min >= 0 { global_data.min_atomic_i32(0, bitcast[i32](soft_min)); }
+            if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
+            if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
         }
-        
-        // Sort the window
-        batcher_sort(9, @|i, j| {
-            if window(i) > window(j) {
-                swap(&mut window(i), &mut window(j));
-            }
-        });
-
-        // Put percentile information
-        let soft_min = window(1);
-        let soft_max = window(7);
-        let median   = window(4);
-
-        if soft_min >= 0 { global_data.min_atomic_i32(0, bitcast[i32](soft_min)); }
-        if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
-        if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
+    } else {
+        // Given window is not large enough, use the fixed variants
+        output.soft_min = output.min;
+        output.soft_max = output.max;
+        output.median   = output.avg;
     }
-    device.sync();
 
-    output.soft_min = bitcast[f32](global_data.load_i32_host(0));
-    output.soft_max = bitcast[f32](global_data.load_i32_host(1));
-    output.median   = bitcast[f32](global_data.load_i32_host(2));
+    // Check pixels
+    if settings.acquire_error_stats {
+        for i in device.parallel_range(0, 3*width*height) {
+            let c = buffer_in.load_f32(i);
 
-    // Setup histogram
-    let histogram_start     = output.soft_min;
-    let histogram_end       = output.soft_max;
-    let histogram_range     = histogram_end - histogram_start;
-    let histogram_bin_count = settings.bins;
-    let histogram_factor    = safe_div(histogram_bin_count as f32, histogram_range);
+            let is_nan = math_builtins::isnan(c);
+            let is_inf = !math_builtins::isfinite(c) && !is_nan;
+            let is_neg = math_builtins::signbit(c);
 
-    let dev_hist_size = round_up(histogram_bin_count, 4);
-    let dev_histogram = device.request_buffer("__imageinfo_histogram", sizeof[i32]() as i32 * dev_hist_size, 0);
-
-    // Reset histogram
-    for i in device.parallel_range(0, dev_hist_size / 4) {
-        dev_histogram.store_int4(i * 4, 0, 0, 0, 0);
+            if is_inf { global_data.add_atomic_i32(3, 1); }
+            if is_nan { global_data.add_atomic_i32(4, 1); }
+            if is_neg { global_data.add_atomic_i32(5, 1); }
+        }
     }
+
     device.sync();
 
-    // Update histogram
-    for i in device.parallel_range(0, size) {
-        let L   = get_elem(i);
-        let bin = clamp(((L - histogram_start) * histogram_factor) as i32, 0, histogram_bin_count - 1);
-        dev_histogram.add_atomic_i32(bin, 1);
+    if do_soft {
+        output.soft_min = bitcast[f32](global_data.load_i32_host(0));
+        output.soft_max = bitcast[f32](global_data.load_i32_host(1));
+        output.median   = bitcast[f32](global_data.load_i32_host(2));
     }
-    device.sync();
 
-    // Copy histogram to host
-    dev_histogram.copy_to_host(0, histogram_bin_count, settings.histogram);
-    device.sync();
+    output.inf_counter = global_data.load_i32_host(3);
+    output.nan_counter = global_data.load_i32_host(4);
+    output.neg_counter = global_data.load_i32_host(5);
+
+    if settings.acquire_histogram {
+        // Setup histogram
+        let histogram_start     = select(output.min < output.max, output.min, 0:f32);
+        let histogram_end       = select(output.min < output.soft_max, output.soft_max, select(output.min < output.max, output.max, histogram_start + 1));
+        let histogram_range     = math_builtins::fmax[f32](0, histogram_end - histogram_start);
+        let histogram_bin_count = settings.bins;
+        let histogram_factor    = safe_div(histogram_bin_count as f32, histogram_range);
+
+        let dev_hist_size = round_up(histogram_bin_count, 4);
+        let dev_histogram_r = device.request_buffer("__imageinfo_histogram_r", sizeof[i32]() as i32 * dev_hist_size, 0);
+        let dev_histogram_g = device.request_buffer("__imageinfo_histogram_g", sizeof[i32]() as i32 * dev_hist_size, 0);
+        let dev_histogram_b = device.request_buffer("__imageinfo_histogram_b", sizeof[i32]() as i32 * dev_hist_size, 0);
+        let dev_histogram_l = device.request_buffer("__imageinfo_histogram_l", sizeof[i32]() as i32 * dev_hist_size, 0);
+
+        // Reset histogram
+        for i in device.parallel_range(0, dev_hist_size / 4) {
+            dev_histogram_r.store_int4(i * 4, 0, 0, 0, 0);
+            dev_histogram_g.store_int4(i * 4, 0, 0, 0, 0);
+            dev_histogram_b.store_int4(i * 4, 0, 0, 0, 0);
+            dev_histogram_l.store_int4(i * 4, 0, 0, 0, 0);
+        }
+        device.sync();
+
+        // Map all components to the given min & soft max, even while RGB might be larger
+        fn @get_bin(v: f32) = clamp(((v - histogram_start) * histogram_factor) as i32, 0, histogram_bin_count - 1);
+
+        // Update histogram
+        for i in device.parallel_range(0, size) {
+            let r = check_get(i*3 + 0) * scale;
+            let g = check_get(i*3 + 1) * scale;
+            let b = check_get(i*3 + 2) * scale;
+            let L = srgb_to_xyY(make_color(r, g, b, 1)).b;
+
+            dev_histogram_r.add_atomic_i32(get_bin(r), 1);
+            dev_histogram_g.add_atomic_i32(get_bin(g), 1);
+            dev_histogram_b.add_atomic_i32(get_bin(b), 1);
+            dev_histogram_l.add_atomic_i32(get_bin(L), 1);
+        }
+        device.sync();
+
+        // Copy histogram to host
+        dev_histogram_r.copy_to_host(0, histogram_bin_count, settings.histogram_r);
+        dev_histogram_g.copy_to_host(0, histogram_bin_count, settings.histogram_g);
+        dev_histogram_b.copy_to_host(0, histogram_bin_count, settings.histogram_b);
+        dev_histogram_l.copy_to_host(0, histogram_bin_count, settings.histogram_l);
+        device.sync();
+    }
 }

@@ -65,13 +65,13 @@
     {
       "name": "__light_2",
       "type": "point",
-      "intensity": [1.2566370614, 2.513274123, 12.566370614],
+      "intensity": [0.1, 0.2, 1],
       "position": [-1, 0.25, 0]
     },
     {
       "name": "__light_3",
       "type": "point",
-      "intensity": [12.566370614, 2.513274123, 1.2566370614],
+      "intensity": [1, 0.2, 0.1],
       "position": [1, 0.25, 0]
     }
   ]

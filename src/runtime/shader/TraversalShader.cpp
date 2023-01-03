@@ -10,15 +10,13 @@
 #include <sstream>
 
 namespace IG {
-using namespace Parser;
-
 std::string TraversalShader::begin(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
     stream << "#[export] fn ig_traversal_shader(settings: &Settings, size: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
            << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl;
 
     return stream.str();

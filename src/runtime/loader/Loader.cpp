@@ -3,8 +3,10 @@
 #include "LoaderCamera.h"
 #include "LoaderEntity.h"
 #include "LoaderLight.h"
+#include "LoaderMedium.h"
 #include "LoaderShape.h"
 #include "LoaderTechnique.h"
+#include "LoaderTexture.h"
 #include "Logger.h"
 #include "shader/AdvancedShadowShader.h"
 #include "shader/DeviceShader.h"
@@ -18,48 +20,45 @@
 #include <functional>
 
 namespace IG {
-bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
+std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
 {
     LoaderContext ctx;
-    ctx.Database            = &result.Database;
-    ctx.FilePath            = opts.FilePath;
-    ctx.Target              = opts.Target;
-    ctx.Scene               = opts.Scene;
-    ctx.CameraType          = opts.CameraType;
-    ctx.TechniqueType       = opts.TechniqueType;
-    ctx.PixelSamplerType    = opts.PixelSamplerType;
-    ctx.SamplesPerIteration = opts.SamplesPerIteration;
-    ctx.IsTracer            = opts.IsTracer;
-    ctx.Denoiser            = opts.Denoiser;
-    ctx.FilmWidth           = opts.FilmWidth;
-    ctx.FilmHeight          = opts.FilmHeight;
+    ctx.Options = opts;
 
-    ctx.Lights   = std::make_unique<LoaderLight>();
-    ctx.Shapes   = std::make_unique<LoaderShape>();
-    ctx.Entities = std::make_unique<LoaderEntity>();
+    ctx.Cache = std::make_shared<LoaderCache>();
 
-    ctx.ForceShadingTreeSpecialization = opts.ForceSpecialization;
+    ctx.Textures  = std::make_shared<LoaderTexture>();
+    ctx.Lights    = std::make_unique<LoaderLight>();
+    ctx.BSDFs     = std::make_unique<LoaderBSDF>();
+    ctx.Media     = std::make_unique<LoaderMedium>();
+    ctx.Shapes    = std::make_unique<LoaderShape>();
+    ctx.Entities  = std::make_unique<LoaderEntity>();
+    ctx.Technique = std::make_unique<LoaderTechnique>();
+    ctx.Camera    = std::make_unique<LoaderCamera>();
 
     ctx.Shapes->prepare(ctx);
     ctx.Entities->prepare(ctx);
+    ctx.Textures->prepare(ctx);
     ctx.Lights->prepare(ctx);
+    ctx.BSDFs->prepare(ctx);
+    ctx.Media->prepare(ctx);
 
     // Load content
-    if (!ctx.Shapes->load(ctx, result))
-        return false;
+    if (!ctx.Shapes->load(ctx))
+        return std::nullopt;
 
-    if (!ctx.Entities->load(ctx, result))
-        return false;
-
-    LoaderCamera::setupInitialOrientation(ctx, result);
+    if (!ctx.Entities->load(ctx))
+        return std::nullopt;
 
     ctx.Lights->setup(ctx);
-    IG_LOG(L_DEBUG) << "Got " << ctx.Environment.Materials.size() << " unique materials" << std::endl;
+    IG_LOG(L_DEBUG) << "Got " << ctx.Materials.size() << " unique materials" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Lights->lightCount() << " lights" << std::endl;
     if (ctx.Lights->embeddedLightCount() > 0)
         IG_LOG(L_DEBUG) << "Got " << ctx.Lights->embeddedLightCount() << " embedded lights" << std::endl;
     if (ctx.Lights->areaLightCount() > 0)
         IG_LOG(L_DEBUG) << "Got " << ctx.Lights->areaLightCount() << " area lights" << std::endl;
+    if (ctx.Media->mediumCount() > 0)
+        IG_LOG(L_DEBUG) << "Got " << ctx.Media->mediumCount() << " participating media" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->shapeCount() << " shapes" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->triShapeCount() << " triangular shapes" << std::endl;
     if (ctx.Shapes->planeShapeCount() > 0)
@@ -68,29 +67,31 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->sphereShapeCount() << " shapes which are approximative spherical" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Entities->entityCount() << " entities" << std::endl;
 
-    result.Database.MaterialCount = ctx.Environment.Materials.size();
+    ctx.Database.MaterialCount = ctx.Materials.size(); // TODO: Refactor this
 
-    auto tech_info = LoaderTechnique::getInfo(ctx);
-    if (!tech_info.has_value())
-        return false;
+    ctx.Camera->setup(ctx);
+    if (!ctx.Camera->hasCamera())
+        return std::nullopt;
 
-    ctx.TechniqueInfo = tech_info.value();
+    ctx.Technique->setup(ctx);
+    if (!ctx.Technique->hasTechnique())
+        return std::nullopt;
 
-    if (ctx.TechniqueInfo.Variants.empty()) {
+    if (ctx.Technique->info().Variants.empty()) {
         IG_LOG(L_ERROR) << "Invalid technique with no variants" << std::endl;
-        return false;
+        return std::nullopt;
     }
 
-    if (ctx.TechniqueInfo.Variants.size() == 1)
+    if (ctx.Technique->info().Variants.size() == 1)
         IG_LOG(L_DEBUG) << "Generating shaders for a single variant" << std::endl;
     else
-        IG_LOG(L_DEBUG) << "Generating shaders for " << ctx.TechniqueInfo.Variants.size() << " variants" << std::endl;
+        IG_LOG(L_DEBUG) << "Generating shaders for " << ctx.Technique->info().Variants.size() << " variants" << std::endl;
 
-    result.TechniqueVariants.resize(ctx.TechniqueInfo.Variants.size());
+    ctx.TechniqueVariants.resize(ctx.Technique->info().Variants.size());
     try {
-        for (size_t i = 0; i < ctx.TechniqueInfo.Variants.size(); ++i) {
+        for (size_t i = 0; i < ctx.Technique->info().Variants.size(); ++i) {
             const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
-                ctx.resetRegistry();
+                ctx.resetLocalRegistry();
                 IG_LOG(L_DEBUG) << "Generating " << name << " shader for variant " << i << std::endl;
                 output.Exec = func();
                 if (output.Exec.empty()) {
@@ -99,10 +100,10 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
                 output.LocalRegistry = std::move(ctx.LocalRegistry);
             };
 
-            auto& variant               = result.TechniqueVariants[i];
-            const auto& info            = ctx.TechniqueInfo.Variants[i];
-            ctx.CurrentTechniqueVariant = i;
-            ctx.SamplesPerIteration     = info.GetSPI(opts.SamplesPerIteration);
+            auto& variant                   = ctx.TechniqueVariants[i];
+            const auto& info                = ctx.Technique->info().Variants[i];
+            ctx.CurrentTechniqueVariant     = i;
+            ctx.Options.SamplesPerIteration = info.GetSPI(opts.SamplesPerIteration);
 
             // Generate shaders
             setup(
@@ -123,7 +124,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
                 "miss", [&]() { return MissShader::setup(ctx); }, variant.MissShader);
 
             // Generate hit shaders
-            for (size_t j = 0; j < ctx.Environment.Materials.size(); ++j) {
+            for (size_t j = 0; j < ctx.Materials.size(); ++j) {
                 ShaderOutput<std::string> output;
                 setup(
                     "hit " + std::to_string(j), [&]() { return HitShader::setup(j, ctx); }, output);
@@ -132,7 +133,7 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
 
             // Generate advanced shadow shaders if requested
             if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
-                const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Environment.Materials.size();
+                const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Materials.size();
                 for (size_t j = 0; j < max_materials; ++j) {
                     ShaderOutput<std::string> output;
                     setup(
@@ -157,15 +158,13 @@ bool Loader::load(const LoaderOptions& opts, LoaderResult& result)
         }
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
-        return false;
+        return std::nullopt;
     }
 
-    result.Database.SceneRadius = ctx.Environment.SceneDiameter / 2.0f;
-    result.Database.SceneBBox   = ctx.Environment.SceneBBox;
-    result.TechniqueInfo        = ctx.TechniqueInfo;
-    result.ResourceMap          = ctx.generateResourceMap();
-
-    return !ctx.HasError;
+    if (ctx.HasError)
+        return std::nullopt;
+    else
+        return std::optional<LoaderContext>(std::in_place, std::move(ctx));
 }
 
 std::vector<std::string> Loader::getAvailableTechniqueTypes()

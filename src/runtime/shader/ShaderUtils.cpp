@@ -90,8 +90,8 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
 {
     std::stringstream stream;
 
-    const Material material = tree.context().Environment.Materials.at(mat_id);
-    stream << LoaderBSDF::generate(material.BSDF, tree);
+    const Material material = tree.context().Materials.at(mat_id);
+    stream << tree.context().BSDFs->generate(material.BSDF, tree);
 
     std::string bsdf_id = tree.getClosureID(material.BSDF);
     const bool isLight  = material.hasEmission() && tree.context().Lights->isAreaLight(material.Entity);
@@ -121,7 +121,7 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
 
     stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Target) << std::endl;
+           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl;
     return stream.str();
 }
 
@@ -134,8 +134,8 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    if (ctx.SamplesPerIteration == 1) // Hardcode this case as some optimizations might apply
-        stream << ctx.SamplesPerIteration << " : i32";
+    if (ctx.Options.SamplesPerIteration == 1) // Hardcode this case as some optimizations might apply
+        stream << ctx.Options.SamplesPerIteration << " : i32";
     else // Fallback to dynamic spi
         stream << "registry::get_global_parameter_i32(\"__spi\", 1)";
 

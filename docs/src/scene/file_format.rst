@@ -8,7 +8,8 @@ Trailing commas are allowed to ease automatic generation of scene files as well.
 
 .. literalinclude:: ../../../scenes/diamond_scene.json
     :language: javascript
-    :caption: The included ``diamond_scene.json`` is a good example for an Ignis scene. 
+    :tab-width: 4
+    :caption: The included ``diamond_scene.json`` is a good example for an Ignis scene.
 
 Transformation
 --------------

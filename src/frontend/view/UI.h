@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Camera.h"
-#include "DebugMode.h"
+#include "CameraProxy.h"
 #include "SPPMode.h"
+#include "technique/DebugMode.h"
 
 #include <memory>
 
@@ -18,14 +18,27 @@ enum class ToneMappingMethod {
 class Runtime;
 class UI {
 public:
-    UI(SPPMode sppmode, Runtime* runtime, size_t width, size_t height, bool showDebug);
+    UI(SPPMode sppmode, Runtime* runtime, bool showDebug);
     ~UI();
 
     void setTitle(const char* str);
-    bool handleInput(size_t& iter, bool& run, Camera& cam);
-    void update(size_t iter, size_t samples);
 
-    inline DebugMode currentDebugMode() const { return mDebugMode; }
+    enum class InputResult {
+        Continue, // Continue, nothing of importance changed
+        Resume,   // Resume the rendering
+        Pause,    // Pause the rendering
+        Reset,    // Reset the rendering
+        Quit      // Quit the application
+    };
+    [[nodiscard]] InputResult handleInput(CameraProxy& cam);
+
+    enum class UpdateResult {
+        Continue, // Continue, nothing of importance changed
+        Reset     // Reset the rendering
+    };
+    [[nodiscard]] UpdateResult update();
+
+    [[nodiscard]] inline DebugMode currentDebugMode() const { return mDebugMode; }
 
     void setTravelSpeed(float v);
 

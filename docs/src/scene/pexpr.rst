@@ -3,8 +3,6 @@
 PExpr
 =====
 
-.. NOTE:: The PExpr documentation is not complete. For further details it is recommended to have a look at the scenes distributed together with the framework.
-
 **P**\ ear\ **Expr**\ ession is a single line, math like, functional language.
 It is, by design, easy to transpile to other languages like ``artic``, like in the case of the Ignis rendering framework.
 It has **no** support for control flow, like ``if`` or ``while``, and statements in general.
@@ -68,20 +66,20 @@ Variables
 Some special variables given are available as ``vec2``:
 
 -   ``uv`` The current texture coordinates.
--   ``prim_coords`` Primitive specific coordinates if surface, else a zero.
+-   ``prim_coords`` Primitive specific coordinates if surface, else zero vector.
 
 some as ``vec3``:
 
--   ``uvw`` The current texture coordinates given in as a triplet.
+-   ``uvw`` The current texture coordinates given as triplet.
 -   ``V`` World ray direction facing from a surface or any other source outwards.
 -   ``Rd`` Same as ``V``.
 -   ``Ro`` World ray origin.
--   ``P`` World position if bsdf or medium, else zero.
--   ``Np`` Normalized position if bsdf or medium, else a zero.
--   ``N`` World shading normal if bsdf, else a zero.
--   ``Ng`` World geometry normal if bsdf, else a zero.
--   ``Nx`` World shading tangent if bsdf, else a zero.
--   ``Ny`` World shading bitangent if bsdf, else a zero.
+-   ``P`` World position if bsdf or medium, else zero vector.
+-   ``Np`` Normalized position if bsdf or medium, else zero vector.
+-   ``N`` World shading normal if bsdf, else zero vector.
+-   ``Ng`` World geometry normal if bsdf, else zero vector.
+-   ``Nx`` World shading tangent if bsdf, else zero vector.
+-   ``Ny`` World shading bitangent if bsdf, else zero vector.
 
 few as ``int``:
 
@@ -92,8 +90,6 @@ few as ``int``:
 and a few as ``bool``:
 
 -   ``frontside`` |true| if normal and ray orientation is front facing. This will be always ``true`` if the point is not lying on a surface.
-
-.. NOTE:: More special variables might be introduced in the future.
 
 Predefined constants of type ``num`` are:
 
@@ -106,7 +102,39 @@ Predefined constants of type ``num`` are:
 
 All textures defined in the scene representation are also available as variables of type ``vec4``.
 These texture variables use the variable ``uv`` as their texture coordinate implicitly.
-The above defined special variable and constant names have precedence over texture names.
+The above defined special variable and constant names have precedence over texture names and parameters as explained below.
+
+.. _pexpr_parameters:
+
+Scene Parameters
+----------------
+
+Defining scene-wide parameters inside the :code:`"parameters"` section in the scene description allows the convenient usage of user input in the viewer and the cli. All defined parameters are available as variables inside a PExpr expression.
+Parameters can be defined as follow:
+
+.. code-block:: javascript
+    
+    {
+        // ...
+        "parameters": [
+            // ...
+            { "name":"NAME1", "type":"number", "value":42 },
+            { "name":"NAME2", "type":"vector", "value":[1,0,0] },
+            { "name":"NAME3", "type":"color",  "value":[1,0,1] }
+            // ...
+        ]
+        // ...
+    }
+
+Currently only the types ``number`` for ``num``, ``vector`` for ``vec3`` and ``color`` for ``vec4`` are available. The given ``value`` can not be a PExpr!
+
+.. NOTE:: Defining color with alpha is currently not supported. Use an array of **three** numbers to define color.
+
+The above defined parameters have precedence over texture names, but not the already defined special variables and constants in the previous section.
+
+Property names starting with an ``_`` are considered read-only and can not be changed within the viewer. You may have to press ``F4`` to open up the property view in ``igview``.
+
+The command line options ``--Pi``, ``--Pn``, ``--Pv`` and ``--Pc`` allow setting the parameters to a different value at the start of the rendering. Using the command line parameters allow changing internal and read-only flagged parameters as well.
 
 Functions
 ---------
@@ -138,6 +166,7 @@ Functions
 -   ``avg(vec2) -> num``
 -   ``avg(vec3) -> num``
 -   ``avg(vec4) -> num``
+-   ``bump(vec3, vec3, vec3, num, num, num) -> vec3``
 -   ``blackbody(num) -> vec4``
 -   ``cbrt(num) -> num``
 -   ``cbrt(vec2) -> vec2``
@@ -203,6 +232,7 @@ Functions
 -   ``dot(vec2, vec2) -> num``
 -   ``dot(vec3, vec3) -> num``
 -   ``dot(vec4, vec4) -> num``
+-   ``ensure_valid_reflection(vec3, vec3, vec3) -> vec3``
 -   ``exp(num) -> num``
 -   ``exp(vec2) -> vec2``
 -   ``exp(vec3) -> vec3``
@@ -318,6 +348,13 @@ Functions
 -   ``select(bool, vec3, vec3) -> vec3``
 -   ``select(bool, vec4, vec4) -> vec4``
 -   ``select(bool, str, str) -> str``
+-   ``sign(num) -> num``
+-   ``sign(vec2) -> vec2``
+-   ``sign(vec3) -> vec3``
+-   ``sign(vec4) -> vec4``
+-   ``sign(int) -> int``
+-   ``signbit(int) -> bool``
+-   ``signbit(num) -> bool``
 -   ``sin(num) -> num``
 -   ``sin(vec2) -> vec2``
 -   ``sin(vec3) -> vec3``
@@ -376,8 +413,5 @@ Functions
 -   ``wrap(vec4, vec4, vec4) -> vec4``
 -   ``xyztorgb(vec4) -> vec4``
 
-.. NOTE:: More functions will be added in the future.
-
 All textures defined in the scene representation are also available as functions with signature ``TEXTURE(vec2) -> vec4``, with ``TEXTURE`` being the texture name.
 The above defined function names have precedence over texture names, if the signature matches.
-

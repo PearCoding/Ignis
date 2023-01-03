@@ -32,9 +32,9 @@ Image texture (:monosp:`image`)
     - Path to a valid image file.
   * - filter_type
     - |string|
-    - :code:`"bilinear"`
+    - :code:`"bicubic"`
     - No
-    - The filter type to be used. Has to be one of the following: ["bilinear", "nearest"].
+    - The filter type to be used. Has to be one of the following: ["bicubic", "bilinear", "nearest"].
   * - wrap_mode
     - |string|
     - :code:`"repeat"`
@@ -53,7 +53,7 @@ Image texture (:monosp:`image`)
 
 .. subfigstart::
 
-.. figure::  images/tex_image.jpg
+.. figure::  images/texture_image.jpg
   :width: 90%
   :align: center
   
@@ -62,6 +62,27 @@ Image texture (:monosp:`image`)
 .. subfigend::
   :width: 0.6
   :label: fig-image
+
+.. subfigstart::
+
+.. subfigure::  images/texture_image_nearest.jpg
+  :align: center
+  
+  Nearest filter
+
+.. subfigure::  images/texture_image_bilinear.jpg
+  :align: center
+  
+  Bilinear filter
+
+.. subfigure::  images/texture_image_bicubic.jpg
+  :align: center
+  
+  Bicubic filter
+
+.. subfigend::
+  :width: 0.6
+  :label: fig-image-filters
 
 Brick (:monosp:`brick`)
 -------------------------------------
@@ -91,7 +112,7 @@ Brick (:monosp:`brick`)
 
 .. subfigstart::
 
-.. figure::  images/tex_brick.jpg
+.. figure::  images/texture_brick.jpg
   :width: 90%
   :align: center
   
@@ -124,7 +145,7 @@ Checkerboard (:monosp:`checkerboard`)
 
 .. subfigstart::
 
-.. figure::  images/tex_checkerboard.jpg
+.. figure::  images/texture_checkerboard.jpg
   :width: 90%
   :align: center
   
@@ -152,7 +173,7 @@ Noise (:monosp:`noise`)
 
 .. subfigstart::
 
-.. figure::  images/tex_noise.jpg
+.. figure::  images/texture_noise.jpg
   :width: 90%
   :align: center
   
@@ -192,7 +213,7 @@ Original noise used in legacy perlin implementation.
 
 .. subfigstart::
 
-.. figure::  images/tex_pnoise.jpg
+.. figure::  images/texture_pnoise.jpg
   :width: 90%
   :align: center
   
@@ -230,7 +251,7 @@ Cell Noise (:monosp:`cellnoise`)
 
 .. subfigstart::
 
-.. figure::  images/tex_cellnoise.jpg
+.. figure::  images/texture_cellnoise.jpg
   :width: 90%
   :align: center
   
@@ -268,7 +289,7 @@ Perlin Noise (:monosp:`perlin`)
 
 .. subfigstart::
 
-.. figure::  images/tex_perlin.jpg
+.. figure::  images/texture_perlin.jpg
   :width: 90%
   :align: center
   
@@ -306,7 +327,7 @@ Voronoi Noise (:monosp:`voronoi`)
 
 .. subfigstart::
 
-.. figure::  images/tex_voronoi.jpg
+.. figure::  images/texture_voronoi.jpg
   :width: 90%
   :align: center
   
@@ -344,7 +365,7 @@ Fractional Brownian Motion (:monosp:`fbm`)
 
 .. subfigstart::
 
-.. figure::  images/tex_fbm.jpg
+.. figure::  images/texture_fbm.jpg
   :width: 90%
   :align: center
   
@@ -374,7 +395,7 @@ E.g., ``color_tint`` will be called ``tint`` inside the expression.
 
 .. subfigstart::
 
-.. figure::  images/tex_expr.jpg
+.. figure::  images/texture_expr.jpg
   :width: 90%
   :align: center
   
@@ -383,6 +404,13 @@ E.g., ``color_tint`` will be called ``tint`` inside the expression.
 .. subfigend::
   :width: 0.6
   :label: fig-expr
+
+.. literalinclude:: ../../../scenes/showcase/texture/expr.json
+    :language: javascript
+    :tab-width: 4
+    :lines: 6-12
+    :dedent:
+    :caption: The following texture specification generates the above image. 
 
 Texture transform (:monosp:`transform`)
 ---------------------------------------------
@@ -402,7 +430,7 @@ Texture transform (:monosp:`transform`)
 
 .. subfigstart::
 
-.. figure::  images/tex_transform.jpg
+.. figure::  images/texture_transform.jpg
   :width: 90%
   :align: center
   

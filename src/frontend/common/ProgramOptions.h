@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Logger.h"
+#include "RuntimeStructs.h"
 #include "SPPMode.h"
 #include "device/Target.h"
 
@@ -49,16 +50,19 @@ public:
     std::string TechniqueType;
 
     IG::Target Target;
-    
+
     std::optional<int> SPP;
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;
 
     bool AcquireStats     = false;
     bool AcquireFullStats = false;
+    bool DebugTrace       = false;
 
-    bool DumpShader     = false;
-    bool DumpFullShader = false;
+    bool DumpShader       = false;
+    bool DumpFullShader   = false;
+    bool DumpRegistry     = false;
+    bool DumpFullRegistry = false;
 
     bool AddExtraEnvLight    = false;
     bool ForceSpecialization = false;
@@ -74,6 +78,8 @@ public:
     std::filesystem::path InputRay;
 
     std::filesystem::path ScriptDir;
+
+    ParameterSet UserEntries;
 
     void populate(RuntimeOptions& options) const;
 };

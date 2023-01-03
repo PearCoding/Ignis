@@ -2,8 +2,8 @@
 
 #include "LoaderShape.h"
 #include "Loader.h"
-
 #include "Logger.h"
+#include "StringUtils.h"
 #include "shape/SphereProvider.h"
 #include "shape/TriMeshProvider.h"
 
@@ -37,6 +37,7 @@ static const struct ShapeProviderEntry {
     { "ply", "trimesh" },
     { "mitsuba", "trimesh" },
     { "external", "trimesh" },
+    { "inline", "trimesh" },
     { "", nullptr }
 };
 
@@ -54,12 +55,12 @@ static const ShapeProviderEntry* getShapeProviderEntry(const std::string& name)
 void LoaderShape::prepare(const LoaderContext& ctx)
 {
     // Check which shape provider we need
-    for (const auto& ent : ctx.Scene.entities()) {
+    for (const auto& ent : ctx.Options.Scene->entities()) {
         const auto shapeName = ent.second->property("shape").getString();
         if (shapeName.empty())
             continue;
 
-        const auto shape = ctx.Scene.shape(shapeName);
+        const auto shape = ctx.Options.Scene->shape(shapeName);
         if (!shape)
             continue;
 
@@ -80,22 +81,24 @@ void LoaderShape::prepare(const LoaderContext& ctx)
     }
 }
 
-bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
+bool LoaderShape::load(LoaderContext& ctx)
 {
+    ShapeMTAccessor acc;
+
     // To make use of parallelization and workaround the map restrictions
     // we do have to construct a map
-    std::vector<std::string> names(ctx.Scene.shapes().size());
-    std::transform(ctx.Scene.shapes().begin(), ctx.Scene.shapes().end(), names.begin(),
-                   [](const std::pair<std::string, std::shared_ptr<Parser::Object>>& pair) {
+    std::vector<std::string> names(ctx.Options.Scene->shapes().size());
+    std::transform(ctx.Options.Scene->shapes().begin(), ctx.Options.Scene->shapes().end(), names.begin(),
+                   [](const std::pair<std::string, std::shared_ptr<SceneObject>>& pair) {
                        return pair.first;
                    });
 
     // Make sure this table is preloaded
-    result.Database.DynTables.emplace("shapes", DynTable{});
+    ctx.Database.DynTables.emplace("shapes", DynTable{});
 
     const auto load_shape = [&](size_t i) {
         const std::string name = names.at(i);
-        const auto child       = ctx.Scene.shape(name);
+        const auto child       = ctx.Options.Scene->shape(name);
 
         auto entry = getShapeProviderEntry(child->pluginType());
         if (!entry)
@@ -105,7 +108,7 @@ bool LoaderShape::load(LoaderContext& ctx, LoaderResult& result)
         if (it == mShapeProviders.end())
             return;
 
-        it->second->handle(ctx, result, name, *child);
+        it->second->handle(ctx, acc, name, *child);
     };
 
     // Start loading!

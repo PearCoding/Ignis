@@ -16,18 +16,21 @@ def get_output_path(scene_file, out_dir, spp, target):
 
 def get_reference_path(scene_file, ref_dir):
     basename = Path(scene_file).stem
-    for filename in Path(ref_dir).glob(f"ref-{basename}*.exr"):
-        return filename  # Return first filename
+    filenames = [str(p) for p in Path(ref_dir).glob(f"ref-{basename}*.exr")]
+    if len(filenames) > 0:
+        return min(filenames, key=len)
 
     # If not found, drop one '-' section
     basename = basename[:basename.rfind('-')]
-    for filename in Path(ref_dir).glob(f"ref-{basename}*.exr"):
-        return filename  # Return first filename
+    filenames = [str(p) for p in Path(ref_dir).glob(f"ref-{basename}*.exr")]
+    if len(filenames) > 0:
+        return min(filenames, key=len)
 
     # If not found, drop another '-' section
     basename = basename[:basename.rfind('-')]
-    for filename in Path(ref_dir).glob(f"ref-{basename}*.exr"):
-        return filename  # Return first filename
+    filenames = [str(p) for p in Path(ref_dir).glob(f"ref-{basename}*.exr")]
+    if len(filenames) > 0:
+        return min(filenames, key=len)
 
     print(f"Could not find a reference in {ref_dir} for {scene_file}")
     return None
@@ -76,27 +79,38 @@ def colorbar(cmap=cm.inferno):
 
 def error_image(img, ref):
     mask = ref != 0
-    raw = np.zeros_like(ref)
-    raw[mask] = np.square((img[mask] - ref[mask]) / ref[mask])
-    max = np.percentile(raw, 99)
-    return np.clip(raw / max, 0, 1) if max != 0 else np.zeros_like(ref)
+    err = np.zeros_like(ref)
+    err[mask] = np.square((img[mask] - ref[mask]) / ref[mask])       # RelSE
+    err[np.logical_not(mask)] = np.square(img[np.logical_not(mask)]) # AbsSE
+    max = np.percentile(err, 99)
+    avg = np.average(np.clip(err, 0, max)) # This is a questionable mixture, but allows some corner-cases with zero reference pixels
+    return (avg, np.clip(err / max, 0, 1) if max != 0 else np.zeros_like(ref))
 
 
 # Some predefined eps
 predef_eps = {
     "cbox-d1": 5e-3,
     "cbox-d6": 5e-3,
+    "cycles-lights": 5e-2,  # Ignis should resemble Blender Cycles, but there is no need to be exact
+    "cycles-principled": 5e-2,
+    "cycles-tex": 1e-2,
+    "cycles-sun": 1e-2,
     "room": 1e-3,
-    "volume":  5e-3,
-    "env4k":  8e-2,
-    "env4k-nocdf":  8e-2,
-    "multilight-uniform":  3e-4,
-    "multilight-simple":  3e-4,
-    "multilight-hierarchy":  3e-4,
-    "sphere-light-ico":  2e-3,
-    "sphere-light-ico-nopt":  2e-3,
-    "sphere-light-uv":  2e-3,
-    "sphere-light-pure":  2e-3,
+    "volume": 5e-3,
+    "env4k": 8e-2,
+    "env4k-nocdf": 8e-2,
+    "env4k-nomisc": 8e-2,
+    "multilight-uniform": 3e-4,
+    "multilight-simple": 3e-4,
+    "multilight-hierarchy": 3e-4,
+    "plane-array-klems-front": 2e-2,
+    "plane-array-klems-back": 2e-2,
+    "plane-array-tensortree-front": 2e-2,
+    "plane-array-tensortree-back": 2e-2,
+    "sphere-light-ico": 2e-3,
+    "sphere-light-ico-nopt": 2e-3,
+    "sphere-light-uv": 2e-3,
+    "sphere-light-pure": 3e-3,
 }
 
 
@@ -128,7 +142,7 @@ def make_figure(scenes, args):
         scene_data.append((Path(scene).stem, image_gpu_name,
                           image_cpu_name, image_ref_name))
 
-    errors = []
+    gpu_errors = []
     cpu_errors = []
     names = []
     grid = figuregen.Grid(len(scene_data), 5)
@@ -136,30 +150,50 @@ def make_figure(scenes, args):
 
     eps = 1e-3
     for name, image_gpu_name, image_cpu_name, image_ref_name in scene_data:
-        img = sio.read(str(image_gpu_name))
+        img_gpu = sio.read(str(image_gpu_name))
         img_cpu = sio.read(str(image_cpu_name))
         ref_img = sio.read(str(image_ref_name))
 
-        err = sio.relative_mse_outlier_rejection(img, ref_img, 0.001)
-        err_cpu = sio.relative_mse_outlier_rejection(img_cpu, ref_img, 0.001)
+        has_nan_gpu = np.isnan(img_gpu).any()
+        has_inf_gpu = np.isinf(img_gpu).any()
+        has_nan_cpu = np.isnan(img_cpu).any()
+        has_inf_cpu = np.isinf(img_cpu).any()
 
-        errors.append(err)
+        img_gpu[~np.isfinite(img_gpu)] = 0
+        img_cpu[~np.isfinite(img_cpu)] = 0
+
+        err_gpu, err_img_gpu = error_image(img_gpu, ref_img) 
+        err_cpu, err_img_cpu = error_image(img_cpu, ref_img) 
+
+        gpu_errors.append(err_gpu)
         cpu_errors.append(err_cpu)
         names.append(str(name))
 
+        frame_gpu = [0, 255, 0]
+        frame_cpu = [0, 255, 0]
+
         leps = predef_eps[name] if name in predef_eps else eps
-        if not err < leps:
+        if has_nan_gpu or has_inf_gpu:
+            print(f"-> Scene {name} contains erroneous pixels on the GPU")
+            frame_gpu = [255, 255, 0]
+        if not err_gpu < leps:
             print(f"-> Scene {name} fails on the GPU")
+            frame_gpu = [255, 0, 0]
+
+        if has_nan_cpu or has_inf_cpu:
+            print(f"-> Scene {name} contains erroneous pixels on the CPU")
+            frame_cpu = [255, 255, 0]
         if not err_cpu < leps:
             print(f"-> Scene {name} fails on the CPU")
+            frame_cpu = [255, 0, 0]
 
         grid[i, 0].set_image(map_img(ref_img))
-        grid[i, 1].set_image(map_img(img))
-        grid[i, 2].set_image(map_img(error_image(img, ref_img)))
-        grid[i, 2].set_frame(1, [0, 255, 0] if err < leps else [255, 0, 0])
+        grid[i, 1].set_image(map_img(img_gpu))
+        grid[i, 2].set_image(map_img(err_img_gpu))
+        grid[i, 2].set_frame(1, frame_gpu)
         grid[i, 3].set_image(map_img(img_cpu))
-        grid[i, 4].set_image(map_img(error_image(img_cpu, ref_img)))
-        grid[i, 4].set_frame(1, [0, 255, 0] if err_cpu < leps else [255, 0, 0])
+        grid[i, 4].set_image(map_img(err_img_cpu))
+        grid[i, 4].set_frame(1, frame_cpu)
 
         i += 1
 
@@ -167,7 +201,7 @@ def make_figure(scenes, args):
                         "Rel. Error GPU", "Render CPU", "Rel. Error CPU"])
     grid.set_row_titles("left", names)
     grid.set_row_titles("right", [
-                        f"RelMSE (GPU,CPU)\\\\ {err:.2E} | {cerr:.2E}" for err, cerr in zip(errors, cpu_errors)])
+                        f"RelMSE (GPU,CPU)\\\\ {err:.2E} | {cerr:.2E}" for err, cerr in zip(gpu_errors, cpu_errors)])
     grid.layout.set_row_titles("right", field_size_mm=10, fontsize=6)
     grid.layout.set_row_titles("left", field_size_mm=8, fontsize=6)
 
@@ -179,12 +213,13 @@ def make_figure(scenes, args):
 
     # Generate the figure with the pdflatex backend and default settings
     figuregen.figure(rows, width_cm=10, filename=f"{out_dir}/Evaluation.pdf")
+    figuregen.figure(rows, width_cm=30, filename=f"{out_dir}/Evaluation.html")
 
 
 if __name__ == '__main__':
     root_dir = get_root_dir()
     out_dir = os.path.join(root_dir, "build", "evaluation")
-    ref_dir = os.path.join(root_dir, "scenes", "evaluation")
+    ref_dir = os.path.join(root_dir, "scenes", "evaluation", "references")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('OutputDir', nargs='?', type=Path, default=out_dir,

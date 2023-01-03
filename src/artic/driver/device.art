@@ -24,7 +24,7 @@ struct Device {
     handle_miss_shader: fn (Technique, PayloadInfo, i32, i32, i32, bool) -> (), 
 
     // [Internal] Handle a hit shader
-    handle_hit_shader: fn (i32, MaterialShader, Scene, Technique, PayloadInfo, i32, i32, i32, bool) -> (),
+    handle_hit_shader: fn (MaterialShader, Scene, Technique, PayloadInfo, i32, i32, i32, bool) -> (),
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
     handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32, i32, i32, bool, bool) -> (), 
@@ -44,6 +44,9 @@ struct Device {
 
     // Parallel reduce function for generic operator on the device
     parallel_reduce_f32: fn (i32 /* size */, fn (i32) -> f32 /* accessor */, fn (f32, f32) -> f32 /* operator */) -> f32,
+
+    // Generic parallel reduce handler to be used with the generic 'reduce' function
+    parallel_reduce_handler: ParellelReduceHandler,
 
     // Returns a callback function to create a virtual device buffer by providing a pointer on device memory
     get_device_buffer_accessor: fn () -> DeviceBufferAccessor,

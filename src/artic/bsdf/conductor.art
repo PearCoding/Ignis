@@ -10,7 +10,7 @@ fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
 
 //--------------------------------------
 // Creates a perfect conductor BSDF
-fn @make_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color) = Bsdf {
+fn @make_pure_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Color) = Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
@@ -106,4 +106,17 @@ fn @make_rough_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Co
         conductor_factor(ior.b, k.b, cosTheta),
         1);
     make_rough_base_conductor_bsdf(surf, color_builtins::black, ks, fresnelTerm, micro)
+}
+
+/// General version
+fn @make_conductor_bsdf(surf: SurfaceElement, eta: Color, k: Color, ks: Color, micro: microfacet::MicrofacetDistribution) -> Bsdf {
+    if micro.is_delta {
+        if ?eta && ?k && is_black_eps(eta, 1e-4) && is_white_eps(k, 1e-4) {
+            make_mirror_bsdf(surf, ks)
+        } else {
+            make_pure_conductor_bsdf(surf, eta, k, ks)
+        }
+    } else {
+        make_rough_conductor_bsdf(surf, eta, k, ks, micro)
+    }
 }

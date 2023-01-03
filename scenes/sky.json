@@ -15,7 +15,7 @@
 	},
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-GrayWall", "reflectance":[1,1,1]},
-		{"type":"dielectric", "name": "mat-Diamond", "alpha": 0.0025, "int_ior": 2.3, "specular_transmittance":[1,1,1]}
+		{"type":"dielectric", "name": "mat-Diamond", "roughness": 0.0025, "int_ior": 2.3, "specular_transmittance":[1,1,1]}
 	],
 	"shapes": [
 		{"type":"ply", "name":"Bottom", "filename":"meshes/Bottom.ply"},

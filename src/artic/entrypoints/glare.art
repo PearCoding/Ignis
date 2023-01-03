@@ -1,6 +1,7 @@
 struct GlareSettings {
     avg:f32,
-    mul:f32
+    mul:f32,
+    scale:f32
 }
 
 fn @ig_glare_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &GlareSettings) {
@@ -12,39 +13,40 @@ fn @ig_glare_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32],
         buffer_out.store_i32(index, bitcast[i32](make_byte_color(color)));
     }
 
-    let lum_source = (settings.avg * settings.mul) as f64;
+    let scale = settings.scale as f32;
+    let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
+    let get_pixel = @|i:i32| make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1);
+    let luminance = @|col:Color| srgb_to_xyY(color_mulf(col, scale)).b; // Only luminance
 
-    fn @evalglare() -> () {
-        // primary glare source scan
-        for ind in device.parallel_range(0, width * height) {
-            let mut actual_igs = 0;
-            let mut igs = 0;
-    
-            //let lum_thres = 2000.0;
-            //let lum_task = 0.0;
+    let lum_source = (settings.avg * settings.mul) as f32;
 
-            let mut last_was_glare_source = false;
-            let mut lum_total_max = 0.0 as f64;
-            let mut pixel_color = make_color(buffer_in.load_f32(ind * 3 + 0), buffer_in.load_f32(ind * 3 + 1), buffer_in.load_f32(ind * 3 + 2), 1);
+    // primary glare source scan
+    for ind in device.parallel_range(0, width * height) {
+        let mut actual_igs = 0;
+        let mut igs = 0;
 
-            let act_lum = color_luminance(pixel_color) as f64;
-            if (act_lum > lum_source) {
-                store_pixel(ind, make_color(1.0, 0.0, 0.0, 1.0));
-                if (act_lum > lum_total_max) {
-                    lum_total_max = act_lum;
-                }
+        //let lum_thres = 2000.0;
+        //let lum_task = 0.0;
 
-                if (last_was_glare_source) {
-                    //actual_igs = find_near_pgs()
-                }
-            } else {
-                last_was_glare_source = false;
+        let mut last_was_glare_source = false;
+        let mut lum_total_max = 0.0 as f32;
+        let current_color = get_pixel(ind);
+        let act_lum = luminance(current_color);
+
+        if (act_lum > lum_source) {
+            store_pixel(ind, make_color(1.0, 0.0, 0.0, 1.0));
+            if (act_lum > lum_total_max) {
+                lum_total_max = act_lum;
             }
-	    }
-    }
-        
 
-    evalglare();
+            if (last_was_glare_source) {
+                //actual_igs = find_near_pgs()
+            }
+        } else {
+            last_was_glare_source = false;
+        }
+    }
+    
 
     device.sync();
 }

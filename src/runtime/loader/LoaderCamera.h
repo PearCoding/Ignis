@@ -1,13 +1,20 @@
 #pragma once
 
-#include "LoaderContext.h"
+#include "camera/CameraOrientation.h"
 
 namespace IG {
-struct LoaderResult;
-struct LoaderCamera {
-    static std::string generate(const LoaderContext& ctx);
-    static void setupInitialOrientation(const LoaderContext& ctx, LoaderResult& result);
+class LoaderContext;
+class LoaderCamera {
+public:
+    void setup(const LoaderContext& ctx);
+    [[nodiscard]] std::string generate(LoaderContext& ctx) const;
+    [[nodiscard]] CameraOrientation getOrientation(const LoaderContext& ctx) const;
+
+    inline bool hasCamera() const { return mCamera != nullptr; }
 
     static std::vector<std::string> getAvailableTypes();
+
+private:
+    std::shared_ptr<class Camera> mCamera;
 };
 } // namespace IG

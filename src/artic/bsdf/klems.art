@@ -47,12 +47,12 @@ fn @k_bo(v: Vec3) = k_fo(make_vec3(v.x, v.y, -v.z));
 fn @k_bi(v: Vec3) = k_fo(vec3_neg(v));
 
 fn @k_theta_index(theta: f32, basis: KlemsBasis) {
-    interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower <= theta)
+    interval::binary_search(basis.theta_count, @|k| basis.theta_basis(k).lower < theta)
 }
 
 fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) {
     let idx = max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2 + 0.5) as i32);
-    select(idx > basis.phi_count - 1, 0, idx)
+    select(idx >= basis.phi_count, 0, idx)
 }
 
 fn @k_multi_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> (i32, i32) {
@@ -67,10 +67,7 @@ fn @k_index_of(theta: f32, phi: f32, basis: KlemsBasis) -> i32 {
 }
 
 fn @k_eval_component_index(row: i32, col: i32, component: KlemsComponent) = component.matrix(row * component.column_basis.entry_count + col);
-
-fn @k_sample_component_index(u: f32, row: i32, component: KlemsComponent) {
-    component.cdf(row).sample_discrete(u)
-}
+fn @k_sample_component_index(u: f32, row: i32, component: KlemsComponent) = component.cdf(row).sample_discrete(u);
 
 fn @k_eval_component(in_dir: Vec3, out_dir: Vec3, component: KlemsComponent) {
     let (in_theta, in_phi)   = spherical_from_dir(in_dir);
@@ -97,7 +94,7 @@ fn @k_sample_theta_basis(u: f32, v: f32, basis: KlemsThetaBasis, phi_i: i32) -> 
 
     let phi = 2 * flt_pi * (phi_i as f32 + v - 0.5) / basis.phi_count as f32;
 
-    // Ignis normaly uses a different phi direction
+    // Ignis normally uses a different phi direction
     let vec = make_vec3(math_builtins::cos(phi) * sinTheta, math_builtins::sin(phi) * sinTheta, cosTheta);
 
     let pdf = (lower_sa2 - upper_sa2) * flt_pi / basis.phi_count as f32;
@@ -144,12 +141,14 @@ fn @make_klems_component(specification: KlemsComponentSpecification, buffer: Dev
     let (col_basis, col_off) = make_klems_basis(specification, buffer, off + row_off, 1);
 
     let mat_size = row_basis.entry_count * col_basis.entry_count;
+    let mat_off  = off + row_off + col_off;
+    let cdf_off  = mat_off + mat_size; // No padding between matrix & cdf
     (KlemsComponent {
         specification = specification,
         row_basis     = row_basis,
         column_basis  = col_basis,
-        matrix        = @ |i| buffer.load_f32(off + row_off + col_off + i),
-        cdf           = @ |col| cdf::make_cdf_1d_from_buffer(buffer, col_basis.entry_count, off + row_off + col_off + mat_size + col * col_basis.entry_count) 
+        matrix        = @ |i| buffer.load_f32(mat_off + i),
+        cdf           = @ |col| cdf::make_cdf_1d_from_buffer(buffer, col_basis.entry_count, cdf_off + col * col_basis.entry_count) 
     }, k_align(row_off + col_off + 2 * mat_size))
 }
 
@@ -182,15 +181,10 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
     }
 
     // Only optimize components away if they are given at compile time!
-    let has_front_refl = !?front_refl_total || front_refl_total > 0;
-    let has_front_tran = !?front_tran_total || front_tran_total > 0;
-    let has_back_refl  = !?back_refl_total  || back_refl_total  > 0;
-    let has_back_tran  = !?back_tran_total  || back_tran_total  > 0;
-
-    // Radiance uses a custom world transformation (making sure the flip of the normal is not propagated)
-    let transform = tt_transform_matrix(if surf.is_entering { surf.local.col(2) } else { vec3_neg(surf.local.col(2)) }, up);
-    let to_local  = @|v:Vec3| shading::to_local(transform, v);
-    let to_global = @|v:Vec3| shading::to_world(transform, v);
+    let has_front_refl = front_refl_total > 0;
+    let has_front_tran = front_tran_total > 0;
+    let has_back_refl  = back_refl_total  > 0;
+    let has_back_tran  = back_tran_total  > 0;
 
     let local_eval = |wi : Vec3, wo : Vec3| {
         // Be sure to get side without the (possible) flip from the surface interaction
@@ -207,17 +201,18 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
         color_mulf(color, factor * shading::abs_cos_theta(wi))
     };
 
+    // Radiance uses a custom world transformation (making sure the flip of the normal is not propagated)
+    let transform = tt_transform_matrix(if surf.is_entering { surf.local.col(2) } else { vec3_neg(surf.local.col(2)) }, up);
+    let to_local  = @|v:Vec3| shading::to_local(transform, v);
+    let to_global = @|v:Vec3| shading::to_world(transform, v);
+
     Bsdf {
         eval   = @ |in_dir, out_dir| {
-            if true { return(color_builtins::black) } // See note below about NEE
-
             let wo = to_local(out_dir);
             let wi = to_local(in_dir);
             local_eval(wi, wo)
         },
         pdf    = @ |in_dir, out_dir| {
-            if true { return(0) } // See note below about NEE
-
             let wo        = to_local(out_dir);
             let wi        = to_local(in_dir);
             let refl_prob = get_refl_prob(wo);
@@ -280,6 +275,6 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
                 }
             }
         },
-        is_specular = true // FIXME: The bsdf does not work properly together with NEE. Figure out why!
+        is_specular = false
     }
 }

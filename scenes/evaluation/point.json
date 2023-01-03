@@ -45,7 +45,7 @@
       "name": "__light_0",
       "type": "point",
       "position": [0,1,0],
-      "intensity": 12.566370614 // TODO: Maybe make the 4*pi part of the actual parameter?
+      "intensity": 1
     }
   ]
 }

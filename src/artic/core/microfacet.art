@@ -209,7 +209,7 @@ fn @make_delta_model(local: Mat3x3) = MicrofacetModel {
     is_delta = true
 };
 
-fn @make_aniso_beckmann_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
+fn @make_beckmann_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
     D  = @|m| ndf_beckmann(local, m, alpha_u, alpha_v),
     G1 = @|w, m| g_1_walter(local, w, m, alpha_u, alpha_v),
     sample = @ |rnd| {
@@ -237,9 +237,8 @@ fn @make_aniso_beckmann_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = Micro
     alpha_v  = alpha_v,
     is_delta = false
 };
-fn @make_iso_beckmann_model(local: Mat3x3, alpha: f32) = make_aniso_beckmann_model(local, alpha, alpha);
 
-fn @make_aniso_ggx_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
+fn @make_ggx_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = MicrofacetModel {
     D  = @|m| ndf_ggx(local, m, alpha_u, alpha_v),
     G1 = @|w, m| g_1_smith(local, w, m, alpha_u, alpha_v),
     sample = @ |rnd| {
@@ -270,7 +269,6 @@ fn @make_aniso_ggx_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = Microfacet
     alpha_v  = alpha_v,
     is_delta = false
 };
-fn @make_iso_ggx_model(local: Mat3x3, alpha: f32) = make_aniso_ggx_model(local, alpha, alpha);
 ///////////////////////////////////
 
 struct MicrofacetDistribution {
@@ -305,7 +303,7 @@ fn @make_beckmann_distribution(local: Mat3x3, alpha_u: f32, alpha_v: f32) -> Mic
     if check_if_delta_distribution(alpha_u, alpha_v) {
         make_delta_distribution(local) 
     } else {
-        make_microfacet_distribution(make_aniso_beckmann_model(local, alpha_u, alpha_v), local)
+        make_microfacet_distribution(make_beckmann_model(local, alpha_u, alpha_v), local)
     }
 }
 
@@ -313,7 +311,7 @@ fn @make_ggx_distribution(local: Mat3x3, alpha_u: f32, alpha_v: f32) -> Microfac
     if check_if_delta_distribution(alpha_u, alpha_v) {
         make_delta_distribution(local)
     } else { 
-        make_microfacet_distribution(make_aniso_ggx_model(local, alpha_u, alpha_v), local)
+        make_microfacet_distribution(make_ggx_model(local, alpha_u, alpha_v), local)
     }
 }
 
@@ -357,8 +355,7 @@ fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, a
     );
     
     let Nh = if !math_builtins::isfinite(slope2.x) {
-        // Compute fallback for numerical instabilities
-        all::select(vL.z > 0, all::make_vec3(0,0,1), all::vec3_normalize(all::make_vec3(vL.x, vL.y, 0)))
+        all::vec3_expand(0)
     } else {
         // Compute normal
         all::vec3_normalize(all::make_vec3(-slope2.x, -slope2.y, 1))
@@ -379,7 +376,7 @@ fn @make_vndf_ggx_distribution(face_normal: Vec3, local: Mat3x3, alpha_u: f32, a
     if check_if_delta_distribution(alpha_u, alpha_v) {
         make_delta_distribution(local)
     } else {
-        let model = make_aniso_ggx_model(local, alpha_u, alpha_v);
+        let model = make_ggx_model(local, alpha_u, alpha_v);
         MicrofacetDistribution {
             D      = model.D,
             G      = @ |wi, wo, m| model.G1(wi, m) * model.G1(wo, m),
@@ -395,5 +392,12 @@ fn @make_vndf_ggx_distribution(face_normal: Vec3, local: Mat3x3, alpha_u: f32, a
             is_delta = false
         }
     }
+}
+
+fn @compute_explicit(roughness: f32, anisotropic: f32) -> (f32, f32) {
+    let aspect = if ?anisotropic && anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - super::clampf(anisotropic, 0, 1) * 0.99) };
+    let rx	   = roughness / aspect;
+    let ry	   = roughness * aspect;
+    (rx, ry)
 }
 }

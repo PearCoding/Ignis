@@ -46,7 +46,7 @@ if(OpenImageDenoise_INCLUDE_DIR)
 endif()
 
 # Extract the version
-if(EXISTS OpenImageDenoise_VERSION_FILE)
+if(EXISTS "${OpenImageDenoise_VERSION_FILE}")
   file(READ "${OpenImageDenoise_VERSION_FILE}" _oidn_version_file)
   string(REGEX REPLACE ".*#define[ \t\r\n]+OIDN_VERSION_MAJOR[ \t\r\n]+([0-9]+).*" "\\1"
       OpenImageDenoise_VERSION_MAJOR "${_oidn_version_file}")

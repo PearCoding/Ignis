@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Camera.h"
+#include "CameraProxy.h"
 
 namespace IG {
 struct CameraPose {
@@ -9,7 +9,7 @@ struct CameraPose {
     Vector3f Up  = Vector3f(0, 1, 0);
 
     inline CameraPose() = default;
-    inline explicit CameraPose(const Camera& cam)
+    inline explicit CameraPose(const CameraProxy& cam)
         : Eye(cam.Eye)
         , Dir(cam.Direction)
         , Up(cam.Up)
