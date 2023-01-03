@@ -20,6 +20,7 @@ std::string MissShader::setup(LoaderContext& ctx)
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
+           << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl
            << std::endl;
 
     ShadingTree tree(ctx);

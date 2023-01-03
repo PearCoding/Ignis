@@ -7,7 +7,7 @@ from .emission import get_emission
 from .defaults import *
 
 
-def export_background(result, out_dir, depsgraph, copy_images):
+def export_background(result, out_dir, depsgraph, settings):
     scene = depsgraph.scene
 
     # It might be that no world is given at all
@@ -32,7 +32,7 @@ def export_background(result, out_dir, depsgraph, copy_images):
         return None
 
     radiance = get_emission(NodeContext(
-        result, out_dir, depsgraph, copy_images), surface)
+        result, out_dir, depsgraph, settings), surface)
 
     if not radiance:
         return
@@ -59,7 +59,8 @@ def export_light(result, inst):
         cutoff = l.spot_size / 2
         falloff = math.acos(
             l.spot_blend + (1 - l.spot_blend) * math.cos(cutoff))
-        factor = 1 / (4 * math.pi) # Ignis allows power as input, but defines it as the actual emitted output. Cycles only scales it by a factor independent of cutoff & falloff
+        # Ignis allows power as input, but defines it as the actual emitted output. Cycles only scales it by a factor independent of cutoff & falloff
+        factor = 1 / (4 * math.pi)
         result["lights"].append(
             {"type": "spot", "name": light.name, "position": map_vector(position), "direction": map_vector(direction.normalized(
             )), "intensity": map_rgb([power[0] * factor, power[1] * factor, power[2] * factor]), "cutoff": math.degrees(cutoff), "falloff": math.degrees(falloff)}
@@ -68,12 +69,12 @@ def export_light(result, inst):
         if l.angle < 1e-4:
             result["lights"].append(
                 {"type": "directional", "name": light.name, "direction": map_vector(
-                    direction.normalized()), "irradiance": map_rgb(power) }
+                    direction.normalized()), "irradiance": map_rgb(power)}
             )
         else:
             result["lights"].append(
                 {"type": "sun", "name": light.name, "direction": map_vector(
-                    direction.normalized()), "irradiance": map_rgb(power), "angle": math.degrees(l.angle) }
+                    direction.normalized()), "irradiance": map_rgb(power), "angle": math.degrees(l.angle)}
             )
     elif l.type == "AREA":
         size_x = l.size
@@ -100,14 +101,17 @@ def export_light(result, inst):
                     "-shape", "width": size_x, "height": size_y, "flip_normals": True}
             )
 
-        result["entities"].append(
-            {"name": light.name,
-             "shape": light.name + "-shape",
-             "bsdf": BSDF_BLACK_NAME,
-             "transform": flat_matrix(inst.matrix_world),
-             "camera_visible": light.visible_camera,
-             "bounce_visible": (light.visible_diffuse or light.visible_glossy or light.visible_transmission)}
-        )
+        entity_dict = {"name": light.name,
+                       "shape": light.name + "-shape",
+                       "bsdf": BSDF_BLACK_NAME,
+                       "transform": flat_matrix(inst.matrix_world)}
+
+        if not light.visible_camera:
+            entity_dict["camera_visible"] = False
+        if not inst.object.visible_diffuse and not inst.object.visible_glossy and not inst.object.visible_transmission:
+            entity_dict["bounce_visible"] = False
+
+        result["entities"].append(entity_dict)
 
         result["lights"].append(
             {"type": "area", "name": light.name, "entity": light.name,

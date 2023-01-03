@@ -1,4 +1,5 @@
 #include "Target.h"
+#include "StringUtils.h"
 
 #include "anydsl_runtime.h"
 
@@ -10,7 +11,7 @@ namespace IG {
 Target::Target()
     : mInitialized(false)
     , mGPU(false)
-    , mGPUVendor(GPUVendor::Unknown)
+    , mGPUArchitecture(GPUArchitecture::Unknown)
     , mCPUArchitecture(CPUArchitecture::Unknown)
     , mDevice(0)
     , mThreadCount(0)
@@ -23,18 +24,18 @@ std::string Target::toString() const
     std::stringstream stream;
     if (mGPU) {
         stream << "GPU[";
-        switch (mGPUVendor) {
-        case GPUVendor::AMD:
+        switch (mGPUArchitecture) {
+        case GPUArchitecture::AMD:
             stream << "AMD";
             break;
-        case GPUVendor::Intel:
+        case GPUArchitecture::Intel:
             stream << "Intel";
             break;
-        case GPUVendor::Nvidia:
+        case GPUArchitecture::Nvidia:
             stream << "Nvidia";
             break;
         default:
-        case GPUVendor::Unknown:
+        case GPUArchitecture::Unknown:
             stream << "Unknown";
             break;
         }
@@ -56,6 +57,40 @@ std::string Target::toString() const
         stream << ",T=" << mThreadCount << ",V=" << mVectorWidth << "]";
     }
     return stream.str();
+}
+
+CPUArchitecture Target::getCPUArchitectureFromString(const std::string& str)
+{
+    const std::string lstr = to_lowercase(str);
+    if (lstr == "arm")
+        return CPUArchitecture::ARM;
+    else if (lstr == "x86")
+        return CPUArchitecture::X86;
+    else
+        return CPUArchitecture::Unknown;
+}
+
+GPUArchitecture Target::getGPUArchitectureFromString(const std::string& str)
+{
+    const std::string lstr = to_lowercase(str);
+    if (lstr == "amd")
+        return GPUArchitecture::AMD;
+    else if (lstr == "intel")
+        return GPUArchitecture::Intel;
+    else if (lstr == "nvidia")
+        return GPUArchitecture::Nvidia;
+    else
+        return GPUArchitecture::Unknown;
+}
+
+std::vector<std::string> Target::getAvailableCPUArchitectureNames()
+{
+    return { "ARM", "x86" };
+}
+
+std::vector<std::string> Target::getAvailableGPUArchitectureNames()
+{
+    return { "AMD", "Intel", "Nvidia" };
 }
 
 static inline CPUArchitecture getCPUArchitecture()
@@ -94,13 +129,13 @@ Target Target::makeCPU(CPUArchitecture arch, size_t threads, size_t vectorWidth)
     return target;
 }
 
-Target Target::makeGPU(GPUVendor vendor, size_t device)
+Target Target::makeGPU(GPUArchitecture arch, size_t device)
 {
     Target target;
-    target.mGPU         = true;
-    target.mGPUVendor   = vendor;
-    target.mDevice      = device;
-    target.mInitialized = true;
+    target.mGPU             = true;
+    target.mGPUArchitecture = arch;
+    target.mDevice          = device;
+    target.mInitialized     = true;
     return target;
 }
 
@@ -317,17 +352,17 @@ Target Target::pickGPU(size_t device)
     // TODO: Runtime check?
 
     if (hasNvidiaSupport)
-        return makeGPU(GPUVendor::Nvidia, device);
+        return makeGPU(GPUArchitecture::Nvidia, device);
     else if (hasAMDSupport)
-        return makeGPU(GPUVendor::AMD, device);
+        return makeGPU(GPUArchitecture::AMD, device);
     else
-        return makeGPU(GPUVendor::Unknown, device);
+        return makeGPU(GPUArchitecture::Unknown, device);
 }
 
 Target Target::pickBest()
 {
     Target t = pickGPU();
-    if (t.isValid() && t.mGPUVendor != GPUVendor::Unknown)
+    if (t.isValid() && t.mGPUArchitecture != GPUArchitecture::Unknown)
         return t;
 
     return pickCPU();

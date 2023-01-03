@@ -68,3 +68,6 @@ scripts/docker/ignis/tmp/
 
 # Do not add backup files
 *.blend1
+
+# Do not export imgui settings
+imgui.ini

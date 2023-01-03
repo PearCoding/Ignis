@@ -1,0 +1,28 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 6
+  },
+  "camera": {
+    "type": "perspective",
+    "transform": [1, 0, 0, 278, 0, 1, 0, 273, 0, 0, 1, -800, 0, 0, 0, 1],
+    "fov": 39.3077,
+    "far_clip": 2800,
+    "near_clip": 10
+  },
+  "film": {
+    "size": [256, 256]
+  },
+	"textures": [
+		{ "type": "image", "name": "env", "filename": "../textures/environment/phalzer_forest_01_4k.exr" }
+	],
+  "bsdfs": [
+    { "name": "bsdf", "type": "diffuse", "reflectance": [0.885809, 0.698859, 0.666422] }
+  ],
+  "shapes": [
+    { "name": "shape", "type": "obj", "filename": "meshes/cbox_floor.obj" }
+  ],
+  "entities": [
+    { "name": "entity", "shape": "shape", "bsdf": "bsdf" }
+  ]
+}

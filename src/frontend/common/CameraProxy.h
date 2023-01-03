@@ -23,17 +23,17 @@ struct CameraProxy {
     inline void rotate_fixroll(float yaw, float pitch)
     {
         Eigen::AngleAxisf pitchAngle(-pitch, Vector3f::UnitX());
-        Eigen::Quaternionf q1 = Eigen::Quaternionf(pitchAngle).normalized();
+        Quaternionf q1 = Quaternionf(pitchAngle).normalized();
 
         Direction = q1 * Direction;
         Right     = q1 * Right;
         Up        = Right.cross(Direction).normalized();
 
         Eigen::AngleAxisf yawAngle(-yaw, Up);
-        Eigen::Quaternionf q2 = Eigen::Quaternionf(yawAngle).normalized();
-        Direction             = q2 * Direction;
-        Right                 = q2 * Right;
-        Up                    = q2 * Up;
+        Quaternionf q2 = Quaternionf(yawAngle).normalized();
+        Direction      = q2 * Direction;
+        Right          = q2 * Right;
+        Up             = q2 * Up;
     }
 
     inline void rotate_around(const Vector3f& center, float yaw, float pitch)

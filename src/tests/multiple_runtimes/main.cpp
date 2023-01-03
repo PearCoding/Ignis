@@ -18,7 +18,7 @@ int main(int argc, char** argv)
             RuntimeOptions opts = RuntimeOptions::makeDefault();
             if (k % 2 == 1) {
                 opts.Target = Target::pickGPU();
-                if (!opts.Target.isValid() || opts.Target.gpuVendor() == GPUVendor::Unknown)
+                if (!opts.Target.isValid() || opts.Target.gpuArchitecture() == GPUArchitecture::Unknown)
                     opts.Target = Target::pickBest();
             } else {
                 opts.Target = Target::pickCPU();

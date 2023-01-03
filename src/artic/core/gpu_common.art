@@ -16,6 +16,9 @@ fn @gpu_make_null_atomics() = Atomics {
     add_shared_f32 = @ |_, _| 0,
 };
 
+fn @  nvvm_likely(cond: bool) = llvm_expect(cond,  true);
+fn @nvvm_unlikely(cond: bool) = llvm_expect(cond, false);
+
 // Simple ranged for
 fn @gpu_exec_1d(acc: Accelerator, dim: i32, block_size: i32, body: fn (WorkItem) -> ()) {
     // Helper function that deduces the appropriate grid size that is at least larger

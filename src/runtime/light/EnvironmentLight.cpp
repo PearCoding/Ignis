@@ -1,5 +1,6 @@
 #include "EnvironmentLight.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "loader/LoaderTexture.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
@@ -11,6 +12,7 @@ EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_pt
     , mLight(light)
 {
     mUseCDF          = light->property("cdf").getBool(true);
+    mUseCDFSAT       = to_lowercase(light->property("cdf_method").getString("")) == "sat";
     mUseCompensation = light->property("compensate").getBool(true);
 }
 
@@ -43,11 +45,17 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 
     const std::string light_id = input.Tree.currentClosureID();
     if (mUseCDF && baked.has_value() && baked.value()->width > 1 && baked.value()->height > 1) {
-        const auto cdf          = LoaderUtils::setup_cdf2d(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
-        const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
-        input.Stream << input.Tree.pullHeader()
-                     << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
-                     << "  let light_" << light_id << " = make_environment_light_textured(" << input.ID
+        input.Stream << input.Tree.pullHeader();
+        if (!mUseCDFSAT) {
+            const auto cdf          = LoaderUtils::setup_cdf2d(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
+            const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
+            input.Stream << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl;
+        } else {
+            const auto cdf          = LoaderUtils::setup_cdf2d_sat(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
+            const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
+            input.Stream << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_sat_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl;
+        }
+        input.Stream << "  let light_" << light_id << " = make_environment_light_textured(" << input.ID
                      << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                      << ", " << input.Tree.getInline("scale")
                      << ", " << input.Tree.getInline("radiance")

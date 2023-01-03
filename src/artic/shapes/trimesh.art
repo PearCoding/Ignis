@@ -141,19 +141,18 @@ fn @make_cpu_tri_prim(tris: &[Tri4]) -> fn (i32) -> Prim {
     }
 }
 
-fn @make_gpu_tri_prim(j: i32, tris: &[Tri1], is_nvvm: bool) -> Prim {
-    let load4_f32 = @ |p: &addrspace(1)[simd[f32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_f32(&p(i)) } else { p(i) };
+fn @make_gpu_tri_prim(j: i32, tris: &[Tri1], accessor: DeviceBufferAccessor) -> Prim {
+    let d = accessor(&tris(j) as &[f32], 0);
 
-    let simd_ptr = &tris(j) as &addrspace(1)[simd[f32 * 4]];
-    let tri0     = load4_f32(simd_ptr, 0);
-    let tri1     = load4_f32(simd_ptr, 1);
-    let tri2     = load4_f32(simd_ptr, 2);
-    let prim_id  = bitcast[i32](tri2(3));
+    let tri0    = d.load_vec4(0);
+    let tri1    = d.load_vec4(4);
+    let tri2    = d.load_vec4(8);
+    let prim_id = bitcast[i32](tri2.w);
     Prim {
         intersect = @ |_, ray| {
-            let v0  = make_vec3(tri0(0), tri0(1), tri0(2));
-            let e1  = make_vec3(tri1(0), tri1(1), tri1(2));
-            let e2  = make_vec3(tri2(0), tri2(1), tri2(2));
+            let v0  = make_vec3(tri0.x, tri0.y, tri0.z);
+            let e1  = make_vec3(tri1.x, tri1.y, tri1.z);
+            let e2  = make_vec3(tri2.x, tri2.y, tri2.z);
             let n   = vec3_cross(e1, e2);
             let tri = make_tri(v0, e1, e2, n);
             if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri_gpu(false /*backface_culling*/, ray, tri) {
@@ -188,22 +187,20 @@ fn @make_cpu_bvh8_tri4(nodes: &[Node8], tris: &[Tri4]) = PrimBvh {
     arity = 8
 };
 
-fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], is_nvvm: bool) -> PrimBvh {
+fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], acc: DeviceBufferAccessor) -> PrimBvh {
     PrimBvh {
-        node     = @ |j| @make_gpu_node(j, nodes, is_nvvm),
-        prim     = @ |j| @make_gpu_tri_prim(j, tris , is_nvvm),
+        node     = @ |j| @make_gpu_node(j, nodes, acc),
+        prim     = @ |j| @make_gpu_tri_prim(j, tris, acc),
         prefetch = @ |_| (), // Not implemented
         arity    = 2
     }
 }
 
 fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
-    let dtb = device.load_fixtable("trimesh_primbvh"); 
-    let acc = device.get_device_buffer_accessor();
+    let dtb = device.load_fixtable("trimesh_primbvh");
 
     @ |off| {
-        let ptr    = &(dtb.pointer(0) as &[f32])(off) as &[u8];
-        let header = acc(ptr);
+        let header      = shift_device_buffer(off as i32, 0, dtb);
         let leaf_offset = header.load_i32(0);
 
         if vector_width >= 8 {
@@ -218,17 +215,16 @@ fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
     } 
 }
 
-fn @make_gpu_trimesh_bvh_table(device: Device, is_nvvm: bool) -> BVHTable {
+fn @make_gpu_trimesh_bvh_table(device: Device) -> BVHTable {
     let dtb = device.load_fixtable("trimesh_primbvh");
     let acc = device.get_device_buffer_accessor();
 
     @ |off| {
-        let ptr    = &(dtb.pointer(0) as &[f32])(off) as &[u8];
-        let header = acc(ptr);
+        let header      = shift_device_buffer(off as i32, 0, dtb);
         let leaf_offset = header.load_i32(0);
 
         let nodes = header.pointer(4) as &[Node2];
         let tris  = header.pointer(4 + leaf_offset * sizeof[Node2]() as i32 / 4) as &[Tri1];
-        make_gpu_bvh2_tri1(nodes, tris, is_nvvm)
+        make_gpu_bvh2_tri1(nodes, tris, acc)
     }
 }

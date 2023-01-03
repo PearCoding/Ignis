@@ -14,6 +14,7 @@ public:
 
 private:
     bool mUseCDF;
+    bool mUseCDFSAT;
     bool mUseCompensation;
 
     std::shared_ptr<SceneObject> mLight;

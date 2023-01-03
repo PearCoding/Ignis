@@ -18,7 +18,6 @@ A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly 
 ## Dependencies
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>
- - Eigen3 <http://eigen.tuxfamily.org>
  - Intel® Threading Building Blocks https://www.threadingbuildingblocks.org/
  - ZLib <https://zlib.net/>
 
@@ -33,6 +32,7 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - bvh <https://github.com/madmann91/bvh>
  - Catch2 <https://github.com/catchorg/Catch2>
  - CLI11 <https://github.com/CLIUtils/CLI11>
+ - Eigen3 <http://eigen.tuxfamily.org>
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
  - implot <https://github.com/epezent/implot>

@@ -55,6 +55,21 @@ struct IG_LIB Image {
 
     [[nodiscard]] Vector4f computeAverage() const;
 
+    enum class FilterMethod {
+        Nearest,
+        Bilinear,
+        Bicubic
+    };
+
+    enum class BorderMethod {
+        Clamp,
+        Repeat,
+        Mirror
+    };
+
+    /// Basic evaluation of the image at point `uv`.
+    [[nodiscard]] Vector4f eval(const Vector2f& uv, BorderMethod borderMethod = BorderMethod::Repeat, FilterMethod filterMethod = FilterMethod::Bicubic) const;
+
     /// Will format to packed format (RGBA or Mono, 8bit each)
     /// Use this only for byte formats, else image quality will be lost
     void copyToPackedFormat(std::vector<uint8>& dst) const;

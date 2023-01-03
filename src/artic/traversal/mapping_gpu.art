@@ -6,33 +6,31 @@ struct Node2 {
     pad:    [i32 * 2]
 }
 
-fn @make_gpu_node(j: i32, nodes: &[Node2], is_nvvm: bool) -> Node {
-    let load4_f32 = @ |p: &addrspace(1)[simd[f32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_f32(&p(i)) } else { p(i) };
-    let load4_i32 = @ |p: &addrspace(1)[simd[i32 * 4]], i: i32| if is_nvvm { nvvm_ldg4_i32(&p(i)) } else { p(i) };
+fn @make_gpu_node(j: i32, nodes: &[Node2], accessor: DeviceBufferAccessor) -> Node {
+    let d = accessor(&nodes(j) as &[f32], 0);
     
-    let simd_ptr = &nodes(j) as &addrspace(1)[simd[f32 * 4]];
-    let bb0      = load4_f32(simd_ptr, 0);
-    let bb1      = load4_f32(simd_ptr, 1);
-    let bb2      = load4_f32(simd_ptr, 2);
-    let children = load4_i32(simd_ptr as &addrspace(1)[simd[i32 * 4]], 3);
+    let bb0      = d.load_vec4( 0);
+    let bb1      = d.load_vec4( 4);
+    let bb2      = d.load_vec4( 8);
+    let children = d.load_int4(12);
 
     Node {
         bbox = @ |i| {
             if i == 0 {
-                make_bbox(make_vec3(bb0(0), bb0(2), bb1(0)),
-                          make_vec3(bb0(1), bb0(3), bb1(1)))
+                make_bbox(make_vec3(bb0.x, bb0.z, bb1.x),
+                          make_vec3(bb0.y, bb0.w, bb1.y))
             } else {
-                make_bbox(make_vec3(bb1(2), bb2(0), bb2(2)),
-                          make_vec3(bb1(3), bb2(1), bb2(3)))
+                make_bbox(make_vec3(bb1.z, bb2.x, bb2.z),
+                          make_vec3(bb1.w, bb2.y, bb2.w))
             }
         },
         ordered_bbox = @ |_, _| undef[BBox](), // Not implemented
-        child = @ |i| children(i)
+        child = @ |i| [children.0, children.1](i) // Only arity 2 supported
     }
 }
 
-fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], is_nvvm: bool) -> EntityLeaf {
-    let d  = make_gpu_buffer(0/* Does not matter */, &objs(j) as &addrspace(1)[u8], 0, gpu_make_null_atomics(), is_nvvm);
+fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], accessor: DeviceBufferAccessor) -> EntityLeaf {
+    let d  = accessor(&objs(j) as &[f32], 0);
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);
@@ -47,10 +45,10 @@ fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], is_nvvm: bool) -> EntityLeaf {
     )
 }
 
-fn @make_gpu_bvh2_ent(nodes: &[Node2], objs: &[EntityLeaf1], is_nvvm: bool) -> SceneBvh {
+fn @make_gpu_bvh2_ent(nodes: &[Node2], objs: &[EntityLeaf1], accessor: DeviceBufferAccessor) -> SceneBvh {
     SceneBvh {
-        node     = @ |j| @make_gpu_node(j, nodes, is_nvvm),
-        ent      = @ |j| @make_gpu_ent( j, objs , is_nvvm),
+        node     = @ |j| @make_gpu_node(j, nodes, accessor),
+        ent      = @ |j| @make_gpu_ent( j, objs , accessor),
         prefetch = @ |_| (), // Not implemented
         arity    = 2
     }
@@ -73,12 +71,12 @@ fn @make_amdgpu_min_max() = make_min_max(ocml_fminf, ocml_fmaxf, false);
 
 // Traversal kernel  ---------------------------------------------------------------
 fn @gpu_traverse_helper( min_max: MinMax
-                              , mut ray: Ray
-                              , mut hit: Hit
-                              , bvh: TraversalBvh
-                              , any_hit: bool
-                              , root: i32
-                              ) -> Hit {
+                       , mut ray: Ray
+                       , mut hit: Hit
+                       , bvh: TraversalBvh
+                       , any_hit: bool
+                       , root: i32
+                       ) -> Hit {
     let stack = alloc_stack();
     stack.push(root, undef[f32]());
 
@@ -90,7 +88,7 @@ fn @gpu_traverse_helper( min_max: MinMax
         let small_stack = make_small_stack(bvh.arity);
         for k in unroll(0, bvh.arity) {
             let bbox = node.bbox(k);
-            if likely(!bbox_is_empty(bbox)) {
+            if !bbox_is_empty(bbox) {
                 let (t0, t1) = intersect_ray_box(min_max, false, ray, bbox);
                 if t0 <= t1 {
                     mask |= 1 << k;
@@ -188,12 +186,12 @@ fn @make_gpu_scene_local_handler_multiple(prims: BVHTable, min_max: MinMax) -> S
 
 // Traverses a single ray at a time. 
 fn @gpu_traverse_scene( min_max: MinMax
-                        , ray: Ray
-                        , init_hit: Hit
-                        , scene: SceneGeometry
-                        , any_hit: bool
-                        , root: i32
-                        ) -> Hit {
+                      , ray: Ray
+                      , init_hit: Hit
+                      , scene: SceneGeometry
+                      , any_hit: bool
+                      , root: i32
+                      ) -> Hit {
 
     let bvh = scene.bvh;
     fn @scene_handle(leaf_ref: NodeRef, ray2: &mut Ray, hit: &mut Hit) -> bool {

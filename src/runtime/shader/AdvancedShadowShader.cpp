@@ -23,6 +23,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
+           << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl
            << std::endl;
 
     if (ctx.CurrentTechniqueVariantInfo().UsesLights) {

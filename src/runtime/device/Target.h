@@ -3,7 +3,7 @@
 #include "IG_Config.h"
 
 namespace IG {
-enum class GPUVendor {
+enum class GPUArchitecture {
     AMD,
     Intel, // TODO: Only listed here, no support at the moment
     Nvidia,
@@ -26,7 +26,7 @@ public:
     [[nodiscard]] inline bool isCPU() const { return !mGPU; }
     [[nodiscard]] inline bool isGPU() const { return mGPU; }
 
-    [[nodiscard]] inline GPUVendor gpuVendor() const { return mGPUVendor; }
+    [[nodiscard]] inline GPUArchitecture gpuArchitecture() const { return mGPUArchitecture; }
     [[nodiscard]] inline CPUArchitecture cpuArchitecture() const { return mCPUArchitecture; }
 
     [[nodiscard]] inline size_t device() const { return mDevice; }
@@ -43,17 +43,23 @@ public:
 
     [[nodiscard]] static Target makeCPU(size_t threads, size_t vectorWidth);
     [[nodiscard]] static Target makeCPU(CPUArchitecture arch, size_t threads, size_t vectorWidth);
-    [[nodiscard]] static Target makeGPU(GPUVendor vendor, size_t device);
+    [[nodiscard]] static Target makeGPU(GPUArchitecture arch, size_t device);
 
     [[nodiscard]] static Target pickCPU();
     [[nodiscard]] static Target pickGPU(size_t device = 0);
     [[nodiscard]] static Target pickBest();
 
+    [[nodiscard]] static CPUArchitecture getCPUArchitectureFromString(const std::string& str);
+    [[nodiscard]] static GPUArchitecture getGPUArchitectureFromString(const std::string& str);
+
+    [[nodiscard]] static std::vector<std::string> getAvailableCPUArchitectureNames();
+    [[nodiscard]] static std::vector<std::string> getAvailableGPUArchitectureNames();
+
 private:
     bool mInitialized;
     bool mGPU;
 
-    GPUVendor mGPUVendor;
+    GPUArchitecture mGPUArchitecture;
     CPUArchitecture mCPUArchitecture;
 
     size_t mDevice;

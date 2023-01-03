@@ -144,7 +144,7 @@ fn @make_rough_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color
             let H  = select(math_builtins::signbit(vec3_dot(oH, out_dir)), vec3_neg(oH), oH);
 
             let cos_h_o = vec3_dot(H, out_dir);
-            if unlikely(math_builtins::fabs(cos_h_o) <= cos_eps) { return(reject_bsdf_sample()) }
+            if math_builtins::fabs(cos_h_o) <= cos_eps { return(reject_bsdf_sample()) }
 
             let fterm = from_option(fresnel(eta, cos_h_o), FresnelTerm{ cos_t = 0, factor = 1 });
 

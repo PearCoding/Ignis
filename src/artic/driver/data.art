@@ -26,7 +26,7 @@ fn @make_dyntable(tbl: DynTableData, acc: DeviceBufferAccessor) -> DynTable {
     fn @get_lookup_entry(ind: i32) -> LookupEntry {
         // TODO: Check boundaries
         //tbl.header(ind)
-        let data = acc((&tbl.header(ind)) as &[u8]);
+        let data = acc((&tbl.header(ind)) as &[f32], 0);
         let (type_id, flags, off1, off2) = data.load_int4(0);
         LookupEntry {
              type_id = bitcast[u32](type_id),
@@ -37,7 +37,7 @@ fn @make_dyntable(tbl: DynTableData, acc: DeviceBufferAccessor) -> DynTable {
     
     fn @get_table_entry(off: u64) -> DeviceBuffer {
         // TODO: Check boundaries
-        acc(&tbl.start(off) as &[u8])
+        acc(&tbl.start(off) as &[f32], 0)
     }
 
     DynTable {

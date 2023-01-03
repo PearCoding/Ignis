@@ -7,25 +7,24 @@
 #include <sstream>
 
 namespace IG {
-std::string LoaderUtils::inlineSceneInfo(const LoaderContext& ctx)
-{
-    std::stringstream stream;
-    stream << "SceneInfo { num_entities = " << ctx.EntityCount << ", num_materials = " << ctx.Materials.size() << " }";
-    return stream.str();
-}
-
 std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
 {
+#if 0
     std::stringstream stream;
     stream << "make_bbox(" << LoaderUtils::inlineVector(ctx.SceneBBox.min) << ", " << LoaderUtils::inlineVector(ctx.SceneBBox.max) << ")";
     return stream.str();
+#else
+    IG_UNUSED(ctx);
+    return "scene_bbox"; // Defined in each respective shader
+#endif
 }
 
 std::string LoaderUtils::inlineEntity(const Entity& entity)
 {
-    const Eigen::Matrix<float, 3, 4> localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
-    const Eigen::Matrix<float, 3, 4> globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
-    const Matrix3f normalMat                   = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
+    // TODO: Might be beneficial to put this into the registry?
+    const Matrix34f localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
+    const Matrix34f globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
+    const Matrix3f normalMat  = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
 
     std::stringstream stream;
     stream << "Entity{ id = " << entity.ID
@@ -84,7 +83,7 @@ std::string LoaderUtils::inlineMatrix(const Matrix3f& mat)
     }
 }
 
-std::string LoaderUtils::inlineMatrix34(const Eigen::Matrix<float, 3, 4>& mat)
+std::string LoaderUtils::inlineMatrix34(const Matrix34f& mat)
 {
     if (mat.isIdentity()) {
         return "mat3x4_identity()";
@@ -155,19 +154,19 @@ Vector3f LoaderUtils::getDirection(const SceneObject& obj)
     return getEA(obj).toDirectionYUp();
 }
 
-LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
 {
     std::string name = std::filesystem::path(filename).stem().generic_u8string();
     Image image      = Image::load(filename);
     return setup_cdf2d(ctx, name, image, premultiplySin, compensate);
 }
 
-LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
 {
     const std::string exported_id = "_cdf2d_" + name;
     const auto data               = ctx.Cache->ExportedData.find(exported_id);
     if (data != ctx.Cache->ExportedData.end())
-        return std::any_cast<CDFData>(data->second);
+        return std::any_cast<CDF2DData>(data->second);
 
     IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name << "'" << std::endl;
     std::filesystem::create_directories("data/"); // Make sure this directory exists
@@ -177,7 +176,34 @@ LoaderUtils::CDFData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::str
     size_t slice_marginal    = 0;
     CDF::computeForImage(image, path, slice_conditional, slice_marginal, premultiplySin, compensate);
 
-    const CDFData cdf_data               = { path, slice_conditional, slice_marginal };
+    const CDF2DData cdf_data             = { path, slice_conditional, slice_marginal };
+    ctx.Cache->ExportedData[exported_id] = cdf_data;
+    return cdf_data;
+}
+
+LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
+{
+    std::string name = std::filesystem::path(filename).stem().generic_u8string();
+    Image image      = Image::load(filename);
+    return setup_cdf2d_sat(ctx, name, image, premultiplySin, compensate);
+}
+
+LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
+{
+    const std::string exported_id = "_cdf2dsat_" + name;
+    const auto data               = ctx.Cache->ExportedData.find(exported_id);
+    if (data != ctx.Cache->ExportedData.end())
+        return std::any_cast<CDF2DSATData>(data->second);
+
+    IG_LOG(L_DEBUG) << "Generating environment cdf (SAT) for '" << name << "'" << std::endl;
+    std::filesystem::create_directories("data/"); // Make sure this directory exists
+    std::string path = "data/cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin";
+
+    size_t size  = 0;
+    size_t slice = 0;
+    CDF::computeForImageSAT(image, path, size, slice, premultiplySin, compensate);
+
+    const CDF2DSATData cdf_data          = { path, size, slice };
     ctx.Cache->ExportedData[exported_id] = cdf_data;
     return cdf_data;
 }

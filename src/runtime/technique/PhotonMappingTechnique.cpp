@@ -42,7 +42,6 @@ static std::string ppm_before_iteration_generator(LoaderContext& ctx)
     std::stringstream stream;
 
     stream << ShaderUtils::beginCallback(ctx) << std::endl
-           << "  let scene_bbox = " << LoaderUtils::inlineSceneBBox(ctx) << ";" << std::endl
            << "  let tech_photons = registry::get_global_parameter_i32(\"__tech_photon_count\", 1000);" << std::endl
            << "  ppm_handle_before_iteration(device, iter, " << ctx.CurrentTechniqueVariant << ", tech_photons, scene_bbox);" << std::endl
            << ShaderUtils::endCallback() << std::endl;
@@ -147,8 +146,7 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
                      << "  };" << std::endl;
     }
 
-    input.Stream << "  let scene_bbox  = " << LoaderUtils::inlineSceneBBox(input.Context) << ";" << std::endl
-                 << "  let light_cache = make_ppm_lightcache(device, tech_photons, scene_bbox);" << std::endl;
+    input.Stream << "  let light_cache = make_ppm_lightcache(device, tech_photons, scene_bbox);" << std::endl;
 
     if (is_light_pass) {
         input.Stream << "  let technique = make_ppm_light_renderer(tech_max_light_depth, aovs, light_cache);" << std::endl;

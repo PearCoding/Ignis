@@ -6,8 +6,8 @@ struct GlareSettings {
 
 fn @ig_glare_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &GlareSettings) {
 
-    let buffer_in  = device.make_buffer(in_pixels as &[u8],  width * height * 3);
-    let buffer_out = device.make_buffer(out_pixels as &[u8], width * height);
+    let buffer_in  = device.make_buffer(in_pixels,  width * height * 3);
+    let buffer_out = device.make_buffer(out_pixels as &[f32], width * height);
 
     fn @store_pixel(index: i32, color: Color) {
         buffer_out.store_i32(index, bitcast[i32](make_byte_color(color)));

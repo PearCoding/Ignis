@@ -107,25 +107,25 @@ std::unique_ptr<Runtime> RuntimeWrap::sInstance;
 void runtime_module(py::module_& m)
 {
     // Logger IO stuff
-    m.def("flushLog", flush_io);
+    m.def("flushLog", flush_io, "Flush internal logs");
 
-    py::enum_<CPUArchitecture>(m, "CPUArchitecture")
+    py::enum_<CPUArchitecture>(m, "CPUArchitecture", "Enum holding supported CPU architectures")
         .value("ARM", CPUArchitecture::ARM)
         .value("X86", CPUArchitecture::X86)
         .value("Unknown", CPUArchitecture::Unknown);
 
-    py::enum_<GPUVendor>(m, "GPUVendor")
-        .value("AMD", GPUVendor::AMD)
-        .value("Intel", GPUVendor::Intel)
-        .value("Nvidia", GPUVendor::Nvidia)
-        .value("Unknown", GPUVendor::Unknown);
+    py::enum_<GPUArchitecture>(m, "GPUArchitecture", "Enum holding supported GPU architectures")
+        .value("AMD", GPUArchitecture::AMD)
+        .value("Intel", GPUArchitecture::Intel)
+        .value("Nvidia", GPUArchitecture::Nvidia)
+        .value("Unknown", GPUArchitecture::Unknown);
 
-    py::class_<Target>(m, "Target")
+    py::class_<Target>(m, "Target", "Target specification the runtime is using")
         .def(py::init<>())
         .def_property_readonly("IsValid", &Target::isValid)
         .def_property_readonly("IsCPU", &Target::isCPU)
         .def_property_readonly("IsGPU", &Target::isGPU)
-        .def_property_readonly("GPUVendor", &Target::gpuVendor)
+        .def_property_readonly("GPUArchitecture", &Target::gpuArchitecture)
         .def_property_readonly("CPUArchitecture", &Target::cpuArchitecture)
         .def_property("Device", &Target::device, &Target::setDevice)
         .def_property("VectorWidth", &Target::vectorWidth, &Target::setVectorWidth)
@@ -140,32 +140,32 @@ void runtime_module(py::module_& m)
         .def_static("pickCPU", &Target::pickCPU)
         .def_static("pickGPU", &Target::pickGPU, py::arg("device") = 0);
 
-    py::class_<RuntimeOptions>(m, "RuntimeOptions")
+    py::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
         .def(py::init<>())
         .def_static("makeDefault", &RuntimeOptions::makeDefault, py::arg("trace") = false)
-        .def_readwrite("Target", &RuntimeOptions::Target)
-        .def_readwrite("DumpShader", &RuntimeOptions::DumpShader)
-        .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull)
-        .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats)
-        .def_readwrite("SPI", &RuntimeOptions::SPI)
-        .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera)
-        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique)
-        .def_readwrite("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize)
-        .def_readwrite("EnableTonemapping", &RuntimeOptions::EnableTonemapping);
+        .def_readwrite("Target", &RuntimeOptions::Target, "The target device")
+        .def_readwrite("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
+        .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
+        .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats, "Set True if statistical data should be acquired while rendering")
+        .def_readwrite("SPI", &RuntimeOptions::SPI, "The requested sample per iteration. Can be 0 to set automatically")
+        .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera, "Type of camera to use instead of the one used by the scene")
+        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique, "Type of technique to use instead of the one used by the scene")
+        .def_readwrite("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize, "Type of film size to use instead of the one used by the scene")
+        .def_readwrite("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used");
 
-    py::class_<Ray>(m, "Ray")
+    py::class_<Ray>(m, "Ray", "Single ray traced into the scene")
         .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, FltMax) }; }))
         .def(py::init([](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; }))
-        .def_readwrite("Origin", &Ray::Origin)
-        .def_readwrite("Direction", &Ray::Direction)
-        .def_readwrite("Range", &Ray::Range);
+        .def_readwrite("Origin", &Ray::Origin, "Origin of the ray")
+        .def_readwrite("Direction", &Ray::Direction, "Direction of the ray")
+        .def_readwrite("Range", &Ray::Range, "Range (tmin, tmax) of the ray");
 
-    py::class_<CameraOrientation>(m, "CameraOrientation")
-        .def_readwrite("Eye", &CameraOrientation::Eye)
-        .def_readwrite("Dir", &CameraOrientation::Dir)
-        .def_readwrite("Up", &CameraOrientation::Up);
+    py::class_<CameraOrientation>(m, "CameraOrientation", "General camera orientation")
+        .def_readwrite("Eye", &CameraOrientation::Eye, "Origin of the camera")
+        .def_readwrite("Dir", &CameraOrientation::Dir, "Direction the camera is facing")
+        .def_readwrite("Up", &CameraOrientation::Up, "Vector defining the up of the camera");
 
-    py::class_<Runtime>(m, "Runtime")
+    py::class_<Runtime>(m, "Runtime", "Renderer runtime allowing control of simulation and access to results")
         .def("step", &Runtime::step, py::arg("ignoreDenoiser") = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
@@ -240,43 +240,65 @@ void runtime_module(py::module_& m)
         .def_property_readonly_static("AvailableCameraTypes", &Runtime::getAvailableCameraTypes)
         .def_property_readonly_static("AvailableTechniqueTypes", &Runtime::getAvailableTechniqueTypes);
 
-    py::class_<RuntimeWrap>(m, "RuntimeWrap")
+    py::class_<RuntimeWrap>(m, "RuntimeWrap", "Wrapper around the runtime used for proper runtime loading and shutdown")
         .def("__enter__", &RuntimeWrap::enter, py::return_value_policy::reference_internal)
         .def("__exit__", &RuntimeWrap::exit)
         .def_property_readonly("instance", &RuntimeWrap::instance, py::return_value_policy::reference_internal)
         .def("shutdown", &RuntimeWrap::shutdown)
         .def("__del__", &RuntimeWrap::shutdown);
 
-    m.def("loadFromFile", [](const std::string& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); })
-        .def("loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); })
-        .def("loadFromString", [](const std::string& str) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, std::string{}); })
-        .def("loadFromString", [](const std::string& str, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, dir); })
-        .def("loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, std::string{}); })
-        .def("loadFromString", [](const std::string& str, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, dir); })
-        .def("loadFromScene", [](const std::shared_ptr<Scene>& scene) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, std::string{}); })
-        .def("loadFromScene", [](const std::shared_ptr<Scene>& scene, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, dir); })
-        .def("loadFromScene", [](const std::shared_ptr<Scene>& scene, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, std::string{}); })
-        .def("loadFromScene", [](const std::shared_ptr<Scene>& scene, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); })
-        .def("saveExr", [](const std::string& path, py::buffer b) {
-            py::buffer_info info = b.request();
+    m.def(
+         "loadFromFile", [](const std::string& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); },
+         "Load a scene from file and generate a default runtime")
+        .def(
+            "loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); },
+            "Load a scene from file and generate a runtime with given options")
+        .def(
+            "loadFromString", [](const std::string& str) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, std::string{}); },
+            "Load a scene from a string and generate a default runtime")
+        .def(
+            "loadFromString", [](const std::string& str, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, dir); },
+            "Load a scene from a string with directory for external resources and generate a default runtime")
+        .def(
+            "loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, std::string{}); },
+            "Load a scene from a string and generate a runtime with given options")
+        .def(
+            "loadFromString", [](const std::string& str, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, dir); },
+            "Load a scene from a string with directory for external resources and generate a runtime with given options")
+        .def(
+            "loadFromScene", [](const std::shared_ptr<Scene>& scene) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, std::string{}); },
+            "Generate a default runtime from an already loaded scene")
+        .def(
+            "loadFromScene", [](const std::shared_ptr<Scene>& scene, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, dir); },
+            "Generate a default runtime from an already loaded scene with directory for external resources")
+        .def(
+            "loadFromScene", [](const std::shared_ptr<Scene>& scene, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, std::string{}); },
+            "Generate a runtime with given options from an already loaded scene")
+        .def(
+            "loadFromScene", [](const std::shared_ptr<Scene>& scene, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); },
+            "Generate a runtime with given options from an already loaded scene with directory for external resources")
+        .def(
+            "saveExr", [](const std::string& path, py::buffer b) {
+                py::buffer_info info = b.request();
 
-            /* Some basic validation checks ... */
-            if (info.format != py::format_descriptor<float>::format())
-                throw std::runtime_error("Incompatible buffer: Expected a float array!");
+                /* Some basic validation checks ... */
+                if (info.format != py::format_descriptor<float>::format())
+                    throw std::runtime_error("Incompatible buffer: Expected a float array!");
 
-            if (info.ndim != 2 && info.ndim != 3)
-                throw std::runtime_error("Incompatible buffer: Expected two dimensional or three dimensional buffer");
+                if (info.ndim != 2 && info.ndim != 3)
+                    throw std::runtime_error("Incompatible buffer: Expected two dimensional or three dimensional buffer");
 
-            pybind11::ssize_t width    = info.shape[0];
-            pybind11::ssize_t height   = info.shape[1];
-            pybind11::ssize_t channels = info.ndim == 3 ? info.shape[2] : 1;
+                pybind11::ssize_t width    = info.shape[0];
+                pybind11::ssize_t height   = info.shape[1];
+                pybind11::ssize_t channels = info.ndim == 3 ? info.shape[2] : 1;
 
-            if (width <= 0 || height <= 0)
-                throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
+                if (width <= 0 || height <= 0)
+                    throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
 
-            if (channels != 1 && channels != 3 && channels != 4)
-                throw std::runtime_error("Incompatible buffer: Only 1, 3 or 4 channels supported");
+                if (channels != 1 && channels != 3 && channels != 4)
+                    throw std::runtime_error("Incompatible buffer: Only 1, 3 or 4 channels supported");
 
-            return Image::save(path, (const float*)info.ptr, width, height, channels);
-        });
+                return Image::save(path, (const float*)info.ptr, width, height, channels);
+            },
+            "Save an OpenEXR image to the filesystem");
 }

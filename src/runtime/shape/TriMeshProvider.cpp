@@ -1,4 +1,5 @@
 #include "TriMeshProvider.h"
+#include "Image.h"
 #include "StringUtils.h"
 #include "bvh/TriBVHAdapter.h"
 #include "loader/LoaderShape.h"
@@ -205,7 +206,7 @@ inline TriMesh setup_mesh_inline(const std::string& name, const SceneObject& ele
     bool hasNormals   = false;
     bool hasTexCoords = false;
 
-    // TODO: Would be nice to acquire the arrays and remove data from the properties, as, very likely, they will not be needed anymore. 
+    // TODO: Would be nice to acquire the arrays and remove data from the properties, as, very likely, they will not be needed anymore.
     // This however requires write access to Scene to consume properties
     SceneProperty::IntegerArray indices;
     if (propIndices.has_value())
@@ -326,6 +327,81 @@ static uint64 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mut
     return offset;
 }
 
+static void handleRefinement(TriMesh& mesh, const SceneObject& elem)
+{
+    const float min_area = elem.property("refinement").getNumber(0);
+    if (min_area <= FltEps)
+        return;
+
+    constexpr size_t MaxIter = 16; // Just to prevent infinite iterations
+
+    // Refine the mesh until sufficient or max iterations
+    IG_LOG(L_DEBUG) << "Refining mesh until " << min_area << std::endl;
+    for (size_t k = 0; k < MaxIter; ++k) {
+        std::vector<bool> mask;
+        mesh.markAreaGreater(mask, min_area);
+
+        // Check if we still have to refine the mesh
+        bool check = false;
+        for (const bool b : mask) {
+            if (b) {
+                check = true;
+                break;
+            }
+        }
+
+        if (!check)
+            break;
+
+        mesh.subdivide(&mask);
+    }
+}
+
+static void applyDisplacement(TriMesh& mesh, const Image& image, float amount)
+{
+    // Generate necessary attributes if necessary
+    if (mesh.normals.size() != mesh.vertices.size())
+        mesh.computeVertexNormals();
+
+    if (mesh.texcoords.size() / 2 != mesh.vertices.size() / 3)
+        mesh.makeTexCoordsNormalized();
+
+    // Apply displacement
+    IG_LOG(L_DEBUG) << "Applying displacement for mesh" << std::endl;
+    for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+        StVector3f& v       = mesh.vertices[i];
+        const StVector3f nv = mesh.normals[i];
+        const StVector2f tv = mesh.texcoords[i];
+
+        const Vector4f val = image.eval(tv, Image::BorderMethod::Repeat, Image::FilterMethod::Nearest);
+        const float dist   = val.block<3, 1>(0, 0).mean() * amount;
+        v += nv * dist;
+    }
+}
+
+static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, const SceneObject& elem)
+{
+    const auto displacementProp = elem.property("displacement");
+    if (!displacementProp.isValid() || displacementProp.type() != SceneProperty::PT_STRING)
+        return;
+
+    const auto filename = ctx.handlePath(displacementProp.getString(), elem);
+    const Image image   = Image::load(filename);
+
+    if (!image.isValid())
+        return;
+
+    const float amount = elem.property("displacement_amount").getNumber(1.0f);
+
+    applyDisplacement(mesh, image, amount);
+
+    // Re-Evaluate normals if necessary
+    if (elem.property("smooth_normals").getBool(false))
+        mesh.computeVertexNormals();
+    else
+        mesh.setupFaceNormalsAsVertexNormals();
+}
+
 static inline std::pair<uint32, uint32> split_u64_to_u32(uint64 a)
 {
     return { uint32(a & 0xFFFFFFFF), uint32((a >> 32) & 0xFFFFFFFF) };
@@ -385,9 +461,18 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
 
     if (elem.property("face_normals").getBool(false))
         mesh.setupFaceNormalsAsVertexNormals();
+    else if (elem.property("smooth_normals").getBool(false))
+        mesh.computeVertexNormals();
 
     if (!elem.property("transform").getTransform().matrix().isIdentity())
         mesh.transform(elem.property("transform").getTransform());
+
+    const size_t subdivisionCount = elem.property("subdivision").getInteger(0);
+    for (size_t i = 0; i < subdivisionCount; ++i)
+        mesh.subdivide();
+
+    handleRefinement(mesh, elem);
+    handleDisplacement(mesh, ctx, elem);
 
     // Build bounding box
     BoundingBox bbox = mesh.computeBBox();
@@ -475,7 +560,7 @@ std::string TriMeshProvider::generateTraversalCode(const LoaderContext& ctx)
     stream << ShaderUtils::generateShapeLookup("trimesh_shapes", this, ctx) << std::endl;
 
     if (ctx.Options.Target.isGPU()) {
-        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device, " << (ctx.Options.Target.gpuVendor() == GPUVendor::Nvidia ? "true" : "false") << ");" << std::endl;
+        stream << "  let prim_bvhs = make_gpu_trimesh_bvh_table(device);" << std::endl;
     } else {
         stream << "  let prim_bvhs = make_cpu_trimesh_bvh_table(device, " << ctx.Options.Target.vectorWidth() << ");" << std::endl;
     }

@@ -17,6 +17,7 @@ static_assert(sizeof(StVector2f) == sizeof(float) * 2, "Expected storage vector 
 class IG_LIB TriMesh {
 public:
     // TODO: Refactor the direct access out
+    // TODO: We can use the fourth index in a "triangle" to make use of quads
     std::vector<StVector3f> vertices;
     std::vector<uint32> indices; // A triangle is based as [i0,i1,i2,0]
     std::vector<StVector3f> normals;
@@ -39,6 +40,22 @@ public:
     [[nodiscard]] BoundingBox computeBBox() const;
 
     void transform(const Transformf& t);
+
+    /// @brief Apply basic triangle subdivision
+    /// @param mask Optional mask to mark faces to subdivide. If specified, must have faceCount() entries
+    void subdivide(const std::vector<bool>* mask = nullptr);
+
+    /// @brief Will mask the entry in the array true if the given face has an area greater or equal the given threshold
+    /// @param mask Array of bool resized to faceCount()
+    /// @param threshold Greater or equal threshold which the areas will be marked true
+    void markAreaGreater(std::vector<bool>& mask, float threshold) const;
+
+    /// @brief Will skin the current vertices to the given joints and transforms. The perVertexPerJoint arrays have the size numVertices * numJointsPerVertex
+    /// @param weightsPerVertexPerJoint Weights per vertex per joint
+    /// @param indexPerVertexPerJoint Index of joint per vertex per joint
+    /// @param transformsPerJoint Transform for each joint
+    /// @param numJointsPerVertex Number of joints each vertex is associated with. If a single vertex has less than the number of joints used, set the respective weights to zero. glTF is fixed to 4
+    void applySkinning(const std::vector<float>& weightsPerVertexPerJoint, const std::vector<uint32>& indexPerVertexPerJoint, const AlignedVector<Matrix4f>& transformsPerJoint, size_t numJointsPerVertex);
 
     /// Returns PlaneShape if the given mesh can be approximated as a plane
     [[nodiscard]] std::optional<PlaneShape> getAsPlane() const;

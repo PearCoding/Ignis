@@ -13,15 +13,15 @@ struct Entity {
     uint32 ShapeID;
     std::string BSDF;
 
-    inline Eigen::Matrix<float, 3, 4> computeLocalMatrix() const
+    inline Matrix34f computeLocalMatrix() const
     {
         return Transform.inverse().matrix().block<3, 4>(0, 0);
     }
-    inline Eigen::Matrix<float, 3, 4> computeGlobalMatrix() const
+    inline Matrix34f computeGlobalMatrix() const
     {
         return Transform.matrix().block<3, 4>(0, 0);
     }
-    inline Eigen::Matrix<float, 3, 3> computeGlobalNormalMatrix() const
+    inline Matrix3f computeGlobalNormalMatrix() const
     {
         return Transform.matrix().block<3, 3>(0, 0).inverse().transpose();
     }

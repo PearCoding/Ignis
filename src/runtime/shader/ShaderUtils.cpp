@@ -1,5 +1,6 @@
 #include "ShaderUtils.h"
 #include "loader/LoaderBSDF.h"
+#include "loader/LoaderEntity.h"
 #include "loader/LoaderLight.h"
 #include "loader/LoaderShape.h"
 #include "loader/LoaderTechnique.h"
@@ -32,13 +33,14 @@ std::string ShaderUtils::constructDevice(const Target& target)
                << ", 16"
                << ", true);";
     } else {
-        switch (target.gpuVendor()) {
-        case GPUVendor::AMD:
-            stream << "make_amdgpu_device(settings.device);";
+        // TODO: Customize kernel config for device?
+        switch (target.gpuArchitecture()) {
+        case GPUArchitecture::AMD:
+            stream << "make_amdgpu_device(settings.device, make_default_gpu_kernel_config());";
             break;
         default:
-        case GPUVendor::Nvidia:
-            stream << "make_nvvm_device(settings.device);";
+        case GPUArchitecture::Nvidia:
+            stream << "make_nvvm_device(settings.device, make_default_gpu_kernel_config());";
             break;
         }
     }
@@ -121,7 +123,9 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
 
     stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl;
+           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
+           << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
+
     return stream.str();
 }
 
@@ -141,6 +145,26 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
     return stream.str();
+}
+
+std::string ShaderUtils::inlineSceneBBox(const LoaderContext& ctx)
+{
+    IG_UNUSED(ctx);
+
+    std::stringstream stream;
+    stream << "make_bbox(registry::get_global_parameter_vec3(\"__scene_bbox_lower\", vec3_expand(0)), registry::get_global_parameter_vec3(\"__scene_bbox_upper\", vec3_expand(0)))";
+    return stream.str();
+}
+
+std::string ShaderUtils::inlineSceneInfo(const LoaderContext& ctx, bool embed)
+{
+    if (embed) {
+        std::stringstream stream;
+        stream << "SceneInfo { num_entities = " << ctx.Entities->entityCount() << ", num_materials = " << ctx.Materials.size() << " }";
+        return stream.str();
+    } else {
+        return "SceneInfo { num_entities = registry::get_global_parameter_i32(\"__entity_count\", 0), num_materials = registry::get_global_parameter_i32(\"__shape_count\", 0) }";
+    }
 }
 
 std::string ShaderUtils::inlinePayloadInfo(const LoaderContext& ctx)

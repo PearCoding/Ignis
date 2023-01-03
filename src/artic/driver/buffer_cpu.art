@@ -3,7 +3,7 @@ fn @cpu_load_vec4(p: &[f32], elem: i32) {
     make_vec4(v(0), v(1), v(2), v(3)) 
 }
 
-fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
+fn @make_cpu_buffer(p: &[f32], count: i32) = DeviceBuffer {
     add_atomic_i32 = @ |i, v| cpu_atomic_add_i32(&(p as &[i32])(i) as &mut i32, v),
     add_atomic_f32 = @ |i, v| cpu_atomic_add_f32(&mut ((p as &mut [f32])(i)), v),
     min_atomic_i32 = @ |i, v| cpu_atomic_min_i32(&mut ((p as &mut [i32])(i)), v),
@@ -23,21 +23,21 @@ fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
         }
     },
 
-    load_f32    = @ |i| (p as &[f32])(i),
+    load_f32    = @ |i| p(i),
     load_i32    = @ |i| (p as &[i32])(i),
-    load_vec2   = @ |i| { let q = p as &[f32]; make_vec2(q(i + 0), q(i + 1)) },
-    load_vec3   = @ |i| { let q = p as &[f32]; make_vec3(q(i + 0), q(i + 1), q(i + 2)) },
-    load_vec4   = @ |i| { let v = (&p(i * 4) as &[simd[f32 * 4]])(0); make_vec4(v(0), v(1), v(2), v(3)) },
+    load_vec2   = @ |i| { make_vec2(p(i + 0), p(i + 1)) },
+    load_vec3   = @ |i| { make_vec3(p(i + 0), p(i + 1), p(i + 2)) },
+    load_vec4   = @ |i| { let v = (&p(i) as &[simd[f32 * 4]])(0); make_vec4(v(0), v(1), v(2), v(3)) },
     load_int2   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1)) },
     load_int3   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2)) },
     //load_int4   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2), q(i + 3)) },
-    load_int4   = @ |i| { let v = ((&p(i * 4)) as &[simd[i32 * 4]])(0); (v(0), v(1), v(2), v(3)) },
-    load_mat3x3 = @ |i| { let q = p as &[f32]; 
-        make_mat3x3(make_vec3(q(i + 0), q(i + 1), q(i + 2)),
-                    make_vec3(q(i + 3), q(i + 4), q(i + 5)),
-                    make_vec3(q(i + 6), q(i + 7), q(i + 8))) },
+    load_int4   = @ |i| { let v = ((&p(i)) as &[simd[i32 * 4]])(0); (v(0), v(1), v(2), v(3)) },
+    load_mat3x3 = @ |i| {  
+        make_mat3x3(make_vec3(p(i + 0), p(i + 1), p(i + 2)),
+                    make_vec3(p(i + 3), p(i + 4), p(i + 5)),
+                    make_vec3(p(i + 6), p(i + 7), p(i + 8))) },
     load_mat3x4 = @ |i| {
-        let q  = &p(i * 4) as &[simd[f32 * 4]];
+        let q  = &p(i) as &[simd[f32 * 4]];
         let v0 = q(0);
         let v1 = q(1);
         let v2 = q(2);
@@ -47,7 +47,7 @@ fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
                     make_vec3(v2(1), v2(2), v2(3)))
     },
     load_mat4x4 = @ |i| {
-        let q  = &p(i * 4) as &[simd[f32 * 4]];
+        let q  = &p(i) as &[simd[f32 * 4]];
         let v0 = q(0);
         let v1 = q(1);
         let v2 = q(2);
@@ -85,7 +85,7 @@ fn @make_cpu_buffer(p: &[u8], count: i32) = DeviceBuffer {
         q(i +  8) = v.col(2).x; q(i +  9) = v.col(2).y; q(i + 10) = v.col(2).z; q(i + 11) = v.col(2).w;
         q(i + 12) = v.col(3).x; q(i + 13) = v.col(3).y; q(i + 14) = v.col(3).z; q(i + 15) = v.col(3).w;
     },
-    pointer       = @ |i| &(p as &[i32])(i) as &[u8],
+    pointer       = @ |i| &p(i) as &[f32],
     count         = count,
     has_alignment = false
 };
@@ -94,12 +94,12 @@ fn @load_cpu_buffer(filename: &[u8]) {
     let mut ptr      : &[u8];
     let mut bytesize : i32;
     ignis_load_buffer(0, filename, &mut ptr, &mut bytesize);
-    make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
+    make_cpu_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
 }
 
 fn @load_cpu_buffer_by_id(id: i32) {
     let mut ptr      : &[u8];
     let mut bytesize : i32;
     ignis_load_buffer_by_id(0, id, &mut ptr, &mut bytesize);
-    make_cpu_buffer(ptr, (bytesize as i64 / sizeof[i32]()) as i32)
+    make_cpu_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
 }
