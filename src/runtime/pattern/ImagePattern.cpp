@@ -1,4 +1,6 @@
 #include "ImagePattern.h"
+#include "Image.h"
+#include "Logger.h"
 #include "SceneObject.h"
 #include "loader/LoaderUtils.h"
 #include "loader/ShadingTree.h"
@@ -69,5 +71,18 @@ void ImagePattern::serialize(const SerializationInput& input) const
                  << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     input.Tree.endClosure();
+}
+
+std::pair<size_t, size_t> ImagePattern::computeResolution(ShadingTree& tree) const
+{
+    const std::filesystem::path filename = tree.context().handlePath(mObject->property("filename").getString(), *mObject);
+
+    try {
+        const auto res = Image::loadResolution(filename);
+        return { res.Width, res.Height };
+    } catch (const ImageLoadException& e) {
+        IG_LOG(L_ERROR) << e.what() << std::endl;
+        return { 1, 1 };
+    }
 }
 } // namespace IG

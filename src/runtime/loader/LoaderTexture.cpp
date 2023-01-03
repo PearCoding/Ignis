@@ -113,4 +113,14 @@ std::string LoaderTexture::generate(const std::string& name, ShadingTree& tree)
     return stream.str();
 }
 
+std::pair<size_t, size_t> LoaderTexture::computeResolution(const std::string& name, ShadingTree& tree)
+{
+    auto it = mAvailablePatterns.find(name);
+    if (it == mAvailablePatterns.end()) {
+        IG_LOG(L_ERROR) << "Unknown texture '" << name << "'" << std::endl;
+        return { 1, 1 };
+    }
+
+    return it->second->computeResolution(tree);
+}
 } // namespace IG

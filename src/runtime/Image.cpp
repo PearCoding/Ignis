@@ -632,6 +632,46 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
     stbi_image_free(data);
 }
 
+Image::Resolution Image::loadResolution(const std::filesystem::path& path)
+{
+    std::string ext   = path.extension().generic_u8string();
+    const bool useExr = string_ends_with(ext, ".exr");
+
+    if (useExr) {
+        EXRVersion exr_version;
+        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_u8string().c_str());
+        if (ret != 0)
+            throw ImageLoadException("Could not extract exr version information", path);
+
+        EXRHeader exr_header;
+        InitEXRHeader(&exr_header);
+
+        const char* err = nullptr;
+        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_u8string().c_str(), &err);
+        if (ret != 0) {
+            std::string _err = err;
+            FreeEXRErrorMessage(err);
+            throw ImageLoadException(_err, path);
+        }
+
+        Resolution res;
+        res.Width    = exr_header.data_window.max_x - exr_header.data_window.min_x + 1;
+        res.Height   = exr_header.data_window.max_y - exr_header.data_window.min_y + 1;
+        res.Channels = exr_header.num_channels;
+
+        FreeEXRHeader(&exr_header);
+        return res;
+    } else {
+        int width = 0, height = 0, channels = 0;
+        int good = stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
+
+        if ((bool)good)
+            return Resolution{ (size_t)width, (size_t)height, (size_t)channels };
+        else
+            throw ImageLoadException("Could not get image info: " + std::string(stbi_failure_reason()), path);
+    }
+}
+
 bool Image::save(const std::filesystem::path& path)
 {
     return save(path, pixels.get(), width, height, channels);

@@ -100,6 +100,14 @@ struct IG_LIB Image {
     /// If channels == 4 and alpha channel is omitted as requested, the appointed format still is channels x width x height
     static bool save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha = false);
 
+    struct Resolution {
+        size_t Width;
+        size_t Height;
+        size_t Channels;
+    };
+    /// Tries to get the resolution without loading image data. Will throw ImageLoadException if image is not available
+    [[nodiscard]] static Resolution loadResolution(const std::filesystem::path& path);
+
     [[nodiscard]] static Image createSolidImage(const Vector4f& color, size_t width = 1, size_t height = 1);
 };
 } // namespace IG

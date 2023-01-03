@@ -382,6 +382,61 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     }
 }
 
+std::pair<size_t, size_t> ShadingTree::computeTextureResolution(const std::string& name, const SceneObject& obj)
+{
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    switch (prop.type()) {
+    default:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        [[fallthrough]];
+    case SceneProperty::PT_NONE:
+    case SceneProperty::PT_INTEGER:
+    case SceneProperty::PT_NUMBER:
+    case SceneProperty::PT_VECTOR3:
+        return { 1, 1 };
+    case SceneProperty::PT_STRING: {
+        const std::string expr = prop.getString();
+        if (const auto it = mContext.Cache->ExprResolution.find(expr); it != mContext.Cache->ExprResolution.end())
+            return it->second;
+
+        IG_LOG(L_DEBUG) << "Computing resolution of property '" << name << "'" << std::endl;
+        LoaderContext ctx_copy               = mContext.copyForBake();
+        const auto res                       = ShadingTree(ctx_copy).computeTextureResolution(name, expr);
+        mContext.Cache->ExprResolution[expr] = res;
+        return res;
+    }
+    }
+}
+
+static inline bool isTexVariable(const std::string& var)
+{
+    return var == "uv" || var == "uvw";
+}
+
+std::pair<size_t, size_t> ShadingTree::computeTextureResolution(const std::string& name, const std::string& expr)
+{
+    const auto res = mTranspiler.transpile(expr);
+    if (!res.has_value())
+        return { 1, 1 };
+    else
+        return computeTextureResolution(name, res.value());
+}
+
+std::pair<size_t, size_t> ShadingTree::computeTextureResolution(const std::string&, const Transpiler::Result& result)
+{
+    std::pair<size_t, size_t> res = { 1, 1 };
+    for (const auto& tex : result.Textures) {
+        const auto tex_res = mContext.Textures->computeResolution(tex, *this);
+
+        res.first  = std::max(res.first, tex_res.first);
+        res.second = std::max(res.second, tex_res.second);
+    }
+
+    return res;
+}
+
 static inline std::optional<float> tryExtractFloat(const std::string& str)
 {
     std::string c_str = str;
@@ -426,7 +481,7 @@ Image ShadingTree::computeImage(const std::string& name, const Transpiler::Resul
 {
     bool warn = false;
     for (const std::string& var : result.Variables) {
-        if (var != "uv")
+        if (!isTexVariable(var))
             warn = true;
     }
 
@@ -444,11 +499,27 @@ Image ShadingTree::computeImage(const std::string& name, const Transpiler::Resul
 
     inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr_art + "};" << std::endl;
 
-    const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), options.Width, options.Height);
+    // Compute fitting resolution if needed
+    size_t width  = std::max(options.MaxWidth, options.MinWidth);
+    size_t height = std::max(options.MaxHeight, options.MinHeight);
+    if (options.MaxWidth != options.MinWidth || options.MaxHeight != options.MinHeight) {
+        const auto res = computeTextureResolution(name, result);
+        width          = std::max(options.MinWidth, res.first);
+        height         = std::max(options.MinHeight, res.second);
+        if (options.MaxWidth > 0)
+            width = std::min(options.MaxWidth, width);
+        if (options.MaxHeight > 0)
+            height = std::min(options.MaxHeight, height);
+    }
+    // Ensure width is at minimum 1
+    width  = std::max<size_t>(1, width);
+    height = std::max<size_t>(1, height);
+
+    const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), width, height);
 
     void* shader = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_bake_shader");
 
-    Image image          = Image::createSolidImage(Vector4f::Zero(), options.Width, options.Height);
+    Image image          = Image::createSolidImage(Vector4f::Zero(), width, height);
     const auto resources = mContext.generateResourceMap();
     mContext.Options.Device->bake(ShaderOutput<void*>{ shader, mContext.LocalRegistry }, &resources, image.pixels.get());
     return image;
@@ -492,7 +563,7 @@ Vector3f ShadingTree::bakeTextureExpressionAverage(const std::string& name, cons
             return color;
         }
 
-        const Image image                     = computeImage(name, result, TextureBakeOptions{ 16, 16, true });
+        const Image image                     = computeImage(name, result, TextureBakeOptions{ 0, 0, 1, 1, true });
         const Vector4f average                = image.computeAverage();
         mContext.Cache->ExprComputation[expr] = average.block<3, 1>(0, 0);
         return average.block<3, 1>(0, 0);
