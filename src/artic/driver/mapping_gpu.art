@@ -527,6 +527,13 @@ fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
         select(id < 0, -id, num_materials + id) - 1
     }
 
+    // Fill temporary buffer with 0s
+    gpu_exec_1d(acc, limit, config.block_size_reset, |work_item| {
+        let id = work_item.gidx();
+        if id >= limit { return() }
+        gpu_tmp(id) = 0;
+    });
+
     // Count number of rays for each geometry
     gpu_exec_1d(acc, size, config.block_size_sort_secondary_materials, |work_item| {
         let ray_id = work_item.gidx();
@@ -773,7 +780,7 @@ fn @gpu_trace( dev_id: i32
                     pipeline.on_advanced_shadow(0, valid_count, count, true);
                 }
                 acc.sync();
-            } else if work_info.advanced_shadows {                
+            } else if work_info.advanced_shadows_with_materials {                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
                 let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, secondary_size, dev_id, acc, config, atomics, scene_info, payload_info.secondary_count, gpu_tmp, temp.ray_begins, temp.ray_ends);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
