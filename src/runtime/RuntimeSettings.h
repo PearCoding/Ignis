@@ -20,6 +20,9 @@ struct RuntimeOptions {
     bool AcquireStats      = false;
     bool DebugTrace        = false; // Show debug information regarding the calls on the device
     uint32 SPI             = 0;     // Detect automatically
+
+    size_t Seed = 0;
+
     IG::Target Target;
     std::string OverrideTechnique;
     std::string OverrideCamera;

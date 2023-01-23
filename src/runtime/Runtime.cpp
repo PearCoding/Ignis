@@ -322,6 +322,7 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
     settings.info      = info;
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
+    settings.user_seed = mOptions.Seed;
 
     setParameter("__spi", (int)settings.spi);
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
@@ -380,6 +381,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     settings.info      = info;
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
+    settings.user_seed = mOptions.Seed;
 
     setParameter("__spi", (int)settings.spi);
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
