@@ -30,7 +30,7 @@ static std::string ppm_light_camera_generator(LoaderContext& ctx, const std::str
     ShadingTree tree(ctx);
     stream << ctx.Lights->generate(tree, false) << std::endl
            << ctx.Lights->generateLightSelector(light_selector, tree)
-           << "  let emitter = make_ppm_light_emitter(light_selector, settings.iter);" << std::endl
+           << "  let emitter = make_ppm_light_emitter(light_selector, render_config);" << std::endl
            << RayGenerationShader::end();
 
     return stream.str();

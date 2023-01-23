@@ -31,11 +31,11 @@ fn @unwrap_ltsecondarypayload(payload: RayPayload) = LTSecondaryPayload {
     pixel = make_vec2(payload.get(0), payload.get(1)),
 };
 
-fn @make_lt_emitter(light_selector: LightSelector, iter: i32, _spi: i32, frame: i32) -> RayEmitter {
+fn @make_lt_emitter(light_selector: LightSelector, config: RenderConfig) -> RayEmitter {
     let offset = 0.001:f32;
 
     @ |sample, x, y, _width, _height, payload| {
-        let rnd = create_random_generator(create_random_seed(sample, iter, frame, x, y, 0/*TODO: User Seed*/));
+        let rnd = create_random_generator(create_random_seed(sample, config.iter, config.frame, x, y, config.seed));
 
         let (light, light_pdf) = light_selector.sample(rnd, vec3_expand(0));
         let sample_emission    = light.sample_emission;
