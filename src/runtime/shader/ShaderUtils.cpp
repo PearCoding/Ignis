@@ -10,37 +10,41 @@
 #include <sstream>
 
 namespace IG {
-std::string ShaderUtils::constructDevice(const Target& target)
+std::string ShaderUtils::constructDevice(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << "let device = ";
-    if (target.isCPU()) {
-        const bool compact = false; /*target.vectorWidth() >= 8;*/ // FIXME: Maybe something wrong with this flag?
-        const bool single  = target.vectorWidth() >= 4;
+    stream << "let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
+           << "let render_config = make_render_config_from_settings(settings, spi);" << std::endl
+           << "let device = ";
+
+    if (ctx.Options.Target.isCPU()) {
+        const bool compact = false; /*ctx.Options.Target.vectorWidth() >= 8;*/ // FIXME: Maybe something wrong with this flag?
+        const bool single  = ctx.Options.Target.vectorWidth() >= 4;
 
         // TODO: Better decisions?
         std::string min_max = "make_default_min_max()";
-        if (target.vectorWidth() >= 4)
+        if (ctx.Options.Target.vectorWidth() >= 4)
             min_max = "make_cpu_int_min_max()";
 
         stream << "make_cpu_device("
+               << "render_config, "
                << (compact ? "true" : "false") << ", "
                << (single ? "true" : "false") << ", "
                << min_max << ", "
-               << target.vectorWidth()
+               << ctx.Options.Target.vectorWidth()
                << ", settings.thread_count"
                << ", 16"
                << ", true);";
     } else {
         // TODO: Customize kernel config for device?
-        switch (target.gpuArchitecture()) {
+        switch (ctx.Options.Target.gpuArchitecture()) {
         case GPUArchitecture::AMD:
-            stream << "make_amdgpu_device(settings.device, make_default_gpu_kernel_config());";
+            stream << "make_amdgpu_device(settings.device, render_config, make_default_gpu_kernel_config());";
             break;
         default:
         case GPUArchitecture::Nvidia:
-            stream << "make_nvvm_device(settings.device, make_default_gpu_kernel_config());";
+            stream << "make_nvvm_device(settings.device, render_config, make_default_gpu_kernel_config());";
             break;
         }
     }
@@ -122,8 +126,7 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
 
     return stream.str();
@@ -141,7 +144,7 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
     if (ctx.Options.SamplesPerIteration == 1) // Hardcode this case as some optimizations might apply
         stream << ctx.Options.SamplesPerIteration << " : i32";
     else // Fallback to dynamic spi
-        stream << "registry::get_global_parameter_i32(\"__spi\", 1)";
+        stream << "settings.spi";
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
     return stream.str();

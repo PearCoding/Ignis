@@ -25,7 +25,6 @@ static std::string lt_light_camera_generator(LoaderContext& ctx, const std::stri
     ShadingTree tree(ctx);
     stream << ctx.Lights->generate(tree, false) << std::endl
            << ctx.Lights->generateLightSelector(light_selector, tree)
-           << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
            << "  let emitter = make_lt_emitter(light_selector, settings.iter, spi, settings.frame);" << std::endl
            << RayGenerationShader::end();
 

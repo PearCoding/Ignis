@@ -576,17 +576,18 @@ fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
 }
 
 fn @gpu_generate_rays( primary: PrimaryStream
-                     , current_size: i32
                      , acc: Accelerator
                      , gpu_config: GPUKernelConfiguration
                      , emitter: RayEmitter
+                     , config: RenderConfig
                      , payload_info: PayloadInfo
-                     , next_id: i32
+                     , gen_info: GenerateRayInfo
                      , film_width: i32
                      , film_height: i32
-                     , spi: i32
                      ) -> i32 {
-    let first_ray_id = next_id;
+    let spi          = config.spi;
+    let current_size = gen_info.size;
+    let first_ray_id = gen_info.next_id;
     let first_dst_id = current_size;
     let film_size    = film_width * film_height;
     let num_rays     = min(spi * film_size - first_ray_id, gpu_config.stream_capacity - first_dst_id);
@@ -626,20 +627,19 @@ fn @gpu_generate_rays( primary: PrimaryStream
 }
 
 fn @gpu_generate_rays_handler(dev_id: i32
-                            , size: i32
                             , acc: Accelerator
                             , gpu_config: GPUKernelConfiguration
                             , emitter: RayEmitter
+                            , config: RenderConfig
                             , payload_info: PayloadInfo
-                            , next_id: i32
-                            , spi: i32
+                            , gen_info: GenerateRayInfo
                             ) -> i32 {
     let work_info = get_work_info();
 
     let mut primary: PrimaryStream;
     ignis_get_primary_stream(dev_id, 0, &mut primary, gpu_config.stream_capacity);
 
-    gpu_generate_rays(primary, size, acc, gpu_config, emitter, payload_info, next_id, work_info.width, work_info.height, spi)
+    gpu_generate_rays(primary, acc, gpu_config, emitter, config, payload_info, gen_info, work_info.width, work_info.height)
 }
 
 fn @gpu_compact_primary( primary: PrimaryStream
@@ -720,7 +720,7 @@ fn @gpu_trace( dev_id: i32
         // Regenerate rays
         if current_size < gpu_config.stream_capacity && id < num_rays {
             let before_s = current_size;
-            current_size = pipeline.on_generate(id, current_size, 0, 0, work_info.width, work_info.height);
+            current_size = pipeline.on_generate(GenerateRayInfo{ next_id=id, size=current_size, xmin=0, ymin=0, xmax=work_info.width, ymax=work_info.height });
             let added    = current_size - before_s;
             id += added;
             stats::add_quantity(stats::Quantity::CameraRayCount, added);
@@ -846,8 +846,8 @@ fn @make_gpu_device( dev_id: i32
             if is_nvvm { nvvm_likely } else { null_likely }
         )
     },
-    generate_rays = @ | emitter, payload_info, next_id, size, _xmin, _ymin, _xmax, _ymax | -> i32 {
-        gpu_generate_rays_handler(dev_id, size, acc, gpu_config, emitter, config, payload_info, next_id)
+    generate_rays = @ | emitter, payload_info, gen_info | -> i32 {
+        gpu_generate_rays_handler(dev_id, acc, gpu_config, emitter, config, payload_info, gen_info)
     },
     handle_traversal_primary = @ | scene_tracer, size | {
         let mut primary: PrimaryStream;
@@ -855,21 +855,21 @@ fn @make_gpu_device( dev_id: i32
 
         gpu_traverse_primary(primary, scene_tracer, size, min_max, acc, gpu_config);
     },
-    handle_traversal_secondary = @ | scene_tracer, size, is_advanced, spi, use_framebuffer | {
+    handle_traversal_secondary = @ | scene_tracer, size, is_advanced, use_framebuffer | {
         let mut secondary: SecondaryStream;
         ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
-        let framebuffer = gpu_get_framebuffer(dev_id, spi, use_framebuffer, atomics);
+        let framebuffer = gpu_get_framebuffer(dev_id, config.spi, use_framebuffer, atomics);
         gpu_traverse_secondary(secondary, scene_tracer, size, min_max, acc, gpu_config, framebuffer, is_advanced);
     },
     handle_miss_shader = @ | technique, payload_info, first, last, use_framebuffer | {
         gpu_miss_shade_handler(dev_id, acc, gpu_config, atomics, technique, config, payload_info, first, last, use_framebuffer);
     },
     handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, use_framebuffer | {
-        gpu_hit_shade_handler(dev_id, acc, gpu_config, atomics, shader, scene, technique, payload_info, first, last, use_framebuffer);
+        gpu_hit_shade_handler(dev_id, acc, gpu_config, atomics, shader, scene, technique, config, payload_info, first, last, use_framebuffer);
     },
     handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, use_framebuffer, is_hit | {
-        gpu_advanced_shadow_handler(dev_id, acc, gpu_config, atomics, shader, technique, payload_info, first, last, use_framebuffer, is_hit);
+        gpu_advanced_shadow_handler(dev_id, acc, gpu_config, atomics, shader, technique, config, payload_info, first, last, use_framebuffer, is_hit);
     },
     get_traversal_handler_multiple = @ | prims | make_gpu_scene_local_handler_multiple(prims, min_max), 
     sync = @ || acc.sync(),
@@ -1082,7 +1082,7 @@ fn @make_default_gpu_kernel_config() = GPUKernelConfiguration {
     stream_capacity                     = 1024 * 1024,
 };
 
-fn @make_nvvm_device(dev: i32, config: GPUKernelConfiguration) -> Device {
+fn @make_nvvm_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConfiguration) -> Device {
     let dev_id  = runtime_device(1, dev);
     let atomics = Atomics {
         add_global_i32 = @ |p, i| nvvm_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
@@ -1107,8 +1107,9 @@ fn @make_nvvm_device(dev: i32, config: GPUKernelConfiguration) -> Device {
 
     make_gpu_device(
         dev_id,
-        nvvm_accelerator(dev),
         config,
+        nvvm_accelerator(dev),
+        gpu_config,
         make_default_min_max(), //make_nvvm_min_max(), // The NVVM min_max stuff seems to be slow compared to the default one
         @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
         atomics,
@@ -1116,7 +1117,7 @@ fn @make_nvvm_device(dev: i32, config: GPUKernelConfiguration) -> Device {
     )
 }
 
-fn @make_amdgpu_device(dev: i32, config: GPUKernelConfiguration) -> Device {
+fn @make_amdgpu_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConfiguration, ) -> Device {
     let dev_id  = runtime_device(3, dev);
     let atomics = Atomics {
         add_global_i32 = @ |p, i| amdgcn_atomic_add_global_i32(p as &mut addrspace(1)i32, i),
@@ -1141,8 +1142,9 @@ fn @make_amdgpu_device(dev: i32, config: GPUKernelConfiguration) -> Device {
 
     make_gpu_device(
         dev_id,
-        amdgpu_accelerator(dev),
         config,
+        amdgpu_accelerator(dev),
+        gpu_config,
         make_default_min_max(), //make_amdgpu_min_max(),
         @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
         atomics,

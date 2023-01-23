@@ -17,9 +17,9 @@ struct RenderConfig {
     seed:  i32 // User Seed
 }
 
-fn @make_render_config_from_settings(settings: Settings) = RenderConfig {
+fn @make_render_config_from_settings(settings: &Settings, spi: i32) = RenderConfig {
     iter  = settings.iter,
     frame = settings.frame,
-    spi   = settings.spi,
+    spi   = spi,
     seed  = settings.seed
 };

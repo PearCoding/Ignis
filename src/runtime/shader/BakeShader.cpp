@@ -9,8 +9,7 @@ std::string BakeShader::begin(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_bake_shader(settings: &Settings, output: &mut [f32]) -> () {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl;
+           << "  " << ShaderUtils::constructDevice(ctx) << std::endl;
 
     return stream.str();
 }
