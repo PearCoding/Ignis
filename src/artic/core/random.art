@@ -76,7 +76,7 @@ fn @sample_tea_u32(mut v0: u32, mut v1: u32) -> u32 {
 struct RandomGenerator {
     next_f32: fn ()         -> f32,
     next_i32: fn (i32, i32) -> i32,
-    get_counter: fn ()      -> u32
+    create_seed: fn ()      -> u32
 }
 
 fn @create_random_seed(sample: i32, iter: i32, frame: i32, x: i32, y: i32, user: i32) -> u32 {
@@ -90,7 +90,7 @@ fn @create_random_seed(sample: i32, iter: i32, frame: i32, x: i32, y: i32, user:
     hash
 }
 
-fn @create_random_generator_base(next_u32: fn() -> u32, get_counter: fn() -> u32) = RandomGenerator {
+fn @create_random_generator_base(next_u32: fn() -> u32, create_seed: fn() -> u32) = RandomGenerator {
     next_f32 = @|| {
         let x = next_u32();
         bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
@@ -99,17 +99,12 @@ fn @create_random_generator_base(next_u32: fn() -> u32, get_counter: fn() -> u32
         let x = bitcast[i32](next_u32());
         x % (e - s) + s
     },
-    get_counter = get_counter
+    create_seed = create_seed
 };
 
 fn @create_random_generator(seed: u32) -> RandomGenerator {
     let mut counter = 1:u32;
 
     fn @next_u32() = sample_tea_u32(seed, counter++);
-    create_random_generator_base(next_u32, @|| counter)
-}
-
-fn @create_random_generator_live(seed: u32, mut counter: u32) -> RandomGenerator {
-    fn @next_u32() = sample_tea_u32(seed, counter++);
-    create_random_generator_base(next_u32, @|| counter)
+    create_random_generator_base(next_u32, @|| fnv_hash(seed, counter) )
 }

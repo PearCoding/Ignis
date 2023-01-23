@@ -113,7 +113,6 @@ fn @gpu_hit_shade( acc: Accelerator
                  , shader: MaterialShader
                  , scene: Scene
                  , technique: Technique
-                 , config: RenderConfig
                  , payload_info: PayloadInfo
                  , framebuffer: AOVImage
                  , primary: PrimaryStream
@@ -151,7 +150,7 @@ fn @gpu_hit_shade( acc: Accelerator
         let ray_id  = primary.rays.id(i);
         let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
-        let rnd = create_random_generator_live(create_random_seed(0/*TODO*/, config.iter, config.frame, pixel.x, pixel.y, config.seed), read_primary_rnd_state(i, 0));
+        let rnd = create_random_generator(read_primary_rnd_state(i, 0));
 
         let entity = @entities(hit.ent_id);
         let shape  = @shapes(entity.shape_id);
@@ -189,7 +188,7 @@ fn @gpu_hit_shade( acc: Accelerator
 
         if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, rnd, primary_payload, mat) {
             write_primary_ray(i, 0, new_ray);
-            write_primary_rnd_state(i, 0, rnd.get_counter());
+            write_primary_rnd_state(i, 0, rnd.create_seed());
         } else {
             primary.rays.id(i) = -1;
         }
@@ -214,7 +213,7 @@ fn @gpu_hit_shade_handler(dev_id: i32
     ignis_get_secondary_stream_const(dev_id, 0, &mut secondary);
 
     let framebuffer = gpu_get_framebuffer(dev_id, config.spi, use_framebuffer, atomics);
-    gpu_hit_shade(acc, gpu_config, shader, scene, technique, config, payload_info, framebuffer, primary, secondary, begin, end);
+    gpu_hit_shade(acc, gpu_config, shader, scene, technique, payload_info, framebuffer, primary, secondary, begin, end);
 }
 
 // Shade nonhits
@@ -618,7 +617,7 @@ fn @gpu_generate_rays( primary: PrimaryStream
 
         let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
         write_ray(dst_id, 0, ray);
-        write_rnd(dst_id, 0, rnd.get_counter());
+        write_rnd(dst_id, 0, rnd.create_seed());
         write_id(dst_id, 0, pixel);
     });
     acc.sync();

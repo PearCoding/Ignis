@@ -339,7 +339,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let payload = get_payload(cur_ray, 0);
         let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
         write_ray(cur_ray, 0, ray);
-        write_rnd(cur_ray, 0, rnd.get_counter());
+        write_rnd(cur_ray, 0, rnd.create_seed());
         primary.rays.id(cur_ray) = y * film_width + x;
     }
     
@@ -446,7 +446,6 @@ fn @cpu_hit_shade(primary: &PrimaryStream
     , scene: Scene
     , technique: Technique
     , framebuffer: AOVImage
-    , config: RenderConfig
     , payload_info: PayloadInfo
     , begin: i32
     , end: i32
@@ -482,7 +481,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         let ray_id  = primary.rays.id(i);
         let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
 
-        let rnd = create_random_generator_live(create_random_seed(0/*TODO*/, config.iter, config.frame, pixel.x, pixel.y, config.seed), read_primary_rnd_state(i, 0));
+        let rnd = create_random_generator(read_primary_rnd_state(i, 0));
 
         let primary_payload   = get_primary_payload(i, 0);
         let secondary_payload = get_secondary_payload(i, 0);
@@ -523,7 +522,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         // Sample new rays
         if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, rnd, primary_payload, mat) {
             write_primary_ray(i, 0, new_ray);
-            write_primary_rnd_state(i, 0, rnd.get_counter());
+            write_primary_rnd_state(i, 0, rnd.create_seed());
         } else {
             primary.rays.id(i) = -1;
         }
@@ -547,7 +546,7 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
 
     let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
-    cpu_hit_shade(primary, secondary, shader, scene, technique, framebuffer, config, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+    cpu_hit_shade(primary, secondary, shader, scene, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
 // Miss shader ------------------------------------------------------------------
