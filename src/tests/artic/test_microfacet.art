@@ -39,7 +39,7 @@ fn test_microfacet_ggx_aniso() {
     err  
 }
 
-fn @make_test_random_generator() = create_random_generator(fnv_hash(fnv_init(), 42));
+fn @make_test_random_generator() = create_random_generator(hash_combine(hash_init(), 42));
 
 fn test_microfacet_ggx_sample() {
     let mut err = 0;

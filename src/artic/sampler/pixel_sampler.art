@@ -18,7 +18,7 @@ fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
 	let bin_yf = bin_y as f32;
 
     @|rnd, index, x, y| {
-		let seed   = fnv_hash(fnv_hash(fnv_init(), bitcast[u32](x)), bitcast[u32](y));
+		let seed   = hash_combine(hash_combine(hash_init(), bitcast[u32](x)), bitcast[u32](y));
 		let index2 = index as u32;
 		let sx     = permute_element(index2 % bin_x, bin_x, seed * F1) as f32;
 		let sy     = permute_element(index2 / bin_x, bin_y, seed * F2) as f32;

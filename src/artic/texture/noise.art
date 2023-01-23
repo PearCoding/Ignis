@@ -1,7 +1,6 @@
 // ---------------------- 1D
 fn @noise1[T](u: T, seed: f32) -> f32 {
-    let mut tmp = fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](u));
-    randf(&mut tmp)
+    create_random_generator(hash_combine(hash_combine(hash_init(), bitcast[u32](seed)), bitcast[u32](u))).next_f32()
 }
 
 fn @snoise1(u: f32, seed: f32)     = noise1(u, seed: f32) * 2 - 1;
@@ -33,8 +32,7 @@ fn @cpnoise1(u: f32, seed: f32) -> Color {
 
 // ---------------------- 2D
 fn @noise2[T](u: T, v: T, seed: f32) -> f32 {
-    let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](u)), bitcast[u32](v));
-    randf(&mut tmp)
+    create_random_generator(hash_combine(hash_combine(hash_combine(hash_init(), bitcast[u32](seed)), bitcast[u32](u)), bitcast[u32](v))).next_f32()
 }
 
 fn @noise2_v(uv: Vec2, seed: f32)    = noise2(uv.x, uv.y, seed);
@@ -180,8 +178,7 @@ fn @cfbm2(uv: Vec2, seed: f32)     = fbm2_gen(uv, seed, 6, 2, 0.5, @|a, b| vec2_
 
 // ---------------------- 3D
 fn @noise3[T](u: T, v: T, w: T, seed: f32) -> f32 {
-    let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_hash(fnv_init(), bitcast[u32](seed)), bitcast[u32](u)), bitcast[u32](v)), bitcast[u32](w));
-    randf(&mut tmp)
+    create_random_generator(hash_combine(hash_combine(hash_combine(hash_combine(hash_init(), bitcast[u32](seed)), bitcast[u32](u)), bitcast[u32](v)), bitcast[u32](w))).next_f32()
 }
 
 fn @noise3_v(uvw: Vec3, seed: f32)    = noise3(uvw.x, uvw.y, uvw.z, seed);

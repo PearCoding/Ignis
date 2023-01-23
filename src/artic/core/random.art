@@ -1,60 +1,10 @@
-// Change these variables to use another random number generator
-//type RndState = u64;
-//static randi = mwc64x;
 type RndState = u32;
-static randi = xorshift;
-
-// This trick is borrowed from Alex, who borrowed it from Mitsuba, which borrowed it from MTGP:
-// We generate a random number in [1,2) and subtract 1 from it.
-fn @randf(rnd: &mut RndState) -> f32 {
-    // Assumes IEEE 754 floating point format
-    let x = randi(rnd) as u32;
-    bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
-}
-
-// Function will return a random number based on the given seed.
-// As long as the seed does not change the return value will not change either.
-fn @hash_rndf(seed: f32) -> f32 {
-    let mut rnd = fnv_hash(fnv_init(), bitcast[u32](seed)); // Let it be random
-    randf(&mut rnd)
-}
-
-// MWC64X: http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
-fn @mwc64x(seed: &mut u64) -> i32 {
-    let c = *seed >> 32;
-    let x = *seed & 0xFFFFFFFF;
-    *seed = x * 4294883355 + c;
-    (x as i32)^(c as i32)
-}
-
-// 32-bit version of the xorshift random number generator
-fn @xorshift(seed: &mut u32) -> i32 {
-    let mut x = *seed;
-    x = select(x == 0, 1:u32, x);
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x <<  5;
-    *seed = x;
-    x as i32
-}
-
-// Initializer for Bernstein's hash function
-fn @bernstein_init() -> u32 { 5381:u32 }
-
-// Bernstein's hash function
-fn @bernstein_hash(mut h: u32, d: u32) -> u32 {
-    h = (h * 33) ^ ( d        & 0xFF);
-    h = (h * 33) ^ ((d >>  8) & 0xFF);
-    h = (h * 33) ^ ((d >> 16) & 0xFF);
-    h = (h * 33) ^ ((d >> 24) & 0xFF);
-    h
-}
 
 // Initializer for the FNV hash function
-fn @fnv_init() -> u32 { 0x811C9DC5 }
+fn @hash_init() -> u32 { 0x811C9DC5 }
 
 // FNV hash function
-fn @fnv_hash(mut h: u32, d: u32) -> u32 {
+fn @hash_combine(mut h: u32, d: u32) -> u32 {
     h = (h * 16777619) ^ ( d        & 0xFF);
     h = (h * 16777619) ^ ((d >>  8) & 0xFF);
     h = (h * 16777619) ^ ((d >> 16) & 0xFF);
@@ -80,18 +30,20 @@ struct RandomGenerator {
 }
 
 fn @create_random_seed(sample: i32, iter: i32, frame: i32, x: i32, y: i32, user: i32) -> u32 {
-    let mut hash = fnv_init();
-    hash = fnv_hash(hash, sample as u32);
-    hash = fnv_hash(hash, iter as u32);
-    hash = fnv_hash(hash, frame as u32);
-    hash = fnv_hash(hash, x as u32);
-    hash = fnv_hash(hash, y as u32);
-    hash = fnv_hash(hash, user as u32);
+    let mut hash = hash_init();
+    hash = hash_combine(hash, sample as u32);
+    hash = hash_combine(hash, iter as u32);
+    hash = hash_combine(hash, frame as u32);
+    hash = hash_combine(hash, x as u32);
+    hash = hash_combine(hash, y as u32);
+    hash = hash_combine(hash, user as u32);
     hash
 }
 
 fn @create_random_generator_base(next_u32: fn() -> u32, create_seed: fn() -> u32) = RandomGenerator {
     next_f32 = @|| {
+        // This trick is borrowed from Alex, who borrowed it from Mitsuba, which borrowed it from MTGP:
+        // We generate a random number in [1,2) and subtract 1 from it.
         let x = next_u32();
         bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
     },
@@ -106,5 +58,11 @@ fn @create_random_generator(seed: u32) -> RandomGenerator {
     let mut counter = 1:u32;
 
     fn @next_u32() = sample_tea_u32(seed, counter++);
-    create_random_generator_base(next_u32, @|| fnv_hash(seed, counter) )
+    create_random_generator_base(next_u32, @|| hash_combine(seed, counter) )
+}
+
+// Function will return a random number based on the given seed.
+// As long as the seed does not change the return value will not change either.
+fn @hash_rndf(seed: f32) -> f32 {
+    create_random_generator(hash_combine(hash_init(), bitcast[u32](seed))).next_f32()
 }
