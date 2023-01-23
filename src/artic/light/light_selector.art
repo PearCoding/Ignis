@@ -1,4 +1,4 @@
-// Result of sampling a direction
+// Light selection method
 struct LightSelector {
     count:     i32,
     sample:    fn (RandomGenerator, Vec3) -> (Light, f32),
