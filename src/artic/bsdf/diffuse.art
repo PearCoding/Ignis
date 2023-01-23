@@ -3,7 +3,7 @@ fn @make_lambertian_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
     eval   = @ |in_dir, _| color_mulf(kd, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
     pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
     sample = @ |rnd, _, _| {
-        let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+        let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
         let gdir   = mat3x3_mul(surf.local, sample.dir);
         make_bsdf_sample(gdir, sample.pdf, kd, 1)
     },
@@ -30,7 +30,7 @@ fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
         eval   = eval,
         pdf    = @ |in_dir, _| cosine_hemisphere_pdf(absolute_cos(in_dir, surf.local.col(2))),
         sample = @ |rnd, out_dir, _| {
-            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+            let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
             let gdir   = mat3x3_mul(surf.local, sample.dir);
             make_bsdf_sample(gdir, sample.pdf, color_mulf(eval(gdir, out_dir), 1 / sample.pdf), 1)
         },

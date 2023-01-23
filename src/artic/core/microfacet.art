@@ -4,10 +4,10 @@ use super::math_builtins;
 use super::math;
 use super::shading;
 
-type Vec2     = all::Vec2;
-type Vec3     = all::Vec3;
-type Mat3x3   = all::Mat3x3;
-type RndState = all::RndState;
+type Vec2            = all::Vec2;
+type Vec3            = all::Vec3;
+type Mat3x3          = all::Mat3x3;
+type RandomGenerator = all::RandomGenerator;
 
 struct MicrofacetSample {
     normal: Vec3,          
@@ -46,21 +46,21 @@ struct MicrofacetSlopeModel {
     D    : fn (Vec3) -> f32,       // Distribution of normals (NDF)
     D_wi : fn (Vec3, Vec3) -> f32, // Distribution of visible normals (VNDF)
 
-    // sample    : fn (&mut RndState) -> Vec3, // Sample NDF
-    sample_wi : fn (&mut RndState, Vec3) -> Vec3, // Sample VNDF
+    // sample    : fn (RandomGenerator) -> Vec3, // Sample NDF
+    sample_wi : fn (RandomGenerator, Vec3) -> Vec3, // Sample VNDF
 
     lambda   : fn (Vec3) -> f32, // Smith's lambda function
     projArea : fn (Vec3) -> f32, // Projected area towards incident direction
 
     p22        : fn (Vec2) -> f32, // Distribution of slopes
-    sample_p22 : fn (&mut RndState, f32) -> Vec2, // Sampling visible slopes with alpha=1
+    sample_p22 : fn (RandomGenerator, f32) -> Vec2, // Sampling visible slopes with alpha=1
 }
 
 fn @make_slope_model_base(alpha_u : f32, alpha_v : f32,
                           lambda: fn (Vec3) -> f32,
                           projArea: fn (Vec3) -> f32,
                           p22: fn (Vec2) -> f32,
-                          sample_p22: fn (&mut RndState, f32) -> Vec2) -> MicrofacetSlopeModel {
+                          sample_p22: fn (RandomGenerator, f32) -> Vec2) -> MicrofacetSlopeModel {
     fn @D(wm: Vec3) -> f32 {
         if shading::cos_theta(wm) <= 0 {
             return(0)
@@ -90,7 +90,7 @@ fn @make_slope_model_base(alpha_u : f32, alpha_v : f32,
             all::safe_div(all::positive_cos(wi, wm) * D(wm), area)
         },
 
-        sample_wi = @|rnd: &mut RndState, wi: Vec3| -> Vec3 {
+        sample_wi = @|rnd: RandomGenerator, wi: Vec3| -> Vec3 {
             // Stretch
             let swi = all::vec3_normalize(all::make_vec3(alpha_u * wi.x, alpha_v * wi.y, wi.z));
             
@@ -126,7 +126,7 @@ fn @make_slope_model_base(alpha_u : f32, alpha_v : f32,
 struct MicrofacetModel {
     D       : fn (Vec3) -> f32,
     G1      : fn (Vec3, Vec3) -> f32,
-    sample  : fn (&mut RndState) -> MicrofacetSample,
+    sample  : fn (RandomGenerator) -> MicrofacetSample,
     alpha_u : f32,
     alpha_v : f32,
     is_delta: bool
@@ -213,8 +213,8 @@ fn @make_beckmann_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = MicrofacetM
     D  = @|m| ndf_beckmann(local, m, alpha_u, alpha_v),
     G1 = @|w, m| g_1_walter(local, w, m, alpha_u, alpha_v),
     sample = @ |rnd| {
-        let u0 = all::randf(rnd);
-        let u1 = all::randf(rnd);
+        let u0 = rnd.next_f32();
+        let u1 = rnd.next_f32();
         
         let ar     = alpha_v / alpha_u;
         let phi    = math_builtins::atan(ar * math_builtins::tan(2 * all::flt_pi * u1));
@@ -242,8 +242,8 @@ fn @make_ggx_model(local: Mat3x3, alpha_u: f32, alpha_v: f32) = MicrofacetModel 
     D  = @|m| ndf_ggx(local, m, alpha_u, alpha_v),
     G1 = @|w, m| g_1_smith(local, w, m, alpha_u, alpha_v),
     sample = @ |rnd| {
-        let u0 = all::randf(rnd);
-        let u1 = all::randf(rnd);
+        let u0 = rnd.next_f32();
+        let u1 = rnd.next_f32();
         
         let ar     = alpha_v / alpha_u;
         let phi    = if ?alpha_u && ?alpha_v && alpha_u == alpha_v { 2 * all::flt_pi * u1 } else { math_builtins::atan(ar * math_builtins::tan(2 * all::flt_pi * u1)) };
@@ -276,7 +276,7 @@ struct MicrofacetDistribution {
     G       : fn (Vec3, Vec3, Vec3) -> f32, // Wi, Wo, Normal
     norm    : fn (Vec3, Vec3, Vec3) -> f32, // Wi, Wo, Normal
     pdf     : fn (Vec3, Vec3, Vec3) -> f32, // Wi, Wo, Normal
-    sample  : fn (&mut RndState, Vec3) -> MicrofacetSample, // RND, Wo
+    sample  : fn (RandomGenerator, Vec3) -> MicrofacetSample, // RND, Wo
     alpha_u : f32,
     alpha_v : f32,
     is_delta: bool
@@ -318,9 +318,9 @@ fn @make_ggx_distribution(local: Mat3x3, alpha_u: f32, alpha_v: f32) -> Microfac
 // Based on:
 // Journal of Computer Graphics Techniques Vol. 7, No. 4, 2018 http://jcgt.org.
 // Sampling the GGX Distribution of Visible Normals. Eric Heitz
-fn @sample_vndf_ggx_11(rnd: &mut RndState, cos_theta: f32) -> Vec2 {
-    let u0 = all::randf(rnd);
-    let u1 = all::randf(rnd);
+fn @sample_vndf_ggx_11(rnd: RandomGenerator, cos_theta: f32) -> Vec2 {
+    let u0 = rnd.next_f32();
+    let u1 = rnd.next_f32();
 
 	// Sample concentric uniform disk
     let pc = all::square_to_concentric_disk(all::make_vec2(u0, u1));
@@ -337,7 +337,7 @@ fn @sample_vndf_ggx_11(rnd: &mut RndState, cos_theta: f32) -> Vec2 {
     all::vec2_mulf(all::make_vec2(all::diff_of_prod(cos_theta, y, sin_theta, z), pc.x), norm)
 }
 
-fn @sample_vndf_ggx(rnd: &mut RndState, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
+fn @sample_vndf_ggx(rnd: RandomGenerator, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
     // Transform to local
     let vL = shading::to_local(local, vN);
 

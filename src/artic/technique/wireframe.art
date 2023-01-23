@@ -43,7 +43,7 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
     }
 
     fn @on_bounce( ctx: ShadingContext
-                , _rnd: &mut RndState
+                , _rnd: RandomGenerator
                 , payload: RayPayload
                 , _mat: Material
         ) -> Option[Ray] {

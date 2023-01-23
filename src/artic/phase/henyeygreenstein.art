@@ -17,14 +17,14 @@ fn @make_henyeygreenstein_phase(g: f32) -> PhaseFunction {
         },
         sample = @ |rnd, out_dir| {
             if is_iso { // Isotropic
-                let sample = sample_uniform_sphere(randf(rnd), randf(rnd));
+                let sample = sample_uniform_sphere(rnd.next_f32(), rnd.next_f32());
                 make_phase_sample(sample.dir, sample.pdf, 1)
             } else {    // Anisotropic
-                let sqrTerm  = (1 - g * g) / (1 + g - 2 * g * randf(rnd));
+                let sqrTerm  = (1 - g * g) / (1 + g - 2 * g * rnd.next_f32());
                 let cosTheta = -(1 + g * g - sqrTerm * sqrTerm) / (2 * g);
                 let sinTheta = math_builtins::sqrt(math_builtins::fmax[f32](0, 1 - cosTheta * cosTheta));
 
-                let phi = 2 * flt_pi * randf(rnd);
+                let phi = 2 * flt_pi * rnd.next_f32();
                 let dir = make_vec3(sinTheta * math_builtins::cos(phi),
                                     sinTheta * math_builtins::sin(phi),
                                     cosTheta);

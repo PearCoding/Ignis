@@ -39,7 +39,7 @@ fn @make_spot_light(id: i32, pos: Vec3, dir: Vec3, cutoff_angle: f32, falloff_an
             make_direct_sample(pos, out_dir, color, make_area_pdf(area_pdf), cos, dist)
         },
         sample_emission = @ |rnd| {
-            let sample  = sample_uniform_cone(randf(rnd), randf(rnd), cosCutoffAngle);
+            let sample  = sample_uniform_cone(rnd.next_f32(), rnd.next_f32(), cosCutoffAngle);
             let out_dir = to_world(sample.dir);
             let color   = color_mulf(eval_dir(out_dir), 1 / (spot_area * sample.pdf));
 

@@ -404,17 +404,17 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             }
 
             let lobes = principled::calcLobeDistribution(closure, wo);
-            let pick  = randf(rnd);
+            let pick  = rnd.next_f32();
 
             let sample = if pick < lobes.diff_refl {
                 // Diffuse reflection
-                let s  = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+                let s  = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
                 let wi = shading::make_same_hemisphere(wo, s.dir);
                 DirSample { dir = wi,
                             pdf = s.pdf * lobes.diff_refl + specReflPdf_local(wo, wi) * lobes.spec_refl }
             } else if pick < lobes.diff_refl + lobes.diff_trans {
                 // Diffuse transmission
-                let s  = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+                let s  = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
                 let wi = vec3_neg(shading::make_same_hemisphere(wo, s.dir));
                 DirSample { dir = wi,
                             pdf = s.pdf * lobes.diff_trans + specTransPdf_local(wo, wi) * lobes.spec_trans }

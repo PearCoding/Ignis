@@ -1,7 +1,7 @@
 {
 	"technique": {
 		"type": "volpath",
-		"max_depth": 64
+		"max_depth": 6
 	},
 	"camera": {
 		"type": "perspective",
@@ -45,6 +45,6 @@
 		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0,0,0], "sigma_s": [0,0,0], "g": 0}
 		// {"type": "homogeneous", "name": "Medium", "sigma_a": [0.2,0.6,0.8], "sigma_s": [0.3,0.2,0.1], "g": 0}
 		// {"type": "homogeneous", "name": "Medium", "sigma_a": "color(0.2,0.6,0.8)*exp(-abs(V)).xyzz", "sigma_s": "color(0.3,0.2,0.1)*exp(-abs(V)).xyzz", "g": 0}
-		{"type": "homogeneous", "name": "Medium", "sigma_a": "4*Np.xyzz", "sigma_s": "0.2*(color(1)-Np.xyzz)", "g": 0}
+		{"type": "homogeneous", "name": "Medium", "sigma_a": "4*norm(Np.xyzz)", "sigma_s": "0.2*(color(1)-norm(Np.xyzz))", "g": 0}
 	]
 }

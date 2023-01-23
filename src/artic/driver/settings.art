@@ -6,5 +6,20 @@ struct Settings {
     frame:        i32,
     iter:         i32,
     width:        i32,
-    height:       i32
+    height:       i32,
+    seed:         i32 // User given seed
 }
+
+struct RenderConfig {
+    iter:  i32,
+    frame: i32,
+    spi:   i32,
+    seed:  i32 // User Seed
+}
+
+fn @make_render_config_from_settings(settings: Settings) = RenderConfig {
+    iter  = settings.iter,
+    frame = settings.frame,
+    spi   = settings.spi,
+    seed  = settings.seed
+};

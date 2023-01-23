@@ -6,7 +6,7 @@ struct Device {
 
     //------------------------------------- Pipeline    
     // [Internal] Run full pipeline with the given scene info and spi
-    trace: fn (SceneInfo, Pipeline, PayloadInfo, i32 /* spi */) -> (),
+    trace: fn (SceneInfo, Pipeline, PayloadInfo) -> (),
 
     // [Internal] Generate rays
     generate_rays: fn (RayEmitter, PayloadInfo, i32, i32, i32, i32, i32, i32, i32) -> i32, 

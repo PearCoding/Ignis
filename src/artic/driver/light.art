@@ -36,9 +36,9 @@ struct Light {
     // ID of the light given by the system
     id: i32,
     // Samples direct illumination from this light source at the given point on a surface
-    sample_direct: fn (&mut RndState, SurfaceElement) -> DirectLightSample,
+    sample_direct: fn (RandomGenerator, SurfaceElement) -> DirectLightSample,
     // Samples the emitting surface of the light
-    sample_emission: fn (&mut RndState) -> EmissionSample,
+    sample_emission: fn (RandomGenerator) -> EmissionSample,
     // Returns the emission properties of the light at a given point on its surface. The SurfaceElement is only valid if delta & infinite is false
     emission: fn (ShadingContext) -> Color,
     // Returns the pdf properties of the light at a given point on its surface for direct illumination. 

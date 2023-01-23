@@ -61,3 +61,55 @@ fn @fnv_hash(mut h: u32, d: u32) -> u32 {
     h = (h * 16777619) ^ ((d >> 24) & 0xFF);
     h
 }
+
+fn @sample_tea_u32(mut v0: u32, mut v1: u32) -> u32 {
+    let mut sum = 0:u32;
+    for _i in unroll(0, 4) {
+        sum += 0x9e3779b9;
+        v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + sum) ^ ((v1 >> 5) + 0xc8013ea4);
+        v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + sum) ^ ((v0 >> 5) + 0x7e95761e);
+    }
+
+    v1
+}
+
+struct RandomGenerator {
+    next_f32: fn ()         -> f32,
+    next_i32: fn (i32, i32) -> i32,
+    get_counter: fn ()      -> u32
+}
+
+fn @create_random_seed(sample: i32, iter: i32, frame: i32, x: i32, y: i32, user: i32) -> u32 {
+    let mut hash = fnv_init();
+    hash = fnv_hash(hash, sample as u32);
+    hash = fnv_hash(hash, iter as u32);
+    hash = fnv_hash(hash, frame as u32);
+    hash = fnv_hash(hash, x as u32);
+    hash = fnv_hash(hash, y as u32);
+    hash = fnv_hash(hash, user as u32);
+    hash
+}
+
+fn @create_random_generator_base(next_u32: fn() -> u32, get_counter: fn() -> u32) = RandomGenerator {
+    next_f32 = @|| {
+        let x = next_u32();
+        bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
+    },
+    next_i32 = @|s, e| {
+        let x = bitcast[i32](next_u32());
+        x % (e - s) + s
+    },
+    get_counter = get_counter
+};
+
+fn @create_random_generator(seed: u32) -> RandomGenerator {
+    let mut counter = 1:u32;
+
+    fn @next_u32() = sample_tea_u32(seed, counter++);
+    create_random_generator_base(next_u32, @|| counter)
+}
+
+fn @create_random_generator_live(seed: u32, mut counter: u32) -> RandomGenerator {
+    fn @next_u32() = sample_tea_u32(seed, counter++);
+    create_random_generator_base(next_u32, @|| counter)
+}

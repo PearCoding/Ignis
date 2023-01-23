@@ -341,7 +341,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let payload = get_payload(cur_ray, 0);
         let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
         write_ray(cur_ray, 0, ray);
-        write_rnd(cur_ray, 0, rnd);
+        write_rnd(cur_ray, 0, rnd.get_counter());
         primary.rays.id(cur_ray) = y * film_width + x;
     }
     
@@ -485,9 +485,10 @@ fn @cpu_hit_shade(primary: &PrimaryStream
     for i, r_vector_width in vectorized_range(vector_width, begin, end) {
         let ray     = read_primary_ray(i, 0);
         let hit     = read_primary_hit(i, 0);
-        let mut rnd = read_primary_rnd_state(i, 0);
         let ray_id  = primary.rays.id(i);
         let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+
+        let rnd = create_random_generator_live(1234/*TODO*/, read_primary_rnd_state(i, 0));
 
         let primary_payload   = get_primary_payload(i, 0);
         let secondary_payload = get_secondary_payload(i, 0);
@@ -503,7 +504,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width);
 
         // Compute shadow rays
-        match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
+        match @on_shadow(ctx, rnd, primary_payload, secondary_payload, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(i, 0, new_ray);
                 secondary.mat_id(i)  = mat.id + 1;
@@ -526,9 +527,9 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         }
 
         // Sample new rays
-        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, rnd, primary_payload, mat) {
             write_primary_ray(i, 0, new_ray);
-            write_primary_rnd_state(i, 0, rnd);
+            write_primary_rnd_state(i, 0, rnd.get_counter());
         } else {
             primary.rays.id(i) = -1;
         }

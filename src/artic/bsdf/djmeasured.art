@@ -752,7 +752,7 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, isotropic : bool, jacobian : bool
         },
         sample = @ |rnd, out_dir, _| {
             let out_local = shading::to_local(surf.local, out_dir);
-            let sample = sample_brdf(brdf_data, make_vec2(randf(rnd), randf(rnd)), out_local);
+            let sample = sample_brdf(brdf_data, make_vec2(rnd.next_f32(), rnd.next_f32()), out_local);
             let in_global = shading::to_world(surf.local, sample.out);
             make_bsdf_sample(in_global, sample.pdf, color_mul(tint, vec3_to_color(sample.res)), 1)
         },

@@ -9,7 +9,7 @@ fn @make_pure_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color,
 
         let fterm = from_option(fresnel(k, cos_o), FresnelTerm { cos_t = 0, factor = 1 });
 
-        if randf(rnd) > fterm.factor {
+        if rnd.next_f32() > fterm.factor {
             // Refraction
             let t = vec3_refract(out_dir, n, k, cos_o, fterm.cos_t);
             let adjoint_term = if adjoint { k * k } else { 1 };
@@ -35,7 +35,7 @@ fn @make_thin_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color,
         let fterm = math::fresnel_dielectric(k, cos_o);
         let F     = fterm + (1 - fterm) * fterm / (fterm + 1);
 
-        if randf(rnd) > F {
+        if rnd.next_f32() > F {
             // Refraction
             make_bsdf_sample(vec3_neg(out_dir), 1, kt, 1 /* It is thin*/)
         } else {
@@ -148,7 +148,7 @@ fn @make_rough_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color
 
             let fterm = from_option(fresnel(eta, cos_h_o), FresnelTerm{ cos_t = 0, factor = 1 });
 
-            let (in_dir, sel_pdf) = if (randf(rnd) > fterm.factor) {
+            let (in_dir, sel_pdf) = if (rnd.next_f32() > fterm.factor) {
                 // Refraction
                 let dir   = vec3_normalize(vec3_refract(out_dir, H, eta, cos_h_o, fterm.cos_t));
                 let jacob = shading::halfway_refractive_jacobian(eta, vec3_dot(H, dir), cos_h_o);

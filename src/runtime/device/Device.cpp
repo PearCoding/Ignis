@@ -346,6 +346,7 @@ public:
         driver_settings.iter   = (int)settings.iteration;
         driver_settings.width  = (int)settings.width;
         driver_settings.height = (int)settings.height;
+        driver_settings.seed   = (int)settings.user_seed;
 
         if (settings.width != film_width || settings.height != film_height)
             resizeFramebuffer(settings.width, settings.height);

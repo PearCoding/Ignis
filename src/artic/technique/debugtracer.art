@@ -127,11 +127,11 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                         let color    = [color_builtins::red, color_builtins::orange, color_builtins::yellow, color_builtins::blue](index);
                         make_option(color)
                     } else {
-                        let mut tmp = fnv_hash(fnv_hash(fnv_hash(fnv_init(),
+                        let tmp_rnd = create_random_generator(fnv_hash(fnv_hash(fnv_hash(fnv_init(),
                                                     bitcast[u32](ctx.hit.distance)),
                                                 bitcast[u32](ctx.hit.prim_coords.x)),
-                                            bitcast[u32](ctx.hit.prim_coords.y));
-                        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(&mut tmp, out_dir, false) {    
+                                            bitcast[u32](ctx.hit.prim_coords.y)));
+                        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(tmp_rnd, out_dir, false) {    
                             let pdf = mat.bsdf.pdf(mat_sample.in_dir, out_dir);
                             let evl = color_mulf(mat.bsdf.eval(mat_sample.in_dir, out_dir), safe_div(1, pdf));
 
