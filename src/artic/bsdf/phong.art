@@ -11,7 +11,7 @@ fn @make_phong_bsdf(surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     },
     sample = @ |rnd, out_dir, _| {
         let reflect_out = vec3_reflect(out_dir, surf.local.col(2));
-        let sample      = sample_cosine_power_hemisphere(ns, randf(rnd), randf(rnd));
+        let sample      = sample_cosine_power_hemisphere(ns, rnd.next_f32(), rnd.next_f32());
         let in_dir      = mat3x3_mul(make_orthonormal_mat3x3(reflect_out), sample.dir);
         let cos         = positive_cos(in_dir, surf.local.col(2));
         let color       = color_mulf(ks, cos * (ns + 2) / (ns + 1)); // TODO: Really cos?

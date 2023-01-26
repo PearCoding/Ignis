@@ -1,10 +1,10 @@
-type PixelSampler = fn (&mut RndState, i32, i32, i32) -> (f32, f32);
+type PixelSampler = fn (RandomGenerator, i32, i32, i32) -> (f32, f32);
 
 // --------------------------
 fn @make_uniform_pixel_sampler() -> PixelSampler {
     @|rnd, _, _, _| {
-		let rx = randf(rnd);
-		let ry = randf(rnd);
+		let rx = rnd.next_f32();
+		let ry = rnd.next_f32();
         (rx, ry)
     }
 }
@@ -18,13 +18,13 @@ fn @make_mjitt_pixel_sampler(bin_x: u32, bin_y: u32) -> PixelSampler {
 	let bin_yf = bin_y as f32;
 
     @|rnd, index, x, y| {
-		let seed   = fnv_hash(fnv_hash(fnv_init(), bitcast[u32](x)), bitcast[u32](y));
+		let seed   = hash_combine(hash_combine(hash_init(), bitcast[u32](x)), bitcast[u32](y));
 		let index2 = index as u32;
 		let sx     = permute_element(index2 % bin_x, bin_x, seed * F1) as f32;
 		let sy     = permute_element(index2 / bin_x, bin_y, seed * F2) as f32;
 
-		let jx = randf(rnd);
-		let jy = randf(rnd);
+		let jx = rnd.next_f32();
+		let jy = rnd.next_f32();
         let rx = (sx + (sy + jx) / bin_yf) / bin_xf;
         let ry = (sy + (sx + jy) / bin_xf) / bin_yf;
         

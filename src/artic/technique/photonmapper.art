@@ -144,18 +144,13 @@ fn init_ppm_raypayload(payload: RayPayload) = write_ppmraypayload(payload, PPMRa
 });
 
 /////////////////////////////////////
-fn @make_ppm_light_emitter(light_selector: LightSelector, iter: i32) -> RayEmitter {
+fn @make_ppm_light_emitter(light_selector: LightSelector, config: RenderConfig) -> RayEmitter {
     let offset = 0.001:f32;
 
     @ |sample, x, y, _width, _height, payload| {
-        let mut hash = fnv_init();
-        hash = fnv_hash(hash, sample as u32);
-        hash = fnv_hash(hash, iter as u32);
-        hash = fnv_hash(hash, x as u32);
-        hash = fnv_hash(hash, y as u32);
-        let mut rnd = hash /*as RndState*/;
+        let rnd = create_random_generator(create_random_seed(sample, config.iter, config.frame, x, y, config.seed));
         
-        let (light, light_pdf) = light_selector.sample(&mut rnd, vec3_expand(0));
+        let (light, light_pdf) = light_selector.sample(rnd, vec3_expand(0));
         let sample_emission    = light.sample_emission;
         let light_sample       = @sample_emission(rnd);
         
@@ -206,7 +201,7 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
     }
 
     fn @on_bounce( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , payload: RayPayload
                  , mat: Material
                  ) -> Option[Ray] {
@@ -367,7 +362,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, rad
     }
 
     fn @on_bounce( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , payload: RayPayload
                  , mat: Material
                  ) -> Option[Ray] {
@@ -382,7 +377,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, rad
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
-            if randf(rnd) >= rr_prob {
+            if rnd.next_f32() >= rr_prob {
                 return(Option[Ray]::None)
             }
 

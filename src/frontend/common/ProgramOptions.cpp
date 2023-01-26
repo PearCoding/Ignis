@@ -164,6 +164,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
             "--realtime", [&]() { this->SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
             "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
     }
+    app.add_option("--seed", Seed, "Seed for the random generators. Depending on the technique this will enforce reproducibility");
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
     app.add_flag("--stats-full", AcquireFullStats, "Acquire all stats alongside rendering. Will be dumped at the end of the rendering session");
@@ -386,6 +387,8 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.DumpRegistry     = DumpRegistry || DumpFullRegistry;
     options.DumpRegistryFull = DumpFullRegistry;
     options.SPI              = SPI.value_or(0);
+
+    options.Seed = (size_t)Seed;
 
     options.OverrideTechnique = TechniqueType;
     options.OverrideCamera    = CameraType;

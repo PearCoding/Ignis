@@ -1,3 +1,12 @@
+struct GenerateRayInfo {
+    next_id: i32,
+    size: i32,
+    xmin: i32,
+    ymin: i32,
+    xmax: i32,
+    ymax: i32
+}
+
 // Rendering device
 // Methods marked with [Internal] are only for internal use and should not be called in random places
 struct Device {
@@ -6,28 +15,28 @@ struct Device {
 
     //------------------------------------- Pipeline    
     // [Internal] Run full pipeline with the given scene info and spi
-    trace: fn (SceneInfo, Pipeline, PayloadInfo, i32 /* spi */) -> (),
+    trace: fn (SceneInfo, Pipeline, PayloadInfo) -> (),
 
     // [Internal] Generate rays
-    generate_rays: fn (RayEmitter, PayloadInfo, i32, i32, i32, i32, i32, i32, i32) -> i32, 
+    generate_rays: fn (RayEmitter, PayloadInfo, GenerateRayInfo) -> i32, 
 
     // Synchronize device
     sync: fn () -> (),
 
     // [Internal] Handle a traversal primary shader
-    handle_traversal_primary: fn (SceneTracer, i32) -> (), 
+    handle_traversal_primary: fn (SceneTracer, i32 /* size */) -> (), 
 
     // [Internal] Handle a traversal secondary shader
-    handle_traversal_secondary: fn (SceneTracer, i32, bool, i32, bool) -> (), 
+    handle_traversal_secondary: fn (SceneTracer, i32 /* size */, bool /* is_advanced */, bool /* use_framebuffer */) -> (), 
 
     // [Internal] Handle a miss shader
-    handle_miss_shader: fn (Technique, PayloadInfo, i32, i32, i32, bool) -> (), 
+    handle_miss_shader: fn (Technique, PayloadInfo, i32 /* first */, i32 /* last */, bool /* use_framebuffer */) -> (), 
 
     // [Internal] Handle a hit shader
-    handle_hit_shader: fn (MaterialShader, Scene, Technique, PayloadInfo, i32, i32, i32, bool) -> (),
+    handle_hit_shader: fn (MaterialShader, Scene, Technique, PayloadInfo, i32 /* first */, i32 /* last */, bool /* use_framebuffer */) -> (),
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
-    handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32, i32, i32, bool, bool) -> (), 
+    handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32 /* first */, i32 /* last */, bool /* use_framebuffer */, bool /* is_hit */) -> (), 
 
     // [Internal] Special local handler for multilevel traversal
     get_traversal_handler_multiple: fn (BVHTable) -> SceneTraverseLocalHandler,

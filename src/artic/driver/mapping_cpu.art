@@ -305,14 +305,9 @@ fn @cpu_compact_secondary(secondary: &SecondaryStream, size: i32, payload_count:
 
 // Ray generator ------------------------------------------------------------------
 fn @cpu_generate_rays( primary: PrimaryStream
-                     , current_size: i32
                      , capacity: i32
                      , emitter: RayEmitter
-                     , next_id: i32
-                     , xmin: i32
-                     , ymin: i32
-                     , xmax: i32
-                     , ymax: i32
+                     , gen_info: GenerateRayInfo
                      , film_width: i32
                      , film_height: i32
                      , spi: i32
@@ -320,13 +315,16 @@ fn @cpu_generate_rays( primary: PrimaryStream
                      , vector_width: i32
                      , is_payload_soa: bool
                      ) -> i32 {
-    let write_ray = make_ray_stream_writer(primary.rays, 1);
-    let write_rnd = make_primary_stream_rnd_state_writer(primary, 1);
-    let get_payload = make_primary_stream_payload_handler(primary, payload_info.primary_count, capacity, 1, is_payload_soa);
-    let first_id = next_id;
-    let (tile_width, tile_height) = (xmax - xmin, ymax - ymin);
+    let current_size = gen_info.size;
+    let write_ray    = make_ray_stream_writer(primary.rays, 1);
+    let write_rnd    = make_primary_stream_rnd_state_writer(primary, 1);
+    let get_payload  = make_primary_stream_payload_handler(primary, payload_info.primary_count, capacity, 1, is_payload_soa);
+    let first_id     = gen_info.next_id;
+
+    let (tile_width, tile_height) = (gen_info.xmax - gen_info.xmin, gen_info.ymax - gen_info.ymin);
     let num_rays = min(spi * tile_width * tile_height - first_id, capacity - current_size);
     let tile_div = make_fast_div(tile_width as u32);
+    
     for i, _ in vectorized_range(vector_width, 0, num_rays) {
         let in_tile_id = first_id + i;
 
@@ -335,27 +333,22 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let in_tile_pixel = in_tile_id / spi;
         let in_tile_y = fast_div(tile_div, in_tile_pixel as u32) as i32;
         let in_tile_x = in_tile_pixel - in_tile_y * tile_width;
-        let x = xmin + in_tile_x;
-        let y = ymin + in_tile_y;
+        let x = gen_info.xmin + in_tile_x;
+        let y = gen_info.ymin + in_tile_y;
         let cur_ray = current_size + i;
         let payload = get_payload(cur_ray, 0);
         let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
         write_ray(cur_ray, 0, ray);
-        write_rnd(cur_ray, 0, rnd);
+        write_rnd(cur_ray, 0, rnd.create_seed());
         primary.rays.id(cur_ray) = y * film_width + x;
     }
     
     current_size + num_rays
 }
 
-fn @cpu_generate_rays_handler(size: i32
-                            , capacity: i32
+fn @cpu_generate_rays_handler(capacity: i32
                             , emitter: RayEmitter
-                            , next_id: i32
-                            , xmin: i32
-                            , ymin: i32
-                            , xmax: i32
-                            , ymax: i32
+                            , gen_info: GenerateRayInfo
                             , spi: i32
                             , payload_info: PayloadInfo
                             , vector_width: i32
@@ -364,7 +357,7 @@ fn @cpu_generate_rays_handler(size: i32
 
     let mut primary : PrimaryStream;
     ignis_get_primary_stream(0, 0, &mut primary, capacity);
-    cpu_generate_rays(primary, size, capacity, emitter, next_id, xmin, ymin, xmax, ymax, work_info.width, work_info.height, spi, payload_info, vector_width, is_payload_soa)
+    cpu_generate_rays(primary, capacity, emitter, gen_info, work_info.width, work_info.height, spi, payload_info, vector_width, is_payload_soa)
 }
 
 // Traverse functions ------------------------------------------------------------------
@@ -485,9 +478,10 @@ fn @cpu_hit_shade(primary: &PrimaryStream
     for i, r_vector_width in vectorized_range(vector_width, begin, end) {
         let ray     = read_primary_ray(i, 0);
         let hit     = read_primary_hit(i, 0);
-        let mut rnd = read_primary_rnd_state(i, 0);
         let ray_id  = primary.rays.id(i);
         let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+
+        let rnd = create_random_generator(read_primary_rnd_state(i, 0));
 
         let primary_payload   = get_primary_payload(i, 0);
         let secondary_payload = get_secondary_payload(i, 0);
@@ -503,7 +497,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width);
 
         // Compute shadow rays
-        match @on_shadow(ctx, &mut rnd, primary_payload, secondary_payload, mat) {
+        match @on_shadow(ctx, rnd, primary_payload, secondary_payload, mat) {
             ShadowRay::Simple(new_ray, color) => {
                 write_secondary_ray(i, 0, new_ray);
                 secondary.mat_id(i)  = mat.id + 1;
@@ -526,9 +520,9 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         }
 
         // Sample new rays
-        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, &mut rnd, primary_payload, mat) {
+        if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, rnd, primary_payload, mat) {
             write_primary_ray(i, 0, new_ray);
-            write_primary_rnd_state(i, 0, rnd);
+            write_primary_rnd_state(i, 0, rnd.create_seed());
         } else {
             primary.rays.id(i) = -1;
         }
@@ -538,11 +532,11 @@ fn @cpu_hit_shade(primary: &PrimaryStream
 fn @cpu_hit_shade_handler(shader: MaterialShader
     , scene: Scene
     , technique: Technique
+    , config: RenderConfig
     , payload_info: PayloadInfo
     , begin: i32
     , end: i32
     , capacity: i32
-    , spi: i32
     , use_framebuffer: bool
     , vector_width: i32
     , is_payload_soa: bool) -> () {
@@ -551,7 +545,7 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
 
-    let framebuffer = cpu_get_framebuffer(spi, use_framebuffer);
+    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
     cpu_hit_shade(primary, secondary, shader, scene, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
@@ -711,7 +705,7 @@ fn @cpu_trace( scene_info: SceneInfo
             // (Re-)generate primary rays
             if current_size < capacity && id < num_rays {
                 let before_s = current_size;
-                current_size = pipeline.on_generate(id, current_size, xmin, ymin, xmax, ymax);
+                current_size = pipeline.on_generate(GenerateRayInfo{ next_id=id, size=current_size, xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax });
                 let added    = current_size - before_s;
                 id += added;
                 stats::add_quantity(stats::Quantity::CameraRayCount, added);
@@ -821,41 +815,41 @@ fn @cpu_trace( scene_info: SceneInfo
 }
 
 // CPU device ----------------------------------------------------------------------
-fn @make_cpu_device(vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32, is_payload_soa: bool) = Device {
+fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, min_max: MinMax, vector_width: i32, num_cores: i32, tile_size: i32, is_payload_soa: bool) = Device {
     id    = 0,
-    trace = @ |scene_info, pipeline, payload_info, spi| {
+    trace = @ |scene_info, pipeline, payload_info| {
         cpu_trace(
             scene_info,
             pipeline,
             payload_info,
             tile_size,
-            spi,
+            config.spi,
             num_cores,
             vector_width,
             vector_compact,
             is_payload_soa
         )
     },
-    generate_rays = @ | emitter, payload_info, next_id, size, xmin, ymin, xmax, ymax, spi | -> i32 {
-        cpu_generate_rays_handler(size, @cpu_get_stream_capacity(spi, tile_size), emitter, next_id, xmin, ymin, xmax, ymax, spi, payload_info, vector_width, is_payload_soa)
+    generate_rays = @ | emitter, payload_info, gen_info | -> i32 {
+        cpu_generate_rays_handler(@cpu_get_stream_capacity(config.spi, tile_size), emitter, gen_info, config.spi, payload_info, vector_width, is_payload_soa)
     },
     handle_traversal_primary = @ | scene_tracer, size | {
         cpu_traverse_primary(scene_tracer, size, min_max, vector_width);
     },
-    handle_traversal_secondary = @ | scene_tracer, size, _is_advanced, _spi, _use_framebuffer | {
+    handle_traversal_secondary = @ | scene_tracer, size, _is_advanced, _use_framebuffer | {
         cpu_traverse_secondary(scene_tracer, size, min_max, vector_width);
     },
-    handle_miss_shader = @ | technique, payload_info, first, last, spi, use_framebuffer | {
-        cpu_miss_shade_handler(technique, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, payload_info, use_framebuffer, vector_width, is_payload_soa);
+    handle_miss_shader = @ | technique, payload_info, first, last, use_framebuffer | {
+        cpu_miss_shade_handler(technique, first, last, @cpu_get_stream_capacity(config.spi, tile_size), config.spi, payload_info, use_framebuffer, vector_width, is_payload_soa);
     },
-    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, spi, use_framebuffer | {
-        cpu_hit_shade_handler(shader, scene, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, vector_width, is_payload_soa);
+    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, use_framebuffer | {
+        cpu_hit_shade_handler(shader, scene, technique, config, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), use_framebuffer, vector_width, is_payload_soa);
     },
-    handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit | {
-        cpu_advanced_shadow_handler(shader, technique, payload_info, first, last, @cpu_get_stream_capacity(spi, tile_size), spi, use_framebuffer, is_hit, vector_width, is_payload_soa);
+    handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, use_framebuffer, is_hit | {
+        cpu_advanced_shadow_handler(shader, technique, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), config.spi, use_framebuffer, is_hit, vector_width, is_payload_soa);
     },
     get_traversal_handler_multiple = @ | prims | make_cpu_scene_local_handler_multiple(prims, vector_width, single, min_max), 
-    sync    = @ || {},
+    sync = @ || {},
     parallel_range = @ |body| {
         @|start, end| {
             for i in parallel(num_cores, start, end) {

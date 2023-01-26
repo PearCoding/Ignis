@@ -10,7 +10,7 @@ struct AreaEmitter {
 fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
     id = id,
     sample_direct = @ |rnd, from_surf| {
-        let (to_surf, pdf, weight) = area.sample_direct(make_vec2(randf(rnd), randf(rnd)), from_surf.point);
+        let (to_surf, pdf, weight) = area.sample_direct(make_vec2(rnd.next_f32(), rnd.next_f32()), from_surf.point);
         let dir_ = vec3_sub(to_surf.point, from_surf.point);
         let dist = vec3_len(dir_);
         let dir  = vec3_mulf(dir_, safe_div(1, dist));
@@ -24,8 +24,8 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
             dist)
     },
     sample_emission = @ |rnd| {
-        let (surf, area_pdf) = area.sample_emission(make_vec2(randf(rnd), randf(rnd)));
-        let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+        let (surf, area_pdf) = area.sample_emission(make_vec2(rnd.next_f32(), rnd.next_f32()));
+        let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
         let weight = safe_div(1, area_pdf * sample.pdf);
         let ctx    = make_emissive_shading_context(make_zero_ray(), surf, vec2_to_3(surf.tex_coords, 0));
         make_emission_sample(surf.point,

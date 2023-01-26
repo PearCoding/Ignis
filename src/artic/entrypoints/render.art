@@ -1,9 +1,9 @@
-fn @ig_render_pipeline(device: Device, payload_info: PayloadInfo, spi: i32) -> () {
+fn @ig_render_pipeline(device: Device, payload_info: PayloadInfo) -> () {
     let scene_info = device.load_scene_info();
 
     let pipeline = Pipeline {
-        on_generate   = @ | next_id, size, xmin, ymin, xmax, ymax | -> i32 {
-            ignis_handle_ray_generation(device.id, next_id, size, xmin, ymin, xmax, ymax)
+        on_generate   = @ | gen_info | -> i32 {
+            ignis_handle_ray_generation(device.id, gen_info.next_id, gen_info.size, gen_info.xmin, gen_info.ymin, gen_info.xmax, gen_info.ymax)
         },
         on_traverse_primary = @ | size | -> () {
             ignis_handle_traverse_primary(device.id, size)
@@ -23,6 +23,6 @@ fn @ig_render_pipeline(device: Device, payload_info: PayloadInfo, spi: i32) -> (
     };
 
     ignis_handle_callback_shader(device.id, 0/*BeforeIteration*/);
-    device.trace(scene_info, pipeline, payload_info, spi);
+    device.trace(scene_info, pipeline, payload_info);
     ignis_handle_callback_shader(device.id, 1/*AfterIteration*/);
 }

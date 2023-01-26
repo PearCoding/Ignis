@@ -14,20 +14,19 @@ std::string RayGenerationShader::begin(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_ray_generation_shader(settings: &Settings, next_id: i32, size: i32, xmin: i32, ymin: i32, xmax: i32, ymax: i32) -> i32 {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
 
     return stream.str();
 }
 
-std::string RayGenerationShader::end(const std::string_view& emitterName, const std::string_view& spiName, bool skipReturn)
+std::string RayGenerationShader::end(const std::string_view& emitterName, bool skipReturn)
 {
     std::stringstream stream;
 
     if (!skipReturn)
-        stream << "  device.generate_rays(" << emitterName << ", payload_info, next_id, size, xmin, ymin, xmax, ymax, " << spiName << ")" << std::endl;
+        stream << "  device.generate_rays(" << emitterName << ", payload_info, GenerateRayInfo{ next_id=next_id, size=size, xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax })" << std::endl;
 
     stream << "}" << std::endl;
 
@@ -55,15 +54,14 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
     std::stringstream stream;
 
     stream << begin(ctx) << std::endl
-           << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
            << "  let init_raypayload = " << ctx.CurrentTechniqueVariantInfo().GetEmitterPayloadInitializer() << ";" << std::endl;
 
     if (ctx.Options.IsTracer) {
-        stream << "  let emitter = make_list_emitter(device.load_rays(), settings.iter, init_raypayload);" << std::endl;
+        stream << "  let emitter = make_list_emitter(device.load_rays(), render_config, init_raypayload);" << std::endl;
     } else {
         stream << ctx.Camera->generate(ctx) << std::endl // Will set `camera`
                << generatePixelSampler(ctx) << std::endl // Will set `pixel_sampler`
-               << "  let emitter = make_camera_emitter(camera, settings.iter, spi, settings.frame, pixel_sampler, init_raypayload);" << std::endl;
+               << "  let emitter = make_camera_emitter(camera, render_config, pixel_sampler, init_raypayload);" << std::endl;
     }
 
     stream << end();

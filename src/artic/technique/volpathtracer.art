@@ -48,7 +48,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
     }
 
     fn @on_shadow( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , payload: RayPayload
                  , _: RayPayload
                  , mat: Material
@@ -171,7 +171,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
     }
 
     fn @on_bounce( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , payload: RayPayload
                  , mat: Material
                  ) -> Option[Ray] {
@@ -189,7 +189,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
             let contrib      = color_mul(pt.contrib, color_mulf(medium_sample.color, phase_sample.weight)/* Pdf already applied!*/);
             let rr_prob      = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
 
-            if randf(rnd) >= rr_prob {
+            if rnd.next_f32() >= rr_prob {
                 Option[Ray]::None
             } else {
                 let new_contrib = color_mulf(contrib, 1 / rr_prob);
@@ -214,7 +214,7 @@ fn @make_volume_path_renderer(max_path_len: i32, light_selector: LightSelector, 
                 let contrib     = color_mul(vol_contrib, bsdf_sample.color/* Pdf and cosine are already applied!*/);
                 let rr_prob     = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
                 
-                if randf(rnd) >= rr_prob {
+                if rnd.next_f32() >= rr_prob {
                     Option[Ray]::None
                 } else {
                     let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / bsdf_sample.pdf };

@@ -1,7 +1,7 @@
-// Result of sampling a direction
+// Light selection method
 struct LightSelector {
     count:     i32,
-    sample:    fn (&mut RndState, Vec3) -> (Light, f32),
+    sample:    fn (RandomGenerator, Vec3) -> (Light, f32),
     pdf:       fn (Light, Vec3) -> f32,
     infinites: LightTable,
     finites:   LightTable
@@ -15,12 +15,11 @@ fn @make_null_light_selector() = LightSelector {
     finites   = make_empty_light_table()
 };
 
-fn @pick_light_id(rnd: &mut RndState, num_lights: i32) {
-    if ?num_lights && num_lights == 1 {
+fn @pick_light_id(rnd: RandomGenerator, num_lights: i32) {
+    if ?num_lights && num_lights <= 1 {
         0
     } else {
-        // Note: randi() returns random integers, but we only want positive integers here
-        (randi(rnd) & 0x7FFFFFFF) % num_lights
+        rnd.next_i32(0, num_lights)
     }
 }
 
@@ -48,7 +47,7 @@ fn @make_cdf_light_selector(infinite_lights: LightTable, finite_lights: LightTab
     if infinite_lights.count == 0 {
         LightSelector {
             count     = finite_lights.count,
-            sample    = @|rnd,_| { let s = sampler.sample_discrete(randf(rnd)); (finite_lights.get(s.off), s.pdf) },
+            sample    = @|rnd,_| { let s = sampler.sample_discrete(rnd.next_f32()); (finite_lights.get(s.off), s.pdf) },
             pdf       = @|light,_| sampler.pdf_discrete(light.id).pdf,
             infinites = infinite_lights,
             finites   = finite_lights
@@ -59,12 +58,12 @@ fn @make_cdf_light_selector(infinite_lights: LightTable, finite_lights: LightTab
         LightSelector {
             count  = infinite_lights.count + finite_lights.count,
             sample = @|rnd,_| {
-                let q = randf(rnd);
+                let q = rnd.next_f32();
                 if q < infinite_ratio {
                     let id = pick_light_id(rnd, infinite_lights.count);
                     (infinite_lights.get(id), pdf_infinite_lights * infinite_ratio)
                 } else {
-                    let s = sampler.sample_discrete(randf(rnd));
+                    let s = sampler.sample_discrete(rnd.next_f32());
                     (finite_lights.get(s.off), s.pdf * (1-infinite_ratio))
                 }
             },
@@ -94,7 +93,7 @@ fn @make_hierarchy_light_selector(infinite_lights: LightTable, finite_lights: Li
         LightSelector {
             count     = infinite_lights.count + finite_lights.count,
             sample    = @|rnd, from_pos| {
-                let q = randf(rnd);
+                let q = rnd.next_f32();
                 if q < infinite_ratio {
                     let id = pick_light_id(rnd, infinite_lights.count);
                     (infinite_lights.get(id), pdf_infinite_lights * infinite_ratio)

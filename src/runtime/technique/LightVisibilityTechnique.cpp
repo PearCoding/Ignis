@@ -19,7 +19,7 @@ TechniqueInfo LightVisibilityTechnique::getInfo(const LoaderContext&) const
     info.Variants[0].UsesLights                = true;
     info.Variants[0].PrimaryPayloadCount       = 1;
     info.Variants[0].SecondaryPayloadCount     = 1;
-    info.Variants[0].ShadowHandlingMode        = ShadowHandlingMode::Advanced;
+    info.Variants[0].ShadowHandlingMode        = ShadowHandlingMode::AdvancedWithMaterials;
     info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_lv_raypayload)";
     return info;
 }

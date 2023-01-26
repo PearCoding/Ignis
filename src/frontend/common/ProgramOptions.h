@@ -55,6 +55,8 @@ public:
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;
 
+    int Seed = 0;
+
     bool AcquireStats     = false;
     bool AcquireFullStats = false;
     bool DebugTrace       = false;
