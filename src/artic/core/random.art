@@ -27,7 +27,8 @@ struct RandomGenerator {
     next_f32: fn ()         -> f32,
     next_i32: fn (i32, i32) -> i32,
     next_u32: fn (u32, u32) -> u32,
-    create_seed: fn ()      -> u32
+    next_raw_u32: fn ()     -> u32,
+    get_counter:  fn ()     -> u32
 }
 
 fn @create_random_seed(sample: i32, iter: i32, frame: i32, x: i32, y: i32, user: i32) -> u32 {
@@ -41,7 +42,7 @@ fn @create_random_seed(sample: i32, iter: i32, frame: i32, x: i32, y: i32, user:
     hash
 }
 
-fn @create_random_generator_base(next_u32: fn() -> u32, create_seed: fn() -> u32) = RandomGenerator {
+fn @create_random_generator_base(next_u32: fn() -> u32, get_counter: fn() -> u32) = RandomGenerator {
     next_f32 = @|| {
         // This trick is borrowed from Alex, who borrowed it from Mitsuba, which borrowed it from MTGP:
         // We generate a random number in [1,2) and subtract 1 from it.
@@ -56,14 +57,15 @@ fn @create_random_generator_base(next_u32: fn() -> u32, create_seed: fn() -> u32
         let x = next_u32();
         (x % (e - s)) + s
     },
-    create_seed = create_seed
+    next_raw_u32 = next_u32,
+    get_counter  = get_counter
 };
 
-fn @create_random_generator(seed: u32) -> RandomGenerator {
-    let mut counter = 1:u32;
+fn @create_random_generator(seed: u32) = create_random_generator_live(seed, 1);
 
+fn @create_random_generator_live(seed: u32, mut counter: u32) -> RandomGenerator {
     fn @next_u32() = sample_tea_u32(seed, counter++);
-    create_random_generator_base(next_u32, @|| hash_combine(seed, counter) )
+    create_random_generator_base(next_u32, @|| counter)
 }
 
 // Function will return a random number based on the given seed.

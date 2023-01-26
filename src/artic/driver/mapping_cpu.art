@@ -308,13 +308,15 @@ fn @cpu_generate_rays( primary: PrimaryStream
                      , capacity: i32
                      , emitter: RayEmitter
                      , gen_info: GenerateRayInfo
+                     , config: RenderConfig
                      , film_width: i32
                      , film_height: i32
-                     , spi: i32
                      , payload_info: PayloadInfo
                      , vector_width: i32
                      , is_payload_soa: bool
                      ) -> i32 {
+    let spi = config.spi;
+
     let current_size = gen_info.size;
     let write_ray    = make_ray_stream_writer(primary.rays, 1);
     let write_rnd    = make_primary_stream_rnd_state_writer(primary, 1);
@@ -339,8 +341,8 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let payload = get_payload(cur_ray, 0);
         let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
         write_ray(cur_ray, 0, ray);
-        write_rnd(cur_ray, 0, rnd.create_seed());
-        primary.rays.id(cur_ray) = y * film_width + x;
+        write_rnd(cur_ray, 0, rnd.get_counter());
+        primary.rays.id(cur_ray) = (y * film_width + x) * spi + sample;
     }
     
     current_size + num_rays
@@ -349,7 +351,7 @@ fn @cpu_generate_rays( primary: PrimaryStream
 fn @cpu_generate_rays_handler(capacity: i32
                             , emitter: RayEmitter
                             , gen_info: GenerateRayInfo
-                            , spi: i32
+                            , config: RenderConfig
                             , payload_info: PayloadInfo
                             , vector_width: i32
                             , is_payload_soa: bool) -> i32 {
@@ -357,7 +359,7 @@ fn @cpu_generate_rays_handler(capacity: i32
 
     let mut primary : PrimaryStream;
     ignis_get_primary_stream(0, 0, &mut primary, capacity);
-    cpu_generate_rays(primary, capacity, emitter, gen_info, work_info.width, work_info.height, spi, payload_info, vector_width, is_payload_soa)
+    cpu_generate_rays(primary, capacity, emitter, gen_info, config, work_info.width, work_info.height, payload_info, vector_width, is_payload_soa)
 }
 
 // Traverse functions ------------------------------------------------------------------
@@ -421,16 +423,17 @@ fn @cpu_traverse_secondary(scene: SceneTracer, size: i32, min_max: MinMax, vecto
     }
 }
 
-fn @cpu_splat_rv(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32) {
+fn @cpu_splat_rv(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32, spi: i32) {
     for lane in unroll(0, vector_width) {
-        let j = bitcast[i32](rv_extract(bitcast[f32](id), lane));
+        let j  = bitcast[i32](rv_extract(bitcast[f32](id), lane));
+        let pj = j / spi;
         let color_lane = make_color(
             rv_extract(color.r, lane),
             rv_extract(color.g, lane),
             rv_extract(color.b, lane),
             1
         );
-        framebuffer.splat(make_pixelcoord_from_linear(j, framebuffer.width, framebuffer.height, 0, 0), color_lane);
+        framebuffer.splat(make_pixelcoord_from_linear(pj, framebuffer.width, framebuffer.height, 0, 0), color_lane);
     }
 }
 
@@ -445,6 +448,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
     , shader: MaterialShader
     , scene: Scene
     , technique: Technique
+    , config: RenderConfig
     , framebuffer: AOVImage
     , payload_info: PayloadInfo
     , begin: i32
@@ -479,9 +483,11 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         let ray     = read_primary_ray(i, 0);
         let hit     = read_primary_hit(i, 0);
         let ray_id  = primary.rays.id(i);
-        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+        let sample  = ray_id % config.spi;
+        let pixel_l = ray_id / config.spi;
+        let pixel   = make_pixelcoord_from_linear(pixel_l, framebuffer.width, framebuffer.height, 0, 0);
 
-        let rnd = create_random_generator(read_primary_rnd_state(i, 0));
+        let rnd = create_random_generator_live(create_random_seed(sample, config.iter, config.frame, pixel.x, pixel.y, config.seed), read_primary_rnd_state(i, 0));
 
         let primary_payload   = get_primary_payload(i, 0);
         let secondary_payload = get_secondary_payload(i, 0);
@@ -494,7 +500,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         let mat       = @shader(ctx);
         let hit_color = if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) { color } else { color_builtins::black };
         
-        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width);
+        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width, config.spi);
 
         // Compute shadow rays
         match @on_shadow(ctx, rnd, primary_payload, secondary_payload, mat) {
@@ -522,7 +528,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         // Sample new rays
         if let Option[Ray]::Some(new_ray) = @on_bounce(ctx, rnd, primary_payload, mat) {
             write_primary_ray(i, 0, new_ray);
-            write_primary_rnd_state(i, 0, rnd.create_seed());
+            write_primary_rnd_state(i, 0, rnd.get_counter());
         } else {
             primary.rays.id(i) = -1;
         }
@@ -546,12 +552,13 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
 
     let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
-    cpu_hit_shade(primary, secondary, shader, scene, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+    cpu_hit_shade(primary, secondary, shader, scene, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
 // Miss shader ------------------------------------------------------------------
 fn @cpu_miss_shade(primary: &PrimaryStream
     , technique: Technique
+    , config: RenderConfig
     , framebuffer: AOVImage
     , payload_info: PayloadInfo
     , begin: i32
@@ -565,27 +572,29 @@ fn @cpu_miss_shade(primary: &PrimaryStream
     let get_primary_payload = make_primary_stream_payload_handler(*primary, payload_info.primary_count, capacity, 1, is_payload_soa);
     
     let on_miss = technique.on_miss;
+    let spi     = config.spi;
 
     for i, r_vector_width in vectorized_range(vector_width, begin, end) {
         let ray     = read_primary_ray(i, 0);
         let payload = get_primary_payload(i, 0);
         let ray_id  = primary.rays.id(i);
-        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+        let pixel_l = ray_id / spi;
+        let pixel   = make_pixelcoord_from_linear(pixel_l, framebuffer.width, framebuffer.height, 0, 0);
 
         // Execute hit point shading, and add the contribution of each lane to the frame buffer
         let hit_color = if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) { color } else { color_builtins::black };
 
-        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width);
+        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width, spi);
 
         primary.rays.id(i) = -1;
     }
 }
 
 fn @cpu_miss_shade_handler(technique: Technique
+    , config: RenderConfig
     , begin: i32
     , end: i32
     , capacity: i32
-    , spi: i32
     , payload_info: PayloadInfo
     , use_framebuffer: bool
     , vector_width: i32
@@ -593,8 +602,8 @@ fn @cpu_miss_shade_handler(technique: Technique
     let mut primary : PrimaryStream;
     ignis_get_primary_stream_const(0, 0, &mut primary);
 
-    let framebuffer = cpu_get_framebuffer(spi, use_framebuffer);
-    cpu_miss_shade(primary, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
+    cpu_miss_shade(primary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
 // Advanced shadow shader ------------------------------------------------------------------
@@ -602,6 +611,7 @@ fn @cpu_advanced_shadow(is_hit: bool
     , shader: MaterialShader
     , secondary: &SecondaryStream
     , technique: Technique
+    , config: RenderConfig
     , framebuffer: AOVImage
     , payload_info: PayloadInfo
     , begin: i32
@@ -620,27 +630,29 @@ fn @cpu_advanced_shadow(is_hit: bool
 
     let callback = if is_hit { on_hit } else { on_miss };
 
+    let spi = config.spi;
     for i, r_vector_width in vectorized_range(vector_width, begin, end) {
         let ray     = read_secondary_ray(i, 0);
         let color   = read_secondary_color(i, 0);
         let payload = get_secondary_payload(i, 0);
         let ray_id  = secondary.rays.id(i);
-        let pixel   = make_pixelcoord_from_linear(ray_id, framebuffer.width, framebuffer.height, 0, 0);
+        let pixel_l = ray_id / spi;
+        let pixel   = make_pixelcoord_from_linear(pixel_l, framebuffer.width, framebuffer.height, 0, 0);
 
         // Execute hit point shading, and add the contribution of each lane to the frame buffer
         if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) { 
-            cpu_splat_rv(ray_id, new_color, framebuffer, r_vector_width);
+            cpu_splat_rv(ray_id, new_color, framebuffer, r_vector_width, spi);
         }
     }
 }
 
 fn @cpu_advanced_shadow_handler(shader: MaterialShader
     , technique: Technique
+    , config: RenderConfig
     , payload_info: PayloadInfo
     , begin: i32
     , end: i32
     , capacity: i32
-    , spi: i32
     , use_framebuffer: bool
     , is_hit: bool
     , vector_width: i32
@@ -648,8 +660,8 @@ fn @cpu_advanced_shadow_handler(shader: MaterialShader
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
 
-    let framebuffer = cpu_get_framebuffer(spi, use_framebuffer);
-    cpu_advanced_shadow(is_hit, shader, secondary, technique, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
+    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
+    cpu_advanced_shadow(is_hit, shader, secondary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
 // Framebuffer & AOVs ------------------------------------------------------------------
@@ -795,8 +807,9 @@ fn @cpu_trace( scene_info: SceneInfo
                     } else if !work_info.framebuffer_locked /* TODO: We should make this a embedded constant! */ {    
                         for i in range(0, secondary_size) {
                             if secondary.mat_id(i) < 0 {
-                                let j = secondary.rays.id(i);
-                                let j_pixel = make_pixelcoord_from_linear(j, framebuffer.width, framebuffer.height, 0, 0);
+                                let j  = secondary.rays.id(i);
+                                let pj = j / spi;
+                                let j_pixel = make_pixelcoord_from_linear(pj, framebuffer.width, framebuffer.height, 0, 0);
                                 framebuffer.splat(j_pixel, make_color(
                                         secondary.color_r(i),
                                         secondary.color_g(i),
@@ -831,7 +844,7 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
         )
     },
     generate_rays = @ | emitter, payload_info, gen_info | -> i32 {
-        cpu_generate_rays_handler(@cpu_get_stream_capacity(config.spi, tile_size), emitter, gen_info, config.spi, payload_info, vector_width, is_payload_soa)
+        cpu_generate_rays_handler(@cpu_get_stream_capacity(config.spi, tile_size), emitter, gen_info, config, payload_info, vector_width, is_payload_soa)
     },
     handle_traversal_primary = @ | scene_tracer, size | {
         cpu_traverse_primary(scene_tracer, size, min_max, vector_width);
@@ -840,13 +853,13 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
         cpu_traverse_secondary(scene_tracer, size, min_max, vector_width);
     },
     handle_miss_shader = @ | technique, payload_info, first, last, use_framebuffer | {
-        cpu_miss_shade_handler(technique, first, last, @cpu_get_stream_capacity(config.spi, tile_size), config.spi, payload_info, use_framebuffer, vector_width, is_payload_soa);
+        cpu_miss_shade_handler(technique, config, first, last, @cpu_get_stream_capacity(config.spi, tile_size), payload_info, use_framebuffer, vector_width, is_payload_soa);
     },
     handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, use_framebuffer | {
         cpu_hit_shade_handler(shader, scene, technique, config, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), use_framebuffer, vector_width, is_payload_soa);
     },
     handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, use_framebuffer, is_hit | {
-        cpu_advanced_shadow_handler(shader, technique, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), config.spi, use_framebuffer, is_hit, vector_width, is_payload_soa);
+        cpu_advanced_shadow_handler(shader, technique, config, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), use_framebuffer, is_hit, vector_width, is_payload_soa);
     },
     get_traversal_handler_multiple = @ | prims | make_cpu_scene_local_handler_multiple(prims, vector_width, single, min_max), 
     sync = @ || {},
