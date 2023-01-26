@@ -51,6 +51,7 @@ public:
 
     IG::Target Target;
 
+    std::optional<size_t> RenderTime;// In seconds
     std::optional<int> SPP;
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;

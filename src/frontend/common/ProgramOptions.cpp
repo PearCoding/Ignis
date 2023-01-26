@@ -164,6 +164,9 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
             "--realtime", [&]() { this->SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
             "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
     }
+    if (type == ApplicationType::CLI)
+        app.add_option("--time", RenderTime, "Instead of spp, specify the maximum time in seconds to render")->excludes("--spp");
+
     app.add_option("--seed", Seed, "Seed for the random generators. Depending on the technique this will enforce reproducibility");
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");

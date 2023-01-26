@@ -10,10 +10,11 @@ namespace IG {
 #define RESTORE_CURSOR "\33[u"
 class StatusObserver {
 public:
-    StatusObserver(bool beautify, uint64 updateCycleSeconds, uint64 targetIteration)
+    StatusObserver(bool beautify, uint64 updateCycleSeconds, uint64 targetIteration, uint64 targetTime)
         : mBeautify(beautify)
         , mUpdateCycleSeconds(updateCycleSeconds)
         , mTargetSamples(targetIteration)
+        , mTargetTime(targetTime)
         , mFirstTime(false)
     {
     }
@@ -73,6 +74,13 @@ public:
         const auto fullDurationAfterFirst = std::chrono::duration_cast<std::chrono::seconds>(now - mStartAfterFirst);
 
         if ((uint64)duration.count() >= mUpdateCycleSeconds) {
+            double progress = 0;
+            if (mTargetSamples != 0)
+                progress = currentSamples / double(mTargetSamples);
+            else if (mTargetTime != 0)
+                progress = fullDuration.count() / double(mTargetTime);
+            const float percentage = static_cast<float>(100 * progress);
+
             if (mBeautify) {
                 if (mFirstTime) {
                     std::cout << SAVE_CURSOR;
@@ -82,12 +90,15 @@ public:
                 }
 
                 if (mTargetSamples != 0)
-                    drawProgressbar(currentSamples / float(mTargetSamples));
+                    drawProgressbar((float)progress);
+                else if (mTargetTime != 0)
+                    drawProgressbar((float)progress);
             }
-            if (mTargetSamples != 0) {
-                const float percentage = 100 * (currentSamples / float(mTargetSamples));
+
+            if (mTargetSamples != 0)
                 std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
-            }
+            else if (mTargetTime != 0)
+                std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
 
             std::cout << "S: " << std::setw(ITER_OUTPUT_FIELD_SIZE) << currentSamples
                       << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
@@ -134,6 +145,7 @@ private:
     const bool mBeautify;
     const uint64 mUpdateCycleSeconds;
     const uint64 mTargetSamples;
+    const uint64 mTargetTime;
     std::chrono::high_resolution_clock::time_point mStart;
     std::chrono::high_resolution_clock::time_point mStartAfterFirst;
     std::chrono::high_resolution_clock::time_point mLastUpdate;
