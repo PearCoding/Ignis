@@ -876,7 +876,7 @@ public:
             if (ImGui::CollapsingHeader("Poses")) {
                 if (ImGui::Button("Reload")) {
                     PoseManager.load(POSE_FILE);
-                    IG_LOG(L_INFO) << "Poses loaed from '" << POSE_FILE << "'" << std::endl;
+                    IG_LOG(L_INFO) << "Poses loaded from '" << POSE_FILE << "'" << std::endl;
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Save")) {
