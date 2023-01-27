@@ -4,16 +4,20 @@ import bmesh
 from .addon_preferences import get_prefs
 
 
-def get_shape_name_base(obj):
-    return obj.original.data.name  # We use the original mesh name!
+def get_shape_name_base(obj, inst):
+    modifiers = [mod.type for mod in obj.original.modifiers]
+    has_nodes = 'NODES' in modifiers
 
+    if has_nodes:
+        # Not sure how to ensure shapes with nodes are handled as uniques
+        # TODO: We better join them by material
+        id = hex(inst.random_id).replace("0x", "").replace('-', 'M').upper()
+        return f"{obj.name}_{id}"
 
-def get_shape_name_by_material(obj, mat_id):
-    name = get_shape_name_base(obj)
-    if len(obj.original.data.materials) > 1:
-        return _shape_name_material(name, mat_id)
-    else:
-        return name
+    try:
+        return obj.data.name
+    except:
+        return obj.original.data.name  # We use the original mesh name!
 
 
 def _shape_name_material(name, mat_id):
@@ -72,9 +76,10 @@ def _export_bmesh_by_material(me, name, rootPath, settings):
     return shapes
 
 
-def export_shape(result, obj, depsgraph, meshpath, settings):
-    name = get_shape_name_base(obj)
-
+def export_shape(result, name, obj, depsgraph, meshpath, settings):
+    # TODO: We want the mesh to be evaluated with renderer (or viewer) depending on user input
+    # This is not possible currently, as access to `mesh_get_eval_final` (COLLADA) is not available
+    # nor is it possible to setup via dependency graph, see https://devtalk.blender.org/t/get-render-dependency-graph/12164
     try:
         me = obj.to_mesh(preserve_all_data_layers=False, depsgraph=depsgraph)
     except RuntimeError:

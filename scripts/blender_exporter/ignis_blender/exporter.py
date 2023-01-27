@@ -117,19 +117,21 @@ def export_all(filepath, result, depsgraph, settings):
     # Export entities & shapes
     for inst in depsgraph.object_instances:
         object_eval = inst.object
+        if object_eval is None:
+            continue
         if settings.use_selection and not object_eval.original.select_get():
             continue
         if not settings.use_selection and not inst.show_self:
             continue
 
         objType = object_eval.type
-        if objType in {'MESH', 'CURVE', 'SURFACE', 'FONT', 'META'}:
-            name = get_shape_name_base(object_eval)
+        if objType in {'MESH', 'CURVE', 'SURFACE', 'META', 'FONT', 'CURVES'}:
+            name = get_shape_name_base(object_eval, inst)
             if name in exported_shapes:
                 shapes = exported_shapes[name]
             else:
                 shapes = export_shape(
-                    result, object_eval, depsgraph, filepath, settings)
+                    result, name, object_eval, depsgraph, filepath, settings)
                 exported_shapes[name] = shapes
 
             if len(shapes) == 0:
