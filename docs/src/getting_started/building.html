@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-12-23T14:15:20+00:00" />
+    <meta property="article:modified_time" content="2023-01-27T11:16:06+00:00" />
     <title>Building &#8212; Ignis  documentation</title>
   
   
@@ -473,8 +473,7 @@ The following will need <code class="docutils literal notranslate"><span class="
 <li><p>To run the frontends you might have to add multiple shared libraries (<code class="docutils literal notranslate"><span class="pre">*.dlls</span></code>) to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable or copy it next to the executables.
 Currently the shared libraries <code class="docutils literal notranslate"><span class="pre">runtime.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">runtime_jit_artic.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">nvvm64.dll</span></code> or <code class="docutils literal notranslate"><span class="pre">nvvm64_40_0.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">tbb.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">SDL2.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code> are known to be required.
 The list is not exhaustive however, as the final list of dependencies depends on the system, current state of development and other external factors.
-If a module (e.g., <code class="docutils literal notranslate"><span class="pre">ig_driver_avx2.dll</span></code>) can not been found, but exists on the filesystem, a reason for the error might be a missing shared library.
-Use one of the many dll dependency viewers available on Windows to find the exact missing dll and copy it next to the build executable or add it to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable.</p></li>
+Use one of the many dll dependency viewers available on Windows to find missing dlls and copy it next to the build executable or add it to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable.</p></li>
 </ol>
 </li>
 </ol>
@@ -482,7 +481,7 @@ Use one of the many dll dependency viewers available on Windows to find the exac
 <section id="known-issues">
 <h2>Known Issues<a class="headerlink" href="#known-issues" title="Permalink to this heading">#</a></h2>
 <ul>
-<li><p>If you get a <code class="docutils literal notranslate"><span class="pre">CommandLine</span> <span class="pre">Error:</span> <span class="pre">Option</span> <span class="pre">'help-list'</span> <span class="pre">registred</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">once!</span></code>, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
+<li><p>If you get a <code class="docutils literal notranslate"><span class="pre">CommandLine</span> <span class="pre">Error:</span> <span class="pre">Option</span> <span class="pre">'help-list'</span> <span class="pre">registered</span> <span class="pre">more</span> <span class="pre">than</span> <span class="pre">once!</span></code>, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
 A known cause is that <code class="docutils literal notranslate"><span class="pre">igview</span></code> and SDL are using a graphic driver which is loading the system LLVM library in the background.
 On Linux, using accelerated rendering load the X11 drivers, which in return load the system LLVM, which in return clash with the custom LLVM.
 Setting the environment variable <code class="docutils literal notranslate"><span class="pre">SDL_RENDER_DRIVER=software</span></code> and <code class="docutils literal notranslate"><span class="pre">SDL_FRAMEBUFFER_ACCELERATION=0</span></code> should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.</p></li>
@@ -494,7 +493,7 @@ Setting the environment variable <code class="docutils literal notranslate"><spa
 <span class="go">build/_deps/llvm-src/llvm/tools/llvm-ar/CMakeLists.txt:20 (add_llvm_tool_symlink)</span>
 </pre></div>
 </div>
-<p>can be fixed by explicitly undefining the cmake variable <code class="docutils literal notranslate"><span class="pre">CMAKE_CONFIGURATION_TYPES</span></code> via <code class="docutils literal notranslate"><span class="pre">-UCMAKE_CONFIGURATION_TYPES</span></code> in the command line or in the <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/config.json</span></code> when using the automatic script.</p>
+<p>can be fixed by explicitly unsetting the cmake variable <code class="docutils literal notranslate"><span class="pre">CMAKE_CONFIGURATION_TYPES</span></code> via <code class="docutils literal notranslate"><span class="pre">-UCMAKE_CONFIGURATION_TYPES</span></code> in the command line or in the <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/config.json</span></code> when using the automatic script.</p>
 </li>
 </ul>
 </section>
@@ -570,7 +569,7 @@ Setting the environment variable <code class="docutils literal notranslate"><spa
         <footer class="bd-footer-content">
           <div class="bd-footer-content__inner">
             <p class="last-updated">
-Last updated on Dec 23, 2022.<br>
+Last updated on Jan 27, 2023.<br>
 </p>
           </div>
         </footer>

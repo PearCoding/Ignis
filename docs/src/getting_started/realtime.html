@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2022-12-14T21:01:58+00:00" />
+    <meta property="article:modified_time" content="2023-01-27T11:12:36+00:00" />
     <title>Realtime Rendering &#8212; Ignis  documentation</title>
   
   
@@ -338,9 +338,9 @@
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">fixed</span></code> The rendering will finish when the target <code class="docutils literal notranslate"><span class="pre">spp</span></code> is reached. Ultimately only rendering a single frame. This is the default.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">capped</span></code> The rendering will stop when the target <code class="docutils literal notranslate"><span class="pre">spp</span></code> is reached. The application will <strong>not</strong> close. Movement or other state changes will trigger a new rendering, however, ultimately only a single frame will be rendered.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">continuos</span></code> The rendering will restart when the target <code class="docutils literal notranslate"><span class="pre">spp</span></code> is reached. The frame counter will be increased each restart. Movement or change of the rendering state will still increase the frame counter and restart the rendering preemptively.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">continuous</span></code> The rendering will restart when the target <code class="docutils literal notranslate"><span class="pre">spp</span></code> is reached. The frame counter will be increased each restart. Movement or change of the rendering state will still increase the frame counter and restart the rendering preemptively.</p></li>
 </ul>
-<p>Using the <code class="docutils literal notranslate"><span class="pre">--realtime</span></code> command line argument will set <code class="docutils literal notranslate"><span class="pre">spi=1</span></code>, <code class="docutils literal notranslate"><span class="pre">spp=1</span></code> and the <code class="docutils literal notranslate"><span class="pre">spp-mode=continuos</span></code>.</p>
+<p>Using the <code class="docutils literal notranslate"><span class="pre">--realtime</span></code> command line argument will set <code class="docutils literal notranslate"><span class="pre">spi=1</span></code>, <code class="docutils literal notranslate"><span class="pre">spp=1</span></code> and the <code class="docutils literal notranslate"><span class="pre">spp-mode=continuous</span></code>.</p>
 </section>
 
 
@@ -377,7 +377,7 @@
         <footer class="bd-footer-content">
           <div class="bd-footer-content__inner">
             <p class="last-updated">
-Last updated on Dec 14, 2022.<br>
+Last updated on Jan 27, 2023.<br>
 </p>
           </div>
         </footer>
