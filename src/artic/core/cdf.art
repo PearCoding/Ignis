@@ -11,7 +11,7 @@ struct DiscreteSample1d {
     pdf: f32
 }
 
-struct ContinuosSample1d {
+struct ContinuousSample1d {
     off: i32,
     rem: f32,
     pos: f32,
@@ -22,7 +22,7 @@ struct DiscretePdf1d {
     pdf: f32
 }
 
-struct ContinuosPdf1d {
+struct ContinuousPdf1d {
     off: i32,
     pdf: f32
 }
@@ -32,8 +32,8 @@ struct CDF1D {
     get:              fn (i32) -> f32,
     sample_discrete:  fn (f32) -> DiscreteSample1d,
     pdf_discrete:     fn (i32) -> DiscretePdf1d,
-    sample_continuos: fn (f32) -> ContinuosSample1d,
-    pdf_continuos:    fn (f32) -> ContinuosPdf1d,
+    sample_continuous: fn (f32) -> ContinuousSample1d,
+    pdf_continuous:    fn (f32) -> ContinuousPdf1d,
 }
 
 // Creates a cdf with func_size + 1 entries accessed by the get function
@@ -43,15 +43,15 @@ fn @make_cdf_1d(func_size: i32, get: fn (i32) -> f32) -> CDF1D {
         let off = all::min(interval::binary_search(func_size + 1, @|i:i32| get(i) <= u), func_size - 1); // We omit the rare event of u=1 and pull down to u=0.99...
         DiscreteSample1d { off = off, pdf = pdf_discrete(off).pdf }
     };
-    let pdf_continuos    = @|x:f32| {
+    let pdf_continuous    = @|x:f32| {
         let off = all::clamp((x * func_size as f32) as i32, 0, func_size - 1);
-        ContinuosPdf1d { off = off, pdf = pdf_discrete(off).pdf * func_size as f32}
+        ContinuousPdf1d { off = off, pdf = pdf_discrete(off).pdf * func_size as f32}
     };
-    let sample_continuos = @|u:f32| {
+    let sample_continuous = @|u:f32| {
         let sample = sample_discrete(u);
         let rem    = all::safe_div(u - get(sample.off), sample.pdf);
         let pos    = all::clampf((sample.off as f32 + rem) / func_size as f32, 0, 1);
-        ContinuosSample1d { off = sample.off, rem = rem, pos = pos, pdf = sample.pdf * func_size as f32 }
+        ContinuousSample1d { off = sample.off, rem = rem, pos = pos, pdf = sample.pdf * func_size as f32 }
     };
 
     CDF1D {
@@ -59,8 +59,8 @@ fn @make_cdf_1d(func_size: i32, get: fn (i32) -> f32) -> CDF1D {
         get              = get,
         sample_discrete  = sample_discrete,
         pdf_discrete     = pdf_discrete,
-        sample_continuos = sample_continuos,
-        pdf_continuos    = pdf_continuos
+        sample_continuous = sample_continuous,
+        pdf_continuous    = pdf_continuous
     }
 }
 
@@ -75,7 +75,7 @@ struct DiscreteSample2d {
     pdf: f32
 }
 
-struct ContinuosSample2d {
+struct ContinuousSample2d {
     off: (i32, i32),
     rem: Vec2,
     pos: Vec2,
@@ -86,7 +86,7 @@ struct DiscretePdf2d {
     pdf: f32
 }
 
-struct ContinuosPdf2d {
+struct ContinuousPdf2d {
     off: (i32, i32),
     pdf: f32
 }
@@ -94,8 +94,8 @@ struct ContinuosPdf2d {
 struct CDF2D {
     sample_discrete:  fn (Vec2) -> DiscreteSample2d,
     pdf_discrete:     fn (i32, i32) -> DiscretePdf2d,
-    sample_continuos: fn (Vec2) -> ContinuosSample2d,
-    pdf_continuos:    fn (Vec2) -> ContinuosPdf2d,
+    sample_continuous: fn (Vec2) -> ContinuousSample2d,
+    pdf_continuous:    fn (Vec2) -> ContinuousPdf2d,
 }
 
 // (x ~ conditional, y ~ marginal)
@@ -117,22 +117,22 @@ fn @make_cdf_2d(marginal: CDF1D, conditional: fn (i32) -> CDF1D) -> CDF2D {
             pdf = pdf1.pdf * pdf2.pdf
         }
     };
-    let sample_continuos = @|uv: Vec2| -> ContinuosSample2d {
-        let sample1 = marginal.sample_continuos(uv.y);
-        let sample2 = conditional(sample1.off).sample_continuos(uv.x);
+    let sample_continuous = @|uv: Vec2| -> ContinuousSample2d {
+        let sample1 = marginal.sample_continuous(uv.y);
+        let sample2 = conditional(sample1.off).sample_continuous(uv.x);
     
-        ContinuosSample2d {
+        ContinuousSample2d {
             off = (sample2.off, sample1.off),
             rem = all::make_vec2(sample2.rem, sample1.rem),
             pos = all::make_vec2(sample2.pos, sample1.pos),
             pdf = sample1.pdf * sample2.pdf
         }
     };
-    let pdf_continuos    = @|pos: Vec2| -> ContinuosPdf2d {
-        let pdf1 = marginal.pdf_continuos(pos.y);
-        let pdf2 = conditional(pdf1.off).pdf_continuos(pos.x);
+    let pdf_continuous    = @|pos: Vec2| -> ContinuousPdf2d {
+        let pdf1 = marginal.pdf_continuous(pos.y);
+        let pdf2 = conditional(pdf1.off).pdf_continuous(pos.x);
     
-        ContinuosPdf2d {
+        ContinuousPdf2d {
             off = (pdf2.off, pdf1.off),
             pdf = pdf1.pdf * pdf2.pdf
         }
@@ -141,8 +141,8 @@ fn @make_cdf_2d(marginal: CDF1D, conditional: fn (i32) -> CDF1D) -> CDF2D {
     CDF2D {
         sample_discrete  = sample_discrete,
         pdf_discrete     = pdf_discrete,
-        sample_continuos = sample_continuos,
-        pdf_continuos    = pdf_continuos
+        sample_continuous = sample_continuous,
+        pdf_continuous    = pdf_continuous
     }
 }
 
@@ -171,25 +171,25 @@ fn @make_cdf_2d_sat(entries: CDF1D, slice: i32) -> CDF2D {
     let pdf_discrete = @|x: i32, y: i32| DiscretePdf2d {
         pdf = entries.pdf_discrete(y * slice_w + x).pdf
     };
-    let sample_continuos = @|uv: Vec2| -> ContinuosSample2d {
+    let sample_continuous = @|uv: Vec2| -> ContinuousSample2d {
         let sample = entries.sample_discrete(uv.x);
         let rem    = all::safe_div(uv.x - entries.get(sample.off), sample.pdf); // Get unused portion of the floating point
     
         let ix = sample.off % slice_w;
         let iy = sample.off / slice_w;
-        ContinuosSample2d {
+        ContinuousSample2d {
             off = (ix, iy),
             rem = all::make_vec2(rem, uv.y),
             pos = all::make_vec2((ix as f32 + rem) * slice_w_f, (iy as f32 + uv.y) * slice_h_f),
             pdf = sample.pdf
         }
     };
-    let pdf_continuos = @|pos: Vec2| -> ContinuosPdf2d {
+    let pdf_continuous = @|pos: Vec2| -> ContinuousPdf2d {
         let ix  = all::clamp((pos.x * slice_w as f32) as i32, 0, slice_w - 1);
         let iy  = all::clamp((pos.y * slice_h as f32) as i32, 0, slice_h - 1);
         let pdf = entries.pdf_discrete(iy * slice_w + ix);
     
-        ContinuosPdf2d {
+        ContinuousPdf2d {
             off = (ix, iy),
             pdf = pdf.pdf
         }
@@ -198,8 +198,8 @@ fn @make_cdf_2d_sat(entries: CDF1D, slice: i32) -> CDF2D {
     CDF2D {
         sample_discrete  = sample_discrete,
         pdf_discrete     = pdf_discrete,
-        sample_continuos = sample_continuos,
-        pdf_continuos    = pdf_continuos
+        sample_continuous = sample_continuous,
+        pdf_continuous    = pdf_continuous
     }
 }
 

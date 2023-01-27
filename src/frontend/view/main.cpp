@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     }
 
     if (cmd.SPPMode != SPPMode::Fixed && !cmd.SPP.has_value()) {
-        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continuos spp mode" << std::endl;
+        IG_LOG(L_ERROR) << "No valid spp count given. Required by the capped or continuous spp mode" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 
         if (running) {
             if (cmd.SPPMode != SPPMode::Capped || runtime->currentIterationCount() < desired_iter) {
-                if (cmd.SPPMode == SPPMode::Continuos && runtime->currentIterationCount() >= desired_iter) {
+                if (cmd.SPPMode == SPPMode::Continuous && runtime->currentIterationCount() >= desired_iter) {
                     runtime->reset();
                     runtime->incFrameCount(); // Not affected by reset
                 }

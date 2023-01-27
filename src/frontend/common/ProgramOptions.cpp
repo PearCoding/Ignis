@@ -7,7 +7,7 @@
 
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
-static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuos", SPPMode::Continuos } };
+static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuous", SPPMode::Continuous } };
 
 class MyTransformer : public CLI::Validator {
 public:
@@ -161,8 +161,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     if (type == ApplicationType::View) {
         app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(MyTransformer(SPPModeMap, CLI::ignore_case))->default_str("fixed");
         app.add_flag_callback(
-            "--realtime", [&]() { this->SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
-            "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
+            "--realtime", [&]() { this->SPPMode = SPPMode::Continuous; SPI = 1; SPP = 1; },
+            "Same as setting SPPMode='Continuous', SPI=1 and SPP=1 to emulate realtime rendering");
     }
     if (type == ApplicationType::CLI)
         app.add_option("--time", RenderTime, "Instead of spp, specify the maximum time in seconds to render")->excludes("--spp");

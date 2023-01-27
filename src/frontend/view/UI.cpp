@@ -762,7 +762,7 @@ public:
 
                 ImGui::Text("Iter %zu", Runtime->currentIterationCount());
                 ImGui::Text("SPP  %zu", Runtime->currentSampleCount());
-                if (Parent->mSPPMode == SPPMode::Continuos)
+                if (Parent->mSPPMode == SPPMode::Continuous)
                     ImGui::Text("Frame %zu", Runtime->currentFrameCount());
                 ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
                 ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
@@ -1041,8 +1041,8 @@ void UI::setTitle(const char* str)
     case SPPMode::Capped:
         sstream << " [Capped]";
         break;
-    case SPPMode::Continuos:
-        sstream << " [Continuos]";
+    case SPPMode::Continuous:
+        sstream << " [Continuous]";
         break;
     }
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
