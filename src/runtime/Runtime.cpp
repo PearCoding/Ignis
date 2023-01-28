@@ -287,6 +287,8 @@ void Runtime::step(bool ignoreDenoiser)
         return;
     }
 
+    handleTime();
+
     if (mTechniqueInfo.VariantSelector) {
         const auto active = mTechniqueInfo.VariantSelector(mCurrentIteration);
 
@@ -341,6 +343,8 @@ void Runtime::trace(const std::vector<Ray>& rays)
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
         return;
     }
+
+    handleTime();
 
     if (mTechniqueInfo.VariantSelector) {
         const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
@@ -668,5 +672,19 @@ bool Runtime::hasDenoiser() const
 #else
     return false;
 #endif
+}
+
+void Runtime::handleTime()
+{
+    if (mCurrentIteration != 0)
+        return;
+
+    if (mCurrentFrame == 0) {
+        mStartTime = std::chrono::high_resolution_clock::now();
+        setParameter("__time", 0.0f);
+    } else {
+        const auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mStartTime);
+        setParameter("__time", (float)dur.count() / 1000.0f);
+    }
 }
 } // namespace IG

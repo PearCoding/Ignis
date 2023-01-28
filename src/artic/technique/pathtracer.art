@@ -130,8 +130,7 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
         Option[Color]::None
     }
 
-    fn @on_miss( ray: Ray
-               , pixel: PixelCoord
+    fn @on_miss( ctx: ShadingContext
                , payload: RayPayload) -> Option[Color] {
         let mut inflights = 0;
         let mut color     = color_builtins::black;
@@ -144,16 +143,16 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
 
                 inflights += 1;
 
-                let emit  = light.emission(make_miss_shading_context(pixel, ray));
-                let pdf   = light.pdf_direct(ray, make_invalid_surface_element());
+                let emit  = light.emission(ctx);
+                let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
                 let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
-                let mis   = 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ray.org) * pdf_s);
+                let mis   = 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ctx.ray.org) * pdf_s);
                 color     = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
             }
         }
 
         if inflights > 0 {
-            aov_di.splat(pixel, color);
+            aov_di.splat(ctx.pixel, color);
             make_option(color)
         } else {
             Option[Color]::None
@@ -197,12 +196,11 @@ fn @make_path_renderer(max_path_len: i32, light_selector: LightSelector, aovs: A
         }
     }
 
-    fn @on_shadow_miss( _ray: Ray
-                      , pixel: PixelCoord
+    fn @on_shadow_miss( ctx: ShadingContext
                       , _shader: MaterialShader
                       , _: RayPayload
                       , color: Color) -> Option[Color] {
-        aov_nee.splat(pixel, color);
+        aov_nee.splat(ctx.pixel, color);
         make_option(color)
     }
 

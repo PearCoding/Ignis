@@ -109,9 +109,9 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, c
     }
 
     // No surface was between the surface and the camera -> There is a contribution from the light!
-    fn @on_advanced_shadow_miss(_ray: Ray, pixel: PixelCoord, _shader: MaterialShader, secondary_payload: RayPayload, contrib: Color) -> Option[Color] {
+    fn @on_advanced_shadow_miss(ctx: ShadingContext, _shader: MaterialShader, secondary_payload: RayPayload, contrib: Color) -> Option[Color] {
         let lt = unwrap_ltsecondarypayload(secondary_payload);
-        framebuffer.splat(make_pixelcoord_from_normalized(lt.pixel.x, lt.pixel.y, pixel.w, pixel.h), contrib);
+        framebuffer.splat(make_pixelcoord_from_normalized(lt.pixel.x, lt.pixel.y, ctx.pixel.w, ctx.pixel.h), contrib);
         Option[Color]::None
     }
 

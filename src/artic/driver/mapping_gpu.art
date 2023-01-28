@@ -140,6 +140,9 @@ fn @gpu_hit_shade( acc: Accelerator
     let on_hit    = technique.on_hit;
     let on_shadow = technique.on_shadow;
     let on_bounce = technique.on_bounce;
+
+    let shading_info = make_shading_info(config);
+
     gpu_exec_1d(acc, n, gpu_config.block_size_hit, |work_item| {
         let i = first + work_item.gidx();
         if i >= last {
@@ -164,7 +167,7 @@ fn @gpu_hit_shade( acc: Accelerator
         let pmset    = make_standard_pointmapperset(shape, entity);
         let glb_surf = shape.surface_element(ray, hit, pmset);
         
-        let ctx = make_surface_shading_context(hit.ent_id, pixel, ray, hit, glb_surf, pmset);
+        let ctx = make_surface_shading_context(hit.ent_id, pixel, ray, hit, glb_surf, pmset, shading_info);
         let mat = @shader(ctx);
         if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) {
             framebuffer.splat(pixel, color);
@@ -238,6 +241,9 @@ fn @gpu_miss_shade( acc: Accelerator
 
     let on_miss = technique.on_miss;
     let spi     = config.spi;
+
+    let shading_info = make_shading_info(config);
+
     gpu_exec_1d(acc, n, gpu_config.block_size_miss, |work_item| {
         let i = first + work_item.gidx();
         if i >= last {
@@ -250,7 +256,8 @@ fn @gpu_miss_shade( acc: Accelerator
         let pixel_l = ray_id / spi;
         let pixel   = make_pixelcoord_from_linear(pixel_l, framebuffer.width, framebuffer.height, 0, 0);
 
-        if let Option[Color]::Some(color) = @on_miss(ray, pixel, payload) {
+        let ctx = make_miss_shading_context(pixel, ray, shading_info);
+        if let Option[Color]::Some(color) = @on_miss(ctx, payload) {
             framebuffer.splat(pixel, color);
         }
         
@@ -297,7 +304,9 @@ fn @gpu_advanced_shadow(is_hit: bool
     let callback   = if is_hit { on_hit } else { on_miss };
     let block_size = if is_hit { gpu_config.block_size_advanced_shadow_hit } else { gpu_config.block_size_advanced_shadow_miss };
 
-    let spi = config.spi;
+    let spi          = config.spi;
+    let shading_info = make_shading_info(config);
+
     gpu_exec_1d(acc, n, block_size, |work_item| {
         let i = first + work_item.gidx();
         if i >= last { return() }
@@ -309,7 +318,8 @@ fn @gpu_advanced_shadow(is_hit: bool
         let pixel_l = ray_id / spi;
         let pixel   = make_pixelcoord_from_linear(pixel_l, framebuffer.width, framebuffer.height, 0, 0);
 
-        if let Option[Color]::Some(new_color) = @callback(ray, pixel, shader, payload, color) {
+        let ctx = make_miss_shading_context(pixel, ray, shading_info);
+        if let Option[Color]::Some(new_color) = @callback(ctx, shader, payload, color) {
             framebuffer.splat(pixel, new_color);
         }
     });

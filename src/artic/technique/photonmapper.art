@@ -330,8 +330,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, rad
         Option[Color]::None
     }
 
-    fn @on_miss( ray: Ray
-               , pixel: PixelCoord
+    fn @on_miss( ctx: ShadingContext
                , payload: RayPayload) -> Option[Color] {
         // To prevent double counting, only direct hits (with delta taken into account) are accounted for
         let pt = unwrap_ppmraypayload(payload);
@@ -348,13 +347,13 @@ fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, rad
             if light.infinite && !light.delta {
                 inflights += 1;
 
-                let emit = light.emission(make_miss_shading_context(pixel, ray));
+                let emit = light.emission(ctx);
                 color    = color_add(color, color_mul(pt.contrib, emit));
             }
         }
 
         if inflights > 0 {
-            aov_di.splat(pixel, color);
+            aov_di.splat(ctx.pixel, color);
             make_option(handle_color(color))
         } else {
             Option[Color]::None

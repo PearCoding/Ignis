@@ -275,6 +275,8 @@ static const std::unordered_map<std::string, InternalVariable> sInternalVariable
     { "entity_id", { "ctx.entity_id", PExprType::Integer, false } },
     { "Ix", { "ctx.pixel.x", PExprType::Integer, false } },
     { "Iy", { "ctx.pixel.y", PExprType::Integer, false } },
+    { "t", { "ctx.info.time", PExprType::Number, false } },
+    { "frame", { "ctx.info.frame", PExprType::Integer, false } },
     { "Pi", { "flt_pi", PExprType::Number, true } },
     { "E", { "flt_e", PExprType::Number, true } },
     { "Eps", { "flt_eps", PExprType::Number, true } },

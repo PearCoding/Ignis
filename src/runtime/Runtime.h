@@ -146,6 +146,7 @@ private:
     void* compileShader(const std::string& src, const std::string& func, const std::string& name);
     void stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant);
     void traceVariant(const std::vector<Ray>& rays, size_t variant);
+    void handleTime();
 
     const RuntimeOptions mOptions;
 
@@ -160,6 +161,8 @@ private:
     size_t mCurrentIteration;
     size_t mCurrentSampleCount;
     size_t mCurrentFrame;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> mStartTime;
 
     size_t mFilmWidth;
     size_t mFilmHeight;
