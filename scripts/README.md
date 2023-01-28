@@ -20,11 +20,30 @@ You can also pipe the output as usual with the Radiance workflow.
 
 Used internally to test different branches or feature sets after major changes.
 
-## run_*.sh
+## Run*.py
 
 Used internally to render all the showcases and evaluations embedded into the documentation.
 
-## WhiteInfinite.py
+## run_*.sh
 
-Uses the Ignis PythonAPI to test a scene with complete white interior and no escape route for rays.
-The contained energy diverges to infinity.
+Scripts used for comparison and benchmarking between Ignis and Radiance.
+
+## api/
+
+Uses the Ignis PythonAPI to test scenes.
+
+## bash/
+
+Contains a bash completion script.
+
+## blender_exporter/
+
+The official Ignis Blender plugin.
+
+## docker/
+
+Scripts for internal docker creation and setup.
+
+## setup/
+
+Automatic setup script for Windows. Will setup AnyDSL and initialize Ignis for further development for you.
