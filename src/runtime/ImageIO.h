@@ -10,6 +10,9 @@ struct ImageMetaData {
     std::optional<Vector3f> CameraDir;
     std::optional<size_t> SamplePerPixel;
     std::optional<size_t> SamplePerIteration;
+    std::optional<size_t> Iteration;
+    std::optional<size_t> Frame;
+    std::optional<size_t> RendertimeInSeconds;
     std::optional<std::string> TechniqueType;
     std::optional<std::string> CameraType;
     std::optional<std::string> TargetString;

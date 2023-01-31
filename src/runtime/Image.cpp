@@ -302,7 +302,21 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
                 for (size_t k = range.begin(); k < range.end(); ++k)
                     dst[k] = static_cast<uint8>(pixels[k] * 255);
             });
+    } else if(channels == 3) {
+        uint32* ptr = (uint32*)dst.data();
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> range) {
+                for (size_t k = range.begin(); k < range.end(); ++k) {
+                    uint8 r = static_cast<uint8>(static_cast<uint32>(pixels[3 * k + 0] * 255) & 0xFF);
+                    uint8 g = static_cast<uint8>(static_cast<uint32>(pixels[3 * k + 1] * 255) & 0xFF);
+                    uint8 b = static_cast<uint8>(static_cast<uint32>(pixels[3 * k + 2] * 255) & 0xFF);
+                    ptr[k]  = pack_rgba(r, g, b, 255);
+                }
+            });
     } else {
+        IG_ASSERT(channels == 4, "Expected channel count to be 1, 3 or 4");
+
         uint32* ptr = (uint32*)dst.data();
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, width * height),
@@ -390,7 +404,7 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     metaData->CameraType = getStringAttribute(attr);
                 else if (strcmp(attr.name, "igTechniqueType") == 0 && strcmp(attr.type, "string") == 0)
                     metaData->TechniqueType = getStringAttribute(attr);
-                else if (strcmp(attr.name, "igTargetString") == 0 && strcmp(attr.type, "string") == 0)
+                else if (strcmp(attr.name, "igTarget") == 0 && strcmp(attr.type, "string") == 0)
                     metaData->TargetString = getStringAttribute(attr);
                 else if (strcmp(attr.name, "igCameraEye") == 0 && strcmp(attr.type, "v3f") == 0)
                     metaData->CameraEye = getVec3Attribute(attr);
@@ -402,6 +416,12 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     metaData->SamplePerPixel = getIntAttribute(attr);
                 else if (strcmp(attr.name, "igSPI") == 0 && strcmp(attr.type, "int") == 0)
                     metaData->SamplePerIteration = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igIteration") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->Iteration = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igFrame") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->Frame = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igRendertime") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->RendertimeInSeconds = getIntAttribute(attr);
             }
         }
 

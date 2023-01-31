@@ -119,6 +119,8 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
         attributes.emplace_back(makeStringAttribute("igCameraType", metaData.CameraType.value()));
     if (metaData.TechniqueType.has_value())
         attributes.emplace_back(makeStringAttribute("igTechniqueType", metaData.TechniqueType.value()));
+    if (metaData.TargetString.has_value())
+        attributes.emplace_back(makeStringAttribute("igTarget", metaData.TargetString.value()));
     if (metaData.CameraEye.has_value())
         attributes.emplace_back(makeVec3Attribute("igCameraEye", metaData.CameraEye.value()));
     if (metaData.CameraUp.has_value())
@@ -127,6 +129,14 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
         attributes.emplace_back(makeVec3Attribute("igCameraDir", metaData.CameraDir.value()));
     if (metaData.SamplePerPixel.has_value())
         attributes.emplace_back(makeIntAttribute("igSPP", (int)metaData.SamplePerPixel.value()));
+    if (metaData.SamplePerIteration.has_value())
+        attributes.emplace_back(makeIntAttribute("igSPI", (int)metaData.SamplePerIteration.value()));
+    if (metaData.Iteration.has_value())
+        attributes.emplace_back(makeIntAttribute("igIteration", (int)metaData.Iteration.value()));
+    if (metaData.Frame.has_value())
+        attributes.emplace_back(makeIntAttribute("igFrame", (int)metaData.Frame.value()));
+    if (metaData.RendertimeInSeconds.has_value())
+        attributes.emplace_back(makeIntAttribute("igRendertime", (int)metaData.RendertimeInSeconds.value()));
 
     if (!attributes.empty()) {
         header.custom_attributes     = attributes.data();

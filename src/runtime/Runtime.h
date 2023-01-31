@@ -21,6 +21,8 @@ class IG_LIB Runtime {
     IG_CLASS_NON_MOVEABLE(Runtime);
 
 public:
+    using Timepoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
     explicit Runtime(const RuntimeOptions& opts);
     ~Runtime();
 
@@ -74,6 +76,8 @@ public:
     [[nodiscard]] inline size_t currentIterationCount() const { return mCurrentIteration; }
     /// Return number of frames rendered so far
     [[nodiscard]] inline size_t currentFrameCount() const { return mCurrentFrame; }
+    /// Return timepoint when the rendering started
+    [[nodiscard]] inline Timepoint renderStartTime() const { return mStartTime; }
 
     /// Increase frame count (only used in interactive/realtime sessions)
     inline void incFrameCount() { mCurrentFrame++; }
@@ -162,7 +166,7 @@ private:
     size_t mCurrentSampleCount;
     size_t mCurrentFrame;
 
-    std::chrono::time_point<std::chrono::high_resolution_clock> mStartTime;
+    Timepoint mStartTime;
 
     size_t mFilmWidth;
     size_t mFilmHeight;
