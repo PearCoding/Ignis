@@ -89,24 +89,19 @@ public:
                     std::cout << REMOVE_LAST_LINE << RESTORE_CURSOR;
                 }
 
-                if (mTargetSamples != 0)
-                    drawProgressbar((float)progress);
-                else if (mTargetTime != 0)
+                if (mTargetSamples != 0 || mTargetTime != 0)
                     drawProgressbar((float)progress);
             }
 
-            if (mTargetSamples != 0)
-                std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
-            else if (mTargetTime != 0)
+            if (mTargetSamples != 0 || mTargetTime != 0)
                 std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
 
             std::cout << "S: " << std::setw(ITER_OUTPUT_FIELD_SIZE) << currentSamples
                       << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
 
             if (mTargetSamples != 0) {
-                const int64_t fullDur  = fullDurationAfterFirst.count() > 0 ? fullDurationAfterFirst.count() : fullDuration.count();
-                const float percentage = 100 * (currentSamples / float(mTargetSamples));
-                const float etaFactor  = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
+                const int64_t fullDur = fullDurationAfterFirst.count() > 0 ? fullDurationAfterFirst.count() : fullDuration.count();
+                const float etaFactor = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
                 std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(static_cast<uint64>(fullDur * etaFactor));
             }
 
