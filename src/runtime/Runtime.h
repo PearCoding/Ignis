@@ -78,12 +78,14 @@ public:
     [[nodiscard]] inline size_t currentFrameCount() const { return mCurrentFrame; }
     /// Return timepoint when the rendering started
     [[nodiscard]] inline Timepoint renderStartTime() const { return mStartTime; }
+    /// Return seed used for the random generator
+    [[nodiscard]] inline size_t seed() const { return mOptions.Seed; }
 
     /// Increase frame count (only used in interactive/realtime sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
     /// Return pointer to structure containing statistics
-    [[nodiscard]] const Statistics* getStatistics() const;
+    [[nodiscard]] const Statistics* statistics() const;
 
     /// Returns the name of the loaded technique
     [[nodiscard]] inline const std::string& technique() const { return mTechniqueName; }
@@ -113,7 +115,7 @@ public:
     void setParameter(const std::string& name, const Vector4f& value);
 
     /// Get read-only registry
-    [[nodiscard]] inline const ParameterSet& getParameters() const { return mGlobalRegistry; }
+    [[nodiscard]] inline const ParameterSet& parameters() const { return mGlobalRegistry; }
     /// Get modifiable registry. A reset might be needed when changing parameters!
     [[nodiscard]] inline ParameterSet& accessParameters() { return mGlobalRegistry; }
     /// Merge parameters from other registry

@@ -134,6 +134,7 @@ bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime, 
     ImageMetaData metaData;
     metaData.CameraType          = runtime.camera();
     metaData.TechniqueType       = runtime.technique();
+    metaData.Seed                = runtime.seed();
     metaData.SamplePerPixel      = runtime.currentSampleCount();
     metaData.SamplePerIteration  = runtime.samplesPerIteration();
     metaData.Iteration           = runtime.currentIterationCount();

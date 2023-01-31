@@ -412,6 +412,8 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     metaData->CameraUp = getVec3Attribute(attr);
                 else if (strcmp(attr.name, "igCameraDir") == 0 && strcmp(attr.type, "v3f") == 0)
                     metaData->CameraDir = getVec3Attribute(attr);
+                else if (strcmp(attr.name, "igSeed") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->Seed = getIntAttribute(attr);
                 else if (strcmp(attr.name, "igSPP") == 0 && strcmp(attr.type, "int") == 0)
                     metaData->SamplePerPixel = getIntAttribute(attr);
                 else if (strcmp(attr.name, "igSPI") == 0 && strcmp(attr.type, "int") == 0)

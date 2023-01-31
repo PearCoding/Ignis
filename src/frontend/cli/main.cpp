@@ -152,7 +152,7 @@ int main(int argc, char** argv)
 
     timer_all.stop();
 
-    auto stats = runtime->getStatistics();
+    auto stats = runtime->statistics();
     if (stats) {
         IG_LOG(L_INFO)
             << stats->dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats)

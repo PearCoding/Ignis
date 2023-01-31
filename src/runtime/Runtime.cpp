@@ -423,7 +423,7 @@ void Runtime::reset()
     // No mCurrentFrameCount
 }
 
-const Statistics* Runtime::getStatistics() const
+const Statistics* Runtime::statistics() const
 {
     return mOptions.AcquireStats ? mDevice->getStatistics() : nullptr;
 }

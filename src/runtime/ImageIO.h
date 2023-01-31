@@ -8,6 +8,7 @@ struct ImageMetaData {
     std::optional<Vector3f> CameraEye;
     std::optional<Vector3f> CameraUp;
     std::optional<Vector3f> CameraDir;
+    std::optional<size_t> Seed;
     std::optional<size_t> SamplePerPixel;
     std::optional<size_t> SamplePerIteration;
     std::optional<size_t> Iteration;

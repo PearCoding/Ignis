@@ -127,6 +127,8 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
         attributes.emplace_back(makeVec3Attribute("igCameraUp", metaData.CameraUp.value()));
     if (metaData.CameraDir.has_value())
         attributes.emplace_back(makeVec3Attribute("igCameraDir", metaData.CameraDir.value()));
+    if (metaData.Seed.has_value())
+        attributes.emplace_back(makeIntAttribute("igSeed", (int)metaData.Seed.value()));
     if (metaData.SamplePerPixel.has_value())
         attributes.emplace_back(makeIntAttribute("igSPP", (int)metaData.SamplePerPixel.value()));
     if (metaData.SamplePerIteration.has_value())
