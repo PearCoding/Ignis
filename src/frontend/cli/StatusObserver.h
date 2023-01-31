@@ -118,7 +118,7 @@ private:
     inline static void drawProgressbar(float perc)
     {
         constexpr size_t LENGTH = 20;
-        size_t full_count       = (size_t)std::floor(LENGTH * perc);
+        const size_t full_count = (size_t)std::floor(LENGTH * perc);
 
 #ifdef IG_CC_MSC
         std::cout << "{";
