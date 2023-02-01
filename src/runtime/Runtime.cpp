@@ -200,6 +200,7 @@ bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scen
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;
+    lopts.CachePath           = path.parent_path() / ("ignis_cache_" + path.stem().generic_u8string()); // TODO: User given path?
     lopts.Target              = mOptions.Target;
     lopts.IsTracer            = mOptions.IsTracer;
     lopts.Scene               = scene;

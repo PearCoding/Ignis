@@ -169,8 +169,7 @@ LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::s
         return std::any_cast<CDF2DData>(data->second);
 
     IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name << "'" << std::endl;
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin";
+    const std::filesystem::path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
 
     size_t slice_conditional = 0;
     size_t slice_marginal    = 0;
@@ -196,8 +195,7 @@ LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const
         return std::any_cast<CDF2DSATData>(data->second);
 
     IG_LOG(L_DEBUG) << "Generating environment cdf (SAT) for '" << name << "'" << std::endl;
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin";
+    const std::filesystem::path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
 
     size_t size  = 0;
     size_t slice = 0;

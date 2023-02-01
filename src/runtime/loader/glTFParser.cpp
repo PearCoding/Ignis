@@ -901,7 +901,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const std:
 std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const std::filesystem::path& path)
 {
     std::filesystem::path directory = path.parent_path();
-    std::filesystem::path cache_dir = directory / (std::string("_ignis_cache_") + path.stem().generic_u8string());
+    std::filesystem::path cache_dir = directory / (std::string("ignis_cache_") + path.stem().generic_u8string());
 
     std::filesystem::create_directories(cache_dir);
     std::filesystem::create_directories(cache_dir / "images");

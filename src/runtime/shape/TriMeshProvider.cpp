@@ -6,6 +6,7 @@
 #include "mesh/MtsSerializedFile.h"
 #include "mesh/ObjFile.h"
 #include "mesh/PlyFile.h"
+#include "serialization/FileSerializer.h"
 #include "serialization/VectorSerializer.h"
 #include "shader/ShaderUtils.h"
 
@@ -304,27 +305,63 @@ struct BvhTemporary {
 };
 
 template <size_t N, size_t T>
-static uint64 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
+static void serialize_bvh(Serializer& serializer, BvhTemporary<N, T>& bvh)
 {
+    uint32 node_count = (uint32)bvh.nodes.size();
+    uint32 tri_count  = (uint32)bvh.tris.size();
+    uint32 _pad       = 0;
+
+    serializer | node_count;
+    serializer | tri_count; // Not really needed, but just dump it out
+    serializer | _pad;      // Padding
+    serializer | _pad;      // Padding
+
+    if (serializer.isReadMode()) {
+        serializer.read(bvh.nodes, node_count);
+        serializer.read(bvh.tris, tri_count);
+    } else {
+        serializer.write(bvh.nodes, true);
+        serializer.write(bvh.tris, true);
+    }
+}
+
+template <size_t N, size_t T>
+static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::string& name, std::mutex& mutex)
+{
+    constexpr size_t MinFaceCountForCache = 1000000;
     IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
 
+    const std::filesystem::path path = ctx.CacheManager->directory() / ("_bvh_" + name + ".bin");
+    bool inCache                     = false;
+    const bool isEligible            = mesh.faceCount() > MinFaceCountForCache; // Do not waste effort for small meshes
+    if (isEligible && ctx.CacheManager->isEnabled()) {
+        const std::string hash = mesh.computeHash();
+        inCache                = ctx.CacheManager->checkAndUpdate("bvh_" + name, hash);
+    }
+
     BvhTemporary<N, T> bvh;
-    build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
-    mutex.lock();
-    auto& bvhTable = dtb.FixTables["trimesh_primbvh"];
-    auto& bvhData  = bvhTable.addEntry(DefaultAlignment);
-    uint64 offset  = bvhTable.currentOffset() / sizeof(float);
-    VectorSerializer serializer(bvhData, false);
-    serializer.write((uint32)bvh.nodes.size());
-    serializer.write((uint32)bvh.tris.size()); // Not really needed, but just dump it out
-    serializer.write((uint32)0);               // Padding
-    serializer.write((uint32)0);               // Padding
-    serializer.write(bvh.nodes, true);
-    serializer.write(bvh.tris, true);
-    mutex.unlock();
+    if (!inCache || !std::filesystem::exists(path)) {
+        build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
-    return offset;
+        if (ctx.CacheManager->isEnabled() && isEligible) {
+            FileSerializer serializer(path, false);
+            serialize_bvh(serializer, bvh);
+        }
+    } else {
+        FileSerializer serializer(path, true);
+        serialize_bvh(serializer, bvh);
+    }
+
+    {
+        std::lock_guard<std::mutex> _guard(mutex);
+        auto& bvhTable = ctx.Database.FixTables["trimesh_primbvh"];
+        auto& bvhData  = bvhTable.addEntry(DefaultAlignment);
+        uint64 offset  = bvhTable.currentOffset() / sizeof(float);
+        VectorSerializer serializer(bvhData, false);
+        serialize_bvh(serializer, bvh);
+        return offset;
+    }
 }
 
 static void handleRefinement(TriMesh& mesh, const SceneObject& elem)
@@ -394,6 +431,40 @@ static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, const Sc
     const float amount = elem.property("displacement_amount").getNumber(1.0f);
 
     applyDisplacement(mesh, image, amount);
+}
+
+static void handleModification(TriMesh& mesh, const LoaderContext& ctx, const std::string& name, const SceneObject& elem)
+{
+    const size_t subdivisionCount  = elem.property("subdivision").getInteger(0);
+    const float min_area           = elem.property("refinement").getNumber(0);
+    const std::string displacement = elem.property("displacement").getString("");
+    const float amount             = elem.property("displacement_amount").getNumber(1.0f);
+
+    bool hasModification = subdivisionCount > 0 || min_area > 0 || !displacement.empty();
+    if (!hasModification)
+        return;
+
+    const std::filesystem::path path = ctx.CacheManager->directory() / ("_shape_" + name + ".ply");
+
+    bool inCache = false;
+    if (ctx.CacheManager->isEnabled()) {
+        const std::string hash = mesh.computeHash() + "_" + std::to_string(subdivisionCount) + "_" + std::to_string(min_area) + "_" + displacement + "_" + std::to_string(amount);
+        inCache                = ctx.CacheManager->checkAndUpdate("shape_" + name, hash);
+    }
+
+    if (!inCache || !std::filesystem::exists(path)) {
+        for (size_t i = 0; i < subdivisionCount; ++i)
+            mesh.subdivide();
+
+        handleRefinement(mesh, elem);
+        handleDisplacement(mesh, ctx, elem);
+
+        if (ctx.CacheManager->isEnabled())
+            ply::save(mesh, path);
+    } else {
+        IG_LOG(L_DEBUG) << "Loading modified mesh '" << name << "' from cache " << path << std::endl;
+        mesh = ply::load(path);
+    }
 
     // Re-Evaluate normals if necessary
     if (elem.property("smooth_normals").getBool(false))
@@ -467,12 +538,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     if (!elem.property("transform").getTransform().matrix().isIdentity())
         mesh.transform(elem.property("transform").getTransform());
 
-    const size_t subdivisionCount = elem.property("subdivision").getInteger(0);
-    for (size_t i = 0; i < subdivisionCount; ++i)
-        mesh.subdivide();
-
-    handleRefinement(mesh, elem);
-    handleDisplacement(mesh, ctx, elem);
+    handleModification(mesh, ctx, name, elem);
 
     // Build bounding box
     BoundingBox bbox = mesh.computeBBox();
@@ -483,11 +549,11 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     // Setup bvh
     uint64 bvh_offset = 0;
     if (ctx.Options.Target.isGPU()) {
-        bvh_offset = setup_bvh<2, 1>(mesh, ctx.Database, mBvhMutex);
+        bvh_offset = setup_bvh<2, 1>(mesh, ctx, name, mBvhMutex);
     } else if (ctx.Options.Target.vectorWidth() < 8) {
-        bvh_offset = setup_bvh<4, 4>(mesh, ctx.Database, mBvhMutex);
+        bvh_offset = setup_bvh<4, 4>(mesh, ctx, name, mBvhMutex);
     } else {
-        bvh_offset = setup_bvh<8, 4>(mesh, ctx.Database, mBvhMutex);
+        bvh_offset = setup_bvh<8, 4>(mesh, ctx, name, mBvhMutex);
     }
 
     // Precompute approximative shapes outside the lock region

@@ -448,13 +448,12 @@ std::filesystem::path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
 
     const auto data = tree.context().Cache->ExportedData.find(exported_id);
     if (data != tree.context().Cache->ExportedData.end())
-        return std::any_cast<std::string>(data->second);
+        return std::any_cast<std::filesystem::path>(data->second);
 
     if (lightCount() == 0)
         return {}; // Fallback to null light selector
 
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/light_cdf.bin";
+    const std::filesystem::path path = tree.context().CacheManager->directory() / "light_cdf.bin";
 
     std::vector<float> estimated_powers;
     estimated_powers.reserve(mFiniteLights.size());

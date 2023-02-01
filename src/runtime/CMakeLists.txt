@@ -1,5 +1,7 @@
 set(SRC
   IG_Config.h
+  CacheManager.cpp
+  CacheManager.h
   CDF.cpp
   CDF.h
   Color.h

@@ -270,20 +270,26 @@ inline void Serializer::read(ISerializable& v)
 
 template <typename T, typename Alloc>
 inline std::enable_if_t<is_trivial_serializable<T>::value, void>
-Serializer::read(std::vector<T, Alloc>& vec)
+Serializer::read(std::vector<T, Alloc>& vec, size_t size)
 {
-    uint64 size;
-    read(size);
+    if (size == 0) {
+        uint64 _size;
+        read(_size);
+        size = _size;
+    }
     vec.resize(size);
     readRawLooped(reinterpret_cast<uint8*>(vec.data()), vec.size() * sizeof(T));
 }
 
 template <typename T, typename Alloc>
 inline std::enable_if_t<!is_trivial_serializable<T>::value, void>
-Serializer::read(std::vector<T, Alloc>& vec)
+Serializer::read(std::vector<T, Alloc>& vec, size_t size)
 {
-    uint64 size;
-    read(size);
+    if (size == 0) {
+        uint64 _size;
+        read(_size);
+        size = _size;
+    }
     vec.resize(size);
 
     T tmp;

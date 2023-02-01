@@ -24,9 +24,10 @@ LoaderContext::~LoaderContext()                          = default;
 LoaderContext LoaderContext::copyForBake() const
 {
     LoaderContext ctx;
-    ctx.Options  = Options;
-    ctx.Textures = Textures;
-    ctx.Cache    = Cache;
+    ctx.Options      = Options;
+    ctx.Textures     = Textures;
+    ctx.Cache        = Cache;
+    ctx.CacheManager = CacheManager;
 
     // TODO: Maybe copy more?
     return ctx;

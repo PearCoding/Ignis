@@ -89,7 +89,7 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
 
     const auto data = tree.context().Cache->ExportedData.find(exported_id);
     if (data != tree.context().Cache->ExportedData.end())
-        return std::any_cast<std::string>(data->second);
+        return std::any_cast<std::filesystem::path>(data->second);
 
     // Setup bvh
     LightBvh bvh;
@@ -117,9 +117,7 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
         //     IG_LOG(L_DEBUG) << code << std::endl;
     }
 
-    // Export bvh
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/light_hierarchy.bin";
+    const std::filesystem::path path = tree.context().CacheManager->directory() / "light_hierarchy.bin";
 
     FileSerializer serializer(path, false);
     serializer.write(codes, true); // Codes are used to backtrack for the pdf. TODO: Currently this is limited to max depth 32!

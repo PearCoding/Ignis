@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CacheManager.h"
 #include "LoaderOptions.h"
 #include "LoaderTechnique.h"
 #include "RuntimeSettings.h"
@@ -51,6 +52,7 @@ public:
     LoaderOptions Options;
 
     std::shared_ptr<LoaderCache> Cache;
+    std::shared_ptr<IG::CacheManager> CacheManager;
 
     std::shared_ptr<class LoaderTexture> Textures;
     std::unique_ptr<class LoaderLight> Lights;

@@ -33,14 +33,13 @@ static std::string setup_sky(LoaderContext& ctx, const std::string& name, const 
 
     const auto data = ctx.Cache->ExportedData.find(exported_id);
     if (data != ctx.Cache->ExportedData.end())
-        return std::any_cast<std::string>(data->second);
+        return std::any_cast<std::filesystem::path>(data->second);
 
     auto ground    = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
     auto turbidity = light->property("turbidity").getNumber(3.0f);
     const auto ea  = LoaderUtils::getEA(*light);
 
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/skytex_" + LoaderUtils::escapeIdentifier(name) + ".exr";
+    const std::filesystem::path path = ctx.CacheManager->directory() / ("skytex_" + LoaderUtils::escapeIdentifier(name) + ".exr");
     SkyModel model(RGB(ground), ea, turbidity);
     model.save(path);
 

@@ -1,5 +1,6 @@
 #include "TriMesh.h"
 #include "Logger.h"
+#include "SHA256.h"
 #include "math/Spherical.h"
 #include "math/Tangent.h"
 
@@ -205,6 +206,36 @@ float TriMesh::computeArea() const
         area += 0.5f * computeTriangleNormal(v0, v1, v2).norm();
     }
     return area;
+}
+
+std::string TriMesh::computeHash() const
+{
+    SHA256 hash;
+    for (const auto& v : vertices) {
+        const float x = v.x();
+        const float y = v.y();
+        const float z = v.z();
+        hash.update(reinterpret_cast<const uint8*>(&x), sizeof(x));
+        hash.update(reinterpret_cast<const uint8*>(&y), sizeof(y));
+        hash.update(reinterpret_cast<const uint8*>(&z), sizeof(z));
+    }
+    for (const auto& v : normals) {
+        const float x = v.x();
+        const float y = v.y();
+        const float z = v.z();
+        hash.update(reinterpret_cast<const uint8*>(&x), sizeof(x));
+        hash.update(reinterpret_cast<const uint8*>(&y), sizeof(y));
+        hash.update(reinterpret_cast<const uint8*>(&z), sizeof(z));
+    }
+    for (const auto& v : texcoords) {
+        const float x = v.x();
+        const float y = v.y();
+        hash.update(reinterpret_cast<const uint8*>(&x), sizeof(x));
+        hash.update(reinterpret_cast<const uint8*>(&y), sizeof(y));
+    }
+
+    hash.update(reinterpret_cast<const uint8*>(indices.data()), indices.size() * sizeof(uint32));
+    return hash.final();
 }
 
 struct TransformCache {
