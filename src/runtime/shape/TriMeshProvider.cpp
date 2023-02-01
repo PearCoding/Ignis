@@ -328,7 +328,7 @@ static void serialize_bvh(Serializer& serializer, BvhTemporary<N, T>& bvh)
 template <size_t N, size_t T>
 static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::string& name, std::mutex& mutex)
 {
-    constexpr size_t MinFaceCountForCache = 1000000;
+    constexpr size_t MinFaceCountForCache = 500000;
     IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
 
     const std::filesystem::path path = ctx.CacheManager->directory() / ("_bvh_" + name + ".bin");
@@ -340,7 +340,6 @@ static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::stri
     }
 
     BvhTemporary<N, T> bvh;
-
     if (!inCache || !std::filesystem::exists(path)) {
         build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
 
