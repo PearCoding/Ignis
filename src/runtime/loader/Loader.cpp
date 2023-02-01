@@ -25,9 +25,10 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     LoaderContext ctx;
     ctx.Options = opts;
 
-    // TODO: Unify?
+    // TODO: Combine both cache types?
     ctx.Cache        = std::make_shared<LoaderCache>();
     ctx.CacheManager = std::make_shared<IG::CacheManager>(opts.CachePath);
+    ctx.CacheManager->enable(opts.EnableCache);
 
     ctx.Textures  = std::make_shared<LoaderTexture>();
     ctx.Lights    = std::make_unique<LoaderLight>();

@@ -22,6 +22,7 @@ struct LoaderOptions {
     bool IsTracer;
     bool ForceSpecialization;
     bool EnableTonemapping;
+    bool EnableCache;
     DenoiserSettings Denoiser;
 
     ScriptCompiler* Compiler;

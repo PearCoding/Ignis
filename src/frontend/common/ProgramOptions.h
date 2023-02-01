@@ -51,7 +51,7 @@ public:
 
     IG::Target Target;
 
-    std::optional<size_t> RenderTime;// In seconds
+    std::optional<size_t> RenderTime; // In seconds
     std::optional<int> SPP;
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;
@@ -73,6 +73,9 @@ public:
     bool Denoise                    = false;
     bool DenoiserFollowSpecular     = false;
     bool DenoiserOnlyFirstIteration = false;
+
+    bool NoCache = false;
+    std::filesystem::path CacheDir;
 
     size_t ShaderOptimizationLevel = 3;
 

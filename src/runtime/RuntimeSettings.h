@@ -31,6 +31,9 @@ struct RuntimeOptions {
     bool AddExtraEnvLight           = false; // User option to add a constant environment light (just to see something)
     std::filesystem::path ScriptDir = {};    // Path to a new script directory, replacing the internal standard library
 
+    bool EnableCache               = true;
+    std::filesystem::path CacheDir = {};
+
     size_t ShaderOptimizationLevel = 3;
 
     bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time

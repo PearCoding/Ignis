@@ -179,6 +179,9 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag("--dump-registry", DumpRegistry, "Dump global registry to standard output");
     app.add_flag("--dump-registry-full", DumpFullRegistry, "Dump global and internal constructed registry to standard output");
 
+    app.add_flag("--no-cache", NoCache, "Disable filesystem cache usage, which saves large computations for future runs and loads data from previous runs");
+    app.add_option("--cache-dir", CacheDir, "Set directory to cache large computations explicitly, else a directory based on the input file will be used");
+
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
 
     app.add_option("-O,--shader-optimization", ShaderOptimizationLevel, "Level of optimization applied to shaders. Range is [0, 3]. Level 0 will also add debug information")->default_val(ShaderOptimizationLevel);
@@ -404,6 +407,9 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.Denoiser.Enabled            = Denoise;
     options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;
     options.Denoiser.OnlyFirstIteration = DenoiserOnlyFirstIteration;
+
+    options.EnableCache = !NoCache;
+    options.CacheDir    = CacheDir;
 
     options.ScriptDir               = ScriptDir;
     options.ShaderOptimizationLevel = std::min<size_t>(3, ShaderOptimizationLevel);
