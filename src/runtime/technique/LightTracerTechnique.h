@@ -15,6 +15,7 @@ public:
 
 private:
     size_t mMaxLightDepth;
+    size_t mMinLightDepth;
     std::string mLightSelector;
     float mClamp;
 };

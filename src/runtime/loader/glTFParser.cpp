@@ -35,6 +35,7 @@ IG_END_IGNORE_WARNINGS
 // [[maybe_unused]] constexpr std::string_view MSFT_packing_occlusionRoughnessMetallic = "MSFT_packing_occlusionRoughnessMetallic"; // TODO: This is simple to add
 // [[maybe_unused]] constexpr std::string_view MSFT_packing_normalRoughnessMetallic    = "MSFT_packing_normalRoughnessMetallic";    // TODO: This is simple to add
 // [[maybe_unused]] constexpr std::string_view ADOBE_materials_thin_transparency       = "ADOBE_materials_thin_transparency";       // TODO: We basically do this already
+// [[maybe_unused]] constexpr std::string_view KHR_mesh_quantization                   = "KHR_mesh_quantization";                   // TODO: Easy to do if dequantized while loading (not used in rendering)
 static const std::vector<std::string_view> gltf_supported_extensions = {
     KHR_lights_punctual, KHR_materials_clearcoat,
     KHR_materials_emissive_strength, KHR_materials_ior,

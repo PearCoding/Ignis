@@ -13,6 +13,7 @@ PhotonMappingTechnique::PhotonMappingTechnique(const SceneObject& obj)
 {
     mPhotonCount    = (size_t)std::max(100, obj.property("photons").getInteger(1000000));
     mMaxCameraDepth = (size_t)obj.property("max_depth").isValid() ? obj.property("max_depth").getInteger(DefaultMaxRayDepth) : obj.property("max_camera_depth").getInteger(DefaultMaxRayDepth);
+    mMinCameraDepth = (size_t)obj.property("min_depth").isValid() ? obj.property("min_depth").getInteger(DefaultMinRayDepth) : obj.property("min_camera_depth").getInteger(DefaultMinRayDepth);
     mMaxLightDepth  = (size_t)obj.property("max_light_depth").getInteger(8);
     mLightSelector  = obj.property("light_selector").getString();
     mMergeRadius    = obj.property("radius").getNumber(0.01f);
@@ -90,6 +91,7 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
 
     // Insert config into global registry
     input.Context.GlobalRegistry.IntParameters["__tech_max_camera_depth"] = (int)mMaxCameraDepth;
+    input.Context.GlobalRegistry.IntParameters["__tech_min_camera_depth"] = (int)mMinCameraDepth;
     input.Context.GlobalRegistry.IntParameters["__tech_max_light_depth"]  = (int)mMaxLightDepth;
     input.Context.GlobalRegistry.IntParameters["__tech_photon_count"]     = (int)mPhotonCount;
     input.Context.GlobalRegistry.FloatParameters["__tech_radius"]         = mMergeRadius * input.Context.SceneDiameter;
@@ -102,6 +104,11 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
             input.Stream << "  let tech_max_camera_depth = " << mMaxCameraDepth << ":i32;" << std::endl;
         else
             input.Stream << "  let tech_max_camera_depth = registry::get_global_parameter_i32(\"__tech_max_camera_depth\", 8);" << std::endl;
+
+        if (mMinCameraDepth < 2) // 0 & 1 can be an optimization
+            input.Stream << "  let tech_min_camera_depth = " << mMinCameraDepth << ":i32;" << std::endl;
+        else
+            input.Stream << "  let tech_min_camera_depth = registry::get_global_parameter_i32(\"__tech_min_camera_depth\", 2);" << std::endl;
 
         if (mMergeRadius <= 0) // 0 is a special case
             input.Stream << "  let tech_radius = " << mMergeRadius * input.Context.SceneDiameter << ":f32;" << std::endl;
@@ -153,7 +160,7 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
         ShadingTree tree(input.Context);
         input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree)
                      << "  let ppm_radius = ppm_compute_radius(tech_radius, settings.iter);" << std::endl
-                     << "  let technique = make_ppm_path_renderer(tech_max_camera_depth, light_selector, ppm_radius, aovs, tech_clamp, light_cache);" << std::endl;
+                     << "  let technique = make_ppm_path_renderer(tech_max_camera_depth, tech_min_camera_depth, light_selector, ppm_radius, aovs, tech_clamp, light_cache);" << std::endl;
     }
 }
 

@@ -256,7 +256,7 @@ fn @ppm_compute_radius(max_radius: f32, iter: i32) -> f32 {
     math_builtins::fmax(radius, 1e-5:f32)
 }
 
-fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, radius: f32, aovs: AOVTable, clamp_value: f32, light_cache: LightCache) -> Technique {
+fn @make_ppm_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: LightSelector, radius: f32, aovs: AOVTable, clamp_value: f32, light_cache: LightCache) -> Technique {
     let offset : f32 = 0.001;
 
     let handle_color = if clamp_value > 0 {
@@ -375,7 +375,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, light_selector: LightSelector, rad
         let out_dir = vec3_neg(ctx.ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
-            let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
+            let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
             if rnd.next_f32() >= rr_prob {
                 return(Option[Ray]::None)
             }

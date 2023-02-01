@@ -9,6 +9,7 @@ PathTechnique::PathTechnique(const SceneObject& obj)
     : Technique("path")
 {
     mMaxDepth      = obj.property("max_depth").getInteger(DefaultMaxRayDepth);
+    mMinDepth      = obj.property("min_depth").getInteger(DefaultMinRayDepth);
     mLightSelector = obj.property("light_selector").getString();
     mClamp         = obj.property("clamp").getNumber(0.0f);
     mMISAOVs       = obj.property("aov_mis").getBool(false);
@@ -34,12 +35,18 @@ void PathTechnique::generateBody(const SerializationInput& input) const
 {
     // Insert config into global registry
     input.Context.GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxDepth;
+    input.Context.GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMaxDepth;
     input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
 
     if (mMaxDepth < 2) // 0 & 1 can be an optimization
         input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
     else
         input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
+
+    if (mMinDepth < 2) // 0 & 1 can be an optimization
+        input.Stream << "  let tech_min_depth = " << mMinDepth << ":i32;" << std::endl;
+    else
+        input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 8);" << std::endl;
 
     if (mClamp <= 0) // 0 is a special case
         input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
@@ -66,7 +73,7 @@ void PathTechnique::generateBody(const SerializationInput& input) const
 
     ShadingTree tree(input.Context);
     input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree)
-                 << "  let technique = make_path_renderer(tech_max_depth, light_selector, aovs, tech_clamp);" << std::endl;
+                 << "  let technique = make_path_renderer(tech_max_depth, tech_min_depth, light_selector, aovs, tech_clamp);" << std::endl;
 }
 
 } // namespace IG

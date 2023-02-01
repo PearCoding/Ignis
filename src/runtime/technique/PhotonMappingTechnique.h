@@ -16,6 +16,7 @@ public:
 private:
     size_t mPhotonCount;
     size_t mMaxCameraDepth;
+    size_t mMinCameraDepth;
     size_t mMaxLightDepth;
     std::string mLightSelector;
     float mMergeRadius;
