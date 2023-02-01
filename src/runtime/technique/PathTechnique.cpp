@@ -35,7 +35,7 @@ void PathTechnique::generateBody(const SerializationInput& input) const
 {
     // Insert config into global registry
     input.Context.GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxDepth;
-    input.Context.GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMaxDepth;
+    input.Context.GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMinDepth;
     input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
 
     if (mMaxDepth < 2) // 0 & 1 can be an optimization
