@@ -399,7 +399,7 @@ static void applyDisplacement(TriMesh& mesh, const Image& image, float amount)
     if (mesh.normals.size() != mesh.vertices.size())
         mesh.computeVertexNormals();
 
-    if (mesh.texcoords.size() / 2 != mesh.vertices.size() / 3)
+    if (mesh.texcoords.size() != mesh.vertices.size())
         mesh.makeTexCoordsNormalized();
 
     // Apply displacement
@@ -533,6 +533,9 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
         mesh.setupFaceNormalsAsVertexNormals();
     else if (elem.property("smooth_normals").getBool(false))
         mesh.computeVertexNormals();
+
+    if (elem.property("generic_uv").getBool(false))
+        mesh.makeTexCoordsNormalized();
 
     if (!elem.property("transform").getTransform().matrix().isIdentity())
         mesh.transform(elem.property("transform").getTransform());

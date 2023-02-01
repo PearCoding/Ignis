@@ -95,7 +95,7 @@ size_t TriMesh::removeZeroAreaTriangles()
 
 void TriMesh::computeVertexNormals()
 {
-    normals.resize(faceCount() * 3);
+    normals.resize(vertices.size());
     std::fill(normals.begin(), normals.end(), StVector3f::Zero());
 
     const size_t inds = indices.size();
@@ -1037,7 +1037,7 @@ TriMesh TriMesh::MakeRadialGaussian(const Vector3f& origin, const Vector3f& dire
     // Bottom circle
     addDisk(mesh, origin, normal, Nx, Ny, radius_scale, sections, true);
 
-    // Inbetweens
+    // In-betweens
     for (uint32 i = 1; i < slices; ++i) {
         const float radius = 1 - i / (float)slices;
         const float g      = gauss(radius);
@@ -1087,7 +1087,7 @@ TriMesh TriMesh::MakeGaussianLobe(const Vector3f& origin, const Vector3f& direct
 
     const float det = std::abs(cov.determinant());
     if (det <= FltEps) {
-        IG_LOG(L_ERROR) << "Given gaussian coveriance matrix is not positive semidefinit: " << cov << std::endl;
+        IG_LOG(L_ERROR) << "Given gaussian covariance matrix is not positive semi-definit: " << cov << std::endl;
         return TriMesh();
     }
 

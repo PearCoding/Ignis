@@ -70,8 +70,8 @@
 		{"type":"principled", "name": "object", "base_color":"metalplates_color", "roughness": "metalplates_roughness.r", "metallic": "metalplates_metalness.r"}
 	],
 	"shapes": [
-		{"type":"rectangle", "name":"Bottom", "width":10, "height":8, "refinement": 0.01, "smooth_normals": true, "displacement": "textures/Wood047_Displacement.png", "displacement_amount": 0.1},
-		{"type":"icosphere", "name":"Object", "radius":0.9, "subdivision": 4, "smooth_normals": true, "displacement": "textures/MetalPlates006_Displacement.png", "displacement_amount": 0.1}
+		{"type":"rectangle", "name":"Bottom", "width":10, "height":8, "refinement": 0.002, "smooth_normals": true, "displacement": "textures/Wood047_Displacement.png", "displacement_amount": 0.1},
+		{"type":"icosphere", "name":"Object", "radius":0.9, "generic_uv": true, "subdivision": 4, "smooth_normals": true, "displacement": "textures/MetalPlates006_Displacement.png", "displacement_amount": 0.1}
 	],
 	"entities": [
 		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": [{"translate":[0,0,-0.9]}]},
