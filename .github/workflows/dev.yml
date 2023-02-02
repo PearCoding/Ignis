@@ -3,6 +3,7 @@ name: Development (Docker)
 on:
   push:
     branches: [ development ]
+  pull_request:
 
 env:
   # Use docker.io for Docker Hub if empty
