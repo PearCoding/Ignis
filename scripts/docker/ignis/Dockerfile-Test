@@ -1,15 +1,14 @@
 ARG IG_DIR=.
-FROM pearcoding/anydsl:latest-cuda-jit as build
+FROM pearcoding/anydsl:latest-cpu-jit as build
 
 LABEL maintainer="Ömercan Yazici" \
-      description="Ignis Raytracer with CUDA GPU support - Test CI version. Not indended for usage" \
+      description="Ignis Raytracer - Test CI version. Not indended for usage" \
       version="0.2.0"
 
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && apt-get install -y libtbb-dev libsdl2-dev libpython3-dev && rm -rf /var/lib/apt/lists/* 
 
-ENV LD_LIBRARY_PATH="/usr/local/cuda/compat:${LD_LIBRARY_PATH}"
 COPY $IG_DIR /ignis
 WORKDIR /ignis
 RUN bash ./scripts/docker/ignis/compile-test.sh

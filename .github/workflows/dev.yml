@@ -1,4 +1,4 @@
-name: Development (Docker CUDA)
+name: Development (Docker)
 
 on:
   push:
@@ -32,5 +32,5 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./scripts/docker/ignis/Dockerfile-CUDA-Test
+          file: ./scripts/docker/ignis/Dockerfile-Test
           push: false
