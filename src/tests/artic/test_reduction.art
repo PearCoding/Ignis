@@ -62,17 +62,19 @@ fn test_max_reduction_cpu() -> bool {
     value == result
 }
 
-fn test_reduction() -> i32 { 
+fn test_reduction(no_gpu: bool) -> i32 { 
     let mut err = 0;
 
-    if !test_add_reduction_gpu() {
-        ++err;
-        ignis_test_fail("GPU based reduction with the add operator fails!");
-    }
+    if !no_gpu {
+        if !test_add_reduction_gpu() {
+            ++err;
+            ignis_test_fail("GPU based reduction with the add operator fails!");
+        }
 
-    if !test_max_reduction_gpu() {
-        ++err;
-        ignis_test_fail("GPU based reduction with the max operator fails!");
+        if !test_max_reduction_gpu() {
+            ++err;
+            ignis_test_fail("GPU based reduction with the max operator fails!");
+        }
     }
 
     if !test_add_reduction_cpu() {
