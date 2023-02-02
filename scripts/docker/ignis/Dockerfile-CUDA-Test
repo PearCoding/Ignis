@@ -12,4 +12,4 @@ RUN apt-get update && apt-get install -y libtbb-dev libsdl2-dev libpython3-dev &
 ENV LD_LIBRARY_PATH="/usr/local/cuda/compat:${LD_LIBRARY_PATH}"
 COPY $IG_DIR /ignis
 WORKDIR /ignis
-RUN ./scripts/docker/ignis/compile.sh && ./scripts/docker/ignis/test.sh
+RUN ./scripts/docker/ignis/compile-test.sh

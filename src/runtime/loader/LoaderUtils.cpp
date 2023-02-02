@@ -154,9 +154,9 @@ Vector3f LoaderUtils::getDirection(const SceneObject& obj)
     return getEA(obj).toDirectionYUp();
 }
 
-LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::filesystem::path& filename, bool premultiplySin, bool compensate)
 {
-    std::string name = std::filesystem::path(filename).stem().generic_u8string();
+    std::string name = filename.stem().generic_u8string();
     Image image      = Image::load(filename);
     return setup_cdf2d(ctx, name, image, premultiplySin, compensate);
 }
@@ -180,9 +180,9 @@ LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::s
     return cdf_data;
 }
 
-LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const std::filesystem::path& filename, bool premultiplySin, bool compensate)
 {
-    std::string name = std::filesystem::path(filename).stem().generic_u8string();
+    std::string name = filename.stem().generic_u8string();
     Image image      = Image::load(filename);
     return setup_cdf2d_sat(ctx, name, image, premultiplySin, compensate);
 }

@@ -27,7 +27,7 @@ float SkyLight::computeFlux(ShadingTree& tree) const
     return mTotalFlux * scale * radius * radius;
 }
 
-static std::string setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<SceneObject>& light)
+static std::filesystem::path setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<SceneObject>& light)
 {
     const std::string exported_id = "_sky_" + name;
 
@@ -53,8 +53,8 @@ void SkyLight::serialize(const SerializationInput& input) const
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones());
 
-    const std::string path = setup_sky(input.Tree.context(), name(), mLight);
-    const auto cdf         = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
+    const std::filesystem::path path = setup_sky(input.Tree.context(), name(), mLight);
+    const auto cdf                   = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
