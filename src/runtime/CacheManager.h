@@ -8,12 +8,12 @@ class IG_LIB CacheManager {
     using HashMap = std::unordered_map<std::string, std::string>;
 
 public:
-    CacheManager(const std::filesystem::path& cache_dir);
+    CacheManager(const Path& cache_dir);
     ~CacheManager();
 
     inline void enable(bool b) { mEnabled = b; }
     inline bool isEnabled() const { return mEnabled; }
-    inline const std::filesystem::path& directory() const { return mCacheDir; }
+    inline const Path& directory() const { return mCacheDir; }
 
     void sync();
 
@@ -29,6 +29,6 @@ private:
     mutable std::mutex mMutex;
     bool mEnabled;
     HashMap mHashMap;
-    std::filesystem::path mCacheDir;
+    Path mCacheDir;
 };
 } // namespace IG

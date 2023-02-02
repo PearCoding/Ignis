@@ -81,10 +81,10 @@ public:
     BoundingBox SceneBBox;
     float SceneDiameter = 0.0f;
 
-    std::filesystem::path handlePath(const std::filesystem::path& path, const SceneObject& obj) const;
+    Path handlePath(const Path& path, const SceneObject& obj) const;
 
     std::unordered_map<std::string, size_t> RegisteredResources;
-    inline size_t registerExternalResource(const std::filesystem::path& path)
+    inline size_t registerExternalResource(const Path& path)
     {
         // TODO: Ensure canonical paths?
         auto it = RegisteredResources.find(path.generic_u8string());

@@ -11,7 +11,7 @@ TensorTreeBSDF::TensorTreeBSDF(const std::string& name, const std::shared_ptr<Sc
     , mBSDF(bsdf)
 {
 }
-using TTExportedData = std::pair<std::filesystem::path, TensorTreeSpecification>;
+using TTExportedData = std::pair<Path, TensorTreeSpecification>;
 static TTExportedData setup_tensortree(const std::string& name, const std::shared_ptr<SceneObject>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
@@ -22,7 +22,7 @@ static TTExportedData setup_tensortree(const std::string& name, const std::share
     if (data != ctx.Cache->ExportedData.end())
         return std::any_cast<TTExportedData>(data->second);
 
-    const std::filesystem::path path = ctx.CacheManager->directory() / ("tt_" + LoaderUtils::escapeIdentifier(name) + ".bin");
+    const Path path = ctx.CacheManager->directory() / ("tt_" + LoaderUtils::escapeIdentifier(name) + ".bin");
 
     TensorTreeSpecification spec{};
     if (!TensorTreeLoader::prepare(filename, path, spec))
@@ -66,7 +66,7 @@ void TensorTreeBSDF::serialize(const SerializationInput& input) const
 
     const auto data = setup_tensortree(name(), mBSDF, input.Tree.context());
 
-    const std::filesystem::path buffer_path = std::get<0>(data);
+    const Path buffer_path = std::get<0>(data);
     const TensorTreeSpecification spec      = std::get<1>(data);
 
     size_t res_id             = input.Tree.context().registerExternalResource(buffer_path);

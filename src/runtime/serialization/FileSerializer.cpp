@@ -14,7 +14,7 @@ FileSerializer::FileSerializer()
 {
 }
 
-FileSerializer::FileSerializer(const std::filesystem::path& path, bool readmode)
+FileSerializer::FileSerializer(const Path& path, bool readmode)
     : Serializer(readmode)
     , mInternal(std::make_unique<FileSerializerInternal>())
 {
@@ -31,7 +31,7 @@ size_t FileSerializer::memoryFootprint() const
     return mInternal->MemoryFootprint;
 }
 
-bool FileSerializer::open(const std::filesystem::path& path, bool readmode)
+bool FileSerializer::open(const Path& path, bool readmode)
 {
     if (mInternal->File.is_open())
         return false;

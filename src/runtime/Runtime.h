@@ -27,12 +27,12 @@ public:
     ~Runtime();
 
     /// Load from file and initialize
-    [[nodiscard]] bool loadFromFile(const std::filesystem::path& path);
+    [[nodiscard]] bool loadFromFile(const Path& path);
 
     /// Load from string and initialize
     /// @param str String containing valid scene description
     /// @param dir Optional directory containing external files if not given as absolute files inside the scene description
-    [[nodiscard]] bool loadFromString(const std::string& str, const std::filesystem::path& dir);
+    [[nodiscard]] bool loadFromString(const std::string& str, const Path& dir);
 
     /// Load from an already present scene and initialize
     /// @param scene Valid scene
@@ -145,7 +145,7 @@ public:
 
 private:
     void checkCacheDirectory();
-    bool load(const std::filesystem::path& path, const std::shared_ptr<Scene>& scene);
+    bool load(const Path& path, const std::shared_ptr<Scene>& scene);
     bool setupScene();
     void shutdown();
     bool compileShaders();

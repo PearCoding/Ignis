@@ -79,7 +79,7 @@ inline static LightEntry populateInnerNodes(size_t id, uint32 code, uint32 depth
     return entry;
 }
 
-std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Light>>& lights, ShadingTree& tree)
+Path LightHierarchy::setup(const std::vector<std::shared_ptr<Light>>& lights, ShadingTree& tree)
 {
     if (lights.empty())
         return {};
@@ -89,7 +89,7 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
 
     const auto data = tree.context().Cache->ExportedData.find(exported_id);
     if (data != tree.context().Cache->ExportedData.end())
-        return std::any_cast<std::filesystem::path>(data->second);
+        return std::any_cast<Path>(data->second);
 
     // Setup bvh
     LightBvh bvh;
@@ -117,7 +117,7 @@ std::filesystem::path LightHierarchy::setup(const std::vector<std::shared_ptr<Li
         //     IG_LOG(L_DEBUG) << code << std::endl;
     }
 
-    const std::filesystem::path path = tree.context().CacheManager->directory() / "light_hierarchy.bin";
+    const Path path = tree.context().CacheManager->directory() / "light_hierarchy.bin";
 
     FileSerializer serializer(path, false);
     serializer.write(codes, true); // Codes are used to backtrack for the pdf. TODO: Currently this is limited to max depth 32!

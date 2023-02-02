@@ -331,7 +331,7 @@ static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::stri
     constexpr size_t MinFaceCountForCache = 500000;
     IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
 
-    const std::filesystem::path path = ctx.CacheManager->directory() / ("_bvh_" + name + ".bin");
+    const Path path = ctx.CacheManager->directory() / ("_bvh_" + name + ".bin");
     bool inCache                     = false;
     const bool isEligible            = mesh.faceCount() > MinFaceCountForCache; // Do not waste effort for small meshes
     if (isEligible && ctx.CacheManager->isEnabled()) {
@@ -443,7 +443,7 @@ static void handleModification(TriMesh& mesh, const LoaderContext& ctx, const st
     if (!hasModification)
         return;
 
-    const std::filesystem::path path = ctx.CacheManager->directory() / ("_shape_" + name + ".ply");
+    const Path path = ctx.CacheManager->directory() / ("_shape_" + name + ".ply");
 
     bool inCache = false;
     if (ctx.CacheManager->isEnabled()) {

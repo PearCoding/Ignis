@@ -21,7 +21,7 @@ public:
         _OT_COUNT
     };
 
-    inline explicit SceneObject(Type type, const std::string& pluginType, const std::filesystem::path& baseDir)
+    inline explicit SceneObject(Type type, const std::string& pluginType, const Path& baseDir)
         : mType(type)
         , mPluginType(pluginType)
         , mBaseDir(baseDir)
@@ -36,7 +36,7 @@ public:
 
     inline Type type() const { return mType; }
     inline const std::string& pluginType() const { return mPluginType; }
-    inline const std::filesystem::path& baseDir() const { return mBaseDir; }
+    inline const Path& baseDir() const { return mBaseDir; }
 
     inline SceneProperty property(const std::string& key) const
     {
@@ -65,7 +65,7 @@ public:
 private:
     Type mType;
     std::string mPluginType;
-    std::filesystem::path mBaseDir;
+    Path mBaseDir;
     std::unordered_map<std::string, SceneProperty> mProperties;
 };
 

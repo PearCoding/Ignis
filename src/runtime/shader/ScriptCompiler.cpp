@@ -71,7 +71,7 @@ std::string ScriptCompiler::prepare(const std::string& script) const
     return source.str();
 }
 
-static inline bool checkShaderFileName(const std::filesystem::path& path)
+static inline bool checkShaderFileName(const Path& path)
 {
     if (path.empty())
         return false;
@@ -88,7 +88,7 @@ static inline bool checkShaderFileName(const std::filesystem::path& path)
     return true;
 }
 
-void ScriptCompiler::loadStdLibFromDirectory(const std::filesystem::path& dir)
+void ScriptCompiler::loadStdLibFromDirectory(const Path& dir)
 {
     std::stringstream lib;
 

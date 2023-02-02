@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     }
 
     const std::string input  = argv[1];
-    const std::string output = argc == 3 ? argv[2] : std::filesystem::path(input).replace_extension(".hdr").generic_string();
+    const std::string output = argc == 3 ? argv[2] : Path(input).replace_extension(".hdr").generic_string();
 
     try {
         // Input

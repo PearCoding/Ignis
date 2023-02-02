@@ -139,7 +139,7 @@ void Runtime::checkCacheDirectory()
         IG_LOG(L_DEBUG) << "Cache directory " << dir << " occupies " << FormatMemory(size) << " of disk space" << std::endl;
 }
 
-bool Runtime::loadFromFile(const std::filesystem::path& path)
+bool Runtime::loadFromFile(const Path& path)
 {
     // Parse scene file
     IG_LOG(L_DEBUG) << "Parsing scene file" << std::endl;
@@ -161,7 +161,7 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
     }
 }
 
-bool Runtime::loadFromString(const std::string& str, const std::filesystem::path& dir)
+bool Runtime::loadFromString(const std::string& str, const Path& dir)
 {
     // Parse scene string
     try {
@@ -196,7 +196,7 @@ bool Runtime::loadFromScene(const std::shared_ptr<Scene>& scene)
     }
 }
 
-bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scene>& scene)
+bool Runtime::load(const Path& path, const std::shared_ptr<Scene>& scene)
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;

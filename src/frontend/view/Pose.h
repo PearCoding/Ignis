@@ -22,8 +22,8 @@ public:
     inline CameraPose pose(size_t i) const { return mPoses[i % mPoses.size()]; }
     void setPose(size_t i, const CameraPose& pose);
 
-    void load(const std::filesystem::path& file);
-    void save(const std::filesystem::path& file) const;
+    void load(const Path& file);
+    void save(const Path& file) const;
 
     inline void setInitalPose(const CameraPose& pose) { mInitialPose = pose; }
     inline CameraPose initialPose() const { return mInitialPose; }

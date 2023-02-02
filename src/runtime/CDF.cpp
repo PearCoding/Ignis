@@ -8,7 +8,7 @@ IG_END_IGNORE_WARNINGS
 
 namespace IG {
 
-void CDF::computeForArray(const std::vector<float>& values, const std::filesystem::path& out)
+void CDF::computeForArray(const std::vector<float>& values, const Path& out)
 {
     constexpr float MinEps = 1e-5f;
 
@@ -39,7 +39,7 @@ void CDF::computeForArray(const std::vector<float>& values, const std::filesyste
     serializer.write(cdf, true);
 }
 
-void CDF::computeForImage(const Image& image, const std::filesystem::path& out,
+void CDF::computeForImage(const Image& image, const Path& out,
                           size_t& slice_conditional, size_t& slice_marginal,
                           bool premultiplySin, bool compensate)
 {
@@ -132,7 +132,7 @@ void CDF::computeForImage(const Image& image, const std::filesystem::path& out,
     serializer.write(conditional, true);
 }
 
-void CDF::computeForImageSAT(const Image& image, const std::filesystem::path& out,
+void CDF::computeForImageSAT(const Image& image, const Path& out,
                              size_t& size, size_t& slice, bool premultiplySin, bool compensate)
 {
     constexpr float MinEps = 1e-5f;

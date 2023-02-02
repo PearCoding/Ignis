@@ -9,7 +9,7 @@ IG_BEGIN_IGNORE_WARNINGS
 IG_END_IGNORE_WARNINGS
 
 namespace IG {
-bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t width, size_t height, float scale)
+bool saveImageRGB(const Path& path, const float* rgb, size_t width, size_t height, float scale)
 {
     Image img;
     img.width  = width;
@@ -36,7 +36,7 @@ bool saveImageRGB(const std::filesystem::path& path, const float* rgb, size_t wi
     return img.save(path);
 }
 
-bool saveImageRGBA(const std::filesystem::path& path, const float* rgb, size_t width, size_t height, float scale)
+bool saveImageRGBA(const Path& path, const float* rgb, size_t width, size_t height, float scale)
 {
     Image img;
     img.width  = width;
@@ -64,7 +64,7 @@ bool saveImageRGBA(const std::filesystem::path& path, const float* rgb, size_t w
     return img.save(path);
 }
 
-bool saveImageOutput(const std::filesystem::path& path, const Runtime& runtime, const CameraOrientation* currentOrientation)
+bool saveImageOutput(const Path& path, const Runtime& runtime, const CameraOrientation* currentOrientation)
 {
     const size_t width  = runtime.framebufferWidth();
     const size_t height = runtime.framebufferHeight();

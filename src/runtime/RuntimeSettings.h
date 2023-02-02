@@ -29,10 +29,10 @@ struct RuntimeOptions {
     std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
 
     bool AddExtraEnvLight           = false; // User option to add a constant environment light (just to see something)
-    std::filesystem::path ScriptDir = {};    // Path to a new script directory, replacing the internal standard library
+    Path ScriptDir = {};    // Path to a new script directory, replacing the internal standard library
 
     bool EnableCache               = true;
-    std::filesystem::path CacheDir = {};
+    Path CacheDir = {};
 
     size_t ShaderOptimizationLevel = 3;
 

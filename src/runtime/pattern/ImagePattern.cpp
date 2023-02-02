@@ -16,7 +16,7 @@ void ImagePattern::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    const std::filesystem::path filename = input.Tree.context().handlePath(mObject->property("filename").getString(), *mObject);
+    const Path filename = input.Tree.context().handlePath(mObject->property("filename").getString(), *mObject);
     const std::string filter_type        = mObject->property("filter_type").getString("bicubic");
     const Transformf transform           = mObject->property("transform").getTransform();
     const bool force_unpacked            = mObject->property("force_unpacked").getBool(false); // Force the use of unpacked (float) images
@@ -75,7 +75,7 @@ void ImagePattern::serialize(const SerializationInput& input) const
 
 std::pair<size_t, size_t> ImagePattern::computeResolution(ShadingTree& tree) const
 {
-    const std::filesystem::path filename = tree.context().handlePath(mObject->property("filename").getString(), *mObject);
+    const Path filename = tree.context().handlePath(mObject->property("filename").getString(), *mObject);
 
     try {
         const auto res = Image::loadResolution(filename);

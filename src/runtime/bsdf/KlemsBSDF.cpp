@@ -12,7 +12,7 @@ KlemsBSDF::KlemsBSDF(const std::string& name, const std::shared_ptr<SceneObject>
 {
 }
 
-using KlemsExportedData = std::pair<std::filesystem::path, KlemsSpecification>;
+using KlemsExportedData = std::pair<Path, KlemsSpecification>;
 static KlemsExportedData setup_klems(const std::string& name, const std::shared_ptr<SceneObject>& bsdf, LoaderContext& ctx)
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
@@ -23,7 +23,7 @@ static KlemsExportedData setup_klems(const std::string& name, const std::shared_
     if (data != ctx.Cache->ExportedData.end())
         return std::any_cast<KlemsExportedData>(data->second);
 
-    const std::filesystem::path path = ctx.CacheManager->directory() / ("klems_" + LoaderUtils::escapeIdentifier(name) + ".bin");
+    const Path path = ctx.CacheManager->directory() / ("klems_" + LoaderUtils::escapeIdentifier(name) + ".bin");
 
     KlemsSpecification spec{};
     if (!KlemsLoader::prepare(filename, path, spec))
@@ -65,7 +65,7 @@ void KlemsBSDF::serialize(const SerializationInput& input) const
 
     const auto data = setup_klems(name(), mBSDF, input.Tree.context());
 
-    const std::filesystem::path buffer_path = std::get<0>(data);
+    const Path buffer_path = std::get<0>(data);
     const KlemsSpecification spec           = std::get<1>(data);
 
     size_t res_id             = input.Tree.context().registerExternalResource(buffer_path);

@@ -154,7 +154,7 @@ Vector3f LoaderUtils::getDirection(const SceneObject& obj)
     return getEA(obj).toDirectionYUp();
 }
 
-LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::filesystem::path& filename, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate)
 {
     std::string name = filename.stem().generic_u8string();
     Image image      = Image::load(filename);
@@ -169,7 +169,7 @@ LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::s
         return std::any_cast<CDF2DData>(data->second);
 
     IG_LOG(L_DEBUG) << "Generating environment cdf for '" << name << "'" << std::endl;
-    const std::filesystem::path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
+    const Path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
 
     size_t slice_conditional = 0;
     size_t slice_marginal    = 0;
@@ -180,7 +180,7 @@ LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::s
     return cdf_data;
 }
 
-LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const std::filesystem::path& filename, bool premultiplySin, bool compensate)
+LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate)
 {
     std::string name = filename.stem().generic_u8string();
     Image image      = Image::load(filename);
@@ -195,7 +195,7 @@ LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const
         return std::any_cast<CDF2DSATData>(data->second);
 
     IG_LOG(L_DEBUG) << "Generating environment cdf (SAT) for '" << name << "'" << std::endl;
-    const std::filesystem::path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
+    const Path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
 
     size_t size  = 0;
     size_t slice = 0;

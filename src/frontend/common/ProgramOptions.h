@@ -75,15 +75,15 @@ public:
     bool DenoiserOnlyFirstIteration = false;
 
     bool NoCache = false;
-    std::filesystem::path CacheDir;
+    Path CacheDir;
 
     size_t ShaderOptimizationLevel = 3;
 
-    std::filesystem::path Output;
-    std::filesystem::path InputScene;
-    std::filesystem::path InputRay;
+    Path Output;
+    Path InputScene;
+    Path InputRay;
 
-    std::filesystem::path ScriptDir;
+    Path ScriptDir;
 
     ParameterSet UserEntries;
 

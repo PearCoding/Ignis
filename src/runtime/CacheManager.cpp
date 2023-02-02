@@ -11,7 +11,7 @@
 #include <rapidjson/prettywriter.h>
 
 namespace IG {
-CacheManager::CacheManager(const std::filesystem::path& cache_dir)
+CacheManager::CacheManager(const Path& cache_dir)
     : mEnabled(true)
     , mHashMap()
     , mCacheDir(cache_dir)
@@ -70,7 +70,7 @@ bool CacheManager::checkAndUpdate(const std::string& name, const std::string& ha
 
 CacheManager::HashMap CacheManager::load()
 {
-    const std::filesystem::path file = mCacheDir / "cache.json";
+    const Path file = mCacheDir / "cache.json";
     if (!std::filesystem::exists(file))
         return {}; // No cache file means nothing was cached yet
 
@@ -113,7 +113,7 @@ void CacheManager::save(const HashMap& map)
     if (map.empty())
         return; // Nothing to cache
 
-    const std::filesystem::path file = mCacheDir / "cache.json";
+    const Path file = mCacheDir / "cache.json";
     std::ofstream ofs(file.generic_u8string());
     if (!ofs.good()) {
         IG_LOG(L_ERROR) << "Could not open file '" << file << "'" << std::endl;

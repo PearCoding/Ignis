@@ -62,7 +62,7 @@ EXRAttribute makeIntAttribute(const std::string_view& name, int data)
     return attr;
 }
 
-bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t height,
+bool ImageIO::save(const Path& path, size_t width, size_t height,
                    const std::vector<const float*>& layer_ptrs, const std::vector<std::string>& layer_names,
                    const ImageMetaData& metaData)
 {

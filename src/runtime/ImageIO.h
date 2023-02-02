@@ -21,7 +21,7 @@ struct ImageMetaData {
 
 class IG_LIB ImageIO {
 public:
-    static bool save(const std::filesystem::path& path, size_t width, size_t height,
+    static bool save(const Path& path, size_t width, size_t height,
                      const std::vector<const float*>& layer_ptrs, const std::vector<std::string>& layer_names,
                      const ImageMetaData& metaData = ImageMetaData());
 };

@@ -140,7 +140,7 @@ private:
     bool mRootIsLeaf;
 };
 
-bool TensorTreeLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data, TensorTreeSpecification& spec)
+bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorTreeSpecification& spec)
 {
     // Read Radiance based klems BSDF xml document
     pugi::xml_document doc;

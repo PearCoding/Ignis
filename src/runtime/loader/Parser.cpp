@@ -20,12 +20,12 @@ namespace IG {
 using Arguments = std::unordered_map<std::string, std::string>;
 
 // ------------- File IO
-static inline bool doesFileExist(const std::filesystem::path& fileName)
+static inline bool doesFileExist(const Path& fileName)
 {
     return std::ifstream(fileName.generic_u8string()).good();
 }
 
-static inline std::filesystem::path resolvePath(const std::filesystem::path& path, const std::filesystem::path& baseDir)
+static inline Path resolvePath(const Path& path, const Path& baseDir)
 {
     if (doesFileExist(baseDir / path))
         return baseDir / path;
@@ -333,7 +333,7 @@ inline static void populateObject(std::shared_ptr<SceneObject>& ptr, const rapid
     }
 }
 
-static std::shared_ptr<SceneObject> handleAnonymousObject(Scene& scene, SceneObject::Type type, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
+static std::shared_ptr<SceneObject> handleAnonymousObject(Scene& scene, SceneObject::Type type, const Path& baseDir, const rapidjson::Value& obj)
 {
     IG_UNUSED(scene);
 
@@ -347,7 +347,7 @@ static std::shared_ptr<SceneObject> handleAnonymousObject(Scene& scene, SceneObj
     return ptr;
 }
 
-static void handleNamedObject(Scene& scene, SceneObject::Type type, const std::filesystem::path& baseDir, const rapidjson::Value& obj)
+static void handleNamedObject(Scene& scene, SceneObject::Type type, const Path& baseDir, const rapidjson::Value& obj)
 {
     if (obj.HasMember("type") && !obj["type"].IsString())
         throw std::runtime_error("Expected type to be a string");
@@ -392,7 +392,7 @@ static void handleNamedObject(Scene& scene, SceneObject::Type type, const std::f
     }
 }
 
-static void handleExternalObject(SceneParser& loader, Scene& scene, const std::filesystem::path& baseDir, const rapidjson::Value& obj, uint32 flags)
+static void handleExternalObject(SceneParser& loader, Scene& scene, const Path& baseDir, const rapidjson::Value& obj, uint32 flags)
 {
     if (obj.HasMember("type") && !obj["type"].IsString())
         throw std::runtime_error("Expected type to be a string");
@@ -402,7 +402,7 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
 
     std::string pluginType           = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "";
     const std::string inc_path       = getString(obj["filename"]);
-    const std::filesystem::path path = std::filesystem::canonical(resolvePath(inc_path, baseDir));
+    const Path path = std::filesystem::canonical(resolvePath(inc_path, baseDir));
     if (path.empty())
         throw std::runtime_error("Could not find path '" + inc_path + "'");
 
@@ -440,7 +440,7 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const std::f
 #define _CHECK_FLAG(x) ((flags & x) == x)
 class InternalSceneParser {
 public:
-    static std::shared_ptr<Scene> loadFromJSON(SceneParser& loader, const std::filesystem::path& baseDir, const rapidjson::Document& doc, uint32 flags)
+    static std::shared_ptr<Scene> loadFromJSON(SceneParser& loader, const Path& baseDir, const rapidjson::Document& doc, uint32 flags)
     {
         if (!doc.IsObject())
             throw std::runtime_error("Expected root element to be an object");
@@ -545,7 +545,7 @@ public:
 
 constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag | rapidjson::kParseEscapedApostropheFlag;
 
-std::shared_ptr<Scene> SceneParser::loadFromFile(const std::filesystem::path& path, uint32 flags)
+std::shared_ptr<Scene> SceneParser::loadFromFile(const Path& path, uint32 flags)
 {
     if (path.extension() == ".gltf" || path.extension() == ".glb") {
         // Load gltf directly
@@ -578,11 +578,11 @@ std::shared_ptr<Scene> SceneParser::loadFromFile(const std::filesystem::path& pa
         return nullptr;
     }
 
-    const std::filesystem::path parent = path.has_parent_path() ? std::filesystem::canonical(path.parent_path()) : std::filesystem::path{};
+    const Path parent = path.has_parent_path() ? std::filesystem::canonical(path.parent_path()) : Path{};
     return InternalSceneParser::loadFromJSON(*this, parent, doc, flags);
 }
 
-std::shared_ptr<Scene> SceneParser::loadFromString(const std::string& str, const std::filesystem::path& opt_dir, uint32 flags)
+std::shared_ptr<Scene> SceneParser::loadFromString(const std::string& str, const Path& opt_dir, uint32 flags)
 {
     rapidjson::Document doc;
     if (doc.Parse<JsonFlags>(str.c_str()).HasParseError()) {

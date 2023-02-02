@@ -33,7 +33,7 @@ LoaderContext LoaderContext::copyForBake() const
     return ctx;
 }
 
-std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const SceneObject& obj) const
+Path LoaderContext::handlePath(const Path& path, const SceneObject& obj) const
 {
     if (path.is_absolute())
         return path;

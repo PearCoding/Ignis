@@ -332,7 +332,7 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
     }
 }
 
-bool Image::isPacked(const std::filesystem::path& path)
+bool Image::isPacked(const Path& path)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -341,7 +341,7 @@ bool Image::isPacked(const std::filesystem::path& path)
     return !useExr && !useHdr;
 }
 
-size_t Image::extractChannelCount(const std::filesystem::path& path)
+size_t Image::extractChannelCount(const Path& path)
 {
     int width = 0, height = 0, channels = 0;
     stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
@@ -372,7 +372,7 @@ static inline int getIntAttribute(const EXRAttribute& attr)
     return *reinterpret_cast<const int*>(attr.value);
 }
 
-Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
+Image Image::load(const Path& path, ImageMetaData* metaData)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -562,7 +562,7 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
     return img;
 }
 
-void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
+void Image::loadAsPacked(const Path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -654,7 +654,7 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
     stbi_image_free(data);
 }
 
-Image::Resolution Image::loadResolution(const std::filesystem::path& path)
+Image::Resolution Image::loadResolution(const Path& path)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -694,12 +694,12 @@ Image::Resolution Image::loadResolution(const std::filesystem::path& path)
     }
 }
 
-bool Image::save(const std::filesystem::path& path)
+bool Image::save(const Path& path)
 {
     return save(path, pixels.get(), width, height, channels);
 }
 
-bool Image::save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
+bool Image::save(const Path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
 {
     std::string ext = path.extension().generic_u8string();
     bool useExr     = string_ends_with(ext, ".exr");

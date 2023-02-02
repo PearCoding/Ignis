@@ -27,7 +27,7 @@ T swap_endian(T u)
 }
 
 namespace ply {
-static std::vector<uint32_t> triangulatePly(const std::filesystem::path& path,
+static std::vector<uint32_t> triangulatePly(const Path& path,
                                             const std::vector<Vector3f>& vertices, const std::vector<uint32_t>& glb_indices,
                                             bool& warned)
 {
@@ -88,7 +88,7 @@ struct Header {
     [[nodiscard]] inline bool hasIndices() const { return IndElem >= 0; }
 };
 
-static TriMesh read(const std::filesystem::path& path, std::istream& stream, const Header& header, bool ascii)
+static TriMesh read(const Path& path, std::istream& stream, const Header& header, bool ascii)
 {
     const auto readFloat = [&]() {
         float val = 0;
@@ -260,7 +260,7 @@ static inline bool isAllowedVertIndType(const std::string& str)
            || str == "uint";
 }
 
-TriMesh load(const std::filesystem::path& path)
+TriMesh load(const Path& path)
 {
     std::fstream stream(path, std::ios::in | std::ios::binary);
     if (!stream) {
@@ -381,7 +381,7 @@ TriMesh load(const std::filesystem::path& path)
     return tri_mesh;
 }
 
-bool save(const TriMesh& mesh, const std::filesystem::path& path)
+bool save(const TriMesh& mesh, const Path& path)
 {
     if (mesh.vertices.empty() || mesh.faceCount() == 0)
         return false;
