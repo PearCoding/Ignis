@@ -24,9 +24,9 @@ fn @sample_tea_u32(mut v0: u32, mut v1: u32) -> u32 {
 }
 
 struct RandomGenerator {
-    next_f32: fn ()         -> f32,
-    next_i32: fn (i32, i32) -> i32,
-    next_u32: fn (u32, u32) -> u32,
+    next_f32: fn ()         -> f32, // Return random float between [s, e) (end not included!)
+    next_i32: fn (i32, i32) -> i32, // Return random integer between [s, e] (end is included!)
+    next_u32: fn (u32, u32) -> u32, // Return random unsigned integer between [s, e] (end is included!)
     next_raw_u32: fn ()     -> u32,
     get_counter:  fn ()     -> u32
 }
@@ -42,24 +42,42 @@ fn @create_random_seed(sample: i32, iter: i32, frame: i32, x: i32, y: i32, user:
     hash
 }
 
-fn @create_random_generator_base(next_u32: fn() -> u32, get_counter: fn() -> u32) = RandomGenerator {
-    next_f32 = @|| {
-        // This trick is borrowed from Alex, who borrowed it from Mitsuba, which borrowed it from MTGP:
-        // We generate a random number in [1,2) and subtract 1 from it.
-        let x = next_u32();
-        bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
-    },
-    next_i32 = @|s, e| {
-        let x = (next_u32() & 0x7FFFFFFF) as i32;
-        (x % (e - s)) + s
-    },
-    next_u32 = @|s, e| {
-        let x = next_u32();
-        (x % (e - s)) + s
-    },
-    next_raw_u32 = next_u32,
-    get_counter  = get_counter
-};
+fn @create_random_generator_base(next_u32: fn() -> u32, get_counter: fn() -> u32) -> RandomGenerator {
+    fn @next_u32_range(range: u32) {
+        let rng_range = 0xFFFFFFFF:u32;        
+        if rng_range == range {
+            next_u32()
+        } else {
+            let erange  = range + 1;
+            let scaling = rng_range / erange;
+            let past    = erange * scaling;
+            
+            let mut ret = next_u32();
+            while ret >= past {
+                ret = next_u32();
+            }
+        
+            ret / scaling
+        }
+    }
+
+    RandomGenerator {
+        next_f32 = @|| {
+            // This trick is borrowed from Alex, who borrowed it from Mitsuba, which borrowed it from MTGP:
+            // We generate a random number in [1,2) and subtract 1 from it.
+            let x = next_u32();
+            bitcast[f32]((x & 0x7FFFFF) | 0x3F800000) - 1
+        },
+        next_i32 = @|s, e| {
+            next_u32_range((e-s) as u32) as i32 + s
+        },
+        next_u32 = @|s, e| {
+            next_u32_range(e-s) + s
+        },
+        next_raw_u32 = next_u32,
+        get_counter  = get_counter
+    }
+}
 
 fn @create_random_generator(seed: u32) = create_random_generator_live(seed, 1);
 

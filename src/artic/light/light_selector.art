@@ -19,7 +19,7 @@ fn @pick_light_id(rnd: RandomGenerator, num_lights: i32) {
     if ?num_lights && num_lights <= 1 {
         0
     } else {
-        rnd.next_i32(0, num_lights)
+        rnd.next_i32(0, num_lights-1)
     }
 }
 
