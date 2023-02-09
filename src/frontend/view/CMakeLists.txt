@@ -1,14 +1,14 @@
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
-    GIT_TAG master
+    GIT_TAG v1.89.2
     DOWNLOAD_ONLY YES
 )
 
 CPMAddPackage(
     NAME implot
     GITHUB_REPOSITORY epezent/implot
-    GIT_TAG master
+    GIT_TAG v0.14
     DOWNLOAD_ONLY YES
 )
 
