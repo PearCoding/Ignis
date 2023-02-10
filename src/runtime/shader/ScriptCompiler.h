@@ -2,6 +2,8 @@
 
 #include "IG_Config.h"
 
+#include <mutex>
+
 namespace IG {
 class IG_LIB ScriptCompiler {
 public:
@@ -20,7 +22,9 @@ public:
 
 private:
     std::string mStdLibOverride;
-    size_t mOptimizationLevel; 
+    size_t mOptimizationLevel;
     bool mVerbose;
+
+    mutable std::mutex mCompileMutex;
 };
 } // namespace IG

@@ -24,6 +24,9 @@ ScriptCompiler::~ScriptCompiler()
 
 void* ScriptCompiler::compile(const std::string& script, const std::string& function) const
 {
+    // AnyDSL has no support for multi-threaded compile process :/
+    std::lock_guard<std::mutex> _guard(mCompileMutex);
+
     static bool once = false;
     if (!once) {
         const auto module_path = RuntimeInfo::modulePath();
