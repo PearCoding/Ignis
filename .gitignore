@@ -45,6 +45,7 @@ __pycache__/
 out/
 data/
 ignis_cache*/
+_ignis_cache*/
 
 # Plugin output
 ignis_blender.zip
