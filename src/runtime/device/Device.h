@@ -52,6 +52,8 @@ public:
     void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, const ParameterSet* parameter_set);
     void resize(size_t width, size_t height);
 
+    void releaseAll();
+
     AOVAccessor getFramebuffer(const std::string& name);
     void clearFramebuffer(const std::string& name);
     void clearAllFramebuffer();

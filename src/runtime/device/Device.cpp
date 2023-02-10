@@ -807,10 +807,8 @@ public:
         size = (int32_t)roundUp(size, 32);
 
         auto& buffers = devices[dev].buffers;
-        auto it       = buffers.find(name);
-        if (it != buffers.end() && it->second.Data.size() >= (int64_t)size) {
+        if (auto it = buffers.find(name); it != buffers.end() && it->second.Data.size() >= (int64_t)size)
             return it->second;
-        }
 
         _SECTION(SectionType::BufferRequests);
 
@@ -825,13 +823,24 @@ public:
         return buffers[name] = DeviceBuffer{ anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(ptr), size), 1 };
     }
 
+    inline void releaseBuffer(int32_t dev, const std::string& name)
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
+        auto& buffers = devices[dev].buffers;
+
+        if (auto it = buffers.find(name); it != buffers.end()) {
+            _SECTION(SectionType::BufferReleases);
+            buffers.erase(it);
+        }
+    }
+
     inline void dumpBuffer(int32_t dev, const std::string& name, const std::string& filename)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
         auto& buffers = devices[dev].buffers;
-        auto it       = buffers.find(name);
-        if (it != buffers.end()) {
+        if (auto it = buffers.find(name); it != buffers.end()) {
             const size_t size = (size_t)it->second.Data.size();
 
             // Copy data to host
@@ -922,6 +931,13 @@ public:
             if (dev.second.buffers.count("__dbg_output"))
                 dumpDebugBuffer(dev.first, dev.second.buffers["__dbg_output"]);
         }
+    }
+
+    /// @brief Will release almost all device specific data
+    inline void releaseAll()
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+        std::unordered_map<int32_t, DeviceData>().swap(devices);
     }
 
     // -------------------------------------------------------- Shader
@@ -1530,6 +1546,11 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
 void Device::resize(size_t width, size_t height)
 {
     sInterface->resizeFramebuffer(width, height);
+}
+
+void Device::releaseAll()
+{
+    sInterface->releaseAll();
 }
 
 Device::AOVAccessor Device::getFramebuffer(const std::string& name)

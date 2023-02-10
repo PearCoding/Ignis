@@ -28,6 +28,7 @@ enum class SectionType {
     PackedImageLoading,
     BufferLoading,
     BufferRequests,
+    BufferReleases,
     FramebufferUpdate,
     AOVUpdate,
     TonemapUpdate,

@@ -262,9 +262,8 @@ bool Runtime::load(const Path& path, const std::shared_ptr<Scene>& scene)
     // Setup array of number of entities per material
     mEntityPerMaterial.clear();
     mEntityPerMaterial.reserve(ctx->Materials.size());
-    for (const auto& mat : ctx->Materials) {
+    for (const auto& mat : ctx->Materials)
         mEntityPerMaterial.emplace_back((int)mat.Count);
-    }
 
     // Merge global registry
     mGlobalRegistry.mergeFrom(ctx->GlobalRegistry);
@@ -517,6 +516,7 @@ bool Runtime::setupScene()
         }
     }
 
+    mDevice->releaseAll(); // Release all temporary stuff allocated while loading
     clearFramebuffer();
     return true;
 }
