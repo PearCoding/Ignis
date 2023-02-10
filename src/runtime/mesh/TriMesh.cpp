@@ -320,6 +320,34 @@ static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices, const 
     return edges;
 }
 
+static std::array<uint32, 6> subdivideQuadToTriangle(uint32 q0, const Vector3f& v0,
+                                                     uint32 q1, const Vector3f& v1,
+                                                     uint32 q2, const Vector3f& v2,
+                                                     uint32 q3, const Vector3f& v3)
+{
+    // TODO: Would be nice to get rid of the normalization
+    const Vector3f e01 = (v1 - v0).normalized();
+    const Vector3f e12 = (v2 - v1).normalized();
+    const Vector3f e23 = (v3 - v2).normalized();
+    const Vector3f e30 = (v0 - v3).normalized();
+
+    const float cosA = std::abs(e01.dot(e30));
+    const float cosB = std::abs(e01.dot(e12));
+    const float cosC = std::abs(e12.dot(e23));
+    const float cosD = std::abs(e23.dot(e30));
+
+    // Configuration 1
+    const float c1 = cosA + cosC;
+    // Configuration 2
+    const float c2 = cosB + cosD;
+
+    // Split the larger sum angle (which is the smaller cosine)
+    if (c1 < c2)
+        return { q0, q1, q2, q0, q2, q3 };
+    else
+        return { q0, q1, q3, q1, q2, q3 };
+}
+
 void TriMesh::subdivide(const std::vector<bool>* mask)
 {
     const bool hasMask = mask && mask->size() == faceCount();
@@ -350,7 +378,6 @@ void TriMesh::subdivide(const std::vector<bool>* mask)
 
     // Setup indices
     std::vector<uint32> newIndices;
-    newIndices.reserve(previousTriangleCount * 4 * 4); // For new triangles for each triangle, which is given as a pack of 4 uints
     const auto addNewIndices = [&](size_t t) {
         const uint32 v0  = indices[t * 4 + 0];
         const uint32 v1  = indices[t * 4 + 1];
@@ -366,6 +393,10 @@ void TriMesh::subdivide(const std::vector<bool>* mask)
     };
 
     if (hasMask) {
+        constexpr float InvGoldenRatio = 0.6180339887f;
+        // Previous triangles plus a triangle for each split and a reserve of some triangles for dangling cases
+        const size_t expectedTriangles = std::min(previousTriangleCount * 4, previousTriangleCount + edges.size() + static_cast<size_t>(edges.size() * InvGoldenRatio));
+        newIndices.reserve(expectedTriangles * 4);
         for (size_t t = 0; t < previousTriangleCount; ++t) {
             if (mask->at(t)) {
                 addNewIndices(t);
@@ -404,21 +435,24 @@ void TriMesh::subdivide(const std::vector<bool>* mask)
                                                           v1, v2, e20, 0 });
                     break;
                     // Two neighbors are subdivided, we have to get creative
-                case 0x3: // e01, e12
+                case 0x3: { // e01, e12
+                    const auto res = subdivideQuadToTriangle(v0, vertices[v0], e01, vertices[e01], e12, vertices[e12], v2, vertices[v2]);
                     newIndices.insert(newIndices.end(), { v0, e01, v2, 0,
-                                                          v1, e12, e01, 0,
-                                                          v2, e01, e12, 0 });
-                    break;
-                case 0x5: // e01, e20
+                                                          res[0], res[1], res[2], 0,
+                                                          res[3], res[4], res[5], 0 });
+                } break;
+                case 0x5: { // e01, e20
+                    const auto res = subdivideQuadToTriangle(e01, vertices[e01], v1, vertices[v1], v2, vertices[v2], e20, vertices[e20]);
                     newIndices.insert(newIndices.end(), { v0, e01, e20, 0,
-                                                          v1, e20, e01, 0,
-                                                          v2, e20, v1, 0 });
-                    break;
-                case 0x6: // e12, e20
+                                                          res[0], res[1], res[2], 0,
+                                                          res[3], res[4], res[5], 0 });
+                } break;
+                case 0x6: { // e12, e20
+                    const auto res = subdivideQuadToTriangle(v0, vertices[v0], v1, vertices[v1], e12, vertices[e12], e20, vertices[e20]);
                     newIndices.insert(newIndices.end(), { v0, v1, e20, 0,
-                                                          v1, e12, e20, 0,
-                                                          v2, e20, e12, 0 });
-                    break;
+                                                          res[0], res[1], res[2], 0,
+                                                          res[3], res[4], res[5], 0 });
+                } break;
                     // All neighbors are subdivided, so just subdivide this one as well
                 case 0x7: // e01, e12, e20
                     newIndices.insert(newIndices.end(), { v0, e01, e20, 0,
@@ -430,6 +464,7 @@ void TriMesh::subdivide(const std::vector<bool>* mask)
             }
         }
     } else {
+        newIndices.reserve(previousTriangleCount * 4 * 4); // Each triangle splits into four triangles, which each is given as a pack of 4 uints
         for (size_t t = 0; t < previousTriangleCount; ++t)
             addNewIndices(t);
     }
