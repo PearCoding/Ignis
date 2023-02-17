@@ -29,6 +29,13 @@
 			"color1": [1,1,1]
 		}
 	],
+	"parameters": [
+		{ "type": "number", "name": "scale_point", "value": 10 },
+		{ "type": "color", "name": "color_point", "value": [0.7, 0.4, 0.1] },
+		{ "type": "number", "name": "scale_spot", "value": 10 },
+		{ "type": "color", "name": "color_spot", "value": [0.1, 0.4, 0.7] },
+		{ "type": "number", "name": "cutoff_spot", "value": 0.3 }
+	],
 	"bsdfs": [
 		{"type":"diffuse", "name": "mat-Ground", "reflectance":"check"},
 		{"type":"conductor", "name": "mat-Inner", "reflectance":[1,1,1], "roughness":0.16},
@@ -43,7 +50,7 @@
 		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.5,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
 	],
 	"lights": [
-		{"type":"point", "name":"Point", "intensity": [7, 4, 1], "position": [1, 0.75, 0]},
-		{"type":"spot", "name":"Spot", "intensity": [1, 4, 7], "position": [-1, 0.75, 0], "direction": [1, -1, 0]}
+		{"type":"point", "name":"Point", "intensity": "scale_point * color_point", "position": [1, 0.75, 0]},
+		{"type":"spot", "name":"Spot", "intensity": "scale_spot * color_spot", "cutoff": "cutoff_spot * 90", "falloff": "cutoff_spot * 85", "position": [-1, 0.75, 0], "direction": [1, -1, 0]}
 	]
 }

@@ -40,7 +40,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
-set(Ignis_VENDOR "Ignis project 2020-2022")
+set(Ignis_VENDOR "Ignis project 2020-2023")
 set(Ignis_DESCRIPTION "Device agnostic raytracing framework with shared codebase for offline and realtime rendering and for CPU and GPU")
 set(Ignis_URL "https://github.com/PearCoding/Ignis")
 include(Git)
