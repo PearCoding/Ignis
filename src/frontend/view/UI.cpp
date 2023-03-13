@@ -10,7 +10,7 @@
 #include "implot.h"
 
 #if SDL_VERSION_ATLEAST(2, 0, 17)
-#include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_sdl2.h"
 #include "backends/imgui_impl_sdlrenderer.h"
 #else
 #define USE_OLD_SDL
