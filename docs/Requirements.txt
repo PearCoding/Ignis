@@ -4,4 +4,5 @@ sphinx-design
 sphinx_copybutton
 sphinx-last-updated-by-git
 pandoc
+ipython
 nbsphinx
