@@ -41,7 +41,8 @@ language = "en"
 sys.path.append(os.path.abspath('exts'))
 extensions = ['objectparameters', 'subfig', 'pythonfunc',
               'sphinx_design', 'sphinx_copybutton',
-              'sphinx_last_updated_by_git']
+              'sphinx_last_updated_by_git',
+              'nbsphinx']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

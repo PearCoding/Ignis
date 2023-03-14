@@ -281,7 +281,11 @@ Properties
 
 - :pythonfunc:`SPI`: The requested sample per iteration. Can be 0 to set automatically
 
+- :pythonfunc:`Seed`: Seed for the random generators
+
 - :pythonfunc:`Target`: The target device
+
+- :pythonfunc:`WarnUnused`: Set False if you want to ignore warnings about unused property entries
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -383,6 +387,14 @@ Methods
   
 
 - :pythonfunc:`light(self: {Scene}, arg0: str) -> {SceneObject}`
+
+  
+
+- :pythonfunc:`loadFromFile(path: str, flags: int = 13303) -> {Scene}`
+
+  
+
+- :pythonfunc:`loadFromString(str: str, opt_dir: str = '', flags: int = 13303) -> {Scene}`
 
   
 

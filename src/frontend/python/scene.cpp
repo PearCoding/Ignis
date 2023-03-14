@@ -105,7 +105,17 @@ void scene_module(py::module_& m)
         .def("entity", &Scene::entity)
         .def_property_readonly("entities", &Scene::entities)
         .def("addConstantEnvLight", &Scene::addConstantEnvLight)
-        .def("addFrom", &Scene::addFrom);
+        .def("addFrom", &Scene::addFrom)
+        .def_static(
+            "loadFromFile", [](const std::string& path, uint32 flags) {
+                return SceneParser().loadFromFile(path, flags);
+            },
+            py::arg("path"), py::arg("flags") = (uint32)SceneParser::F_LoadAll)
+        .def_static(
+            "loadFromString", [](const std::string& str, const std::string& dir, uint32 flags) {
+                return SceneParser().loadFromString(str, dir, flags);
+            },
+            py::arg("str"), py::arg("opt_dir") = "", py::arg("flags") = (uint32)SceneParser::F_LoadAll);
 
     auto parser = py::class_<SceneParser>(m, "SceneParser", "Parser for standard JSON and glTF scene description")
                       .def(py::init<>())
