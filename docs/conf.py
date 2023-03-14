@@ -159,3 +159,9 @@ latex_domain_indices = False
 # We use javascript instead of json as it is more powerful
 primary_domain = None
 highlight_language = 'javascript'
+
+# Notebook stuff
+nbsphinx_execute = 'never'
+nbsphinx_codecell_lexer = 'python'
+nbsphinx_input_prompt = 'In:' # Hide execution count as it is completely irrelevant in most cases
+nbsphinx_output_prompt = 'Out:'
