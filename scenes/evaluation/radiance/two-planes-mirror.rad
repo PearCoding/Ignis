@@ -1,0 +1,29 @@
+void mirror back_bsdf
+0
+0
+3 1 1 1
+
+void plastic bottom_bsdf
+0
+0
+5 0.8 0.8 0.8 0 1
+
+back_bsdf mesh back
+1 back.rtm
+0
+0
+
+bottom_bsdf mesh bottom
+1 bottom.rtm
+0
+0
+
+void light point_light
+0
+0
+3 10000 10000 10000
+
+point_light sphere fixture
+0
+0
+4 0.5 0.25 1.0 0.01
