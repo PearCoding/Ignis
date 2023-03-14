@@ -8,7 +8,7 @@
 # `oconv`, `rpict`, `rtrace` and `vwrays` (all Radiance tools) have to be available in the current scope
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
-source $SCRIPT_DIR/../source.sh
+source $SCRIPT_DIR/../source.sh -- 
 
 # We do not cache temporary files
 TMP_OCT=$(mktemp).oct

@@ -2,6 +2,8 @@ import bpy
 import os
 import json
 
+from collections import namedtuple
+
 import numpy as np
 
 from . import exporter, addon_preferences, api
@@ -10,7 +12,7 @@ from . import exporter, addon_preferences, api
 class IgnisRender(bpy.types.RenderEngine):
     bl_idname = 'IGNIS_RENDER'
     bl_label = "Ignis"
-    #bl_use_preview = True
+    # bl_use_preview = True
     bl_use_exclude_layers = True
     bl_use_eevee_viewport = True
     bl_use_shading_nodes_custom = False
@@ -57,7 +59,10 @@ class IgnisRender(bpy.types.RenderEngine):
 
         self.update_stats("", "Ignis: Exporting data")
         exported_scene = exporter.export_scene(
-            sceneFile, depsgraph, False, True, True, True, True, True, False)
+            sceneFile, depsgraph,
+            settings=namedtuple("Settings",
+                                ["export_materials", "use_selection", "export_lights", "enable_background", "enable_camera", "enable_technique", "triangulate_shapes", "copy_images"])(False, True, True, True, True, True, True, False)
+        )
 
         if exported_scene is None:
             return
@@ -117,10 +122,8 @@ class IgnisRender(bpy.types.RenderEngine):
         self.update_stats("", "")
 
 
-
 def register():
     bpy.utils.register_class(IgnisRender)
-
 
 
 def unregister():

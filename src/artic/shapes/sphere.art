@@ -19,11 +19,11 @@ struct Sphere {
 
 // Compute (approximative) area of an ellipsoid created by mapping a sphere into a new coordinate system
 fn @compute_ellipsoid_area(sphere: Sphere, pmset: PointMapperSet) {
-    let l1 = vec3_len(pmset.to_global_direction(make_vec3(1, 0, 0)));
-    let l2 = vec3_len(pmset.to_global_direction(make_vec3(0, 1, 0)));
-    let l3 = vec3_len(pmset.to_global_direction(make_vec3(0, 0, 1)));
+    let l1 = vec3_len(pmset.to_global_direction(make_vec3(sphere.radius, 0, 0)));
+    let l2 = vec3_len(pmset.to_global_direction(make_vec3(0, sphere.radius, 0)));
+    let l3 = vec3_len(pmset.to_global_direction(make_vec3(0, 0, sphere.radius)));
     let P  = 1.6:f32;
-    4 * flt_pi * sphere.radius * math_builtins::pow((math_builtins::pow(l1*l2, P) + math_builtins::pow(l1*l3, P) + math_builtins::pow(l2*l3, P))/3, 1/P)
+    4 * flt_pi * math_builtins::pow((math_builtins::pow(l1*l2, P) + math_builtins::pow(l1*l3, P) + math_builtins::pow(l2*l3, P))/3, 1/P)
 }
 
 fn @sphere_compute_surface_element_for_normal(normal: Vec3, sphere: Sphere, pmset: PointMapperSet) {
