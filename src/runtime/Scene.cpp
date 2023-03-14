@@ -43,9 +43,9 @@ static void warnUnused(const std::string& prefix, const SceneObject& obj)
         return;
 
     auto& stream = IG_LOG(L_WARNING);
-    stream << prefix << " has";
+    stream << prefix << " has ";
     if (unusedCount == 1)
-        stream << " one unused property: [";
+        stream << "one unused property: [";
     else
         stream << unusedCount << " unused properties: [";
 
