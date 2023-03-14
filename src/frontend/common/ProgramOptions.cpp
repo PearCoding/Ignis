@@ -124,6 +124,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         "-v,--verbose", [&]() { VerbosityLevel = L_DEBUG; }, "Set the verbosity level to 'debug'. Shortcut for --log-level debug");
 
     app.add_option("--log-level", VerbosityLevel, "Set the verbosity level")->transform(MyTransformer(LogLevelMap, CLI::ignore_case));
+    app.add_flag("--no-unused", NoUnused, "Do not warn about unused properties");
 
     app.add_flag("--no-color", NoColor, "Do not use decorations to make console output better");
 
@@ -413,6 +414,8 @@ void ProgramOptions::populate(RuntimeOptions& options) const
 
     options.ScriptDir               = ScriptDir;
     options.ShaderOptimizationLevel = std::min<size_t>(3, ShaderOptimizationLevel);
+
+    options.WarnUnused = !NoUnused;
 
     // Check for power of two and round up if not the case
     uint64_t vectorWidth = options.Target.vectorWidth();

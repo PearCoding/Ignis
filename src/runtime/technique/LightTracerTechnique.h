@@ -5,7 +5,7 @@
 namespace IG {
 class LightTracerTechnique : public Technique {
 public:
-    LightTracerTechnique(const SceneObject& obj);
+    LightTracerTechnique(SceneObject& obj);
     ~LightTracerTechnique() = default;
 
     bool hasDenoiserSupport() const override { return true; }

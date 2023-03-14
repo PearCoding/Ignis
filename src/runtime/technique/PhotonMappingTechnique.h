@@ -5,7 +5,7 @@
 namespace IG {
 class PhotonMappingTechnique : public Technique {
 public:
-    PhotonMappingTechnique(const SceneObject& obj);
+    PhotonMappingTechnique(SceneObject& obj);
     ~PhotonMappingTechnique() = default;
 
     bool hasDenoiserSupport() const override { return true; }

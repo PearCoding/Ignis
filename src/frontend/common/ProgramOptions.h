@@ -28,6 +28,7 @@ public:
     bool Quiet              = false;
     LogLevel VerbosityLevel = L_INFO;
 
+    bool NoUnused   = false;
     bool NoColor    = false;
     bool NoProgress = false;
 

@@ -5,7 +5,7 @@
 namespace IG {
 class PathTechnique : public Technique {
 public:
-    PathTechnique(const SceneObject& obj);
+    PathTechnique(SceneObject& obj);
     ~PathTechnique() = default;
 
     bool hasDenoiserSupport() const override { return true; }

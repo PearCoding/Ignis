@@ -4,7 +4,7 @@
 #include "loader/Parser.h"
 
 namespace IG {
-FishLensCamera::FishLensCamera(const SceneObject& camera)
+FishLensCamera::FishLensCamera(SceneObject& camera)
     : Camera("fishlens")
     , mMode(Mode::Circular)
 {

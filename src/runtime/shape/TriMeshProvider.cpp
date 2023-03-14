@@ -16,7 +16,7 @@
 
 namespace IG {
 
-inline TriMesh setup_mesh_triangle(const SceneObject& elem)
+inline TriMesh setup_mesh_triangle(SceneObject& elem)
 {
     const Vector3f p0 = elem.property("p0").getVector3(Vector3f(0, 0, 0));
     const Vector3f p1 = elem.property("p1").getVector3(Vector3f(1, 0, 0));
@@ -24,7 +24,7 @@ inline TriMesh setup_mesh_triangle(const SceneObject& elem)
     return TriMesh::MakeTriangle(p0, p1, p2);
 }
 
-inline TriMesh setup_mesh_rectangle(const SceneObject& elem)
+inline TriMesh setup_mesh_rectangle(SceneObject& elem)
 {
     if (elem.properties().count("p0") == 0) {
         const float width     = elem.property("width").getNumber(2.0f);
@@ -40,7 +40,7 @@ inline TriMesh setup_mesh_rectangle(const SceneObject& elem)
     }
 }
 
-inline TriMesh setup_mesh_cube(const SceneObject& elem)
+inline TriMesh setup_mesh_cube(SceneObject& elem)
 {
     const float width     = elem.property("width").getNumber(2.0f);
     const float height    = elem.property("height").getNumber(2.0f);
@@ -49,7 +49,7 @@ inline TriMesh setup_mesh_cube(const SceneObject& elem)
     return TriMesh::MakeBox(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height, Vector3f::UnitZ() * depth);
 }
 
-inline TriMesh setup_mesh_ico_sphere(const SceneObject& elem)
+inline TriMesh setup_mesh_ico_sphere(SceneObject& elem)
 {
     const Vector3f center     = elem.property("center").getVector3();
     const float radius        = elem.property("radius").getNumber(1.0f);
@@ -57,7 +57,7 @@ inline TriMesh setup_mesh_ico_sphere(const SceneObject& elem)
     return TriMesh::MakeIcoSphere(center, radius, subdivisions);
 }
 
-inline TriMesh setup_mesh_uv_sphere(const SceneObject& elem)
+inline TriMesh setup_mesh_uv_sphere(SceneObject& elem)
 {
     const Vector3f center = elem.property("center").getVector3();
     const float radius    = elem.property("radius").getNumber(1.0f);
@@ -66,7 +66,7 @@ inline TriMesh setup_mesh_uv_sphere(const SceneObject& elem)
     return TriMesh::MakeUVSphere(center, radius, stacks, slices);
 }
 
-inline TriMesh setup_mesh_cylinder(const SceneObject& elem)
+inline TriMesh setup_mesh_cylinder(SceneObject& elem)
 {
     const Vector3f baseCenter = elem.property("p0").getVector3();
     const Vector3f tipCenter  = elem.property("p1").getVector3(Vector3f(0, 0, 1));
@@ -85,7 +85,7 @@ inline TriMesh setup_mesh_cylinder(const SceneObject& elem)
     return TriMesh::MakeCylinder(baseCenter, baseRadius, tipCenter, tipRadius, sections, filled);
 }
 
-inline TriMesh setup_mesh_cone(const SceneObject& elem)
+inline TriMesh setup_mesh_cone(SceneObject& elem)
 {
     const Vector3f baseCenter = elem.property("p0").getVector3();
     const Vector3f tipCenter  = elem.property("p1").getVector3(Vector3f(0, 0, 1));
@@ -95,7 +95,7 @@ inline TriMesh setup_mesh_cone(const SceneObject& elem)
     return TriMesh::MakeCone(baseCenter, radius, tipCenter, sections, filled);
 }
 
-inline TriMesh setup_mesh_disk(const SceneObject& elem)
+inline TriMesh setup_mesh_disk(SceneObject& elem)
 {
     const Vector3f origin = elem.property("origin").getVector3();
     const Vector3f normal = elem.property("normal").getVector3(Vector3f(0, 0, 1));
@@ -104,7 +104,7 @@ inline TriMesh setup_mesh_disk(const SceneObject& elem)
     return TriMesh::MakeDisk(origin, normal, radius, sections);
 }
 
-inline TriMesh setup_mesh_gauss(const SceneObject& elem)
+inline TriMesh setup_mesh_gauss(SceneObject& elem)
 {
     // TODO: Add covariance based approach as well
     const Vector3f origin    = elem.property("origin").getVector3();
@@ -117,7 +117,7 @@ inline TriMesh setup_mesh_gauss(const SceneObject& elem)
     return TriMesh::MakeRadialGaussian(origin, normal * height, sigma, radius_scale, sections, slices);
 }
 
-inline TriMesh setup_mesh_gauss_lobe(const SceneObject& elem)
+inline TriMesh setup_mesh_gauss_lobe(SceneObject& elem)
 {
     const Vector3f origin    = elem.property("origin").getVector3();
     const Vector3f direction = elem.property("direction").getVector3(Vector3f(0, 0, 1));
@@ -137,7 +137,7 @@ inline TriMesh setup_mesh_gauss_lobe(const SceneObject& elem)
     return TriMesh::MakeGaussianLobe(origin, direction, xAxis, yAxis, cov, theta_size, phi_size, scale);
 }
 
-inline TriMesh setup_mesh_obj(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_obj(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     int shape_index     = elem.property("shape_index").getInteger(-1);
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
@@ -151,7 +151,7 @@ inline TriMesh setup_mesh_obj(const std::string& name, const SceneObject& elem, 
     return trimesh;
 }
 
-inline TriMesh setup_mesh_ply(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_ply(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load ply file " << filename << std::endl;
@@ -163,7 +163,7 @@ inline TriMesh setup_mesh_ply(const std::string& name, const SceneObject& elem, 
     return trimesh;
 }
 
-inline TriMesh setup_mesh_mitsuba(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_mitsuba(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     size_t shape_index  = elem.property("shape_index").getInteger(0);
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
@@ -176,7 +176,7 @@ inline TriMesh setup_mesh_mitsuba(const std::string& name, const SceneObject& el
     return trimesh;
 }
 
-inline TriMesh setup_mesh_external(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_external(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     if (filename.empty()) {
@@ -195,7 +195,7 @@ inline TriMesh setup_mesh_external(const std::string& name, const SceneObject& e
     return {};
 }
 
-inline TriMesh setup_mesh_inline(const std::string& name, const SceneObject& elem, const LoaderContext&)
+inline TriMesh setup_mesh_inline(const std::string& name, SceneObject& elem, const LoaderContext&)
 {
     auto propIndices   = elem.propertyOpt("indices");
     auto propVertices  = elem.propertyOpt("vertices");
@@ -363,7 +363,7 @@ static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::stri
     }
 }
 
-static void handleRefinement(TriMesh& mesh, const SceneObject& elem)
+static void handleRefinement(TriMesh& mesh, SceneObject& elem)
 {
     const float min_area = elem.property("refinement").getNumber(0);
     if (min_area <= FltEps)
@@ -415,7 +415,7 @@ static void applyDisplacement(TriMesh& mesh, const Image& image, float amount)
     }
 }
 
-static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, const SceneObject& elem)
+static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, SceneObject& elem)
 {
     const auto displacementProp = elem.property("displacement");
     if (!displacementProp.isValid() || displacementProp.type() != SceneProperty::PT_STRING)
@@ -432,7 +432,7 @@ static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, const Sc
     applyDisplacement(mesh, image, amount);
 }
 
-static void handleModification(TriMesh& mesh, const LoaderContext& ctx, const std::string& name, const SceneObject& elem)
+static void handleModification(TriMesh& mesh, const LoaderContext& ctx, const std::string& name, SceneObject& elem)
 {
     const size_t subdivisionCount  = elem.property("subdivision").getInteger(0);
     const float min_area           = elem.property("refinement").getNumber(0);
@@ -477,7 +477,7 @@ static inline std::pair<uint32, uint32> split_u64_to_u32(uint64 a)
     return { uint32(a & 0xFFFFFFFF), uint32((a >> 32) & 0xFFFFFFFF) };
 }
 
-void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, const SceneObject& elem)
+void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, SceneObject& elem)
 {
     TriMesh mesh;
     if (elem.pluginType() == "triangle") {

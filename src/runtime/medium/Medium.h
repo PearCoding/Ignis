@@ -41,7 +41,7 @@ public:
     [[nodiscard]] inline bool isReferenceEntityIDSet() const { return mReferenceEntityIDSet; }
 
 protected:
-    void handleReferenceEntity(const SceneObject& obj);
+    void handleReferenceEntity(SceneObject& obj);
     /// Will generate a function fn () -> PointMapperSet and return the name of it
     std::string generateReferencePMS(const SerializationInput& input) const; 
 

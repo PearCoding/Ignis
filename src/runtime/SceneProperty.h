@@ -262,9 +262,17 @@ public:
         return p;
     }
 
+    inline void markUsed(bool b = true)
+    {
+        mUsed = b;
+    }
+
+    inline bool isUsed() const { return mUsed; }
+
 private:
     inline explicit SceneProperty(Type type)
         : mType(type)
+        , mUsed(false)
     {
     }
 
@@ -280,6 +288,8 @@ private:
                  IntegerArray,
                  NumberArray>
         mData;
+
+    bool mUsed;
 };
 
 } // namespace IG

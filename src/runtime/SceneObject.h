@@ -38,29 +38,30 @@ public:
     inline const std::string& pluginType() const { return mPluginType; }
     inline const Path& baseDir() const { return mBaseDir; }
 
-    inline SceneProperty property(const std::string& key) const
+    inline SceneProperty property(const std::string& key)
     {
-        if (auto it = mProperties.find(key); it != mProperties.end())
+        if (auto it = mProperties.find(key); it != mProperties.end()) {
+            it->second.markUsed();
             return it->second;
-        else
+        } else {
             return SceneProperty();
+        }
     }
 
     /// @brief Guarded property access for heavy weight properties, due to the reference access. No copy is made
-    inline std::optional<std::reference_wrapper<const SceneProperty>> propertyOpt(const std::string& key) const
+    inline std::optional<std::reference_wrapper<const SceneProperty>> propertyOpt(const std::string& key)
     {
-        if (auto it = mProperties.find(key); it != mProperties.end())
+        if (auto it = mProperties.find(key); it != mProperties.end()) {
+            it->second.markUsed();
             return std::cref(it->second);
-        else
+        } else {
             return std::nullopt;
+        }
     }
 
     inline void setProperty(const std::string& key, const SceneProperty& prop) { mProperties[key] = prop; }
     inline bool hasProperty(const std::string& key) const { return mProperties.count(key) > 0; }
     inline const std::unordered_map<std::string, SceneProperty>& properties() const { return mProperties; }
-
-    inline SceneProperty& operator[](const std::string& key) { return mProperties[key]; }
-    inline SceneProperty operator[](const std::string& key) const { return property(key); }
 
 private:
     Type mType;

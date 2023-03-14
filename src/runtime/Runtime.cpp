@@ -273,7 +273,14 @@ bool Runtime::load(const Path& path, const std::shared_ptr<Scene>& scene)
 
     // Preload camera orientation
     setCameraOrientationParameter(mInitialCameraOrientation);
-    return setupScene();
+    bool res = setupScene();
+
+    if (!res)
+        return false;
+
+    if (mOptions.WarnUnused)
+        scene->warnUnusedProperties();
+    return true;
 }
 
 void Runtime::step(bool ignoreDenoiser)

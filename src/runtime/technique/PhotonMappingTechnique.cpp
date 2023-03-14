@@ -8,7 +8,7 @@
 #include "shader/ShaderUtils.h"
 
 namespace IG {
-PhotonMappingTechnique::PhotonMappingTechnique(const SceneObject& obj)
+PhotonMappingTechnique::PhotonMappingTechnique(SceneObject& obj)
     : Technique("ppm")
 {
     mPhotonCount    = (size_t)std::max(100, obj.property("photons").getInteger(1000000));

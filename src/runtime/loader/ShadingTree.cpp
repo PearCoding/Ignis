@@ -173,7 +173,7 @@ std::string ShadingTree::handlePropertyNumber(const std::string& name, const Sce
     }
 }
 
-void ShadingTree::addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def, const NumberOptions& options)
+void ShadingTree::addNumber(const std::string& name, SceneObject& obj, const std::optional<float>& def, const NumberOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -194,7 +194,7 @@ void ShadingTree::addNumber(const std::string& name, const SceneObject& obj, con
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addColor(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const ColorOptions& options)
+void ShadingTree::addColor(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def, const ColorOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -228,7 +228,7 @@ void ShadingTree::addColor(const std::string& name, const SceneObject& obj, cons
     currentClosure().Parameters[name] = inline_str;
 }
 
-void ShadingTree::addVector(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const VectorOptions& options)
+void ShadingTree::addVector(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def, const VectorOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -263,7 +263,7 @@ void ShadingTree::addVector(const std::string& name, const SceneObject& obj, con
 }
 
 // Only use this if no basic color information suffices
-void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const TextureOptions& options)
+void ShadingTree::addTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def, const TextureOptions& options)
 {
     if (hasParameter(name)) {
         IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
@@ -298,7 +298,7 @@ void ShadingTree::addTexture(const std::string& name, const SceneObject& obj, co
     currentClosure().Parameters[name] = inline_str;
 }
 
-float ShadingTree::computeNumber(const std::string& name, const SceneObject& obj, float def)
+float ShadingTree::computeNumber(const std::string& name, SceneObject& obj, float def)
 {
     const auto prop = obj.property(name);
 
@@ -325,7 +325,7 @@ float ShadingTree::computeNumber(const std::string& name, const SceneObject& obj
     }
 }
 
-Vector3f ShadingTree::computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def)
+Vector3f ShadingTree::computeColor(const std::string& name, SceneObject& obj, const Vector3f& def)
 {
     const auto prop = obj.property(name);
 
@@ -352,7 +352,7 @@ Vector3f ShadingTree::computeColor(const std::string& name, const SceneObject& o
     }
 }
 
-ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def, const TextureBakeOptions& options)
+ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def, const TextureBakeOptions& options)
 {
     // options only affect bake process with PExpr expressions
 
@@ -382,7 +382,7 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTexture(const std::string& name,
     }
 }
 
-std::pair<size_t, size_t> ShadingTree::computeTextureResolution(const std::string& name, const SceneObject& obj)
+std::pair<size_t, size_t> ShadingTree::computeTextureResolution(const std::string& name, SceneObject& obj)
 {
     const auto prop = obj.property(name);
 

@@ -38,7 +38,7 @@ struct LoaderCache {
 };
 
 constexpr size_t DefaultAlignment = sizeof(float) * 4;
-class LoaderContext {
+class IG_LIB LoaderContext {
     IG_CLASS_NON_COPYABLE(LoaderContext);
 
 public:
