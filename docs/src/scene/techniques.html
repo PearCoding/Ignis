@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <meta property="article:modified_time" content="2023-02-01T15:45:53+00:00" />
+    <meta property="article:modified_time" content="2023-03-14T15:53:35+00:00" />
     <title>Techniques &#8212; Ignis  documentation</title>
   
   
@@ -49,6 +49,7 @@
     <script src="../../_static/clipboard.min.js"></script>
     <script src="../../_static/copybutton.js"></script>
     <script src="../../_static/design-tabs.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/techniques';</script>
     <script src="../../_static/js/lightbox.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -438,10 +439,10 @@ The type has to be one of the techniques listed at this section below.</p>
 <p>This is the default and probably most used type. It calculates the full global illumination in the scene.
 If participating media is used, it is recommended to use the volumetric path tracer instead.</p>
 <div class="figure subfigure compound align-center" id="fig-path-technique">
-<figure class="align-center subsubfigure lightbox-image align-default" id="id5" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_path.jpg" style="width: 60%" data-lightbox="-6857869259979322955" data-title=""><img alt="../../_images/technique_path.jpg" src="../../_images/technique_path.jpg" style="width: 90%;" /></a>
+<figure class="align-center subsubfigure lightbox-image align-default" id="id1" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_path.jpg" style="width: 60%" data-lightbox="-6035813816964709336" data-title=""><img alt="../../_images/technique_path.jpg" src="../../_images/technique_path.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the path technique</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id5" title="Permalink to this image">#</a></p>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the path technique</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Permalink to this image">#</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -480,10 +481,10 @@ If participating media is used, it is recommended to use the volumetric path tra
 </table>
 <p>A simple volumetric path tracer. It calculates the full global illumination in the scene.</p>
 <div class="figure subfigure compound align-center" id="fig-volpath-technique">
-<figure class="align-center subsubfigure lightbox-image align-default" id="id6" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_volpath.jpg" style="width: 60%" data-lightbox="-3946215009960704618" data-title=""><img alt="../../_images/technique_volpath.jpg" src="../../_images/technique_volpath.jpg" style="width: 90%;" /></a>
+<figure class="align-center subsubfigure lightbox-image align-default" id="id2" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_volpath.jpg" style="width: 60%" data-lightbox="-4716579578545180940" data-title=""><img alt="../../_images/technique_volpath.jpg" src="../../_images/technique_volpath.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the volumetric path technique. In this picture no volumes were used, converging to the same result as the standard path tracer.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id6" title="Permalink to this image">#</a></p>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the volumetric path technique. In this picture no volumes were used, converging to the same result as the standard path tracer.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Permalink to this image">#</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -530,10 +531,10 @@ If participating media is used, it is recommended to use the volumetric path tra
 <p>At the time of this writing the light tracer still has some problems and is not recommended to be used.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-lt-technique">
-<figure class="align-center subsubfigure lightbox-image align-default" id="id7" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_lt.jpg" style="width: 60%" data-lightbox="2550791762423410919" data-title=""><img alt="../../_images/technique_lt.jpg" src="../../_images/technique_lt.jpg" style="width: 90%;" /></a>
+<figure class="align-center subsubfigure lightbox-image align-default" id="id3" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_lt.jpg" style="width: 60%" data-lightbox="-7408094778780756816" data-title=""><img alt="../../_images/technique_lt.jpg" src="../../_images/technique_lt.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using light tracing. It fails to display fully specular paths, as a path starting from a light source through a perfect specular path can <strong>not</strong> hit a virtual camera randomly.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id7" title="Permalink to this image">#</a></p>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using light tracing. It fails to display fully specular paths, as a path starting from a light source through a perfect specular path can <strong>not</strong> hit a virtual camera randomly.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Permalink to this image">#</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -551,12 +552,12 @@ If participating media is used, it is recommended to use the volumetric path tra
 <tr class="row-even"><td><p><span class="paramtype">max_camera_depth</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">64</span></code></p></td>
-<td><p>Maximum depth of rays starting from the camera. Can also be defined as <a href="#id1"><span class="problematic" id="id2">:param_type:`max_depth`</span></a>.</p></td>
+<td><p>Maximum depth of rays starting from the camera. Can also be defined as <span class="paramtype">max_depth</span>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><span class="paramtype">min_camera_depth</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">2</span></code></p></td>
-<td><p>Minimum depth of rays starting from the camera after which russian roulette applies. Can also be defined as <a href="#id3"><span class="problematic" id="id4">:param_type:`min_depth`</span></a>.</p></td>
+<td><p>Minimum depth of rays starting from the camera after which russian roulette applies. Can also be defined as <span class="paramtype">min_depth</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p><span class="paramtype">max_light_depth</span></p></td>
 <td><p><span class="paramtype">integer</span></p></td>
@@ -591,10 +592,10 @@ If participating media is used, it is recommended to use the volumetric path tra
 <p>The photon mapper is very basic and more recent advancements are not used. This will change in the future.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-ppm-technique">
-<figure class="align-center subsubfigure lightbox-image align-default" id="id8" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ppm.jpg" style="width: 60%" data-lightbox="2419412057409050394" data-title=""><img alt="../../_images/technique_ppm.jpg" src="../../_images/technique_ppm.jpg" style="width: 90%;" /></a>
+<figure class="align-center subsubfigure lightbox-image align-default" id="id4" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ppm.jpg" style="width: 60%" data-lightbox="-1496855975484825736" data-title=""><img alt="../../_images/technique_ppm.jpg" src="../../_images/technique_ppm.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using photon mapping. The footprint of each photon is clearly visible. However, the technique exceeds in displaying the caustics, whom are missing in the standard path tracing technique.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id8" title="Permalink to this image">#</a></p>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using photon mapping. The footprint of each photon is clearly visible. However, the technique exceeds in displaying the caustics, whom are missing in the standard path tracing technique.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id4" title="Permalink to this image">#</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -602,10 +603,10 @@ If participating media is used, it is recommended to use the volumetric path tra
 <span id="fig-ppm-technique"></span><h2>Ambient Occlusion (<span class="monosp">ao</span>)<a class="headerlink" href="#ambient-occlusion-ao" title="Permalink to this heading">#</a></h2>
 <p>This technique calculates the ambient occlusion in the scene. Currently no parameters are available to tinkle around.</p>
 <div class="figure subfigure compound align-center" id="fig-ao-technique">
-<figure class="align-center subsubfigure lightbox-image align-default" id="id9" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ao.jpg" style="width: 60%" data-lightbox="-5484303861874043291" data-title=""><img alt="../../_images/technique_ao.jpg" src="../../_images/technique_ao.jpg" style="width: 90%;" /></a>
+<figure class="align-center subsubfigure lightbox-image align-default" id="id5" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ao.jpg" style="width: 60%" data-lightbox="7916978800410078703" data-title=""><img alt="../../_images/technique_ao.jpg" src="../../_images/technique_ao.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample ambient occlusion rendering. The images looks almost converged, which is due to the grayscale appearance and large number of samples within each bounce.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id9" title="Permalink to this image">#</a></p>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample ambient occlusion rendering. The images looks almost converged, which is due to the grayscale appearance and large number of samples within each bounce.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id5" title="Permalink to this image">#</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -613,10 +614,10 @@ If participating media is used, it is recommended to use the volumetric path tra
 <span id="fig-ao-technique"></span><h2>Wireframe (<span class="monosp">wireframe</span>)<a class="headerlink" href="#wireframe-wireframe" title="Permalink to this heading">#</a></h2>
 <p>This technique renders the scene in wireframe. Currently no parameters are available to tinkle around.</p>
 <div class="figure subfigure compound align-center" id="fig-wireframe-technique">
-<figure class="align-center subsubfigure lightbox-image align-default" id="id10" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_wireframe.jpg" style="width: 60%" data-lightbox="-4203304260111450253" data-title=""><img alt="../../_images/technique_wireframe.jpg" src="../../_images/technique_wireframe.jpg" style="width: 90%;" /></a>
+<figure class="align-center subsubfigure lightbox-image align-default" id="id6" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_wireframe.jpg" style="width: 60%" data-lightbox="6673505315352920383" data-title=""><img alt="../../_images/technique_wireframe.jpg" src="../../_images/technique_wireframe.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="align-center subsubfigure lightbox-image caption-text">A basic visualization of the scene using wireframes.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id10" title="Permalink to this image">#</a></p>
+<p><span class="align-center subsubfigure lightbox-image caption-text">A basic visualization of the scene using wireframes.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id6" title="Permalink to this image">#</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -640,10 +641,10 @@ If participating media is used, it is recommended to use the volumetric path tra
 </table>
 <p>This is a special technique only usable with the <span class="monosp">igview</span> frontend. It displays scene specific information on the screen.</p>
 <div class="figure subfigure compound align-center" id="fig-debug-technique">
-<figure class="align-center subsubfigure lightbox-image align-default" id="id11" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_debug.jpg" style="width: 60%" data-lightbox="-4064172874204341138" data-title=""><img alt="../../_images/technique_debug.jpg" src="../../_images/technique_debug.jpg" style="width: 90%;" /></a>
+<figure class="align-center subsubfigure lightbox-image align-default" id="id7" style="width: 60%">
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_debug.jpg" style="width: 60%" data-lightbox="2280355608422970542" data-title=""><img alt="../../_images/technique_debug.jpg" src="../../_images/technique_debug.jpg" style="width: 90%;" /></a>
 <figcaption>
-<p><span class="align-center subsubfigure lightbox-image caption-text">Debug visualization of the scene displaying the shading normals.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id11" title="Permalink to this image">#</a></p>
+<p><span class="align-center subsubfigure lightbox-image caption-text">Debug visualization of the scene displaying the shading normals.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id7" title="Permalink to this image">#</a></p>
 </figcaption>
 </figure>
 </div></section>
@@ -711,7 +712,7 @@ If participating media is used, it is recommended to use the volumetric path tra
           </div>
           <footer class="bd-footer-content">
             <div class="bd-footer-content__inner"><p class="last-updated">
-  Last updated on Feb 01, 2023.
+  Last updated on Mar 14, 2023.
   <br/>
 </p></div>
           </footer>

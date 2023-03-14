@@ -135,11 +135,11 @@ Photonmapper (:monosp:`photonmapper`)
   * - max_camera_depth
     - |int|
     - :code:`64`
-    - Maximum depth of rays starting from the camera. Can also be defined as :param_type:`max_depth`.
+    - Maximum depth of rays starting from the camera. Can also be defined as :paramtype:`max_depth`.
   * - min_camera_depth
     - |int|
     - :code:`2`
-    - Minimum depth of rays starting from the camera after which russian roulette applies. Can also be defined as :param_type:`min_depth`.
+    - Minimum depth of rays starting from the camera after which russian roulette applies. Can also be defined as :paramtype:`min_depth`.
   * - max_light_depth
     - |int|
     - :code:`8`
