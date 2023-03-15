@@ -18,6 +18,7 @@ private:
     size_t mMinDepth;
     std::string mLightSelector;
     float mClamp;
+    bool mEnableNEE;
     bool mMISAOVs;
 };
 } // namespace IG

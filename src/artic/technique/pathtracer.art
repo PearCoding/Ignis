@@ -37,7 +37,7 @@ fn @init_pt_raypayload(payload: RayPayload) = write_ptraypayload(payload, PTRayP
     eta     = 1
 });
 
-fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32) -> Technique {
+fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32, enable_nee: bool) -> Technique {
     let offset : f32  = 0.001;
 
     let aov_di  = @aovs(AOV_PATH_DIRECT);
@@ -55,6 +55,10 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
                  , _: RayPayload
                  , mat: Material
                  ) -> ShadowRay {
+        if !enable_nee {
+            return(ShadowRay::None)
+        }
+
         // No shadow rays for specular materials
         if mat.bsdf.is_specular || light_selector.count == 0 {
             return(ShadowRay::None)
@@ -119,7 +123,7 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
             if dot > flt_eps { // Only contribute proper aligned directions
                 let emit    = mat.emission(ctx);
                 let pdf_s   = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
-                let mis     = 1 / (1 + pt.inv_pdf * light_selector.pdf(mat.light, ctx.ray.org) * pdf_s);
+                let mis     = if enable_nee { 1 / (1 + pt.inv_pdf * light_selector.pdf(mat.light, ctx.ray.org) * pdf_s) } else { 1:f32 };
                 let contrib = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
                 
                 aov_di.splat(ctx.pixel, contrib);
@@ -146,7 +150,7 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
                 let emit  = light.emission(ctx);
                 let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
                 let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
-                let mis   = 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ctx.ray.org) * pdf_s);
+                let mis   = if enable_nee { 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ctx.ray.org) * pdf_s) } else { 1:f32 };
                 color     = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
             }
         }
