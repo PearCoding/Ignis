@@ -30,10 +30,10 @@ Path Tracer (:monosp:`path`)
     - |string|
     - :code:`"uniform"`
     - Light selection technique. Available are :code:`"hierarchy"`, :code:`"simple"` and :code:`"uniform"`
-  * - aov_normals
+  * - nee
     - |bool|
-    - |false|
-    - Enable normal output as aov.
+    - |true|
+    - Enable next event estimation to improve convergence rate.
   * - aov_mis
     - |bool|
     - |false|
@@ -74,6 +74,10 @@ Volume Path Tracer (:monosp:`volpath`)
     - |string|
     - :code:`"uniform"`
     - Light selection technique. Available are :code:`"hierarchy"`, :code:`"simple"` and :code:`"uniform"`
+  * - nee
+    - |bool|
+    - |true|
+    - Enable next event estimation to improve convergence rate.
 
 A simple volumetric path tracer. It calculates the full global illumination in the scene.
 
