@@ -36,9 +36,9 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
  - implot <https://github.com/epezent/implot>
+ - nanobind <https://github.com/wjakob/nanobind>
  - PExpr <https://github.com/PearCoding/PExpr>
  - pugixml <https://github.com/zeux/pugixml>
- - pybind11 <https://github.com/pybind/pybind11>
  - RapidJSON <https://rapidjson.org/>
  - stb <https://github.com/nothings/stb>
  - tinyexr <https://github.com/syoyo/tinyexr>
