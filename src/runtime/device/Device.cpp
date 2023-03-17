@@ -1497,6 +1497,22 @@ public:
 const Image Interface::MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
 static std::unique_ptr<Interface> sInterface;
 
+// --------------------- Math stuff
+[[maybe_unused]] static unsigned int sPrevMathMode = 0;
+static void enableMathMode() {
+    // Force flush to zero mode for denormals
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+    sPrevMathMode = _mm_getcsr();
+    _mm_setcsr(sPrevMathMode | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+#endif
+}
+static void disableMathMode() {
+    // Reset mode
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+    _mm_setcsr(sPrevMathMode);
+#endif
+}
+
 // --------------------- Device
 Device::Device(const Device::SetupSettings& settings)
 {
@@ -1504,11 +1520,6 @@ Device::Device(const Device::SetupSettings& settings)
     sInterface = std::make_unique<Interface>(settings);
 
     IG_LOG(L_INFO) << "Using device " << anydsl_device_name(sInterface->getDevID()) << std::endl;
-
-    // Force flush to zero mode for denormals
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-    _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
-#endif
 }
 
 Device::~Device()
@@ -1523,6 +1534,8 @@ void Device::assignScene(const SceneSettings& settings)
 
 void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
 {
+    enableMathMode();
+
     // Register host thread
     sInterface->registerThread();
 
@@ -1541,6 +1554,8 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
 #endif
 
     sInterface->unregisterThread();
+    
+    disableMathMode();
 }
 
 void Device::resize(size_t width, size_t height)
@@ -1575,6 +1590,8 @@ const Statistics* Device::getStatistics()
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
 {
+    enableMathMode();
+
     // Register host thread
     sInterface->registerThread();
     sInterface->ensureFramebuffer();
@@ -1600,10 +1617,14 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     }
 
     sInterface->unregisterThread();
+    
+    disableMathMode();
 }
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
+    enableMathMode();
+    
     // Register host thread
     sInterface->registerThread();
     sInterface->ensureFramebuffer();
@@ -1637,11 +1658,15 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 
     sInterface->unregisterThread();
 
+    disableMathMode();
+
     return driver_output;
 }
 
 void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output)
 {
+    enableMathMode();
+
     // Register host thread
     sInterface->registerThread();
 
@@ -1654,6 +1679,8 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
     sInterface->scene.resource_map = copy;
 
     sInterface->unregisterThread();
+
+    disableMathMode();
 }
 
 template <typename T>
