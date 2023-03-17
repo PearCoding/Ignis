@@ -32,12 +32,14 @@ else()
 	set(IG_SUBPROJECT ON)
 endif()
 
+list(APPEND CMAKE_MESSAGE_CONTEXT ${PROJECT_NAME})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 # Set corresponding output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
 set(Ignis_VENDOR "Ignis project 2020-2023")
@@ -96,7 +98,6 @@ set(IG_ARTIC_FLAGS CACHE STRING "Additional artic compilation options")
 mark_as_advanced(IG_ARTIC_CLANG_FLAGS IG_ARTIC_FLAGS)
 
 # Setup CPM
-include(cmake/LTO.cmake)
 include(cmake/SetupCPM.cmake)
 
 # Locate stuff for windows
