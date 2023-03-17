@@ -1,7 +1,9 @@
-#include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/filesystem.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/vector.h>
 
 #include "Image.h"
 #include "Logger.h"
@@ -25,7 +27,7 @@ class RuntimeWrap {
     std::string mSource;
     std::string mPath;
     bool mCreated;
-    std::shared_ptr<Scene> mScene;
+    const Scene* mScene;
 
 public:
     RuntimeWrap(const RuntimeOptions& opts, const std::string& source, const std::string& path)
@@ -33,11 +35,11 @@ public:
         , mSource(source)
         , mPath(path)
         , mCreated(false)
-        , mScene()
+        , mScene(nullptr)
     {
     }
 
-    RuntimeWrap(const RuntimeOptions& opts, const std::shared_ptr<Scene>& scene, const std::string& path)
+    RuntimeWrap(const RuntimeOptions& opts, const Scene* scene, const std::string& path)
         : mOptions(opts)
         , mSource()
         , mPath(path)
@@ -129,9 +131,9 @@ void runtime_module(nb::module_& m)
         .def_prop_ro("IsGPU", &Target::isGPU)
         .def_prop_ro("GPUArchitecture", &Target::gpuArchitecture)
         .def_prop_ro("CPUArchitecture", &Target::cpuArchitecture)
-        .def_property("Device", &Target::device, &Target::setDevice)
-        .def_property("VectorWidth", &Target::vectorWidth, &Target::setVectorWidth)
-        .def_property("ThreadCount", &Target::threadCount, &Target::setThreadCount)
+        .def_prop_rw("Device", &Target::device, &Target::setDevice)
+        .def_prop_rw("VectorWidth", &Target::vectorWidth, &Target::setVectorWidth)
+        .def_prop_rw("ThreadCount", &Target::threadCount, &Target::setThreadCount)
         .def("toString", &Target::toString)
         .def("__str__", &Target::toString)
         .def_static("makeGeneric", &Target::makeGeneric)
@@ -145,36 +147,36 @@ void runtime_module(nb::module_& m)
     nb::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
         .def(nb::init<>())
         .def_static("makeDefault", &RuntimeOptions::makeDefault, nb::arg("trace") = false)
-        .def_readwrite("Target", &RuntimeOptions::Target, "The target device")
-        .def_readwrite("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
-        .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
-        .def_readwrite("AcquireStats", &RuntimeOptions::AcquireStats, "Set True if statistical data should be acquired while rendering")
-        .def_readwrite("SPI", &RuntimeOptions::SPI, "The requested sample per iteration. Can be 0 to set automatically")
-        .def_readwrite("Seed", &RuntimeOptions::Seed, "Seed for the random generators")
-        .def_readwrite("OverrideCamera", &RuntimeOptions::OverrideCamera, "Type of camera to use instead of the one used by the scene")
-        .def_readwrite("OverrideTechnique", &RuntimeOptions::OverrideTechnique, "Type of technique to use instead of the one used by the scene")
-        .def_readwrite("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize, "Type of film size to use instead of the one used by the scene")
-        .def_readwrite("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
-        .def_readwrite("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries");
+        .def_rw("Target", &RuntimeOptions::Target, "The target device")
+        .def_rw("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
+        .def_rw("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
+        .def_rw("AcquireStats", &RuntimeOptions::AcquireStats, "Set True if statistical data should be acquired while rendering")
+        .def_rw("SPI", &RuntimeOptions::SPI, "The requested sample per iteration. Can be 0 to set automatically")
+        .def_rw("Seed", &RuntimeOptions::Seed, "Seed for the random generators")
+        .def_rw("OverrideCamera", &RuntimeOptions::OverrideCamera, "Type of camera to use instead of the one used by the scene")
+        .def_rw("OverrideTechnique", &RuntimeOptions::OverrideTechnique, "Type of technique to use instead of the one used by the scene")
+        .def_rw("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize, "Type of film size to use instead of the one used by the scene")
+        .def_rw("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
+        .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries");
 
     nb::class_<Ray>(m, "Ray", "Single ray traced into the scene")
-        .def("__init__", [](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, FltMax) }; })
-        .def("__init__", [](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; })
-        .def_readwrite("Origin", &Ray::Origin, "Origin of the ray")
-        .def_readwrite("Direction", &Ray::Direction, "Direction of the ray")
-        .def_readwrite("Range", &Ray::Range, "Range (tmin, tmax) of the ray");
+        .def_static("__init__", [](Ray* ray, const Vector3f& org, const Vector3f& dir) { new (ray) Ray{ org, dir, Vector2f(0, FltMax) }; })
+        .def_static("__init__", [](Ray* ray, const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { new (ray) Ray{ org, dir, Vector2f(tmin, tmax) }; })
+        .def_rw("Origin", &Ray::Origin, "Origin of the ray")
+        .def_rw("Direction", &Ray::Direction, "Direction of the ray")
+        .def_rw("Range", &Ray::Range, "Range (tmin, tmax) of the ray");
 
     nb::class_<CameraOrientation>(m, "CameraOrientation", "General camera orientation")
-        .def_readwrite("Eye", &CameraOrientation::Eye, "Origin of the camera")
-        .def_readwrite("Dir", &CameraOrientation::Dir, "Direction the camera is facing")
-        .def_readwrite("Up", &CameraOrientation::Up, "Vector defining the up of the camera");
+        .def_rw("Eye", &CameraOrientation::Eye, "Origin of the camera")
+        .def_rw("Dir", &CameraOrientation::Dir, "Direction the camera is facing")
+        .def_rw("Up", &CameraOrientation::Up, "Vector defining the up of the camera");
 
     // TODO: Add option to insert new "texture" as parameter for Python Interchange with proper device handling
     nb::class_<Runtime>(m, "Runtime", "Renderer runtime allowing control of simulation and access to results")
         .def("step", &Runtime::step, nb::arg("ignoreDenoiser") = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
-            size_t shape[] = {rays.size(), 3ul};
+            size_t shape[] = { rays.size(), 3ul };
             return nb::ndarray<nb::numpy, float, nb::shape<nb::any, 3>>(r.getFramebuffer({}).Data, 2, shape);
         })
         .def("reset", &Runtime::reset)
@@ -184,7 +186,7 @@ void runtime_module(nb::module_& m)
                 // TODO: Add device specific access!
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
-                size_t shape[] = {width, height, 3ul};
+                size_t shape[]      = { width, height, 3ul };
                 return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebuffer(aov).Data, 3, shape);
             },
             nb::arg("aov") = "")
@@ -202,7 +204,7 @@ void runtime_module(nb::module_& m)
             const size_t height = r.framebufferHeight();
 
             if (output.shape(0) != width || output.shape(1) != height)
-                throw std::runtime_error("Incompatible buffer: Buffer has not the correct shape matching the framebuffer size");
+                throw nb::buffer_error("Incompatible buffer: Buffer has not the correct shape matching the framebuffer size");
 
             // TODO: Check stride?
             r.tonemap((uint32*)output.data(), settings);
@@ -230,59 +232,59 @@ void runtime_module(nb::module_& m)
 
     nb::class_<RuntimeWrap>(m, "RuntimeWrap", "Wrapper around the runtime used for proper runtime loading and shutdown")
         .def("__enter__", &RuntimeWrap::enter, nb::rv_policy::reference_internal)
-        .def("__exit__", &RuntimeWrap::exit)
+        .def("__exit__", &RuntimeWrap::exit, "type"_a.none(), "value"_a.none(), "traceback"_a.none())
         .def_prop_ro("instance", &RuntimeWrap::instance, nb::rv_policy::reference_internal)
         .def("shutdown", &RuntimeWrap::shutdown)
         .def("__del__", &RuntimeWrap::shutdown);
 
     m.def(
-         "loadFromFile", [](const std::string& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); },
+         "loadFromFile", [](const Path& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); },
          "Load a scene from file and generate a default runtime")
         .def(
-            "loadFromFile", [](const std::string& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); },
+            "loadFromFile", [](const Path& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); },
             "Load a scene from file and generate a runtime with given options")
         .def(
             "loadFromString", [](const std::string& str) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, std::string{}); },
             "Load a scene from a string and generate a default runtime")
         .def(
-            "loadFromString", [](const std::string& str, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, dir); },
+            "loadFromString", [](const std::string& str, const Path& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, dir); },
             "Load a scene from a string with directory for external resources and generate a default runtime")
         .def(
             "loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, std::string{}); },
             "Load a scene from a string and generate a runtime with given options")
         .def(
-            "loadFromString", [](const std::string& str, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, dir); },
+            "loadFromString", [](const std::string& str, const Path& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, dir); },
             "Load a scene from a string with directory for external resources and generate a runtime with given options")
         .def(
-            "loadFromScene", [](const std::shared_ptr<Scene>& scene) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, std::string{}); },
+            "loadFromScene", [](const Scene* scene) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, std::string{}); },
             "Generate a default runtime from an already loaded scene")
         .def(
-            "loadFromScene", [](const std::shared_ptr<Scene>& scene, const std::string& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, dir); },
+            "loadFromScene", [](const Scene* scene, const Path& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, dir); },
             "Generate a default runtime from an already loaded scene with directory for external resources")
         .def(
-            "loadFromScene", [](const std::shared_ptr<Scene>& scene, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, std::string{}); },
+            "loadFromScene", [](const Scene* scene, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, std::string{}); },
             "Generate a runtime with given options from an already loaded scene")
         .def(
-            "loadFromScene", [](const std::shared_ptr<Scene>& scene, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); },
+            "loadFromScene", [](const Scene* scene, const Path& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); },
             "Generate a runtime with given options from an already loaded scene with directory for external resources")
         .def(
-            "saveExr", [](const std::string& path, nb::ndarray<float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu> b) {
+            "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(0);
                 size_t height = b.shape(1);
 
                 if (width == 0 || height == 0 || b.shape(2) != 3)
-                    throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
+                    throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");
 
                 return Image::save(path, (const float*)b.data(), width, height, 3);
             },
             "Save an OpenEXR image to the filesystem")
         .def(
-            "saveExr", [](const std::string& path, nb::ndarray<float, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> b) {
+            "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(0);
                 size_t height = b.shape(1);
 
                 if (width == 0 || height == 0)
-                    throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
+                    throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");
 
                 return Image::save(path, (const float*)b.data(), width, height, 1);
             },

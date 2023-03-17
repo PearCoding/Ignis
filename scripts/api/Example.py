@@ -47,4 +47,4 @@ if __name__ == "__main__":
     ignis.setVerbose(True)
 
     first_variant(get_root_dir().joinpath("scenes", "diamond_scene.json"))
-    second_variant(get_root_dir().joinpath("scenes", "sky_scene.json"))
+    second_variant(get_root_dir().joinpath("scenes", "sky.json"))

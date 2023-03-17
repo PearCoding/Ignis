@@ -36,7 +36,7 @@ public:
 
     /// Load from an already present scene and initialize
     /// @param scene Valid scene
-    [[nodiscard]] bool loadFromScene(const std::shared_ptr<Scene>& scene);
+    [[nodiscard]] bool loadFromScene(const Scene* scene);
 
     /// Do a single iteration in non-tracing mode
     void step(bool ignoreDenoiser = false);
@@ -145,7 +145,7 @@ public:
 
 private:
     void checkCacheDirectory();
-    bool load(const Path& path, const std::shared_ptr<Scene>& scene);
+    bool load(const Path& path, const Scene* scene);
     bool setupScene();
     void shutdown();
     bool compileShaders();

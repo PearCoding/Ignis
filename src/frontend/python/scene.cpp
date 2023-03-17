@@ -1,7 +1,10 @@
-#include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/filesystem.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/unordered_map.h>
+#include <nanobind/stl/vector.h>
 
 #include "Scene.h"
 #include "loader/Parser.h"
@@ -57,11 +60,9 @@ void scene_module(nb::module_& m)
         .export_values();
 
     auto obj = nb::class_<SceneObject>(m, "SceneObject", "Class representing an object in the scene")
-                   .def("__init__", [](SceneObject::Type type, const std::string& pType, const std::string& dir) {
-                       return SceneObject(type, pType, dir);
-                   })
+                   .def(nb::init<SceneObject::Type, const std::string&, const Path&>())
                    .def_prop_ro("type", &SceneObject::type)
-                   .def_prop_ro("baseDir", [](const SceneObject& o) { return o.baseDir().generic_u8string(); })
+                   .def_prop_ro("baseDir", &SceneObject::baseDir)
                    .def_prop_ro("pluginType", &SceneObject::pluginType)
                    .def("property", &SceneObject::property)
                    .def("setProperty", &SceneObject::setProperty)
@@ -85,9 +86,9 @@ void scene_module(nb::module_& m)
 
     nb::class_<Scene>(m, "Scene", "Class representing a whole scene")
         .def(nb::init<>())
-        .def_property("camera", &Scene::camera, &Scene::setCamera)
-        .def_property("technique", &Scene::technique, &Scene::setTechnique)
-        .def_property("film", &Scene::film, &Scene::setFilm)
+        .def_prop_rw("camera", &Scene::camera, &Scene::setCamera)
+        .def_prop_rw("technique", &Scene::technique, &Scene::setTechnique)
+        .def_prop_rw("film", &Scene::film, &Scene::setFilm)
         .def("addTexture", &Scene::addTexture)
         .def("texture", &Scene::texture)
         .def_prop_ro("textures", &Scene::textures)
@@ -109,26 +110,22 @@ void scene_module(nb::module_& m)
         .def("addConstantEnvLight", &Scene::addConstantEnvLight)
         .def("addFrom", &Scene::addFrom)
         .def_static(
-            "loadFromFile", [](const std::string& path, uint32 flags) {
+            "loadFromFile", [](const Path& path, uint32 flags) {
                 return SceneParser().loadFromFile(path, flags);
             },
             nb::arg("path"), nb::arg("flags") = (uint32)SceneParser::F_LoadAll)
         .def_static(
-            "loadFromString", [](const std::string& str, const std::string& dir, uint32 flags) {
+            "loadFromString", [](const std::string& str, const Path& dir, uint32 flags) {
                 return SceneParser().loadFromString(str, dir, flags);
             },
             nb::arg("str"), nb::arg("opt_dir") = "", nb::arg("flags") = (uint32)SceneParser::F_LoadAll);
 
     auto parser = nb::class_<SceneParser>(m, "SceneParser", "Parser for standard JSON and glTF scene description")
                       .def(
-                          "loadFromFile", [](SceneParser& parser, const std::string& path, uint32 flags) {
-                              return parser.loadFromFile(path, flags);
-                          },
+                          "loadFromFile", &SceneParser::loadFromFile,
                           nb::arg("path"), nb::arg("flags") = (uint32)SceneParser::F_LoadAll)
                       .def(
-                          "loadFromString", [](SceneParser& parser, const std::string& str, const std::string& dir, uint32 flags) {
-                              return parser.loadFromString(str, dir, flags);
-                          },
+                          "loadFromString", &SceneParser::loadFromString,
                           nb::arg("str"), nb::arg("opt_dir") = "", nb::arg("flags") = (uint32)SceneParser::F_LoadAll);
 
     nb::enum_<SceneParser::Flags>(parser, "Flags", nb::is_arithmetic(), "Flags modifying parsing behaviour and allowing partial scene loads")

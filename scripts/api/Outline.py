@@ -74,7 +74,10 @@ def handle_func_doc(lines, identifiers):
 
 
 def handle_class_doc(lines):
-    return re.sub(enum_entry_section, r"- :pythonfunc:`\g<1>`\n", lines).replace("Members:", f"Entries\n{SUBSUBSECTION}\n")
+    if lines is None:
+        return "- :pythonfunc:`Missing Documentation`\n"
+    else:
+        return re.sub(enum_entry_section, r"- :pythonfunc:`\g<1>`\n", lines).replace("Members:", f"Entries\n{SUBSUBSECTION}\n")
 
 
 def get_class_names(root):

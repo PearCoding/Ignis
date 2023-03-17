@@ -154,7 +154,7 @@ bool Runtime::loadFromFile(const Path& path)
         if (mOptions.AddExtraEnvLight)
             scene->addConstantEnvLight();
 
-        return load(path, scene);
+        return load(path, scene.get());
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
@@ -176,19 +176,21 @@ bool Runtime::loadFromString(const std::string& str, const Path& dir)
         if (mOptions.AddExtraEnvLight)
             scene->addConstantEnvLight();
 
-        return load({}, scene);
+        return load({}, scene.get());
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
     }
 }
 
-bool Runtime::loadFromScene(const std::shared_ptr<Scene>& scene)
+bool Runtime::loadFromScene(const Scene* scene)
 {
-    try {
-        if (mOptions.AddExtraEnvLight)
-            scene->addConstantEnvLight();
+    if (scene == nullptr) {
+        IG_LOG(L_ERROR) << "Loading error: Given scene pointer is null" << std::endl;
+        return false;
+    }
 
+    try {
         return load({}, scene);
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
@@ -196,7 +198,7 @@ bool Runtime::loadFromScene(const std::shared_ptr<Scene>& scene)
     }
 }
 
-bool Runtime::load(const Path& path, const std::shared_ptr<Scene>& scene)
+bool Runtime::load(const Path& path, const Scene* scene)
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;
