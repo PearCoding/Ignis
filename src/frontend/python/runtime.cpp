@@ -25,12 +25,12 @@ class RuntimeWrap {
 
     RuntimeOptions mOptions;
     std::string mSource;
-    std::string mPath;
+    Path mPath;
     bool mCreated;
     const Scene* mScene;
 
 public:
-    RuntimeWrap(const RuntimeOptions& opts, const std::string& source, const std::string& path)
+    RuntimeWrap(const RuntimeOptions& opts, const std::string& source, const Path& path)
         : mOptions(opts)
         , mSource(source)
         , mPath(path)
@@ -39,7 +39,7 @@ public:
     {
     }
 
-    RuntimeWrap(const RuntimeOptions& opts, const Scene* scene, const std::string& path)
+    RuntimeWrap(const RuntimeOptions& opts, const Scene* scene, const Path& path)
         : mOptions(opts)
         , mSource()
         , mPath(path)
