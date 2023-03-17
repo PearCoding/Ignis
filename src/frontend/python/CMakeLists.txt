@@ -26,7 +26,8 @@ add_custom_command(TARGET pyignis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${Ignis_SOURCE_DIR}/README.md "${OUTPUT_DIR}/README.md"
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${Ignis_SOURCE_DIR}/LICENSE.txt "${OUTPUT_DIR}/LICENSE")
 # add_checks(pyignis)
-install(TARGETS pyignis ${_IG_RUNTIME_SET} COMPONENT python LIBRARY DESTINATION ignis)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ignis DESTINATION api/ COMPONENT python)
+install(TARGETS pyignis ${_IG_RUNTIME_SET} COMPONENT python LIBRARY DESTINATION api/ignis RUNTIME DESTINATION api/ignis)
 
 # Recursively call cmake from the toplevel again, this time only building the python api
 # This is necessary as the project does not use python as the main setup tool,

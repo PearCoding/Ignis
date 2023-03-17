@@ -125,7 +125,6 @@ if(IG_WITH_DENOISER)
 endif()
 
 include(cmake/GetDependencies.cmake)
-include(cmake/Install.cmake)
 include(cmake/Bash.cmake)
 include(cmake/ExtraUtils.cmake)
 
@@ -189,6 +188,8 @@ else()
 		add_compile_options(${WARNING_FLAGS})
 	endif()
 endif()
+
+include(cmake/Install.cmake)
 
 # Traverse to underlying directories
 add_subdirectory(src)

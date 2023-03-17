@@ -35,14 +35,25 @@ cpack_add_component(documentation GROUP documentation)
 
 if(IG_INSTALL_RUNTIME_DEPENDENCIES)
     if(WIN32)
-        set(exclude_regexes "msvc.*" "api.*" "ext.*")
+        set(exclude_regexes "api-ms-" "ext-ms-")
     else()
         set(exclude_regexes 
             "libX.*" "libxkb.*" "libwayland.*" "libvorbis.*" "libexpat.*" "libFLAC.*" "libpulse.*" "libasound.*" # Skip media related libraries
             "libcuda.*" "libOpenCL.*" "libnvvm.*" "libnvrtc.*" # Ignore CUDA related stuff, as the system should be providing it!
             )
     endif()
+
+    set(search_dirs "$<TARGET_FILE_DIR:ig_lib_runtime>")
+    if(IG_HAS_PYTHON_API)
+        list(APPEND search_dirs "$<TARGET_FILE_DIR:Python::Module>")
+    endif()
+    if(CUDAToolkit_FOUND)
+        list(APPEND search_dirs "${CUDAToolkit_BIN_DIR}")
+    endif()
+
     install(RUNTIME_DEPENDENCY_SET ignis_runtime_set
             PRE_EXCLUDE_REGEXES ${exclude_regexes}
+            POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+            DIRECTORIES ${search_dirs}
         )
 endif()

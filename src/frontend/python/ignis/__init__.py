@@ -8,6 +8,11 @@ def __handle_dll():
     if hasattr(os, "add_dll_directory"):
         # We use Windows and require to use add_dll_directory
         added_dirs.append(os.add_dll_directory(str(script_dir)))
+
+        bin_dir = script_dir.parent.parent.joinpath("bin").absolute()
+        if bin_dir.exists():
+            added_dirs.append(os.add_dll_directory(str(bin_dir)))
+
         for p in os.environ["PATH"].split(';'):
             if p:
                 added_dirs.append(os.add_dll_directory(p))
