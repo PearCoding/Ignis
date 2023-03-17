@@ -3,6 +3,7 @@ CPMAddPackage(
     GITHUB_REPOSITORY wjakob/nanobind
     GIT_TAG master
     EXCLUDE_FROM_ALL YES
+    SYSTEM
 )
 
 set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/api")

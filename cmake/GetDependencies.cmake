@@ -33,6 +33,7 @@ CPMAddPackage(
     GITHUB_REPOSITORY zeux/pugixml 
     GIT_TAG master
     EXCLUDE_FROM_ALL YES
+    SYSTEM
 )
 
 CPMAddPackage(
