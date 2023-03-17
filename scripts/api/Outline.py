@@ -34,9 +34,28 @@ list_with_content = re.compile(r"(\d+\.[^\n]+)\n\n([^\d].*)")
 enum_entry_section = re.compile(r"^\s{2}(\w+)$", re.M)
 
 
+def sub_arrays(lines: str):
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(4, 4), order='F']", "Mat4x4")
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(2), order='C']", "Vec2")
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(3), order='C']", "Vec3")
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(4), order='C']", "Vec4")
+    lines = lines.replace(
+        "ndarray[dtype=uint32, shape=(*, *), order='C', device='cpu']", "CPUArray2d_UInt32")
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(*, *, 3)]", "CPUImage")
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(*, 3)]", "list[Vec3]")
+    return lines
+
+
 def prepare_lines(lines):
     '''Prepare lines such that single new lines are collapsed'''
-    return re.sub(single_newline, r"\g<1> \g<2>", lines)
+    lines = re.sub(single_newline, r"\g<1> \g<2>", lines)
+    return sub_arrays(lines)
 
 
 def ident_lines(lines, prefix=" "):
@@ -45,7 +64,8 @@ def ident_lines(lines, prefix=" "):
 
 def handle_single_func(line, identifiers):
     for ident in identifiers:
-        line = re.sub(r"\b(?<!{)"+re.escape(ident)+r"(?!})", r"{"+re.escape(ident)+r"}", line)
+        line = re.sub(r"\b(?<!{)"+re.escape(ident)+r"(?!})",
+                      r"{"+re.escape(ident)+r"}", line)
     return line
 
 
