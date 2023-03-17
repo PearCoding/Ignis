@@ -189,11 +189,14 @@ else()
 	endif()
 endif()
 
-include(cmake/Install.cmake)
-
 # Traverse to underlying directories
 add_subdirectory(src)
 
 if(IG_WITH_DOCUMENTATION)
 	add_subdirectory(docs)
 endif()
+
+add_subdirectory(scripts)
+
+# Handle install
+include(cmake/Install.cmake)
