@@ -12,6 +12,7 @@ set(CPACK_PACKAGE_DESCRIPTION "${Ignis_DESCRIPTION}")
 set(CPACK_RESOURCE_FILE_README "${PROJECT_SOURCE_DIR}/README.md")
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_PACKAGE_CONTACT "${Ignis_URL}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME}")
 
 # TODO: Add scenes
 
@@ -25,30 +26,21 @@ endif()
 if(IG_HAS_PYTHON_API)
     list(APPEND CPACK_COMPONENTS_ALL python)
 endif()
-set(CPACK_COMPONENT_frontends_DEPENDS runtime)
-set(CPACK_COMPONENT_tools_DEPENDS runtime)
-set(CPACK_COMPONENT_python_DEPENDS runtime)
 
 include(InstallArchive)
 include(InstallBSD)
 include(InstallDeb)
+include(InstallNSIS)
 include(InstallRPM)
 
 include(CPack)
 
-cpack_add_component_group(runtime DISPLAY_NAME "Ignis runtime files")
-cpack_add_component_group(frontends PARENT_GROUP runtime DISPLAY_NAME "Ignis frontends")
-cpack_add_component_group(python PARENT_GROUP runtime DISPLAY_NAME "Ignis Python API")
-cpack_add_component_group(tools PARENT_GROUP runtime DISPLAY_NAME "Ignis extra tools")
-cpack_add_component_group(documentation DISPLAY_NAME "Ignis documentation files")
-cpack_add_component_group(plugins DISPLAY_NAME "Ignis plugins for other software")
-
-cpack_add_component(runtime GROUP runtime)
-cpack_add_component(frontends GROUP frontends)
-cpack_add_component(python GROUP python)
-cpack_add_component(tools GROUP tools)
-cpack_add_component(documentation GROUP documentation)
-cpack_add_component(plugins GROUP plugins)
+cpack_add_component(runtime DISPLAY_NAME "Runtime" DESCRIPTION "Necessary component containing runtime")
+cpack_add_component(frontends DISPLAY_NAME "Frontends" DESCRIPTION "Frontends to interact with the runtime" DEPENDS runtime)
+cpack_add_component(python DISPLAY_NAME "Python API" DESCRIPTION "Python 3+ API" DEPENDS runtime)
+cpack_add_component(tools DISPLAY_NAME "Extra tools" DESCRIPTION "Extra tools to work with data provided by the runtime" DEPENDS runtime)
+cpack_add_component(documentation DISPLAY_NAME "Documentation" DESCRIPTION "Offline version of the documentation")
+cpack_add_component(plugins DISPLAY_NAME "Plugins" DESCRIPTION "Plugin for external software like Blender")
 
 install(FILES "${CPACK_RESOURCE_FILE_LICENSE}" "${CPACK_RESOURCE_FILE_README}" TYPE DATA COMPONENT runtime)
 
