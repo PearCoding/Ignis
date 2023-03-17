@@ -50,6 +50,8 @@ cpack_add_component(tools GROUP tools)
 cpack_add_component(documentation GROUP documentation)
 cpack_add_component(plugins GROUP plugins)
 
+install(FILES "${CPACK_RESOURCE_FILE_LICENSE}" "${CPACK_RESOURCE_FILE_README}" TYPE DATA COMPONENT runtime)
+
 if(IG_INSTALL_RUNTIME_DEPENDENCIES)
     if(WIN32)
         set(exclude_regexes "api-ms-" "ext-ms-")
