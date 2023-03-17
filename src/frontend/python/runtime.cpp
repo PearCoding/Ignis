@@ -1,13 +1,15 @@
-#include <pybind11/eigen.h>
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/eigen/dense.h>
+#include <nanobind/stl/shared_ptr.h>
+#include <nanobind/stl/string.h>
 
 #include "Image.h"
 #include "Logger.h"
 #include "Runtime.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
+using namespace nb::literals;
+
 using namespace IG;
 
 static void flush_io()
@@ -49,7 +51,7 @@ public:
         return create();
     }
 
-    bool exit(const py::object&, const py::object&, const py::object&)
+    bool exit(const nb::object&, const nb::object&, const nb::object&)
     {
         shutdown();
         return false; // Propagate all the exceptions
@@ -104,29 +106,29 @@ private:
 };
 
 std::unique_ptr<Runtime> RuntimeWrap::sInstance;
-void runtime_module(py::module_& m)
+void runtime_module(nb::module_& m)
 {
     // Logger IO stuff
     m.def("flushLog", flush_io, "Flush internal logs");
 
-    py::enum_<CPUArchitecture>(m, "CPUArchitecture", "Enum holding supported CPU architectures")
+    nb::enum_<CPUArchitecture>(m, "CPUArchitecture", "Enum holding supported CPU architectures")
         .value("ARM", CPUArchitecture::ARM)
         .value("X86", CPUArchitecture::X86)
         .value("Unknown", CPUArchitecture::Unknown);
 
-    py::enum_<GPUArchitecture>(m, "GPUArchitecture", "Enum holding supported GPU architectures")
+    nb::enum_<GPUArchitecture>(m, "GPUArchitecture", "Enum holding supported GPU architectures")
         .value("AMD", GPUArchitecture::AMD)
         .value("Intel", GPUArchitecture::Intel)
         .value("Nvidia", GPUArchitecture::Nvidia)
         .value("Unknown", GPUArchitecture::Unknown);
 
-    py::class_<Target>(m, "Target", "Target specification the runtime is using")
-        .def(py::init<>())
-        .def_property_readonly("IsValid", &Target::isValid)
-        .def_property_readonly("IsCPU", &Target::isCPU)
-        .def_property_readonly("IsGPU", &Target::isGPU)
-        .def_property_readonly("GPUArchitecture", &Target::gpuArchitecture)
-        .def_property_readonly("CPUArchitecture", &Target::cpuArchitecture)
+    nb::class_<Target>(m, "Target", "Target specification the runtime is using")
+        .def(nb::init<>())
+        .def_prop_ro("IsValid", &Target::isValid)
+        .def_prop_ro("IsCPU", &Target::isCPU)
+        .def_prop_ro("IsGPU", &Target::isGPU)
+        .def_prop_ro("GPUArchitecture", &Target::gpuArchitecture)
+        .def_prop_ro("CPUArchitecture", &Target::cpuArchitecture)
         .def_property("Device", &Target::device, &Target::setDevice)
         .def_property("VectorWidth", &Target::vectorWidth, &Target::setVectorWidth)
         .def_property("ThreadCount", &Target::threadCount, &Target::setThreadCount)
@@ -134,15 +136,15 @@ void runtime_module(py::module_& m)
         .def("__str__", &Target::toString)
         .def_static("makeGeneric", &Target::makeGeneric)
         .def_static("makeSingle", &Target::makeSingle)
-        .def_static("makeCPU", py::overload_cast<size_t, size_t>(&Target::makeCPU))
+        .def_static("makeCPU", nb::overload_cast<size_t, size_t>(&Target::makeCPU))
         .def_static("makeGPU", &Target::makeGPU)
         .def_static("pickBest", &Target::pickBest)
         .def_static("pickCPU", &Target::pickCPU)
-        .def_static("pickGPU", &Target::pickGPU, py::arg("device") = 0);
+        .def_static("pickGPU", &Target::pickGPU, nb::arg("device") = 0);
 
-    py::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
-        .def(py::init<>())
-        .def_static("makeDefault", &RuntimeOptions::makeDefault, py::arg("trace") = false)
+    nb::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
+        .def(nb::init<>())
+        .def_static("makeDefault", &RuntimeOptions::makeDefault, nb::arg("trace") = false)
         .def_readwrite("Target", &RuntimeOptions::Target, "The target device")
         .def_readwrite("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
         .def_readwrite("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
@@ -155,42 +157,39 @@ void runtime_module(py::module_& m)
         .def_readwrite("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
         .def_readwrite("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries");
 
-    py::class_<Ray>(m, "Ray", "Single ray traced into the scene")
-        .def(py::init([](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, FltMax) }; }))
-        .def(py::init([](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; }))
+    nb::class_<Ray>(m, "Ray", "Single ray traced into the scene")
+        .def("__init__", [](const Vector3f& org, const Vector3f& dir) { return Ray{ org, dir, Vector2f(0, FltMax) }; })
+        .def("__init__", [](const Vector3f& org, const Vector3f& dir, float tmin, float tmax) { return Ray{ org, dir, Vector2f(tmin, tmax) }; })
         .def_readwrite("Origin", &Ray::Origin, "Origin of the ray")
         .def_readwrite("Direction", &Ray::Direction, "Direction of the ray")
         .def_readwrite("Range", &Ray::Range, "Range (tmin, tmax) of the ray");
 
-    py::class_<CameraOrientation>(m, "CameraOrientation", "General camera orientation")
+    nb::class_<CameraOrientation>(m, "CameraOrientation", "General camera orientation")
         .def_readwrite("Eye", &CameraOrientation::Eye, "Origin of the camera")
         .def_readwrite("Dir", &CameraOrientation::Dir, "Direction the camera is facing")
         .def_readwrite("Up", &CameraOrientation::Up, "Vector defining the up of the camera");
 
-    py::class_<Runtime>(m, "Runtime", "Renderer runtime allowing control of simulation and access to results")
-        .def("step", &Runtime::step, py::arg("ignoreDenoiser") = false)
+    // TODO: Add option to insert new "texture" as parameter for Python Interchange with proper device handling
+    nb::class_<Runtime>(m, "Runtime", "Renderer runtime allowing control of simulation and access to results")
+        .def("step", &Runtime::step, nb::arg("ignoreDenoiser") = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
-            return py::memoryview::from_buffer(
-                r.getFramebuffer({}).Data,
-                std::vector<size_t>{ rays.size(), 3ul },
-                { sizeof(float) * 3, sizeof(float) },
-                true);
+            size_t shape[] = {rays.size(), 3ul};
+            return nb::ndarray<nb::numpy, float, nb::shape<nb::any, 3>>(r.getFramebuffer({}).Data, 2, shape);
         })
         .def("reset", &Runtime::reset)
         .def(
             "getFramebuffer", [](const Runtime& r, const std::string& aov) {
                 // TODO: Iteration count?
+                // TODO: Add device specific access!
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
-                return py::memoryview::from_buffer(
-                    r.getFramebuffer(aov).Data,                                                         // buffer pointer
-                    std::vector<size_t>{ height, width, 3ul },                                          // shape (rows, cols)
-                    std::vector<size_t>{ sizeof(float) * width * 3, sizeof(float) * 3, sizeof(float) }, // strides in bytes
-                    true);
+                size_t shape[] = {width, height, 3ul};
+                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebuffer(aov).Data, 3, shape);
             },
-            py::arg("aov") = "")
-        .def("tonemap", [](Runtime& r, py::buffer output) {
+            nb::arg("aov") = "")
+        .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> output) {
+            // TODO: Add device specific access!
             TonemapSettings settings;
             settings.AOV            = "";
             settings.ExposureFactor = 1;
@@ -202,50 +201,37 @@ void runtime_module(py::module_& m)
             const size_t width  = r.framebufferWidth();
             const size_t height = r.framebufferHeight();
 
-            py::buffer_info info = output.request(true);
-
-            /* Some basic validation checks ... */
-            if (info.format != py::format_descriptor<uint8>::format())
-                throw std::runtime_error("Incompatible buffer: Expected a byte array!");
-
-            if (info.ndim != 1 && info.ndim != 2 && info.ndim != 3)
-                throw std::runtime_error("Incompatible buffer: Expected one, two or three dimensional buffer");
-
-            py::ssize_t linear_size = 1;
-            for (py::ssize_t i = 0; i < info.ndim; ++i)
-                linear_size *= info.shape[i];
-
-            if (linear_size != static_cast<py::ssize_t>(width * height * 4))
-                throw std::runtime_error("Incompatible buffer: Buffer has not the correct size");
+            if (output.shape(0) != width || output.shape(1) != height)
+                throw std::runtime_error("Incompatible buffer: Buffer has not the correct shape matching the framebuffer size");
 
             // TODO: Check stride?
-            r.tonemap((uint32*)info.ptr, settings);
+            r.tonemap((uint32*)output.data(), settings);
         })
-        .def("setParameter", py::overload_cast<const std::string&, int>(&Runtime::setParameter))
-        .def("setParameter", py::overload_cast<const std::string&, float>(&Runtime::setParameter))
-        .def("setParameter", py::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
-        .def("setParameter", py::overload_cast<const std::string&, const Vector4f&>(&Runtime::setParameter))
+        .def("setParameter", nb::overload_cast<const std::string&, int>(&Runtime::setParameter))
+        .def("setParameter", nb::overload_cast<const std::string&, float>(&Runtime::setParameter))
+        .def("setParameter", nb::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
+        .def("setParameter", nb::overload_cast<const std::string&, const Vector4f&>(&Runtime::setParameter))
         .def("setCameraOrientationParameter", &Runtime::setCameraOrientationParameter)
-        .def("clearFramebuffer", py::overload_cast<>(&Runtime::clearFramebuffer))
-        .def("clearFramebuffer", py::overload_cast<const std::string&>(&Runtime::clearFramebuffer))
-        .def_property_readonly("InitialCameraOrientation", &Runtime::initialCameraOrientation)
-        .def_property_readonly("IterationCount", &Runtime::currentIterationCount)
-        .def_property_readonly("SampleCount", &Runtime::currentSampleCount)
-        .def_property_readonly("FrameCount", &Runtime::currentFrameCount)
+        .def("clearFramebuffer", nb::overload_cast<>(&Runtime::clearFramebuffer))
+        .def("clearFramebuffer", nb::overload_cast<const std::string&>(&Runtime::clearFramebuffer))
+        .def_prop_ro("InitialCameraOrientation", &Runtime::initialCameraOrientation)
+        .def_prop_ro("IterationCount", &Runtime::currentIterationCount)
+        .def_prop_ro("SampleCount", &Runtime::currentSampleCount)
+        .def_prop_ro("FrameCount", &Runtime::currentFrameCount)
         .def("incFrameCount", &Runtime::incFrameCount)
-        .def_property_readonly("FramebufferWidth", &Runtime::framebufferWidth)
-        .def_property_readonly("FramebufferHeight", &Runtime::framebufferHeight)
-        .def_property_readonly("Technique", &Runtime::technique)
-        .def_property_readonly("Camera", &Runtime::camera)
-        .def_property_readonly("Target", &Runtime::target)
-        .def_property_readonly("SPI", &Runtime::samplesPerIteration)
-        .def_property_readonly_static("AvailableCameraTypes", &Runtime::getAvailableCameraTypes)
-        .def_property_readonly_static("AvailableTechniqueTypes", &Runtime::getAvailableTechniqueTypes);
+        .def_prop_ro("FramebufferWidth", &Runtime::framebufferWidth)
+        .def_prop_ro("FramebufferHeight", &Runtime::framebufferHeight)
+        .def_prop_ro("Technique", &Runtime::technique)
+        .def_prop_ro("Camera", &Runtime::camera)
+        .def_prop_ro("Target", &Runtime::target)
+        .def_prop_ro("SPI", &Runtime::samplesPerIteration)
+        .def_prop_ro_static("AvailableCameraTypes", &Runtime::getAvailableCameraTypes)
+        .def_prop_ro_static("AvailableTechniqueTypes", &Runtime::getAvailableTechniqueTypes);
 
-    py::class_<RuntimeWrap>(m, "RuntimeWrap", "Wrapper around the runtime used for proper runtime loading and shutdown")
-        .def("__enter__", &RuntimeWrap::enter, py::return_value_policy::reference_internal)
+    nb::class_<RuntimeWrap>(m, "RuntimeWrap", "Wrapper around the runtime used for proper runtime loading and shutdown")
+        .def("__enter__", &RuntimeWrap::enter, nb::rv_policy::reference_internal)
         .def("__exit__", &RuntimeWrap::exit)
-        .def_property_readonly("instance", &RuntimeWrap::instance, py::return_value_policy::reference_internal)
+        .def_prop_ro("instance", &RuntimeWrap::instance, nb::rv_policy::reference_internal)
         .def("shutdown", &RuntimeWrap::shutdown)
         .def("__del__", &RuntimeWrap::shutdown);
 
@@ -280,27 +266,25 @@ void runtime_module(py::module_& m)
             "loadFromScene", [](const std::shared_ptr<Scene>& scene, const std::string& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); },
             "Generate a runtime with given options from an already loaded scene with directory for external resources")
         .def(
-            "saveExr", [](const std::string& path, py::buffer b) {
-                py::buffer_info info = b.request();
+            "saveExr", [](const std::string& path, nb::ndarray<float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu> b) {
+                size_t width  = b.shape(0);
+                size_t height = b.shape(1);
 
-                /* Some basic validation checks ... */
-                if (info.format != py::format_descriptor<float>::format())
-                    throw std::runtime_error("Incompatible buffer: Expected a float array!");
-
-                if (info.ndim != 2 && info.ndim != 3)
-                    throw std::runtime_error("Incompatible buffer: Expected two dimensional or three dimensional buffer");
-
-                pybind11::ssize_t width    = info.shape[0];
-                pybind11::ssize_t height   = info.shape[1];
-                pybind11::ssize_t channels = info.ndim == 3 ? info.shape[2] : 1;
-
-                if (width <= 0 || height <= 0)
+                if (width == 0 || height == 0 || b.shape(2) != 3)
                     throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
 
-                if (channels != 1 && channels != 3 && channels != 4)
-                    throw std::runtime_error("Incompatible buffer: Only 1, 3 or 4 channels supported");
-
-                return Image::save(path, (const float*)info.ptr, width, height, channels);
+                return Image::save(path, (const float*)b.data(), width, height, 3);
             },
-            "Save an OpenEXR image to the filesystem");
+            "Save an OpenEXR image to the filesystem")
+        .def(
+            "saveExr", [](const std::string& path, nb::ndarray<float, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> b) {
+                size_t width  = b.shape(0);
+                size_t height = b.shape(1);
+
+                if (width == 0 || height == 0)
+                    throw std::runtime_error("Incompatible buffer: Expected valid buffer dimensions");
+
+                return Image::save(path, (const float*)b.data(), width, height, 1);
+            },
+            "Save an OpenEXR grayscale image to the filesystem");
 }

@@ -1,17 +1,17 @@
 CPMAddPackage(
-    NAME pybind11
-    GITHUB_REPOSITORY pybind/pybind11 
-    GIT_TAG stable
+    NAME nanobind
+    GITHUB_REPOSITORY wjakob/nanobind
+    GIT_TAG master
     EXCLUDE_FROM_ALL YES
-    OPTIONS
-        "PYBIND11_FINDPYTHON ON"
 )
 
 set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/api")
 
-pybind11_add_module(pyignis MODULE api.cpp runtime.cpp scene.cpp)
+set(SRC  api.cpp runtime.cpp scene.cpp)
+nanobind_add_module(pyignis STABLE_ABI LTO ${SRC})
+# pybind11_add_module(pyignis MODULE ${SRC})
+# add_library(pyignis MODULE ${SRC})
 
-# add_library(pyignis MODULE api.cpp runtime.cpp scene.cpp)
 target_link_libraries(pyignis PRIVATE ig_lib_runtime)
 target_compile_definitions(pyignis PRIVATE IGNIS_VERSION=${PROJECT_VERSION})
 set_target_properties(pyignis PROPERTIES 
