@@ -1498,18 +1498,21 @@ const Image Interface::MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 
 static std::unique_ptr<Interface> sInterface;
 
 // --------------------- Math stuff
-[[maybe_unused]] static unsigned int sPrevMathMode = 0;
-static void enableMathMode() {
+[[maybe_unused]] thread_local unsigned int stPrevMathMode = 0;
+static inline void enableMathMode()
+{
     // Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-    sPrevMathMode = _mm_getcsr();
-    _mm_setcsr(sPrevMathMode | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+    stPrevMathMode = _mm_getcsr();
+    _mm_setcsr(stPrevMathMode | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 #endif
 }
-static void disableMathMode() {
+
+static inline void disableMathMode()
+{
     // Reset mode
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-    _mm_setcsr(sPrevMathMode);
+    _mm_setcsr(stPrevMathMode);
 #endif
 }
 
@@ -1554,7 +1557,7 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
 #endif
 
     sInterface->unregisterThread();
-    
+
     disableMathMode();
 }
 
@@ -1617,14 +1620,13 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     }
 
     sInterface->unregisterThread();
-    
     disableMathMode();
 }
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
     enableMathMode();
-    
+
     // Register host thread
     sInterface->registerThread();
     sInterface->ensureFramebuffer();
@@ -1657,7 +1659,6 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
     driver_output.NegCount = output.neg_counter;
 
     sInterface->unregisterThread();
-
     disableMathMode();
 
     return driver_output;
@@ -1679,7 +1680,6 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
     sInterface->scene.resource_map = copy;
 
     sInterface->unregisterThread();
-
     disableMathMode();
 }
 
@@ -1887,12 +1887,14 @@ IG_EXPORT void ignis_gpu_swap_secondary_streams(int dev)
 
 IG_EXPORT void ignis_register_thread()
 {
+    IG::enableMathMode();
     sInterface->registerThread();
 }
 
 IG_EXPORT void ignis_unregister_thread()
 {
     sInterface->unregisterThread();
+    IG::disableMathMode();
 }
 
 IG_EXPORT void ignis_handle_traverse_primary(int dev, int size)
