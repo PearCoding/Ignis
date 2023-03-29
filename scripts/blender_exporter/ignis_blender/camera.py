@@ -12,7 +12,7 @@ def export_camera(result, scene):
     if camera.data.type == 'ORTHO':
         result["camera"] = {
             "type": "orthogonal",
-            "scale": 1/camera.data.ortho_scale,
+            "scale": camera.data.ortho_scale / 2,
             "near_clip": camera.data.clip_start,
             "far_clip": camera.data.clip_end,
             "transform": flat_matrix(matrix)
