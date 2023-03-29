@@ -101,8 +101,8 @@ class IgnisRender(bpy.types.RenderEngine):
                 # runtime.tonemap(layer.passes["Combined"].rect)
                 scale = 1 / runtime.IterationCount if runtime.IterationCount > 0 else 1
                 buffer = np.flip(np.asarray(runtime.getFramebuffer()), axis=0).reshape(
-                    x*y, 3) * scale
-                buffer = np.hstack([buffer, np.ones(shape=(x*y, 1))])
+                    x * y, 3) * scale
+                buffer = np.hstack([buffer, np.ones(shape=(x * y, 1))])
 
                 layer.passes["Combined"].rect = buffer
                 self.update_result(result)
