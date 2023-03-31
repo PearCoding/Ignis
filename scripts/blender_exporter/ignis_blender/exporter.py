@@ -62,13 +62,18 @@ def export_entity(result, depsgraph, inst, filepath, shape_name, mat_i, settings
     shadow_visibility = True
     if settings.export_materials:
         if(len(inst.object.material_slots) > mat_i):
-            result["_materials"].add(
-                inst.object.material_slots[mat_i].material)
-            mat_name = inst.object.material_slots[mat_i].material.name
-            emission = get_material_emission(NodeContext(
-                result, filepath, depsgraph, settings), inst.object.material_slots[mat_i].material)
-            if bpy.context.engine == "EEVEE":
-                shadow_visibility = inst.object.material_slots[mat_i].material.shadow_method != "NONE"
+            inst_mat = inst.object.material_slots[mat_i].material
+            if inst_mat is not None:
+                result["_materials"].add(inst_mat)
+                mat_name = inst_mat.name
+                emission = get_material_emission(NodeContext(
+                    result, filepath, depsgraph, settings), inst_mat)
+                if bpy.context.engine == "EEVEE":
+                    shadow_visibility = inst_mat.shadow_method != "NONE"
+            else:
+                print(f"Obsolete material slot {mat_i} for shape {shape_name} with instance {inst.object.data.name}")
+                mat_name = BSDF_BLACK_NAME
+                emission = None
         else:
             print(f"Entity {inst.object.name} has no material")
             mat_name = BSDF_BLACK_NAME
