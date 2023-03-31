@@ -4,6 +4,7 @@ struct Shape {
     surface_element:           fn (Ray, Hit, PointMapperSet)  -> SurfaceElement,
     surface_element_for_point: fn (i32, Vec2, PointMapperSet) -> SurfaceElement,
     local_bbox:                BBox, // Local bounding box
+    primitive_count:           i32 // Number of internal primitives
 }
 
 type ShapeTable  = fn (i32) -> Shape;

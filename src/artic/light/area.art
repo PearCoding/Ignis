@@ -42,27 +42,27 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
     infinite = false
 };
 
-fn @make_shape_area_emitter(entity: Entity, shape: Shape, mesh: TriMesh) -> AreaEmitter {
+fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
     let pmset = make_standard_pointmapperset(shape, entity);
 
     fn @sample(uv: Vec2) {
-        let ux     = uv.x * (mesh.num_tris as f32);
-        let f      = min(ux as i32, mesh.num_tris - 1);
+        let ux     = uv.x * (shape.primitive_count as f32);
+        let f      = min(ux as i32, shape.primitive_count - 1);
         let (u, v) = sample_triangle(ux - (f as f32), uv.y);
 
         let surf = shape.surface_element_for_point(f, make_vec2(u, v), pmset);
 
-        (surf, surf.inv_area / (mesh.num_tris as f32), (mesh.num_tris as f32) / surf.inv_area)
+        (surf, surf.inv_area / (shape.primitive_count as f32), (shape.primitive_count as f32) / surf.inv_area)
     }
 
     fn @pdf(uv: Vec2) {
-        let ux     = uv.x * (mesh.num_tris as f32);
-        let f      = min(ux as i32, mesh.num_tris - 1);
+        let ux     = uv.x * (shape.primitive_count as f32);
+        let f      = min(ux as i32, shape.primitive_count - 1);
         let (u, v) = sample_triangle(ux - (f as f32), uv.y);
 
         let surf = shape.surface_element_for_point(f, make_vec2(u, v), pmset);
 
-        surf.inv_area / (mesh.num_tris as f32)
+        surf.inv_area / (shape.primitive_count as f32)
     }
 
     AreaEmitter {
@@ -75,8 +75,8 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape, mesh: TriMesh) -> Area
             (surf, pdfv)
         },
         normal = @ |uv| {
-            let ux     = uv.x * (mesh.num_tris as f32);
-            let f      = min(ux as i32, mesh.num_tris - 1);
+            let ux     = uv.x * (shape.primitive_count as f32);
+            let f      = min(ux as i32, shape.primitive_count - 1);
             let (u, v) = sample_triangle(ux - (f as f32), uv.y);
     
             let surf = shape.surface_element_for_point(f, make_vec2(u, v), pmset);
@@ -295,7 +295,7 @@ fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
     }
 }
 
-fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: TriMeshTable) -> LightTable {
+fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, shapes: ShapeTable) -> LightTable {
     let tbl = device.load_fixtable("SimpleAreaLight");
 
     let elem_s = 40; // Given in floats. See AreaLight.cpp (non-optimized)
@@ -315,11 +315,10 @@ fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, meshes: Tri
                 shape_id   = bitcast[i32](m.col(3).x)
             };
 
-            let mesh     = meshes(entity.shape_id);
-            let shape    = make_trimesh_shape(mesh);
+            let shape    = shapes(entity.shape_id);
             let radiance = data.load_vec3(36);
     
-            make_area_light(id + id_off, make_shape_area_emitter(entity, shape, mesh), @|_| vec3_to_color(radiance))
+            make_area_light(id + id_off, make_shape_area_emitter(entity, shape), @|_| vec3_to_color(radiance))
         } 
     }
 }

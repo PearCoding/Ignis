@@ -64,7 +64,8 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
                 local       = make_orthonormal_mat3x3(normal)
             }
         },
-        local_bbox = tri_mesh.bbox
+        local_bbox = tri_mesh.bbox,
+        primitive_count = tri_mesh.num_tris
     }
 }
 
