@@ -33,7 +33,7 @@ inline bool operator==(const Material& a, const Material& b)
 
 struct LoaderCache {
     std::unordered_map<std::string, std::any> ExportedData;                    // Cache with already exported data and auxillary info
-    std::unordered_map<std::string, Vector3f> ExprComputation;                 // Cache with already computed expressions
+    std::unordered_map<std::string, std::any> ExprComputation;                 // Cache with already computed expressions
     std::unordered_map<std::string, std::pair<size_t, size_t>> ExprResolution; // Cache with already approximative expression resolutions
 };
 

@@ -19,15 +19,22 @@ static inline float power_factor(float cutoff, float falloff)
     return 2 * Pi * (1 - 0.5f * (std::cos(cutoff) + std::cos(falloff)));
 }
 
+void SpotLight::precompute(ShadingTree& tree)
+{
+    const auto cutoff  = tree.computeNumber("cutoff", *mLight, 30);
+    const auto falloff = tree.computeNumber("falloff", *mLight, 20);
+    const float factor = power_factor(cutoff.Value * Deg2Rad, falloff.Value * Deg2Rad);
+    const auto output  = tree.computeColor(mUsingPower ? "power" : "intensity", *mLight, Vector3f::Constant(mUsingPower ? factor : 1.0f));
+
+    mColor_Cache = output.Value;
+    if (!mUsingPower)
+        mColor_Cache *= factor;
+    mIsSimple = output.WasConstant && cutoff.WasConstant && falloff.WasConstant;
+}
+
 float SpotLight::computeFlux(ShadingTree& tree) const
 {
-    const float cutoff  = tree.computeNumber("cutoff", *mLight, 30) * Deg2Rad;
-    const float falloff = tree.computeNumber("falloff", *mLight, 20) * Deg2Rad;
-    const float factor  = power_factor(cutoff, falloff);
-    if (mUsingPower)
-        return tree.computeNumber("power", *mLight, factor);
-    else
-        return tree.computeNumber("intensity", *mLight, 1) * factor;
+    return mColor_Cache.mean();
 }
 
 void SpotLight::serialize(const SerializationInput& input) const
@@ -62,32 +69,27 @@ void SpotLight::serialize(const SerializationInput& input) const
 
 std::optional<std::string> SpotLight::getEmbedClass() const
 {
-    const auto position  = mLight->property("position");
-    const auto intensity = mUsingPower ? mLight->property("power") : mLight->property("intensity");
-    const auto cutoff    = mLight->property("cutoff");
-    const auto falloff   = mLight->property("falloff");
+    const auto position = mLight->property("position");
 
     const bool simple = (!position.isValid() || position.type() == SceneProperty::PT_VECTOR3)
-                        && (!intensity.isValid() || intensity.canBeNumber() || intensity.type() == SceneProperty::PT_VECTOR3)
-                        && (!cutoff.isValid() || cutoff.canBeNumber())
-                        && (!falloff.isValid() || falloff.canBeNumber());
+                        && mIsSimple;
 
     return simple ? std::make_optional("SimpleSpotLight") : std::nullopt;
 }
 
 void SpotLight::embed(const EmbedInput& input) const
 {
-    const float cutoff       = input.Tree.computeNumber("cutoff", *mLight, 30) * Deg2Rad;
-    const float falloff      = input.Tree.computeNumber("falloff", *mLight, 20) * Deg2Rad;
-    const float factor       = power_factor(cutoff, falloff);
-    const Vector3f intensity = mUsingPower ? input.Tree.computeColor("power", *mLight, Vector3f::Constant(factor)) / factor : input.Tree.computeColor("intensity", *mLight, Vector3f::Ones());
+    const auto cutoff        = input.Tree.computeNumber("cutoff", *mLight, 30);
+    const auto falloff       = input.Tree.computeNumber("falloff", *mLight, 20);
+    const float factor       = power_factor(cutoff.Value * Deg2Rad, falloff.Value * Deg2Rad);
+    const Vector3f intensity = mColor_Cache / factor;
 
-    input.Serializer.write(mPosition);             // +3   = 3
-    input.Serializer.write(cutoff);                // +1   = 4
-    input.Serializer.write(mDirection);            // +3   = 7
-    input.Serializer.write(falloff);               // +1   = 8
-    input.Serializer.write(intensity);             // +3   = 11
-    input.Serializer.write((uint32)0 /*Padding*/); // +1   = 12
+    input.Serializer.write(mPosition);               // +3   = 3
+    input.Serializer.write(cutoff.Value * Deg2Rad);  // +1   = 4
+    input.Serializer.write(mDirection);              // +3   = 7
+    input.Serializer.write(falloff.Value * Deg2Rad); // +1   = 8
+    input.Serializer.write(intensity);               // +3   = 11
+    input.Serializer.write((uint32)0 /*Padding*/);   // +1   = 12
 }
 
 } // namespace IG

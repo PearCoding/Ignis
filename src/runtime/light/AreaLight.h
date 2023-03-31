@@ -12,6 +12,7 @@ public:
     virtual std::optional<Vector3f> position() const override { return mPosition; }
     virtual std::optional<Vector3f> direction() const override { return mRepresentation == RepresentationType::Plane ? std::make_optional(mDirection) : std::nullopt; }
     virtual std::optional<std::string> entity() const override { return mEntity; }
+    virtual void precompute(ShadingTree&) override;
     virtual float computeFlux(ShadingTree&) const override;
 
     virtual void serialize(const SerializationInput& input) const override;
@@ -24,7 +25,10 @@ private:
     Vector3f mDirection; // ~ Normal
     float mArea;
     std::string mEntity;
-    bool mUsePower;
+    bool mUsingPower;
+
+    Vector3f mColor_Cache;
+    bool mIsSimple;
 
     enum class RepresentationType {
         None,

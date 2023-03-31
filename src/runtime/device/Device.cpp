@@ -1442,8 +1442,8 @@ public:
     int getParameterInt(int32_t dev, const char* name, int def, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->IntParameters.count(name) > 0)
+        // IG_ASSERT(registry != nullptr, "No parameters available!"); // Might be unavailable in baking process
+        if (registry && registry->IntParameters.count(name) > 0)
             return registry->IntParameters.at(name);
         else
             return def;
@@ -1452,8 +1452,8 @@ public:
     float getParameterFloat(int32_t dev, const char* name, float def, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->FloatParameters.count(name) > 0)
+        // IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry && registry->FloatParameters.count(name) > 0)
             return registry->FloatParameters.at(name);
         else
             return def;
@@ -1462,8 +1462,8 @@ public:
     void getParameterVector(int32_t dev, const char* name, float defX, float defY, float defZ, float& outX, float& outY, float& outZ, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->VectorParameters.count(name) > 0) {
+        // IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry && registry->VectorParameters.count(name) > 0) {
             Vector3f param = registry->VectorParameters.at(name);
             outX           = param.x();
             outY           = param.y();
@@ -1478,8 +1478,8 @@ public:
     void getParameterColor(int32_t dev, const char* name, float defR, float defG, float defB, float defA, float& outR, float& outG, float& outB, float& outA, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->ColorParameters.count(name) > 0) {
+        // IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry && registry->ColorParameters.count(name) > 0) {
             Vector4f param = registry->ColorParameters.at(name);
             outR           = param.x();
             outG           = param.y();

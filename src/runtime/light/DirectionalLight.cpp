@@ -14,7 +14,7 @@ DirectionalLight::DirectionalLight(const std::string& name, const std::shared_pt
 float DirectionalLight::computeFlux(ShadingTree& tree) const
 {
     const float radius = tree.context().SceneDiameter / 2;
-    return tree.computeNumber("irradiance", *mLight, 1.0f) * Pi * radius * radius;
+    return tree.computeNumber("irradiance", *mLight, 1.0f).Value * Pi * radius * radius;
 }
 
 void DirectionalLight::serialize(const SerializationInput& input) const

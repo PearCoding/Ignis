@@ -39,7 +39,7 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     , mLight(light)
 {
     mEntity   = light->property("entity").getString();
-    mUsePower = light->hasProperty("power");
+    mUsingPower = light->hasProperty("power");
 
     const auto entity = ctx.Entities->getEmissiveEntity(mEntity);
     if (!entity.has_value()) {
@@ -96,19 +96,26 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     }
 }
 
+void AreaLight::precompute(ShadingTree& tree)
+{
+    const auto output = tree.computeColor(mUsingPower ? "power" : "radiance", *mLight, Vector3f::Constant(mUsingPower ? mArea * Pi : 1.0f));
+
+    mColor_Cache = output.Value;
+    if (!mUsingPower)
+        mColor_Cache *= mArea * Pi;
+    mIsSimple = output.WasConstant;
+}
+
 float AreaLight::computeFlux(ShadingTree& tree) const
 {
-    if (mUsePower)
-        return tree.computeNumber("power", *mLight, mArea * Pi);
-    else
-        return tree.computeNumber("radiance", *mLight, 1.0f) * mArea * Pi;
+    return mColor_Cache.mean();
 }
 
 void AreaLight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    if (mUsePower)
+    if (mUsingPower)
         input.Tree.addColor("power", *mLight, Vector3f::Constant(mArea * Pi));
     else
         input.Tree.addColor("radiance", *mLight, Vector3f::Constant(1.0f));
@@ -162,8 +169,7 @@ void AreaLight::serialize(const SerializationInput& input) const
                          << ", " << tri.NormalCount
                          << ", " << tri.TexCount << ");" << std::endl
                          << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(*entity)
-                         << ", make_trimesh_shape(trimesh_" << light_id << ")"
-                         << ", trimesh_" << light_id << ");" << std::endl;
+                         << ", make_trimesh_shape(trimesh_" << light_id << "));" << std::endl;
         } else {
             // Error already messaged
             input.Tree.signalError();
@@ -176,7 +182,7 @@ void AreaLight::serialize(const SerializationInput& input) const
     input.Stream << "  let light_" << light_id << " = make_area_light(" << input.ID
                  << ", ae_" << light_id;
 
-    if (mUsePower)
+    if (mUsingPower)
         input.Stream << ", @|ctx| { maybe_unused(ctx); color_mulf(" << input.Tree.getInline("power") << ", flt_inv_pi / " << mArea << ") });" << std::endl;
     else
         input.Stream << ", @|ctx| { maybe_unused(ctx); " << input.Tree.getInline("radiance") << " });" << std::endl;
@@ -187,10 +193,8 @@ void AreaLight::serialize(const SerializationInput& input) const
 std::optional<std::string> AreaLight::getEmbedClass() const
 {
     // TODO: Basic texture?
-    const auto radiance = mUsePower ? mLight->property("power") : mLight->property("radiance");
-    const bool simple   = (!radiance.isValid() || radiance.canBeNumber() || radiance.type() == SceneProperty::PT_VECTOR3);
 
-    if (!simple)
+    if (!mIsSimple)
         return std::nullopt;
 
     switch (mRepresentation) {
@@ -206,7 +210,7 @@ std::optional<std::string> AreaLight::getEmbedClass() const
 void AreaLight::embed(const EmbedInput& input) const
 {
     const std::string entityName = mLight->property("entity").getString();
-    const Vector3f radiance      = mUsePower ? input.Tree.computeColor("power", *mLight, Vector3f::Constant(mArea * Pi)) / (mArea * Pi) : input.Tree.computeColor("radiance", *mLight, Vector3f::Ones());
+    const Vector3f radiance      = mColor_Cache / (mArea * Pi);
 
     const auto& ctx   = input.Tree.context();
     const auto entity = ctx.Entities->getEmissiveEntity(entityName);

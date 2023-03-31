@@ -824,14 +824,22 @@ public:
         }
 
         // Return custom variables if matched
-        if (auto var = mParent->mCustomVariableBool.find(name); expectedType == PExprType::Boolean && var != mParent->mCustomVariableBool.end())
+        if (auto var = mParent->mCustomVariableBool.find(name); expectedType == PExprType::Boolean && var != mParent->mCustomVariableBool.end()) {
+            mUsedVariables.insert(var->first);
             return var->second;
-        if (auto var = mParent->mCustomVariableNumber.find(name); expectedType == PExprType::Number && var != mParent->mCustomVariableNumber.end())
+        }
+        if (auto var = mParent->mCustomVariableNumber.find(name); expectedType == PExprType::Number && var != mParent->mCustomVariableNumber.end()) {
+            mUsedVariables.insert(var->first);
             return var->second;
-        if (auto var = mParent->mCustomVariableVector.find(name); expectedType == PExprType::Vec3 && var != mParent->mCustomVariableVector.end())
+        }
+        if (auto var = mParent->mCustomVariableVector.find(name); expectedType == PExprType::Vec3 && var != mParent->mCustomVariableVector.end()) {
+            mUsedVariables.insert(var->first);
             return var->second;
-        if (auto var = mParent->mCustomVariableColor.find(name); expectedType == PExprType::Vec4 && var != mParent->mCustomVariableColor.end())
+        }
+        if (auto var = mParent->mCustomVariableColor.find(name); expectedType == PExprType::Vec4 && var != mParent->mCustomVariableColor.end()) {
+            mUsedVariables.insert(var->first);
             return "color_to_vec4(" + var->second + ")";
+        }
 
         IG_ASSERT(expectedType == PExprType::Vec4 && mParent->mTree.context().Options.Scene->texture(name) != nullptr, "Expected a valid texture name");
         mUsedTextures.insert(name);

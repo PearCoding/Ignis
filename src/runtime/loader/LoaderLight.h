@@ -31,6 +31,7 @@ private:
     void findEmissiveEntities(const LoaderContext& ctx);
 
     void loadLights(LoaderContext& ctx);
+    void precomputeLights(LoaderContext& ctx);
     void setupEmbedClasses();
     void sortLights();
     void setupInfiniteLightIDs();

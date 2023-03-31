@@ -41,7 +41,7 @@ void VolumePathTechnique::generateBody(const SerializationInput& input) const
     if (mMinDepth < 2) // 0 & 1 can be an optimization
         input.Stream << "  let tech_min_depth = " << mMinDepth << ":i32;" << std::endl;
     else
-        input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 8);" << std::endl;
+        input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 2);" << std::endl;
 
     if (mClamp <= 0) // 0 is a special case
         input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;

@@ -9,6 +9,7 @@ public:
 
     virtual bool isDelta() const override { return true; }
     virtual std::optional<Vector3f> position() const override { return mPosition; }
+    virtual void precompute(ShadingTree&) override;
     virtual float computeFlux(ShadingTree&) const override;
 
     virtual void serialize(const SerializationInput& input) const override;
@@ -19,6 +20,9 @@ public:
 private:
     Vector3f mPosition;
     bool mUsingPower;
+
+    Vector3f mColor_Cache;
+    bool mIsSimple;
 
     std::shared_ptr<SceneObject> mLight;
 };

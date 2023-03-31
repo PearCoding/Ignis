@@ -59,6 +59,20 @@ struct TextureOptions {
     static constexpr TextureOptions Structural() { return TextureOptions{ EmbedType::Structural }; }
     static constexpr TextureOptions Default() { return TextureOptions{ EmbedType::Default }; }
 };
+template<typename T>
+struct GenericBakeOutput {
+    T Value;
+    bool WasConstant;
+    static GenericBakeOutput AsConstant(const T& v) { return GenericBakeOutput<T>{v, true}; }
+    static GenericBakeOutput AsVarying(const T& v) { return GenericBakeOutput<T>{v, false}; }
+};
+using BakeOutputNumber = GenericBakeOutput<float>;
+using BakeOutputColor = GenericBakeOutput<Vector3f>;
+struct GenericBakeOptions {
+    bool SkipTextures; // Will not bake parameters which are beyond simple constants
+    static constexpr GenericBakeOptions Default() { return GenericBakeOptions{ false }; }
+    static constexpr GenericBakeOptions OnlyConstants() { return GenericBakeOptions{ true }; }
+};
 struct TextureBakeOptions { // The bake operation might still return width and height 1 for constants or other simple expressions, completely ignoring max & min settings
     size_t MaxWidth;        // Maximum width if expression is a texture. 0 disables maximum
     size_t MaxHeight;       // Maximum height if expression is a texture. 0 disables maximum
@@ -87,6 +101,9 @@ public:
     using VectorOptions  = _details::VectorOptions;
     using TextureOptions = _details::TextureOptions;
 
+    using BakeOutputNumber = _details::BakeOutputNumber;
+    using BakeOutputColor = _details::BakeOutputColor;
+    using GenericBakeOptions = _details::GenericBakeOptions;
     using TextureBakeOptions = _details::TextureBakeOptions;
 
     explicit ShadingTree(LoaderContext& ctx);
@@ -100,8 +117,8 @@ public:
     void addVector(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
 
-    float computeNumber(const std::string& name, SceneObject& obj, float def = 0);
-    Vector3f computeColor(const std::string& name, SceneObject& obj, const Vector3f& def = Vector3f::Zero());
+    BakeOutputNumber computeNumber(const std::string& name, SceneObject& obj, float def = 0, const GenericBakeOptions& options = GenericBakeOptions::Default());
+    BakeOutputColor computeColor(const std::string& name, SceneObject& obj, const Vector3f& def = Vector3f::Zero(), const GenericBakeOptions& options = GenericBakeOptions::Default());
 
     using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
     BakeOutputTexture bakeTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureBakeOptions& options = TextureBakeOptions::Default());
@@ -148,7 +165,7 @@ private:
 
     std::pair<size_t, size_t> computeTextureResolution(const std::string& name, const std::string& expr);
     BakeOutputTexture bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options);
-    Vector3f bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def);
+    BakeOutputColor bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def, const GenericBakeOptions& options);
     Vector3f computeConstantColor(const std::string& name, const Transpiler::Result& result);
     Image computeImage(const std::string& name, const Transpiler::Result& result, const TextureBakeOptions& options);
     std::string loadTexture(const std::string& tex_name);

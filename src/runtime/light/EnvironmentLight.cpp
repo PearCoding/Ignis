@@ -19,8 +19,8 @@ EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_pt
 float EnvironmentLight::computeFlux(ShadingTree& tree) const
 {
     const float radius   = tree.context().SceneDiameter / 2;
-    const float radiance = tree.computeNumber("radiance", *mLight, 1.0f);
-    const float scale    = tree.computeNumber("scale", *mLight, 1.0f);
+    const float radiance = tree.computeNumber("radiance", *mLight, 1.0f).Value;
+    const float scale    = tree.computeNumber("scale", *mLight, 1.0f).Value;
     return scale * radiance * Pi * radius * radius;
 }
 
