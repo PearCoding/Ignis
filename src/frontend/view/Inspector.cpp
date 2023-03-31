@@ -56,7 +56,9 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, 
     constexpr float QuadWidth          = ZoomRectangleWidth / (ZoomSize * 2 + 1);
     static std::array<float, (2 * ZoomSize + 1) * (2 * ZoomSize + 1)> lums;
 
-    ImGui::BeginTooltip();
+    if (!ImGui::BeginTooltip())
+        return;
+
     ImGui::BeginGroup();
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -98,6 +100,7 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, 
     draw_list->AddRect(pos, pos + quadSize, 0xFF0000FF, 0.f, 15, 2.f);
 
     ImGui::EndGroup();
+
     ImGui::SameLine();
     ImGui::BeginGroup();
     ImVec4 color = ImColor(get_texel(px, py, width, height, rgb));
