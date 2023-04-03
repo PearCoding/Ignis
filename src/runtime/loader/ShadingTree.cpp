@@ -16,7 +16,7 @@ namespace IG {
 ShadingTree::ShadingTree(LoaderContext& ctx)
     : mContext(ctx)
     , mTranspiler(*this)
-    , mForceSpecialization(false)
+    , mSpecialization(RuntimeOptions::SpecializationMode::Default)
 {
     beginClosure("_root");
     setupGlobalParameters();
@@ -317,13 +317,13 @@ ShadingTree::BakeOutputNumber ShadingTree::computeNumber(const std::string& name
     case SceneProperty::PT_STRING: {
         if (const auto it = mContext.Cache->ExprComputation.find(prop.getString()); it != mContext.Cache->ExprComputation.end()) {
             const auto output = std::any_cast<BakeOutputColor>(it->second);
-            return BakeOutputNumber{output.Value.mean(), output.WasConstant};
+            return BakeOutputNumber{ output.Value.mean(), output.WasConstant };
         }
 
         IG_LOG(L_DEBUG) << "Computing number for expression '" << prop.getString() << "'" << std::endl;
-        LoaderContext ctx_copy = mContext.copyForBake();
+        LoaderContext ctx_copy  = mContext.copyForBake();
         const auto color_output = ShadingTree(ctx_copy).bakeTextureExpressionAverage(name, prop.getString(), Vector3f::Constant(def), options);
-        return BakeOutputNumber{color_output.Value.mean(), color_output.WasConstant};
+        return BakeOutputNumber{ color_output.Value.mean(), color_output.WasConstant };
     }
     }
 }
@@ -564,9 +564,9 @@ ShadingTree::BakeOutputColor ShadingTree::bakeTextureExpressionAverage(const std
 
             mContext.Cache->ExprComputation[expr] = color;
             return color;
-        } else if(options.SkipTextures) {
+        } else if (options.SkipTextures) {
             return BakeOutputColor::AsConstant(def);
-        } else{
+        } else {
             const Image image                     = computeImage(name, result, TextureBakeOptions{ 0, 0, 1, 1, true });
             const Vector4f average                = image.computeAverage();
             const auto color                      = BakeOutputColor::AsConstant(average.block<3, 1>(0, 0));
@@ -661,8 +661,10 @@ bool ShadingTree::checkIfEmbed(float val, const NumberOptions& options) const
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || mContext.Options.ForceSpecialization)
+        if (mSpecialization == RuntimeOptions::SpecializationMode::Force || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Force)
             return true;
+        else if (mSpecialization == RuntimeOptions::SpecializationMode::Disable || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Disable)
+            return false;
         else if (options.SpecializeZero && std::abs(val) <= FltEps)
             return true;
         else if (options.SpecializeOne && std::abs(val - 1) <= FltEps)
@@ -681,8 +683,10 @@ bool ShadingTree::checkIfEmbed(const Vector3f& color, const ColorOptions& option
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || mContext.Options.ForceSpecialization)
+        if (mSpecialization == RuntimeOptions::SpecializationMode::Force || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Force)
             return true;
+        else if (mSpecialization == RuntimeOptions::SpecializationMode::Disable || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Disable)
+            return false;
         else if (options.SpecializeBlack && color.isZero(FltEps))
             return true;
         else if (options.SpecializeWhite && color.isOnes(FltEps))
@@ -701,8 +705,10 @@ bool ShadingTree::checkIfEmbed(const Vector3f& vec, const VectorOptions& options
         return false;
     default:
     case EmbedType::Default:
-        if (mForceSpecialization || mContext.Options.ForceSpecialization)
+        if (mSpecialization == RuntimeOptions::SpecializationMode::Force || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Force)
             return true;
+        else if (mSpecialization == RuntimeOptions::SpecializationMode::Disable || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Disable)
+            return false;
         else if (options.SpecializeZero && vec.isZero(FltEps))
             return true;
         else if (options.SpecializeOne && vec.isOnes(FltEps))

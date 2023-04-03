@@ -20,7 +20,7 @@ struct LoaderOptions {
     size_t FilmHeight;
     size_t SamplesPerIteration; // Only a recommendation!
     bool IsTracer;
-    bool ForceSpecialization;
+    RuntimeOptions::SpecializationMode Specialization;
     bool EnableTonemapping;
     bool EnableCache;
     DenoiserSettings Denoiser;

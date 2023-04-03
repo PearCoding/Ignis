@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Logger.h"
+#include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
 #include "SPPMode.h"
 #include "device/Target.h"
@@ -68,8 +69,9 @@ public:
     bool DumpRegistry     = false;
     bool DumpFullRegistry = false;
 
-    bool AddExtraEnvLight    = false;
-    bool ForceSpecialization = false;
+    bool AddExtraEnvLight = false;
+
+    RuntimeOptions::SpecializationMode Specialization = RuntimeOptions::SpecializationMode::Default;
 
     bool Denoise                    = false;
     bool DenoiserFollowSpecular     = false;

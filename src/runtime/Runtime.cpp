@@ -201,18 +201,18 @@ bool Runtime::loadFromScene(const Scene* scene)
 bool Runtime::load(const Path& path, const Scene* scene)
 {
     LoaderOptions lopts;
-    lopts.FilePath            = path;
-    lopts.EnableCache         = mOptions.EnableCache;
-    lopts.CachePath           = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_u8string())) : mOptions.CacheDir;
-    lopts.Target              = mOptions.Target;
-    lopts.IsTracer            = mOptions.IsTracer;
-    lopts.Scene               = scene;
-    lopts.ForceSpecialization = mOptions.ForceSpecialization;
-    lopts.EnableTonemapping   = mOptions.EnableTonemapping;
-    lopts.Denoiser            = mOptions.Denoiser;
-    lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
-    lopts.Compiler            = &mCompiler;
-    lopts.Device              = mDevice.get();
+    lopts.FilePath          = path;
+    lopts.EnableCache       = mOptions.EnableCache;
+    lopts.CachePath         = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_u8string())) : mOptions.CacheDir;
+    lopts.Target            = mOptions.Target;
+    lopts.IsTracer          = mOptions.IsTracer;
+    lopts.Scene             = scene;
+    lopts.Specialization    = mOptions.Specialization;
+    lopts.EnableTonemapping = mOptions.EnableTonemapping;
+    lopts.Denoiser          = mOptions.Denoiser;
+    lopts.Denoiser.Enabled  = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
+    lopts.Compiler          = &mCompiler;
+    lopts.Device            = mDevice.get();
 
     mHasSceneParameters = !scene->parameters().empty();
 

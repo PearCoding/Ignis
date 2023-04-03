@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Image.h"
+#include "RuntimeSettings.h"
 #include "Transpiler.h"
+
 #include <unordered_map>
 #include <unordered_set>
 
@@ -59,15 +61,15 @@ struct TextureOptions {
     static constexpr TextureOptions Structural() { return TextureOptions{ EmbedType::Structural }; }
     static constexpr TextureOptions Default() { return TextureOptions{ EmbedType::Default }; }
 };
-template<typename T>
+template <typename T>
 struct GenericBakeOutput {
     T Value;
     bool WasConstant;
-    static GenericBakeOutput AsConstant(const T& v) { return GenericBakeOutput<T>{v, true}; }
-    static GenericBakeOutput AsVarying(const T& v) { return GenericBakeOutput<T>{v, false}; }
+    static GenericBakeOutput AsConstant(const T& v) { return GenericBakeOutput<T>{ v, true }; }
+    static GenericBakeOutput AsVarying(const T& v) { return GenericBakeOutput<T>{ v, false }; }
 };
 using BakeOutputNumber = GenericBakeOutput<float>;
-using BakeOutputColor = GenericBakeOutput<Vector3f>;
+using BakeOutputColor  = GenericBakeOutput<Vector3f>;
 struct GenericBakeOptions {
     bool SkipTextures; // Will not bake parameters which are beyond simple constants
     static constexpr GenericBakeOptions Default() { return GenericBakeOptions{ false }; }
@@ -101,8 +103,8 @@ public:
     using VectorOptions  = _details::VectorOptions;
     using TextureOptions = _details::TextureOptions;
 
-    using BakeOutputNumber = _details::BakeOutputNumber;
-    using BakeOutputColor = _details::BakeOutputColor;
+    using BakeOutputNumber   = _details::BakeOutputNumber;
+    using BakeOutputColor    = _details::BakeOutputColor;
     using GenericBakeOptions = _details::GenericBakeOptions;
     using TextureBakeOptions = _details::TextureBakeOptions;
 
@@ -138,8 +140,8 @@ public:
     inline LoaderContext& context() { return mContext; }
     inline const LoaderContext& context() const { return mContext; }
 
-    inline void forceSpecialization(bool b = true) { mForceSpecialization = b; }
-    inline bool isSpecializationForced() const { return mForceSpecialization; }
+    inline void setSpecialization(RuntimeOptions::SpecializationMode mode) { mSpecialization = mode; }
+    inline RuntimeOptions::SpecializationMode specializationMode() const { return mSpecialization; }
 
     /// Use this function to mark the loading process as failed if it can not be saved with other means
     void signalError();
@@ -180,6 +182,6 @@ private:
     Transpiler mTranspiler;
     std::unordered_map<std::string, size_t> mIDMap; // Used to anonymize names for better caching
 
-    bool mForceSpecialization;
+    RuntimeOptions::SpecializationMode mSpecialization;
 };
 } // namespace IG
