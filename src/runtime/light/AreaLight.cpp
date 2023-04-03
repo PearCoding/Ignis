@@ -108,6 +108,7 @@ void AreaLight::precompute(ShadingTree& tree)
 
 float AreaLight::computeFlux(ShadingTree& tree) const
 {
+    IG_UNUSED(tree);
     return mColor_Cache.mean();
 }
 

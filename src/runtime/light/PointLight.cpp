@@ -26,6 +26,7 @@ void PointLight::precompute(ShadingTree& tree)
 
 float PointLight::computeFlux(ShadingTree& tree) const
 {
+    IG_UNUSED(tree);
     return mColor_Cache.mean();
 }
 

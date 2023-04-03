@@ -34,6 +34,7 @@ void SpotLight::precompute(ShadingTree& tree)
 
 float SpotLight::computeFlux(ShadingTree& tree) const
 {
+    IG_UNUSED(tree);
     return mColor_Cache.mean();
 }
 
