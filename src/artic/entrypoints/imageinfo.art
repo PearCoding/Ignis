@@ -34,6 +34,7 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
 
     let do_soft = width > 10 && height > 10;
     if do_soft {
+        // TODO: This can be optimized further
         // Window based percentile setup (which is just approximative)
         let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
         for (x, y) in device.parallel_range_2d(1, width - 1, 1, height - 1) {

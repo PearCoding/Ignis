@@ -96,9 +96,10 @@ public:
     [[nodiscard]] std::string dump(size_t totalMS, size_t iter, bool verbose) const;
 
 private:
+    using duration_t = Timer::duration;
     struct ShaderStats {
         Timer timer;
-        size_t elapsedMS    = 0;
+        duration_t elapsed  = duration_t(0);
         size_t count        = 0;
         size_t workload     = 0; // This might overflow, but who cares for statistical stuff after that huge number of iterations
         size_t max_workload = 0;
@@ -111,8 +112,8 @@ private:
 
     struct SectionStats {
         Timer timer;
-        size_t elapsedMS = 0;
-        size_t count     = 0;
+        duration_t elapsed = duration_t(0);
+        size_t count = 0;
 
         SectionStats& operator+=(const SectionStats& other);
     };

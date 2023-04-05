@@ -2,8 +2,10 @@
 
 #include "IG_Config.h"
 
+#include <chrono>
 #include <mutex>
 #include <streambuf>
+#include <tuple>
 #include <vector>
 
 namespace IG {
@@ -130,7 +132,7 @@ private:
 template <typename T>
 inline std::ostream& operator<<(std::ostream& stream, const FormatMemory<T>& mem)
 {
-    int i = 0;
+    int i           = 0;
     double mantissa = (double)mem.value();
     for (; i < 9 && mantissa >= 1024; ++i)
         mantissa /= 1024;
@@ -140,6 +142,104 @@ inline std::ostream& operator<<(std::ostream& stream, const FormatMemory<T>& mem
 
     return i == 0 ? stream : (stream << "B");
 }
+
+// Time printer based on https://stackoverflow.com/questions/22063979/elegant-time-print-in-c11
+
+namespace detail {
+template <typename>
+struct duration_traits {
+};
+
+#define DURATION_TRAITS(Duration, Singular, Plural, Suffix) \
+    template <>                                             \
+    struct duration_traits<Duration> {                      \
+        constexpr static const char* singular = Singular;   \
+        constexpr static const char* plural   = Plural;     \
+        constexpr static const char* suffix   = Suffix;     \
+    }
+
+DURATION_TRAITS(std::chrono::nanoseconds, "nanosecond", "nanoseconds", "ns");
+DURATION_TRAITS(std::chrono::microseconds, "microsecond", "microseconds", "us");
+DURATION_TRAITS(std::chrono::milliseconds, "millisecond", "milliseconds", "ms");
+DURATION_TRAITS(std::chrono::seconds, "second", "seconds", "s");
+DURATION_TRAITS(std::chrono::minutes, "minute", "minutes", "min");
+DURATION_TRAITS(std::chrono::hours, "hour", "hours", "h");
+
+#undef DURATION_TRAITS
+
+using divisions = std::tuple<std::chrono::nanoseconds,
+                             std::chrono::microseconds,
+                             std::chrono::milliseconds,
+                             std::chrono::seconds,
+                             std::chrono::minutes,
+                             std::chrono::hours>;
+
+template <typename...>
+struct print_duration_impl_ {
+};
+
+template <typename Head, typename... Tail>
+struct print_duration_impl_<Head, Tail...> {
+    template <typename Duration>
+    static int print(std::ostream& os, Duration& dur)
+    {
+        const auto number_of_prints = print_duration_impl_<Tail...>::print(os, dur);
+
+        const auto n     = std::chrono::duration_cast<Head>(dur);
+        const auto count = n.count();
+
+        if (count == 0) {
+            // Only increase after the first print
+            return number_of_prints > 0 ? number_of_prints + 1 : number_of_prints;
+        }
+
+        if (number_of_prints == 1) {
+            os << ' ';
+        } else if (number_of_prints > 1) {
+            // Only print maximum of two units
+            return number_of_prints;
+        }
+
+        using traits = duration_traits<Head>;
+        os << count << traits::suffix;
+        dur -= n;
+
+        return number_of_prints + 1;
+    }
+};
+
+template <>
+struct print_duration_impl_<> {
+    template <typename Duration>
+    static int print(std::ostream& os, Duration& dur)
+    {
+        IG_UNUSED(os);
+        IG_UNUSED(dur);
+        return 0;
+    }
+};
+
+template <typename...>
+struct print_duration {
+};
+
+template <typename... Args>
+struct print_duration<std::tuple<Args...>> {
+    template <typename Duration>
+    static void print(std::ostream& os, Duration dur)
+    {
+        print_duration_impl_<Args...>::print(os, dur);
+    }
+};
+} // namespace detail
+
+template <typename Rep, typename Period>
+std::ostream& operator<<(std::ostream& os, const std::chrono::duration<Rep, Period>& dur)
+{
+    detail::print_duration<detail::divisions>::print(os, dur);
+    return os;
+}
+
 } // namespace IG
 
 #define IG_LOGGER (IG::Logger::instance())
