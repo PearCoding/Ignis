@@ -7,22 +7,43 @@
 
 mod stats {
 
-enum Section {
-    TODO
-}
-
 enum Quantity {
     CameraRayCount,
     ShadowRayCount,
     BounceRayCount
 }
 
-fn @begin_section(_sec: Section) -> () {
-    // TODO
+enum Section {
+    GPUSortPrimary,
+    GPUSortSecondary,
+    GPUCompactPrimary,
+    GPUSortPrimaryReset,
+    GPUSortPrimaryCount,
+    GPUSortPrimaryScan,
+    GPUSortPrimarySort,
+    GPUSortPrimaryCollapse
+    // TODO: Same depth for secondary and compact?
+}
+
+fn @section_id(sec: Section) = match sec {
+    // Should match numbers in runtime/Statistics.h
+    Section::GPUSortPrimary         => 0,
+    Section::GPUSortSecondary       => 1,
+    Section::GPUCompactPrimary      => 2,
+    Section::GPUSortPrimaryReset    => 3, 
+    Section::GPUSortPrimaryCount    => 4, 
+    Section::GPUSortPrimaryScan     => 5, 
+    Section::GPUSortPrimarySort     => 6, 
+    Section::GPUSortPrimaryCollapse => 7
+    // TODO: Add for CPU as well (vectorization kinda gets in the way though)
+};
+
+fn @begin_section(sec: Section) -> () {
+    super::ignis_stats_begin_section(section_id(sec));
 } 
 
-fn @end_section(_sec: Section) -> () {
-    // TODO
+fn @end_section(sec: Section) -> () {
+    super::ignis_stats_end_section(section_id(sec));
 } 
 
 fn @section(sec: Section, func: fn () -> ()) {

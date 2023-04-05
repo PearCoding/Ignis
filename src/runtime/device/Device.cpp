@@ -1962,8 +1962,7 @@ IG_EXPORT void ignis_stats_begin_section(int id)
     if (!sInterface->setup.acquire_stats)
         return;
 
-    // TODO
-    IG_UNUSED(id);
+    sInterface->getThreadData()->stats.beginSection((IG::SectionType)id);
 }
 
 IG_EXPORT void ignis_stats_end_section(int id)
@@ -1971,8 +1970,7 @@ IG_EXPORT void ignis_stats_end_section(int id)
     if (!sInterface->setup.acquire_stats)
         return;
 
-    // TODO
-    IG_UNUSED(id);
+    sInterface->getThreadData()->stats.endSection((IG::SectionType)id);
 }
 
 IG_EXPORT void ignis_stats_add(int id, int value)

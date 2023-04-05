@@ -24,7 +24,18 @@ enum class ShaderType {
 };
 
 enum class SectionType {
-    ImageLoading = 0,
+    // This should be in sync with core/stats.art
+    GPUSortPrimary         = 0, 
+    GPUSortSecondary       = 1,
+    GPUCompactPrimary      = 2,
+    GPUSortPrimaryReset    = 3, 
+    GPUSortPrimaryCount    = 4, 
+    GPUSortPrimaryScan     = 5, 
+    GPUSortPrimarySort     = 6, 
+    GPUSortPrimaryCollapse = 7, 
+    // TODO: Add for CPU as well (vectorization kinda gets in the way though)
+
+    ImageLoading,
     PackedImageLoading,
     BufferLoading,
     BufferRequests,
@@ -113,7 +124,7 @@ private:
     struct SectionStats {
         Timer timer;
         duration_t elapsed = duration_t(0);
-        size_t count = 0;
+        size_t count       = 0;
 
         SectionStats& operator+=(const SectionStats& other);
     };

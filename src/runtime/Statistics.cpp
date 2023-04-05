@@ -188,9 +188,9 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
         dumpInline(name, stats.count, stats.elapsed, static_cast<float>(double(stats.workload) / double(total_workload)), stats.max_workload, stats.min_workload);
     };
 
-    const auto dumpSectionStats = [&](const std::string& name, const SectionStats& stats) {
+    const auto dumpSectionStats = [&](const std::string& name, const SectionStats& stats, bool skipIter = true) {
         if (stats.count > 0)
-            dumpInline(name, stats.count, stats.elapsed, -1, 0, 0, true);
+            dumpInline(name, stats.count, stats.elapsed, -1, 0, 0, skipIter);
     };
 
     const auto dumpQuantity = [=](size_t count) {
@@ -213,6 +213,14 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     table.addRow({ "Statistics:" });
     table.addRow({ "  Shader:" });
     dumpStats("  |-Device", mDeviceStats);
+    dumpSectionStats("  ||-GPUSortPrimary", mSections[(size_t)SectionType::GPUSortPrimary], false);
+    dumpSectionStats("  |||-GPUSortPrimaryReset", mSections[(size_t)SectionType::GPUSortPrimaryReset], false);
+    dumpSectionStats("  |||-GPUSortPrimaryCount", mSections[(size_t)SectionType::GPUSortPrimaryCount], false);
+    dumpSectionStats("  |||-GPUSortPrimaryScan", mSections[(size_t)SectionType::GPUSortPrimaryScan], false);
+    dumpSectionStats("  |||-GPUSortPrimarySort", mSections[(size_t)SectionType::GPUSortPrimarySort], false);
+    dumpSectionStats("  |||-GPUSortPrimaryCollapse", mSections[(size_t)SectionType::GPUSortPrimaryCollapse], false);
+    dumpSectionStats("  ||-GPUSortSecondary", mSections[(size_t)SectionType::GPUSortSecondary], false);
+    dumpSectionStats("  ||-GPUCompactPrimary", mSections[(size_t)SectionType::GPUCompactPrimary], false);
     dumpStats("  |-PrimaryTraversal", mPrimaryTraversalStats);
     dumpStats("  |-SecondaryTraversal", mSecondaryTraversalStats);
     dumpStats("  |-RayGeneration", mRayGenerationStats);
