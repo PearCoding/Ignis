@@ -121,6 +121,7 @@ void scene_module(nb::module_& m)
             nb::arg("str"), nb::arg("opt_dir") = "", nb::arg("flags") = (uint32)SceneParser::F_LoadAll);
 
     auto parser = nb::class_<SceneParser>(m, "SceneParser", "Parser for standard JSON and glTF scene description")
+                      .def(nb::init<>())
                       .def(
                           "loadFromFile", &SceneParser::loadFromFile,
                           nb::arg("path"), nb::arg("flags") = (uint32)SceneParser::F_LoadAll)
