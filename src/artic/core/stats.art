@@ -21,8 +21,11 @@ enum Section {
     GPUSortPrimaryCount,
     GPUSortPrimaryScan,
     GPUSortPrimarySort,
-    GPUSortPrimaryCollapse
+    GPUSortPrimaryCollapse,
     // TODO: Same depth for secondary and compact?
+    ImageInfoPercentile,
+    ImageInfoError,
+    ImageInfoHistogram
 }
 
 fn @section_id(sec: Section) = match sec {
@@ -34,8 +37,11 @@ fn @section_id(sec: Section) = match sec {
     Section::GPUSortPrimaryCount    => 4, 
     Section::GPUSortPrimaryScan     => 5, 
     Section::GPUSortPrimarySort     => 6, 
-    Section::GPUSortPrimaryCollapse => 7
+    Section::GPUSortPrimaryCollapse => 7,
     // TODO: Add for CPU as well (vectorization kinda gets in the way though)
+    Section::ImageInfoPercentile    => 10, 
+    Section::ImageInfoError         => 11, 
+    Section::ImageInfoHistogram     => 12,
 };
 
 fn @begin_section(sec: Section) -> () {

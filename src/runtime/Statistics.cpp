@@ -257,8 +257,12 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
             dumpStats("  ||-@" + std::to_string(pair.first) + ">", pair.second);
     }
 
-    if (mImageInfoStats.count > 0)
+    if (mImageInfoStats.count > 0) {
         dumpStats("  |-ImageInfo", mImageInfoStats);
+        dumpSectionStats("  ||-ImageInfoPercentile", mSections[(size_t)SectionType::ImageInfoPercentile], false);
+        dumpSectionStats("  ||-ImageInfoError", mSections[(size_t)SectionType::ImageInfoError], false);
+        dumpSectionStats("  ||-ImageInfoHistogram", mSections[(size_t)SectionType::ImageInfoHistogram], false);
+    }
 
     if (mTonemapStats.count > 0)
         dumpStats("  |-Tonemap", mTonemapStats);

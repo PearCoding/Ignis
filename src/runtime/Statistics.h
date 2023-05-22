@@ -25,15 +25,18 @@ enum class ShaderType {
 
 enum class SectionType {
     // This should be in sync with core/stats.art
-    GPUSortPrimary         = 0, 
+    GPUSortPrimary         = 0,
     GPUSortSecondary       = 1,
     GPUCompactPrimary      = 2,
-    GPUSortPrimaryReset    = 3, 
-    GPUSortPrimaryCount    = 4, 
-    GPUSortPrimaryScan     = 5, 
-    GPUSortPrimarySort     = 6, 
-    GPUSortPrimaryCollapse = 7, 
+    GPUSortPrimaryReset    = 3,
+    GPUSortPrimaryCount    = 4,
+    GPUSortPrimaryScan     = 5,
+    GPUSortPrimarySort     = 6,
+    GPUSortPrimaryCollapse = 7,
     // TODO: Add for CPU as well (vectorization kinda gets in the way though)
+    ImageInfoPercentile = 10,
+    ImageInfoError      = 11,
+    ImageInfoHistogram  = 12,
 
     ImageLoading,
     PackedImageLoading,

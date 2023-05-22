@@ -24,16 +24,17 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
     output.avg = reduce_output.sum / size as f32;
 
     let global_data = device.request_buffer("__imageinfo_stats", sizeof[f32]() as i32 * 8, 0);
+    let mut host_arr : [i32 * 8];
+    for i in unroll(0, 8) {
+        host_arr(i) = 0;
+    }
+    host_arr(0) = bitcast[i32](flt_max);
 
-    global_data.store_i32_host(0, bitcast[i32](flt_max)); // Soft Min
-    global_data.store_i32_host(1, 0);                     // Soft Max
-    global_data.store_i32_host(2, 0);                     // Median
-    global_data.store_i32_host(3, 0);                     // Inf Counter
-    global_data.store_i32_host(4, 0);                     // NaN Counter
-    global_data.store_i32_host(5, 0);                     // Neg Counter
+    global_data.copy_from_host(0, 8, host_arr);
 
     let do_soft = width > 10 && height > 10;
     if do_soft {
+        stats::begin_section(stats::Section::ImageInfoPercentile);
         // TODO: This can be optimized further
         // Window based percentile setup (which is just approximative)
         let median_factor = safe_div(1, ((width - 2) * (height - 2)) as f32);
@@ -63,6 +64,7 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
             if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
             if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
         }
+        stats::end_section(stats::Section::ImageInfoPercentile);
     } else {
         // Given window is not large enough, use the fixed variants
         output.soft_min = output.min;
@@ -72,6 +74,7 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
 
     // Check pixels
     if settings.acquire_error_stats {
+        stats::begin_section(stats::Section::ImageInfoError);
         for i in device.parallel_range(0, 3*width*height) {
             let c = buffer_in.load_f32(i);
 
@@ -83,21 +86,25 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
             if is_nan { global_data.add_atomic_i32(4, 1); }
             if is_neg { global_data.add_atomic_i32(5, 1); }
         }
+        stats::end_section(stats::Section::ImageInfoError);
     }
 
     device.sync();
 
+    global_data.copy_to_host(0, 8, host_arr);
+
     if do_soft {
-        output.soft_min = bitcast[f32](global_data.load_i32_host(0));
-        output.soft_max = bitcast[f32](global_data.load_i32_host(1));
-        output.median   = bitcast[f32](global_data.load_i32_host(2));
+        output.soft_min = bitcast[f32](host_arr(0));
+        output.soft_max = bitcast[f32](host_arr(1));
+        output.median   = bitcast[f32](host_arr(2));
     }
 
-    output.inf_counter = global_data.load_i32_host(3);
-    output.nan_counter = global_data.load_i32_host(4);
-    output.neg_counter = global_data.load_i32_host(5);
+    output.inf_counter = host_arr(3);
+    output.nan_counter = host_arr(4);
+    output.neg_counter = host_arr(5);
 
     if settings.acquire_histogram {
+        stats::begin_section(stats::Section::ImageInfoHistogram);
         // Setup histogram
         let histogram_start     = select(output.min < output.max, output.min, 0:f32);
         let histogram_end       = select(output.min < output.soft_max, output.soft_max, select(output.min < output.max, output.max, histogram_start + 1));
@@ -143,5 +150,6 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
         dev_histogram_b.copy_to_host(0, histogram_bin_count, settings.histogram_b);
         dev_histogram_l.copy_to_host(0, histogram_bin_count, settings.histogram_l);
         device.sync();
+        stats::end_section(stats::Section::ImageInfoHistogram);
     }
 }
