@@ -7,7 +7,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source $SCRIPT_DIR/../source.sh
 
 quiet=false
-scene=${SCRIPT_DIR}/../scenes/diamond_scene.json
+scene=$(realpath ${SCRIPT_DIR}/../scenes/diamond_scene.json)
 executable=${BUILD_DIR}/bin/igcli
 spp=64
 num_iterations=10
@@ -32,10 +32,12 @@ while [ -n "$1" ]; do
         shift
         ;;
     -e)
-        executable="$2"
+        executable=$(realpath "$2")
         shift
         ;;
-    -q) quiet=true ;;
+    -q) 
+        quiet=true
+        ;;
     --)
         shift
         break
@@ -49,8 +51,10 @@ args="--spp ${spp} -o _bench.exr ${scene} $@"
 
 # Do some warm up iterations
 if [ "$quiet" = false ]; then
+    echo "Using arguments: ${args}"
     echo "Warm up..."
 fi
+
 for ((i = 0; i < $warmup_iterations; i++)); do
     if [ "$quiet" = false ]; then
         echo $(expr $i + 1)
