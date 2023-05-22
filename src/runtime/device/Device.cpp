@@ -653,14 +653,6 @@ public:
         return proxy;
     }
 
-    inline SceneInfo loadSceneInfo(int32_t dev)
-    {
-        IG_UNUSED(dev);
-
-        return SceneInfo{ (int)entity_count,
-                          (int)scene.database->MaterialCount };
-    }
-
     inline const DynTableProxy& loadDyntable(int32_t dev, const char* name)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
@@ -1755,11 +1747,6 @@ IG_EXPORT void ignis_load_bvh8_ent(int dev, const char* prim_type, Node8** nodes
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
 }
 
-IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
-{
-    *info = sInterface->loadSceneInfo(dev);
-}
-
 static inline DynTableData assignDynTable(const IG::DynTableProxy& tbl)
 {
     DynTableData devtbl;
@@ -1838,17 +1825,17 @@ IG_EXPORT void ignis_dbg_dump_buffer(int32_t dev, const char* name, const char* 
     sInterface->dumpBuffer(dev, name, filename);
 }
 
-IG_EXPORT void ignis_get_temporary_storage(int dev, TemporaryStorageHost* temp)
+IG_EXPORT void ignis_get_temporary_storage_host(int dev, TemporaryStorageHost* temp)
 {
     const auto& data          = sInterface->getTemporaryStorageHost(dev);
     temp->ray_begins          = const_cast<int32_t*>(data.ray_begins.data());
     temp->ray_ends            = const_cast<int32_t*>(data.ray_ends.data());
-    temp->entity_per_material = const_cast<int32_t*>(sInterface->scene.entity_per_material->data()); // Always on the host
+    temp->entity_per_material = const_cast<int32_t*>(sInterface->scene.entity_per_material->data());
 }
 
-IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
+IG_EXPORT void ignis_get_temporary_storage_device(int dev, TemporaryStorageDevice* temp)
 {
-    *buf = sInterface->getGPUTemporaryBuffer(dev).data();
+    temp->counter = sInterface->getGPUTemporaryBuffer(dev).data();
 }
 
 IG_EXPORT void ignis_get_primary_stream(int dev, int id, PrimaryStream* primary, int size)

@@ -159,14 +159,26 @@ std::string ShaderUtils::inlineSceneBBox(const LoaderContext& ctx)
     return stream.str();
 }
 
-std::string ShaderUtils::inlineSceneInfo(const LoaderContext& ctx, bool embed)
+std::string ShaderUtils::inlineScene(const LoaderContext& ctx, bool embed)
 {
     if (embed) {
         std::stringstream stream;
-        stream << "SceneInfo { num_entities = " << ctx.Entities->entityCount() << ", num_materials = " << ctx.Materials.size() << " }";
+        stream << "  let scene  = Scene {" << std::endl
+               << "    num_entities  = " << ctx.Entities->entityCount() << "," << std::endl
+               << "    num_materials = " << ctx.Materials.size() << "," << std::endl
+               << "    shapes   = shapes," << std::endl
+               << "    entities = entities," << std::endl
+               << "  };" << std::endl;
         return stream.str();
     } else {
-        return "SceneInfo { num_entities = registry::get_global_parameter_i32(\"__entity_count\", 0), num_materials = registry::get_global_parameter_i32(\"__shape_count\", 0) }";
+        std::stringstream stream;
+        stream << "  let scene  = Scene {" << std::endl
+               << "    num_entities  = registry::get_global_parameter_i32(\"__entity_count\", 0)," << std::endl
+               << "    num_materials = registry::get_global_parameter_i32(\"__material_count\", 0)," << std::endl
+               << "    shapes   = shapes," << std::endl
+               << "    entities = entities," << std::endl
+               << "  };" << std::endl;
+        return stream.str();
     }
 }
 

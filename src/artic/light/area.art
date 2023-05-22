@@ -312,7 +312,8 @@ fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, shapes: Sha
                 local_mat  = local_mat,
                 global_mat = global_mat,
                 normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
-                shape_id   = bitcast[i32](m.col(3).x)
+                shape_id   = bitcast[i32](m.col(3).x),
+                mat_id     = 0 // TODO
             };
 
             let shape    = shapes(entity.shape_id);
@@ -367,7 +368,8 @@ fn @load_simple_sphere_lights(count: i32, id_off: i32, device: Device) -> LightT
                 local_mat  = local_mat,
                 global_mat = global_mat,
                 normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
-                shape_id   = 0
+                shape_id   = 0,
+                mat_id     = 0 // TODO
             };
 
             let radiance = data.load_vec4(36);

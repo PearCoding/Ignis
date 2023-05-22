@@ -8,8 +8,11 @@ fn ig_callback_shader(_settings: &Settings) -> () {
     ignis_get_primary_stream(  0, 0, &mut primary,   0);
     ignis_get_secondary_stream(0, 0, &mut secondary, 0);
 
-    let mut temp : TemporaryStorageHost;
-    ignis_get_temporary_storage(0, &mut temp);
+    let mut temp_host : TemporaryStorageHost;
+    ignis_get_temporary_storage_host(0, &mut temp_host);
+
+    let mut temp_dev : TemporaryStorageDevice;
+    ignis_get_temporary_storage_device(0, &mut temp_dev);
 
     let mut work_info : WorkInfo;
     ignis_get_work_info(&mut work_info);
@@ -27,9 +30,6 @@ fn ig_callback_shader(_settings: &Settings) -> () {
     // Force the export
     let mut tbl : DynTableData;
     ignis_load_dyntable(0, "", &mut tbl);
-
-    let mut info : SceneInfo;
-    ignis_load_scene_info(0, &mut info);
 
     let mut rays : &[StreamRay];
     ignis_load_rays(0, &mut rays);

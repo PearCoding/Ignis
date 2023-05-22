@@ -407,28 +407,34 @@ fn @gpu_sort_primary( primary: PrimaryStream
                     , acc: Accelerator
                     , gpu_config: GPUKernelConfiguration
                     , atomics: Atomics
-                    , scene_info: SceneInfo
+                    , scene: Scene
                     , payload_count: i32
                     , entity_per_material: &[i32]
                     , gpu_tmp:  &mut [i32]
                     , ray_begins: &mut [i32]
                     , ray_ends: &mut [i32]
                     ) -> () {
+
+    // Note: We could sort based on materials only, but sorting based on entities, 
+    // and than collapsing based on materials ensures a better buffer lookup later in the shading stage, due to similar properties grouped together.
+    // TODO: This has to be proper evaluated in large scenes, though.
+    let num_geometries = scene.num_entities;
+
+    fn @get_entry_arr_id(i: i32) {
+        let k = primary.ent_id(i);
+        // let k = primary.mat_id(i);
+        select(k == InvalidHitId, num_geometries, k)
+    }
+
     // Fill temporary buffer with 0s
     stats::begin_section(stats::Section::GPUSortPrimaryReset);
-    gpu_exec_1d(acc, scene_info.num_entities + 1, gpu_config.block_size_reset, |work_item| {
-        let ent_id = work_item.gidx();
-        if ent_id > scene_info.num_entities { return() }
-        gpu_tmp(ent_id) = 0;
+    gpu_exec_1d(acc, num_geometries + 1, gpu_config.block_size_reset, |work_item| {
+        let id = work_item.gidx();
+        if id > num_geometries { return() }
+        gpu_tmp(id) = 0;
     });
     acc.sync();
     stats::end_section(stats::Section::GPUSortPrimaryReset);
-
-    let num_geometries = scene_info.num_entities;
-    fn @get_ent_arr_id(i: i32) {
-        let k = primary.ent_id(i);
-        select(k == InvalidHitId, num_geometries, k)
-    }
 
     // Count number of rays for each geometry
     stats::begin_section(stats::Section::GPUSortPrimaryCount);
@@ -436,21 +442,22 @@ fn @gpu_sort_primary( primary: PrimaryStream
         let ray_id = work_item.gidx();
         if ray_id >= size { return() }
 
-        atomics.add_global_i32(&mut gpu_tmp(get_ent_arr_id(ray_id)), 1);
+        atomics.add_global_i32(&mut gpu_tmp(get_entry_arr_id(ray_id)), 1);
     });
     acc.sync();
     stats::end_section(stats::Section::GPUSortPrimaryCount);
 
     // Perform a scan on the CPU (there are very few elements to scan)
+    // TODO: Try this out on the GPU?
     stats::begin_section(stats::Section::GPUSortPrimaryScan);
-    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, ray_ends as &mut [i8], 0, sizeof[i32]() * (scene_info.num_entities + 1) as i64);
+    runtime_copy(dev_id, gpu_tmp as &[i8], 0, 0, ray_ends as &mut [i8], 0, sizeof[i32]() * (num_geometries + 1) as i64);
     let mut n = 0;
-    for i in range(0, scene_info.num_entities + 1) {
+    for i in range(0, num_geometries + 1) {
         ray_begins(i) = n;
         n += ray_ends(i);
         ray_ends(i) = n;
     }
-    runtime_copy(0, ray_begins as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]() * (scene_info.num_entities + 1) as i64);
+    runtime_copy(0, ray_begins as &[i8], 0, dev_id, gpu_tmp as &mut [i8], 0, sizeof[i32]() * (num_geometries + 1) as i64);
     stats::end_section(stats::Section::GPUSortPrimaryScan);
 
     // Sort rays
@@ -459,33 +466,35 @@ fn @gpu_sort_primary( primary: PrimaryStream
         let src_id = work_item.gidx();
         if src_id >= size { return() }
 
-        let dst_id = atomics.add_global_i32(&mut gpu_tmp(get_ent_arr_id(src_id)), 1);
+        let dst_id = atomics.add_global_i32(&mut gpu_tmp(get_entry_arr_id(src_id)), 1);
         gpu_copy_primary_ray(primary, other_primary, src_id, dst_id, true, payload_count);
     });
     acc.sync();
     stats::end_section(stats::Section::GPUSortPrimarySort);
 
-    // Collapse entities to materials, because entities are ordered by material while loading
-    // The assumption num_materials <= num_entities has to be strictly fulfilled
-    stats::begin_section(stats::Section::GPUSortPrimaryCollapse);
-    let mut k = 0;
-    for i in range(0, scene_info.num_materials) {
-        let s = entity_per_material(i);
+    if num_geometries != scene.num_materials {
+        // Collapse entities to materials, because entities are ordered by material while loading
+        // The assumption num_materials <= num_entities has to be strictly fulfilled
+        stats::begin_section(stats::Section::GPUSortPrimaryCollapse);
+        let mut k = 0;
+        for i in range(0, scene.num_materials) {
+            let s = entity_per_material(i);
 
-        // A material has at least one entity
-        let start = ray_begins(k);
-        let end   = ray_ends(k + s - 1);
-        
-        ray_begins(i) = start;
-        ray_ends(i)   = end;
-        
-        k += s;
+            // A material has at least one entity
+            let start = ray_begins(k);
+            let end   = ray_ends(k + s - 1);
+            
+            ray_begins(i) = start;
+            ray_ends(i)   = end;
+            
+            k += s;
+        }
+        stats::end_section(stats::Section::GPUSortPrimaryCollapse);
+
+        // Ensure the "invalids" are propagated
+        ray_begins(scene.num_materials) = ray_begins(num_geometries);
+        ray_ends(scene.num_materials)   = ray_ends(num_geometries);
     }
-    stats::end_section(stats::Section::GPUSortPrimaryCollapse);
-
-    // Ensure the "invalids" are propagated
-    ray_begins(scene_info.num_materials) = ray_begins(scene_info.num_entities);
-    ray_ends(scene_info.num_materials)   = ray_ends(scene_info.num_entities);
 }
 
 fn @gpu_sort_secondary(secondary: SecondaryStream
@@ -546,13 +555,13 @@ fn @gpu_sort_secondary_with_materials( secondary: SecondaryStream
                                      , acc: Accelerator
                                      , gpu_config: GPUKernelConfiguration
                                      , atomics: Atomics
-                                     , scene_info: SceneInfo
+                                     , scene: Scene
                                      , payload_count: i32
                                      , gpu_tmp:  &mut [i32]
                                      , ray_begins: &mut [i32]
                                      , ray_ends: &mut [i32]
                                      ) -> (i32, i32) {
-    let num_materials = scene_info.num_materials;
+    let num_materials = scene.num_materials;
     let limit         = num_materials * 2;
 
     fn @map_id(i:i32) -> i32 {
@@ -720,7 +729,7 @@ fn @gpu_trace( dev_id: i32
              , acc: Accelerator
              , gpu_config: GPUKernelConfiguration
              , atomics: Atomics
-             , scene_info: SceneInfo
+             , scene: Scene
              , pipeline: Pipeline
              , config: RenderConfig
              , payload_info: PayloadInfo
@@ -737,12 +746,12 @@ fn @gpu_trace( dev_id: i32
     ignis_get_secondary_stream(dev_id, 0, &mut secondary,       gpu_config.stream_capacity);
     ignis_get_secondary_stream(dev_id, 1, &mut other_secondary, gpu_config.stream_capacity);
 
-    let mut gpu_tmp : &mut [i32];
-    ignis_gpu_get_tmp_buffer(dev_id, &mut gpu_tmp);
-
     // These two buffers are on the host only
-    let mut temp : TemporaryStorageHost;
-    ignis_get_temporary_storage(dev_id, &mut temp);
+    let mut temp_host : TemporaryStorageHost;
+    ignis_get_temporary_storage_host(dev_id, &mut temp_host);
+
+    let mut temp_dev : TemporaryStorageDevice;
+    ignis_get_temporary_storage_device(dev_id, &mut temp_dev);
 
     let mut id = 0;
     let mut current_size = 0;
@@ -758,7 +767,7 @@ fn @gpu_trace( dev_id: i32
         }
 
         // Special case: No entities to intersect
-        if scene_info.num_entities == 0 {
+        if scene.num_entities == 0 {
             pipeline.on_miss_shade(0, current_size);
             current_size = 0;
             acc.sync();
@@ -770,14 +779,14 @@ fn @gpu_trace( dev_id: i32
 
         // Sort rays by entity
         stats::begin_section(stats::Section::GPUSortPrimary);
-        gpu_sort_primary(primary, other_primary, current_size, dev_id, acc, gpu_config, atomics, scene_info, payload_info.primary_count, temp.entity_per_material, gpu_tmp, temp.ray_begins, temp.ray_ends);
+        gpu_sort_primary(primary, other_primary, current_size, dev_id, acc, gpu_config, atomics, scene, payload_info.primary_count, temp_host.entity_per_material, temp_dev.counter, temp_host.ray_begins, temp_host.ray_ends);
         gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
         stats::end_section(stats::Section::GPUSortPrimary);
 
         // Shade rays
         let mut first = 0;
-        for mat_id in range(0, scene_info.num_materials) {
-            let last = temp.ray_ends(mat_id);
+        for mat_id in range(0, scene.num_materials) {
+            let last = temp_host.ray_ends(mat_id);
             if first < last {
                 pipeline.on_hit_shade(mat_id, first, last);
                 // acc.sync(); // Uncomment this for debugging
@@ -786,7 +795,7 @@ fn @gpu_trace( dev_id: i32
         }
 
         // Shade non-hits as well
-        let last = temp.ray_ends(scene_info.num_materials);
+        let last = temp_host.ray_ends(scene.num_materials);
         if first < last {
             pipeline.on_miss_shade(first, last);
             // Do not set first as last (to make sure they drop out)
@@ -803,7 +812,7 @@ fn @gpu_trace( dev_id: i32
             if work_info.advanced_shadows {                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
                 stats::begin_section(stats::Section::GPUSortSecondary);
-                let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, secondary_size, payload_info.secondary_count, dev_id, acc, gpu_config, atomics, gpu_tmp);
+                let (valid_count, count) = gpu_sort_secondary(secondary, other_secondary, secondary_size, payload_info.secondary_count, dev_id, acc, gpu_config, atomics, temp_dev.counter);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
                 stats::end_section(stats::Section::GPUSortSecondary);
 
@@ -820,15 +829,15 @@ fn @gpu_trace( dev_id: i32
             } else if work_info.advanced_shadows_with_materials {                
                 // Secondary stream is modified, sort it to have valid shadows first, invalids last
                 stats::begin_section(stats::Section::GPUSortSecondary);
-                let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, secondary_size, dev_id, acc, gpu_config, atomics, scene_info, payload_info.secondary_count, gpu_tmp, temp.ray_begins, temp.ray_ends);
+                let (valid_count, count) = gpu_sort_secondary_with_materials(secondary, other_secondary, secondary_size, dev_id, acc, gpu_config, atomics, scene, payload_info.secondary_count, temp_dev.counter, temp_host.ray_begins, temp_host.ray_ends);
                 gpu_swap_secondary_streams(dev_id, &mut secondary, &mut other_secondary);
                 stats::end_section(stats::Section::GPUSortSecondary);
 
                 let mut sfirst = 0;
                 if valid_count != 0 {
                     // Call valids (miss)
-                    for mat_id in range(0, scene_info.num_materials) {
-                        let slast = temp.ray_ends(mat_id);
+                    for mat_id in range(0, scene.num_materials) {
+                        let slast = temp_host.ray_ends(mat_id);
                         if sfirst < slast {
                             pipeline.on_advanced_shadow(mat_id, sfirst, slast, false);
                             sfirst = slast;
@@ -838,8 +847,8 @@ fn @gpu_trace( dev_id: i32
 
                 if valid_count < count {
                     // Call invalids (hits)
-                    for mat_id in range(0, scene_info.num_materials) {
-                        let slast = temp.ray_ends(scene_info.num_materials + mat_id);
+                    for mat_id in range(0, scene.num_materials) {
+                        let slast = temp_host.ray_ends(scene.num_materials + mat_id);
                         if sfirst < slast {
                             pipeline.on_advanced_shadow(mat_id, sfirst, slast, true);
                             sfirst = slast;
@@ -852,7 +861,7 @@ fn @gpu_trace( dev_id: i32
 
             // Compact primary rays
             stats::begin_section(stats::Section::GPUCompactPrimary);
-            current_size = gpu_compact_primary(primary, other_primary, current_size, payload_info.primary_count, dev_id, acc, gpu_config, atomics, gpu_tmp);
+            current_size = gpu_compact_primary(primary, other_primary, current_size, payload_info.primary_count, dev_id, acc, gpu_config, atomics, temp_dev.counter);
             gpu_swap_primary_streams(dev_id, &mut primary, &mut other_primary);
             stats::end_section(stats::Section::GPUCompactPrimary);
             stats::add_quantity(stats::Quantity::BounceRayCount, current_size);
@@ -872,13 +881,13 @@ fn @make_gpu_device( dev_id: i32
                    , is_nvvm: bool
                    ) = Device {
     id    = dev_id,
-    trace = @ |scene_info, pipeline, payload_info| {
+    trace = @ |scene, pipeline, payload_info| {
         gpu_trace(
             dev_id,
             acc,
             gpu_config,
             atomics,
-            scene_info,
+            scene,
             pipeline,
             config,
             payload_info,
@@ -966,11 +975,6 @@ fn @make_gpu_device( dev_id: i32
         let mut objs:  &[EntityLeaf1];
         ignis_load_bvh2_ent(dev_id, prim_type, &mut nodes, &mut objs);
         make_gpu_bvh2_ent(nodes, objs, accb)
-    },
-    load_scene_info = @|| {
-        let mut info: SceneInfo;
-        ignis_load_scene_info(dev_id, &mut info);
-        info
     },
     load_dyntable = @ |name| -> DynTable {
         let mut table: DynTableData;

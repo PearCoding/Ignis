@@ -41,9 +41,9 @@ struct EntityLeaf {
     bbox      : BBox,   // Bounding box
     entity_id : i32,    // Entity ID
     shape_id  : i32,    // Shape ID
+    mat_id    : i32,    // Material ID
     user1     : i32,    // Custom (most of the time the bvh id)
     user2     : i32,    // Custom
-    user3     : i32,    // Custom
     local     : Mat3x4, // Matrix to local system
     flags     : u32     // Visibility flags and other stuff, partially the same as ray flags
 }
@@ -56,16 +56,17 @@ struct EntityLeaf1 {
     shape_id  : i32,       // Shape ID
     local     : Mat3x4,    // Matrix to local system
     flags     : u32,       // Flags
-    user      : [i32 * 3]  // Paddings
+    mat_id    : i32,       // Material ID
+    user      : [i32 * 2]  // Paddings
 }
 
-fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, user1: i32, user2: i32, user3: i32, local: Mat3x4, flags: u32) = EntityLeaf {
+fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, mat_id: i32, user1: i32, user2: i32, local: Mat3x4, flags: u32) = EntityLeaf {
     bbox      = bbox,
     entity_id = entity_id,
     shape_id  = shape_id,
+    mat_id    = mat_id,
     user1     = user1,
     user2     = user2,
-    user3     = user3,
     local     = local,
     flags     = flags
 };

@@ -34,12 +34,12 @@ fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], accessor: DeviceBufferAccessor) -
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);
-    let (f, u1, u2, u3) = d.load_int4(20);
+    let (f, mat_id, u1, u2) = d.load_int4(20);
     make_entity_leaf(
         make_bbox(make_vec3(e0.x, e0.y, e0.z),
                   make_vec3(e1.x, e1.y, e1.z)),
         bitcast[i32](e0.w),
-        bitcast[i32](e1.w), u1, u2, u3,
+        bitcast[i32](e1.w), mat_id, u1, u2,
         m,
         bitcast[u32](f)
     )

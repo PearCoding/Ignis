@@ -1,6 +1,7 @@
 struct Entity {
     id:         i32,
     shape_id:   i32,
+    mat_id:     i32,
     local_mat:  Mat3x4,
     global_mat: Mat3x4,
     normal_mat: Mat3x3
@@ -21,7 +22,8 @@ fn @make_entity_table(tbl: DeviceBuffer) -> EntityTable {
             local_mat  = local_mat,
             global_mat = global_mat,
             normal_mat = make_mat3x3(m.col(0),m.col(1),m.col(2)),
-            shape_id   = bitcast[i32](m.col(3).x)
+            shape_id   = bitcast[i32](m.col(3).x),
+            mat_id     = bitcast[i32](m.col(3).y)
         }
     } 
 }

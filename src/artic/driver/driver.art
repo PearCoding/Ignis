@@ -21,12 +21,12 @@ struct WorkInfo {
 #[import(cc = "C")] fn ignis_gpu_get_tmp_buffer(i32, &mut &mut [i32]) -> ();
 #[import(cc = "C")] fn ignis_gpu_swap_primary_streams(i32) -> ();
 #[import(cc = "C")] fn ignis_gpu_swap_secondary_streams(i32) -> ();
-#[import(cc = "C")] fn ignis_get_temporary_storage(i32, &mut TemporaryStorageHost) -> ();
+#[import(cc = "C")] fn ignis_get_temporary_storage_host(i32, &mut TemporaryStorageHost) -> ();
+#[import(cc = "C")] fn ignis_get_temporary_storage_device(i32, &mut TemporaryStorageDevice) -> ();
 #[import(cc = "C")] fn ignis_load_bvh2_ent(i32, &[u8], &mut &[Node2], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh4_ent(i32, &[u8], &mut &[Node4], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_bvh8_ent(i32, &[u8], &mut &[Node8], &mut &[EntityLeaf1]) -> ();
 #[import(cc = "C")] fn ignis_load_rays(i32, &mut &[StreamRay]) -> ();
-#[import(cc = "C")] fn ignis_load_scene_info(i32, &mut SceneInfo) -> ();
 #[import(cc = "C")] fn ignis_load_dyntable(i32, &[u8], &mut DynTableData) -> ();
 #[import(cc = "C")] fn ignis_load_fixtable(i32, &[u8], &mut &[u8], &mut i32) -> ();
 #[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32, i32) -> ();
