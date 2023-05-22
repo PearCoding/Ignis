@@ -26,7 +26,7 @@ def bench_exe(exe_path, gpu, args):
         print(f"Failed to run process {call_args}")
         exit(-2)
 
-    if not args.quiet:
+    if args.verbose:
         print(result.stdout)
 
     m = MSampleRegex.findall(result.stdout)
@@ -160,6 +160,22 @@ if __name__ == "__main__":
 
     TempDir = tempfile.mkdtemp()
 
+    if not args.quiet:
+        try:
+            import tqdm
+
+            count = 0
+            if not args.no_cpu:
+                count += len(args.executable) * (args.w + args.n)
+            if not args.no_gpu:
+                count += len(args.executable) * (args.w + args.n)
+
+            progress = tqdm.tqdm(total=count)
+        except ImportError:
+            progress = None
+    else:
+        progress = None
+
     table = {}
     for exe in args.executable:
         exe = os.path.abspath(exe)
@@ -172,10 +188,14 @@ if __name__ == "__main__":
 
             for _ in range(args.w):
                 bench_exe(exe, gpu == 1, args)  # Ignore output
+                if progress is not None:
+                    progress.update()
 
             results = []
             for _ in range(args.n):
                 results.append(bench_exe(exe, gpu == 1, args))
+                if progress is not None:
+                    progress.update()
 
             avgs = reduce_avg(results)
 
@@ -183,6 +203,10 @@ if __name__ == "__main__":
                 table[f"{exe} [CPU] "] = avgs
             else:
                 table[f"{exe} [GPU] "] = avgs
+
+    if progress is not None:
+        progress.close
+        del progress
 
     shutil.rmtree(TempDir)
 
