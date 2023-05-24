@@ -1,4 +1,6 @@
 #include "ImagePattern.h"
+#include "Image.h"
+#include "Logger.h"
 #include "SceneObject.h"
 #include "loader/LoaderUtils.h"
 #include "loader/ShadingTree.h"
@@ -14,7 +16,7 @@ void ImagePattern::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    const std::filesystem::path filename = input.Tree.context().handlePath(mObject->property("filename").getString(), *mObject);
+    const Path filename = input.Tree.context().handlePath(mObject->property("filename").getString(), *mObject);
     const std::string filter_type        = mObject->property("filter_type").getString("bicubic");
     const Transformf transform           = mObject->property("transform").getTransform();
     const bool force_unpacked            = mObject->property("force_unpacked").getBool(false); // Force the use of unpacked (float) images
@@ -69,5 +71,18 @@ void ImagePattern::serialize(const SerializationInput& input) const
                  << LoaderUtils::inlineTransformAs2d(transform) << ");" << std::endl;
 
     input.Tree.endClosure();
+}
+
+std::pair<size_t, size_t> ImagePattern::computeResolution(ShadingTree& tree) const
+{
+    const Path filename = tree.context().handlePath(mObject->property("filename").getString(), *mObject);
+
+    try {
+        const auto res = Image::loadResolution(filename);
+        return { res.Width, res.Height };
+    } catch (const ImageLoadException& e) {
+        IG_LOG(L_ERROR) << e.what() << std::endl;
+        return { 1, 1 };
+    }
 }
 } // namespace IG

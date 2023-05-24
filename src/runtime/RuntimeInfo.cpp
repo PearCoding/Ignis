@@ -20,7 +20,7 @@
 #include "device/Target.h"
 
 namespace IG {
-std::filesystem::path RuntimeInfo::executablePath()
+Path RuntimeInfo::executablePath()
 {
 #ifdef IG_OS_LINUX
     constexpr const char* const PROC_LINK = "/proc/self/exe";
@@ -54,7 +54,7 @@ std::filesystem::path RuntimeInfo::executablePath()
 #endif
 }
 
-std::filesystem::path RuntimeInfo::modulePath()
+Path RuntimeInfo::modulePath()
 {
 #if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
 #if __USE_GNU
@@ -85,7 +85,7 @@ std::filesystem::path RuntimeInfo::modulePath()
 #endif
 }
 
-std::filesystem::path RuntimeInfo::cacheDirectory()
+Path RuntimeInfo::cacheDirectory()
 {
     auto exe = modulePath();
     if (exe.empty())
@@ -123,9 +123,9 @@ constexpr char ENV_DELIMITER = ':';
 constexpr char ENV_DELIMITER = ';';
 #endif
 
-std::vector<std::filesystem::path> RuntimeInfo::splitEnvPaths(const std::string& str)
+std::vector<Path> RuntimeInfo::splitEnvPaths(const std::string& str)
 {
-    std::vector<std::filesystem::path> paths;
+    std::vector<Path> paths;
 
     size_t start = 0;
     size_t end   = str.find(ENV_DELIMITER);
@@ -141,7 +141,7 @@ std::vector<std::filesystem::path> RuntimeInfo::splitEnvPaths(const std::string&
     return paths;
 }
 
-std::string RuntimeInfo::combineEnvPaths(const std::vector<std::filesystem::path>& paths)
+std::string RuntimeInfo::combineEnvPaths(const std::vector<Path>& paths)
 {
     std::stringstream stream;
 

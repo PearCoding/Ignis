@@ -209,13 +209,13 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, tree: Ten
         },
         sample = @ |rnd, out_dir, _| {
             let wo     = to_local(out_dir);
-            let sample = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+            let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
 
             if sample.pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
                 let refl_prob  = get_refl_prob(wo);
-                let (wi, prob) = if refl_prob > 0 && randf(rnd) < refl_prob {
+                let (wi, prob) = if refl_prob > 0 && rnd.next_f32() < refl_prob {
                     (shading::make_same_hemisphere(wo, sample.dir), refl_prob)
                 } else { 
                     (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), 1 - refl_prob)

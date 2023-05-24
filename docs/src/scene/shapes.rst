@@ -474,6 +474,10 @@ A triangular mesh specified above can have the following parameters additionally
     - |bool|
     - |false|
     - Use shared normals from triangles as vertex normals. This will let the object look *smooth*.
+  * - generic_uv
+    - |bool|
+    - |false|
+    - Compute normalized texture coordinates based on the local bounding box. Will replace previously defined texture coordinates.
   * - subdivision
     - |int|
     - :code:`0`

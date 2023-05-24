@@ -53,7 +53,7 @@ SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, floa
         arhosekskymodelstate_free(state);
 }
 
-bool SkyModel::save(const std::filesystem::path& path) const
+bool SkyModel::save(const Path& path) const
 {
     return Image::save(path, mData.data(), mAzimuthCount, mElevationCount, 4, true);
 }

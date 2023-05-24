@@ -16,10 +16,10 @@ public:
     ShapeProvider()          = default;
     virtual ~ShapeProvider() = default;
 
-    virtual std::string_view identifier() const                                                                              = 0;
-    virtual size_t id() const                                                                                                = 0;
-    virtual void handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, const SceneObject& elem) = 0;
-    virtual std::string generateShapeCode(const LoaderContext& ctx)                                                          = 0;
-    virtual std::string generateTraversalCode(const LoaderContext& ctx)                                                      = 0;
+    virtual std::string_view identifier() const                                                               = 0;
+    virtual size_t id() const                                                                                 = 0;
+    virtual void handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, SceneObject& elem) = 0;
+    virtual std::string generateShapeCode(const LoaderContext& ctx)                                           = 0;
+    virtual std::string generateTraversalCode(const LoaderContext& ctx)                                       = 0;
 };
 } // namespace IG

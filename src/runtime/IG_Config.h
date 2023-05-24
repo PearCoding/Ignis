@@ -235,6 +235,9 @@ using Transformf  = Eigen::Affine3f;
 
 using Colorf = Eigen::Array3f;
 
+/* Simplify name for the developers sanity */
+using Path = std::filesystem::path;
+
 template <typename VectorType>
 using AlignedVector = std::vector<VectorType, Eigen::aligned_allocator<VectorType>>;
 template <typename Key, typename VectorType>

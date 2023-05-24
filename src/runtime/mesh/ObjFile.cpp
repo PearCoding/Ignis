@@ -21,7 +21,7 @@ struct ObjIndexHash {
     }
 };
 
-TriMesh load(const std::filesystem::path& path, const std::optional<size_t>& shape_index)
+TriMesh load(const Path& path, const std::optional<size_t>& shape_index)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;

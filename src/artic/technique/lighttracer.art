@@ -31,19 +31,13 @@ fn @unwrap_ltsecondarypayload(payload: RayPayload) = LTSecondaryPayload {
     pixel = make_vec2(payload.get(0), payload.get(1)),
 };
 
-fn @make_lt_emitter(light_selector: LightSelector, iter: i32, _spi: i32, frame: i32) -> RayEmitter {
+fn @make_lt_emitter(light_selector: LightSelector, config: RenderConfig) -> RayEmitter {
     let offset = 0.001:f32;
 
     @ |sample, x, y, _width, _height, payload| {
-        let mut hash = fnv_init();
-        hash = fnv_hash(hash, sample as u32);
-        hash = fnv_hash(hash, iter as u32);
-        hash = fnv_hash(hash, x as u32);
-        hash = fnv_hash(hash, y as u32);
-        hash = fnv_hash(hash, frame as u32);
-        let mut rnd = hash /*as RndState*/;
+        let rnd = create_random_generator(create_random_seed(sample, config.iter, config.frame, x, y, config.seed));
 
-        let (light, light_pdf) = light_selector.sample(&mut rnd, vec3_expand(0));
+        let (light, light_pdf) = light_selector.sample(rnd, vec3_expand(0));
         let sample_emission    = light.sample_emission;
         let light_sample       = @sample_emission(rnd);
 
@@ -65,7 +59,7 @@ fn @make_lt_emitter(light_selector: LightSelector, iter: i32, _spi: i32, frame: 
 
 /////////////////////////////////////
 /// TODO: This ignores the first vertex on the light surface
-fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, clamp_value: f32) -> Technique {
+fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, min_path_len: i32, clamp_value: f32) -> Technique {
     let offset : f32 = 0.001;
     
     let handle_color = if clamp_value > 0 {
@@ -75,7 +69,7 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, c
     };
 
     fn @on_shadow( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , payload: RayPayload
                  , secondary_payload: RayPayload
                  , mat: Material
@@ -115,15 +109,15 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, c
     }
 
     // No surface was between the surface and the camera -> There is a contribution from the light!
-    fn @on_advanced_shadow_miss(_ray: Ray, pixel: PixelCoord, _shader: MaterialShader, secondary_payload: RayPayload, contrib: Color) -> Option[Color] {
+    fn @on_advanced_shadow_miss(ctx: ShadingContext, _shader: MaterialShader, secondary_payload: RayPayload, contrib: Color) -> Option[Color] {
         let lt = unwrap_ltsecondarypayload(secondary_payload);
-        framebuffer.splat(make_pixelcoord_from_normalized(lt.pixel.x, lt.pixel.y, pixel.w, pixel.h), contrib);
+        framebuffer.splat(make_pixelcoord_from_normalized(lt.pixel.x, lt.pixel.y, ctx.pixel.w, ctx.pixel.h), contrib);
         Option[Color]::None
     }
 
     // Same as pathtracer, except adjoint = true
     fn @on_bounce( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , payload: RayPayload
                  , mat: Material
                  ) -> Option[Ray] {
@@ -137,8 +131,8 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, c
         let out_dir = vec3_neg(ctx.ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, true) {
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
-            let rr_prob = russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95);
-            if randf(rnd) >= rr_prob {
+            let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+            if rnd.next_f32() >= rr_prob {
                 return(Option[Ray]::None)
             }
 

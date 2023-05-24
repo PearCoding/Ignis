@@ -5,7 +5,7 @@
 namespace IG {
 class LightTracerTechnique : public Technique {
 public:
-    LightTracerTechnique(const SceneObject& obj);
+    LightTracerTechnique(SceneObject& obj);
     ~LightTracerTechnique() = default;
 
     bool hasDenoiserSupport() const override { return true; }
@@ -15,6 +15,7 @@ public:
 
 private:
     size_t mMaxLightDepth;
+    size_t mMinLightDepth;
     std::string mLightSelector;
     float mClamp;
 };

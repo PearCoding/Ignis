@@ -16,8 +16,7 @@ std::string TraversalShader::begin(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_traversal_shader(settings: &Settings, size: i32) -> () {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
            << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl;
 
     return stream.str();
@@ -59,10 +58,9 @@ std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
                << end();
     } else {
         stream << begin(ctx) << std::endl
-               << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
                << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
                << setupInternal(ctx)
-               << "  device.handle_traversal_secondary(tracer, size, " << (is_advanced ? "true" : "false") << ", spi, use_framebuffer);" << std::endl
+               << "  device.handle_traversal_secondary(tracer, size, " << (is_advanced ? "true" : "false") << ", use_framebuffer);" << std::endl
                << end();
     }
     return stream.str();

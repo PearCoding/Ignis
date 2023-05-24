@@ -24,8 +24,7 @@ void DJMeasuredBSDF::serialize(const SerializationInput& input) const
     std::string buffer_name = "buffer_" + bsdf_name;
 
     // saving of converted brdf data in /data directory (taken from klems loader)
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string out_path = "data/djmeasured_" + bsdf_name;
+    Path out_path = input.Tree.context().CacheManager->directory() / ("djmeasured_" + bsdf_name);
 
     measured::BRDFData* data = measured::load_brdf_data(filename);
     measured::write_brdf_data(data, out_path);

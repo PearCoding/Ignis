@@ -302,7 +302,21 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
                 for (size_t k = range.begin(); k < range.end(); ++k)
                     dst[k] = static_cast<uint8>(pixels[k] * 255);
             });
+    } else if(channels == 3) {
+        uint32* ptr = (uint32*)dst.data();
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, width * height),
+            [&](tbb::blocked_range<size_t> range) {
+                for (size_t k = range.begin(); k < range.end(); ++k) {
+                    uint8 r = static_cast<uint8>(static_cast<uint32>(pixels[3 * k + 0] * 255) & 0xFF);
+                    uint8 g = static_cast<uint8>(static_cast<uint32>(pixels[3 * k + 1] * 255) & 0xFF);
+                    uint8 b = static_cast<uint8>(static_cast<uint32>(pixels[3 * k + 2] * 255) & 0xFF);
+                    ptr[k]  = pack_rgba(r, g, b, 255);
+                }
+            });
     } else {
+        IG_ASSERT(channels == 4, "Expected channel count to be 1, 3 or 4");
+
         uint32* ptr = (uint32*)dst.data();
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, width * height),
@@ -318,7 +332,7 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
     }
 }
 
-bool Image::isPacked(const std::filesystem::path& path)
+bool Image::isPacked(const Path& path)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -327,7 +341,7 @@ bool Image::isPacked(const std::filesystem::path& path)
     return !useExr && !useHdr;
 }
 
-size_t Image::extractChannelCount(const std::filesystem::path& path)
+size_t Image::extractChannelCount(const Path& path)
 {
     int width = 0, height = 0, channels = 0;
     stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
@@ -358,7 +372,7 @@ static inline int getIntAttribute(const EXRAttribute& attr)
     return *reinterpret_cast<const int*>(attr.value);
 }
 
-Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
+Image Image::load(const Path& path, ImageMetaData* metaData)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -390,7 +404,7 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     metaData->CameraType = getStringAttribute(attr);
                 else if (strcmp(attr.name, "igTechniqueType") == 0 && strcmp(attr.type, "string") == 0)
                     metaData->TechniqueType = getStringAttribute(attr);
-                else if (strcmp(attr.name, "igTargetString") == 0 && strcmp(attr.type, "string") == 0)
+                else if (strcmp(attr.name, "igTarget") == 0 && strcmp(attr.type, "string") == 0)
                     metaData->TargetString = getStringAttribute(attr);
                 else if (strcmp(attr.name, "igCameraEye") == 0 && strcmp(attr.type, "v3f") == 0)
                     metaData->CameraEye = getVec3Attribute(attr);
@@ -398,10 +412,18 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
                     metaData->CameraUp = getVec3Attribute(attr);
                 else if (strcmp(attr.name, "igCameraDir") == 0 && strcmp(attr.type, "v3f") == 0)
                     metaData->CameraDir = getVec3Attribute(attr);
+                else if (strcmp(attr.name, "igSeed") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->Seed = getIntAttribute(attr);
                 else if (strcmp(attr.name, "igSPP") == 0 && strcmp(attr.type, "int") == 0)
                     metaData->SamplePerPixel = getIntAttribute(attr);
                 else if (strcmp(attr.name, "igSPI") == 0 && strcmp(attr.type, "int") == 0)
                     metaData->SamplePerIteration = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igIteration") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->Iteration = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igFrame") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->Frame = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igRendertime") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->RendertimeInSeconds = getIntAttribute(attr);
             }
         }
 
@@ -540,7 +562,7 @@ Image Image::load(const std::filesystem::path& path, ImageMetaData* metaData)
     return img;
 }
 
-void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
+void Image::loadAsPacked(const Path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
 {
     std::string ext   = path.extension().generic_u8string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -632,12 +654,52 @@ void Image::loadAsPacked(const std::filesystem::path& path, std::vector<uint8>& 
     stbi_image_free(data);
 }
 
-bool Image::save(const std::filesystem::path& path)
+Image::Resolution Image::loadResolution(const Path& path)
+{
+    std::string ext   = path.extension().generic_u8string();
+    const bool useExr = string_ends_with(ext, ".exr");
+
+    if (useExr) {
+        EXRVersion exr_version;
+        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_u8string().c_str());
+        if (ret != 0)
+            throw ImageLoadException("Could not extract exr version information", path);
+
+        EXRHeader exr_header;
+        InitEXRHeader(&exr_header);
+
+        const char* err = nullptr;
+        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_u8string().c_str(), &err);
+        if (ret != 0) {
+            std::string _err = err;
+            FreeEXRErrorMessage(err);
+            throw ImageLoadException(_err, path);
+        }
+
+        Resolution res;
+        res.Width    = exr_header.data_window.max_x - exr_header.data_window.min_x + 1;
+        res.Height   = exr_header.data_window.max_y - exr_header.data_window.min_y + 1;
+        res.Channels = exr_header.num_channels;
+
+        FreeEXRHeader(&exr_header);
+        return res;
+    } else {
+        int width = 0, height = 0, channels = 0;
+        int good = stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
+
+        if ((bool)good)
+            return Resolution{ (size_t)width, (size_t)height, (size_t)channels };
+        else
+            throw ImageLoadException("Could not get image info: " + std::string(stbi_failure_reason()), path);
+    }
+}
+
+bool Image::save(const Path& path)
 {
     return save(path, pixels.get(), width, height, channels);
 }
 
-bool Image::save(const std::filesystem::path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
+bool Image::save(const Path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
 {
     std::string ext = path.extension().generic_u8string();
     bool useExr     = string_ends_with(ext, ".exr");

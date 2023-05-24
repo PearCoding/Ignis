@@ -13,11 +13,11 @@ fn @make_medium_sample(pos: Vec3, pdf: f32, color: Color) = make_option(MediumSa
 fn @reject_medium_sample() = Option[MediumSample]::None;
 
 struct Medium {
-    phase:          fn (/* pos */Vec3) -> PhaseFunction,                                                // Returns phase function for given position
-    eval:           fn (/* start_pos */Vec3, /* end_pos */Vec3) -> Color,                               // Evaluate from position A to B
-    eval_inf:       fn (/* start_pos */Vec3, /* direction */Vec3) -> Color,                             // Evaluate from position A with direction B towards infinity (most of the time its zero)
-    sample:         fn (&mut RndState, /* start_pos */Vec3, /* end_pos */Vec3) -> Option[MediumSample], // Sample position between two positions and a direction based on the phase
-    pdf:            fn (/* start_pos */Vec3, /* end_pos */Vec3, /* pos */Vec3) -> f32,                  // Pdf sampled
+    phase:          fn (/* pos */Vec3) -> PhaseFunction,                                                  // Returns phase function for given position
+    eval:           fn (/* start_pos */Vec3, /* end_pos */Vec3) -> Color,                                 // Evaluate from position A to B
+    eval_inf:       fn (/* start_pos */Vec3, /* direction */Vec3) -> Color,                               // Evaluate from position A with direction B towards infinity (most of the time its zero)
+    sample:         fn (RandomGenerator, /* start_pos */Vec3, /* end_pos */Vec3) -> Option[MediumSample], // Sample position between two positions and a direction based on the phase
+    pdf:            fn (/* start_pos */Vec3, /* end_pos */Vec3, /* pos */Vec3) -> f32,                    // Pdf sampled
     is_homogeneous: bool
 }
 

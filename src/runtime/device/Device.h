@@ -35,6 +35,7 @@ public:
         size_t height    = 0;
         size_t iteration = 0;
         size_t frame     = 0;
+        size_t user_seed = 0;
         TechniqueVariantInfo info;
         bool denoise = false;
     };
@@ -50,6 +51,8 @@ public:
     void assignScene(const SceneSettings& settings);
     void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, const ParameterSet* parameter_set);
     void resize(size_t width, size_t height);
+
+    void releaseAll();
 
     AOVAccessor getFramebuffer(const std::string& name);
     void clearFramebuffer(const std::string& name);

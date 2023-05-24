@@ -28,6 +28,7 @@ public:
     bool Quiet              = false;
     LogLevel VerbosityLevel = L_INFO;
 
+    bool NoUnused   = false;
     bool NoColor    = false;
     bool NoProgress = false;
 
@@ -51,9 +52,12 @@ public:
 
     IG::Target Target;
 
+    std::optional<size_t> RenderTime; // In seconds
     std::optional<int> SPP;
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;
+
+    int Seed = 0;
 
     bool AcquireStats     = false;
     bool AcquireFullStats = false;
@@ -71,13 +75,16 @@ public:
     bool DenoiserFollowSpecular     = false;
     bool DenoiserOnlyFirstIteration = false;
 
+    bool NoCache = false;
+    Path CacheDir;
+
     size_t ShaderOptimizationLevel = 3;
 
-    std::filesystem::path Output;
-    std::filesystem::path InputScene;
-    std::filesystem::path InputRay;
+    Path Output;
+    Path InputScene;
+    Path InputRay;
 
-    std::filesystem::path ScriptDir;
+    Path ScriptDir;
 
     ParameterSet UserEntries;
 

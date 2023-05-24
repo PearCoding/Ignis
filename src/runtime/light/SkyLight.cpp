@@ -27,20 +27,19 @@ float SkyLight::computeFlux(ShadingTree& tree) const
     return mTotalFlux * scale * radius * radius;
 }
 
-static std::string setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<SceneObject>& light)
+static Path setup_sky(LoaderContext& ctx, const std::string& name, const std::shared_ptr<SceneObject>& light)
 {
     const std::string exported_id = "_sky_" + name;
 
     const auto data = ctx.Cache->ExportedData.find(exported_id);
     if (data != ctx.Cache->ExportedData.end())
-        return std::any_cast<std::string>(data->second);
+        return std::any_cast<Path>(data->second);
 
     auto ground    = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
     auto turbidity = light->property("turbidity").getNumber(3.0f);
     const auto ea  = LoaderUtils::getEA(*light);
 
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/skytex_" + LoaderUtils::escapeIdentifier(name) + ".exr";
+    const Path path = ctx.CacheManager->directory() / ("skytex_" + LoaderUtils::escapeIdentifier(name) + ".exr");
     SkyModel model(RGB(ground), ea, turbidity);
     model.save(path);
 
@@ -54,8 +53,8 @@ void SkyLight::serialize(const SerializationInput& input) const
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones());
 
-    const std::string path = setup_sky(input.Tree.context(), name(), mLight);
-    const auto cdf         = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
+    const Path path = setup_sky(input.Tree.context(), name(), mLight);
+    const auto cdf                   = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 

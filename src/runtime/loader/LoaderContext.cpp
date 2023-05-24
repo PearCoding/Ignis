@@ -24,15 +24,16 @@ LoaderContext::~LoaderContext()                          = default;
 LoaderContext LoaderContext::copyForBake() const
 {
     LoaderContext ctx;
-    ctx.Options  = Options;
-    ctx.Textures = Textures;
-    ctx.Cache    = Cache;
+    ctx.Options      = Options;
+    ctx.Textures     = Textures;
+    ctx.Cache        = Cache;
+    ctx.CacheManager = CacheManager;
 
     // TODO: Maybe copy more?
     return ctx;
 }
 
-std::filesystem::path LoaderContext::handlePath(const std::filesystem::path& path, const SceneObject& obj) const
+Path LoaderContext::handlePath(const Path& path, const SceneObject& obj) const
 {
     if (path.is_absolute())
         return path;

@@ -59,11 +59,13 @@ struct TextureOptions {
     static constexpr TextureOptions Structural() { return TextureOptions{ EmbedType::Structural }; }
     static constexpr TextureOptions Default() { return TextureOptions{ EmbedType::Default }; }
 };
-struct TextureBakeOptions {
-    size_t Width;
-    size_t Height;
-    bool SkipConstant; // Will not bake parameters which are simple constants
-    static constexpr TextureBakeOptions Default() { return TextureBakeOptions{ 1024, 1024, false }; }
+struct TextureBakeOptions { // The bake operation might still return width and height 1 for constants or other simple expressions, completely ignoring max & min settings
+    size_t MaxWidth;        // Maximum width if expression is a texture. 0 disables maximum
+    size_t MaxHeight;       // Maximum height if expression is a texture. 0 disables maximum
+    size_t MinWidth;        // Minimum width if expression is a texture
+    size_t MinHeight;       // Minimum height if expression is a texture
+    bool SkipConstant;      // Will not bake parameters which are simple constants
+    static constexpr TextureBakeOptions Default() { return TextureBakeOptions{ 0, 0, 1, 1, false }; }
 };
 } // namespace _details
 
@@ -93,16 +95,20 @@ public:
     void beginClosure(const std::string& name);
     void endClosure();
 
-    void addNumber(const std::string& name, const SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0.0f), const NumberOptions& options = NumberOptions::Full());
-    void addColor(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const ColorOptions& options = ColorOptions::Full());
-    void addVector(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
-    void addTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
+    void addNumber(const std::string& name, SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0.0f), const NumberOptions& options = NumberOptions::Full());
+    void addColor(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const ColorOptions& options = ColorOptions::Full());
+    void addVector(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
+    void addTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
 
-    float computeNumber(const std::string& name, const SceneObject& obj, float def = 0);
-    Vector3f computeColor(const std::string& name, const SceneObject& obj, const Vector3f& def = Vector3f::Zero());
+    float computeNumber(const std::string& name, SceneObject& obj, float def = 0);
+    Vector3f computeColor(const std::string& name, SceneObject& obj, const Vector3f& def = Vector3f::Zero());
 
     using BakeOutputTexture = std::optional<std::shared_ptr<Image>>;
-    BakeOutputTexture bakeTexture(const std::string& name, const SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureBakeOptions& options = TextureBakeOptions::Default());
+    BakeOutputTexture bakeTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureBakeOptions& options = TextureBakeOptions::Default());
+
+    /// Compute minimum resolution of a texture for the given property. Only accounts image textures, not checkerboard or noise patterns. If no image texture is used the function will return (1,1)
+    std::pair<size_t, size_t> computeTextureResolution(const std::string& name, SceneObject& obj);
+    std::pair<size_t, size_t> computeTextureResolution(const std::string& name, const Transpiler::Result& result);
 
     inline std::string currentClosureID() const { return currentClosure().ID; }
     std::string getClosureID(const std::string& name);
@@ -140,6 +146,7 @@ private:
     bool checkIfEmbed(const Vector3f& color, const ColorOptions& options) const;
     bool checkIfEmbed(const Vector3f& vec, const VectorOptions& options) const;
 
+    std::pair<size_t, size_t> computeTextureResolution(const std::string& name, const std::string& expr);
     BakeOutputTexture bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options);
     Vector3f bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def);
     Vector3f computeConstantColor(const std::string& name, const Transpiler::Result& result);

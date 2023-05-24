@@ -1,16 +1,35 @@
 // Used as interface
-
-struct ShadingContext {
-    entity_id: i32,
-    pixel:     PixelCoord,
-    ray:       Ray,
-    hit:       Hit,
-    surf:      SurfaceElement,
-    uvw:       Vec3,
-    coord:     PointMapperSet
+struct ShadingInfo {
+    time:  f32, // Time since start in seconds, updated every frame
+    frame: i32  // Current frame
 }
 
-fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hit: Hit, surf: SurfaceElement, coord: PointMapperSet) = ShadingContext {
+fn @make_shading_info(config: RenderConfig) -> ShadingInfo {
+    let time = registry::get_global_parameter_f32("__time", 0);
+    ShadingInfo {
+        time  = time,
+        frame = config.frame
+    }
+}
+
+fn @make_null_shading_info() = ShadingInfo {
+    time  = 0,
+    frame = 0
+};
+
+// Context for the shading tree. Not all data is "valid" all the time
+struct ShadingContext {
+    entity_id: i32,             // Will be -1 if not associated with a hit
+    pixel:     PixelCoord,
+    ray:       Ray,
+    hit:       Hit,             // Invalid if entity_hit == -1
+    surf:      SurfaceElement,  // Invalid if entity_hit == -1 (except for emissive shading, see below)
+    uvw:       Vec3,
+    coord:     PointMapperSet,
+    info:      ShadingInfo
+}
+
+fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hit: Hit, surf: SurfaceElement, coord: PointMapperSet, info: ShadingInfo) = ShadingContext {
     entity_id = entity_id,
     pixel     = pixel,
     ray       = ray,
@@ -18,9 +37,10 @@ fn @make_surface_shading_context(entity_id: i32, pixel: PixelCoord, ray: Ray, hi
     surf      = surf,
     uvw       = vec2_to_3(surf.tex_coords, 0),
     coord     = coord,
+    info      = info
 };
 
-fn @make_miss_shading_context(pixel: PixelCoord, ray: Ray) = ShadingContext {
+fn @make_miss_shading_context(pixel: PixelCoord, ray: Ray, info: ShadingInfo) = ShadingContext {
     entity_id = -1,
     pixel     = pixel,
     ray       = ray,
@@ -28,9 +48,10 @@ fn @make_miss_shading_context(pixel: PixelCoord, ray: Ray) = ShadingContext {
     surf      = make_invalid_surface_element(),
     uvw       = vec3_expand(0),
     coord     = make_identity_pointmapperset(),
+    info      = info
 };
 
-fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3) = ShadingContext {
+fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3, info: ShadingInfo) = ShadingContext {
     entity_id = -1,
     pixel     = make_empty_pixelcoord(),
     ray       = ray,
@@ -38,6 +59,7 @@ fn @make_emissive_shading_context(ray: Ray, surf: SurfaceElement, uvw: Vec3) = S
     surf      = surf,
     uvw       = uvw,
     coord     = make_identity_pointmapperset(), // TODO: ?
+    info      = info
 };
 
 type BSDFShader     = fn (ShadingContext) -> Bsdf;

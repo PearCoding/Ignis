@@ -41,7 +41,7 @@ fn @make_homogeneous_medium(sigma_a: Color, sigma_s: Color, phase: PhaseFunction
                 let dir_u = vec3_sub(p_end, p_start);
                 let dist  = vec3_len(dir_u);
 
-                let ndist = math_builtins::fmin[f32](dist, -math_builtins::log(1 - randf(rnd) * 0.99999) / sigma_t_p);
+                let ndist = math_builtins::fmin[f32](dist, -math_builtins::log(1 - rnd.next_f32() * 0.99999) / sigma_t_p);
 
                 if math_builtins::fabs(dist - ndist) <= eps { return(reject_medium_sample()) }
 

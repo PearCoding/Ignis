@@ -5,7 +5,7 @@
 namespace IG {
 class PathTechnique : public Technique {
 public:
-    PathTechnique(const SceneObject& obj);
+    PathTechnique(SceneObject& obj);
     ~PathTechnique() = default;
 
     bool hasDenoiserSupport() const override { return true; }
@@ -15,8 +15,10 @@ public:
 
 private:
     size_t mMaxDepth;
+    size_t mMinDepth;
     std::string mLightSelector;
     float mClamp;
+    bool mEnableNEE;
     bool mMISAOVs;
 };
 } // namespace IG

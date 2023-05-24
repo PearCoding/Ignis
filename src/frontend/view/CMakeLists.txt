@@ -1,14 +1,14 @@
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
-    GIT_TAG master
+    GIT_TAG v1.89.3
     DOWNLOAD_ONLY YES
 )
 
 CPMAddPackage(
     NAME implot
     GITHUB_REPOSITORY epezent/implot
-    GIT_TAG master
+    GIT_TAG v0.14
     DOWNLOAD_ONLY YES
 )
 
@@ -34,8 +34,9 @@ SET(SRC_FILES
     UI.h)
 
 add_executable(igview ${SRC_FILES})
-target_include_directories(igview PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
+target_include_directories(igview SYSTEM PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
 target_link_libraries(igview PRIVATE ${SDL2_LIBRARY} ig_lib_common)
 add_lto(igview)
 add_checks(igview)
+add_linker_options(igview)
 install(TARGETS igview ${_IG_RUNTIME_SET} COMPONENT frontends)

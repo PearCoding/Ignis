@@ -13,6 +13,21 @@ ExprPattern::ExprPattern(const std::string& name, const std::shared_ptr<SceneObj
 {
 }
 
+static inline void setupTranspiler(Transpiler& transpiler, const std::shared_ptr<SceneObject>& object, ShadingTree& tree)
+{
+    // Register available variables to transpiler as well
+    for (const auto& pair : object->properties()) {
+        if (string_starts_with(pair.first, "num_"))
+            transpiler.registerCustomVariableNumber(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
+        else if (string_starts_with(pair.first, "color_"))
+            transpiler.registerCustomVariableColor(pair.first.substr(6), "var_tex_" + tree.getClosureID(pair.first.substr(6)));
+        else if (string_starts_with(pair.first, "vec_"))
+            transpiler.registerCustomVariableVector(pair.first.substr(4), "var_tex_" + tree.getClosureID(pair.first.substr(4)));
+        else if (string_starts_with(pair.first, "bool_"))
+            transpiler.registerCustomVariableBool(pair.first.substr(5), "var_tex_" + tree.getClosureID(pair.first.substr(5)));
+    }
+}
+
 void ExprPattern::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
@@ -33,18 +48,8 @@ void ExprPattern::serialize(const SerializationInput& input) const
             input.Tree.addColor(pair.first, *mObject, Vector3f::Ones());
     }
 
-    // Register available variables to transpiler as well
     Transpiler transpiler(input.Tree);
-    for (const auto& pair : mObject->properties()) {
-        if (string_starts_with(pair.first, "num_"))
-            transpiler.registerCustomVariableNumber(pair.first.substr(4), "var_tex_" + input.Tree.getClosureID(pair.first.substr(4)));
-        else if (string_starts_with(pair.first, "color_"))
-            transpiler.registerCustomVariableColor(pair.first.substr(6), "var_tex_" + input.Tree.getClosureID(pair.first.substr(6)));
-        else if (string_starts_with(pair.first, "vec_"))
-            transpiler.registerCustomVariableVector(pair.first.substr(4), "var_tex_" + input.Tree.getClosureID(pair.first.substr(4)));
-        else if (string_starts_with(pair.first, "bool_"))
-            transpiler.registerCustomVariableBool(pair.first.substr(5), "var_tex_" + input.Tree.getClosureID(pair.first.substr(5)));
-    }
+    setupTranspiler(transpiler, mObject, input.Tree);
 
     // Transpile
     auto res    = transpiler.transpile(expr);
@@ -93,5 +98,29 @@ void ExprPattern::serialize(const SerializationInput& input) const
     input.Stream << "    " << output << " };" << std::endl;
 
     input.Tree.endClosure();
+}
+
+std::pair<size_t, size_t> ExprPattern::computeResolution(ShadingTree& tree) const
+{
+    std::string expr = mObject->property("expr").getString();
+    if (expr.empty())
+        return { 1, 1 };
+
+    Transpiler transpiler(tree);
+    setupTranspiler(transpiler, mObject, tree);
+    auto res = transpiler.transpile(expr);
+    if (!res.has_value())
+        return { 1, 1 };
+
+    std::pair<size_t, size_t> resolution = tree.computeTextureResolution(name(), res.value());
+    for (const auto& pair : mObject->properties()) {
+        if (string_starts_with(pair.first, "num_") || string_starts_with(pair.first, "color_")) {
+            std::pair<size_t, size_t> param_res = tree.computeTextureResolution(pair.first, *mObject);
+            resolution.first                    = std::max(resolution.first, param_res.first);
+            resolution.second                   = std::max(resolution.second, param_res.second);
+        }
+    }
+
+    return resolution;
 }
 } // namespace IG

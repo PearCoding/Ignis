@@ -29,7 +29,7 @@ public:
 
     [[nodiscard]] RGB computeTotal() const; 
 
-    bool save(const std::filesystem::path& path) const;
+    bool save(const Path& path) const;
 
 private:
     std::vector<float> mData;

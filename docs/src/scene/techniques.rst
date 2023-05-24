@@ -18,6 +18,10 @@ Path Tracer (:monosp:`path`)
     - |int|
     - :code:`64`
     - Maximum depth of rays to be traced.
+  * - min_depth
+    - |int|
+    - :code:`2`
+    - Minimum depth of rays after which russian roulette applies.
   * - clamp
     - |number|
     - :code:`0`
@@ -26,10 +30,10 @@ Path Tracer (:monosp:`path`)
     - |string|
     - :code:`"uniform"`
     - Light selection technique. Available are :code:`"hierarchy"`, :code:`"simple"` and :code:`"uniform"`
-  * - aov_normals
+  * - nee
     - |bool|
-    - |false|
-    - Enable normal output as aov.
+    - |true|
+    - Enable next event estimation to improve convergence rate.
   * - aov_mis
     - |bool|
     - |false|
@@ -58,6 +62,10 @@ Volume Path Tracer (:monosp:`volpath`)
     - |int|
     - :code:`64`
     - Maximum depth of rays to be traced.
+  * - min_depth
+    - |int|
+    - :code:`2`
+    - Minimum depth of rays after which russian roulette applies.
   * - clamp
     - |number|
     - :code:`0`
@@ -66,6 +74,10 @@ Volume Path Tracer (:monosp:`volpath`)
     - |string|
     - :code:`"uniform"`
     - Light selection technique. Available are :code:`"hierarchy"`, :code:`"simple"` and :code:`"uniform"`
+  * - nee
+    - |bool|
+    - |true|
+    - Enable next event estimation to improve convergence rate.
 
 A simple volumetric path tracer. It calculates the full global illumination in the scene.
 
@@ -89,6 +101,10 @@ Light Tracer (:monosp:`lighttracer`)
     - |int|
     - :code:`64`
     - Maximum depth of rays to be traced.
+  * - min_depth
+    - |int|
+    - :code:`2`
+    - Minimum depth of rays after which russian roulette applies.
   * - clamp
     - |number|
     - :code:`0`
@@ -123,7 +139,11 @@ Photonmapper (:monosp:`photonmapper`)
   * - max_camera_depth
     - |int|
     - :code:`64`
-    - Maximum depth of rays starting from the camera.
+    - Maximum depth of rays starting from the camera. Can also be defined as :paramtype:`max_depth`.
+  * - min_camera_depth
+    - |int|
+    - :code:`2`
+    - Minimum depth of rays starting from the camera after which russian roulette applies. Can also be defined as :paramtype:`min_depth`.
   * - max_light_depth
     - |int|
     - :code:`8`

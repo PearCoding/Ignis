@@ -117,14 +117,14 @@ std::vector<float> linearize_warp(const Warp* warp)
     return data;
 }
 
-BRDFData* load_brdf_data(const std::filesystem::path& brdf_path)
+BRDFData* load_brdf_data(const Path& brdf_path)
 {
     powitacq_rgb::BRDF* brdf = new powitacq_rgb::BRDF(brdf_path.generic_u8string());
     BRDFData* data           = convert_brdf(brdf);
     return data;
 }
 
-void write_brdf_data(BRDFData* data, const std::filesystem::path& path)
+void write_brdf_data(BRDFData* data, const Path& path)
 {
     auto ndf       = linearize_warp(&data->ndf);
     auto vndf      = linearize_warp(&data->vndf);

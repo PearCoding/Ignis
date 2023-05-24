@@ -1,0 +1,11 @@
+{
+  "externals": [
+    {"filename": "two-planes-base.json"}
+  ],
+  "bsdfs": [
+    {
+      "type": "mirror",
+      "name": "Back"
+    }
+  ]
+}

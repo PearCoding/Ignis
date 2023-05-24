@@ -10,7 +10,7 @@
 #include "implot.h"
 
 #if SDL_VERSION_ATLEAST(2, 0, 17)
-#include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_sdl2.h"
 #include "backends/imgui_impl_sdlrenderer.h"
 #else
 #define USE_OLD_SDL
@@ -774,7 +774,7 @@ public:
 
                 ImGui::Text("Iter %zu", Runtime->currentIterationCount());
                 ImGui::Text("SPP  %zu", Runtime->currentSampleCount());
-                if (Parent->mSPPMode == SPPMode::Continuos)
+                if (Parent->mSPPMode == SPPMode::Continuous)
                     ImGui::Text("Frame %zu", Runtime->currentFrameCount());
                 ImGui::Text("Cursor  (%f, %f, %f)", rgb.r, rgb.g, rgb.b);
                 ImGui::Text("Lum Max %8.3f | 95%% %8.3f", LastLum.Max, LastLum.SoftMax);
@@ -896,7 +896,7 @@ public:
             if (ImGui::CollapsingHeader("Poses")) {
                 if (ImGui::Button("Reload")) {
                     PoseManager.load(POSE_FILE);
-                    IG_LOG(L_INFO) << "Poses loaed from '" << POSE_FILE << "'" << std::endl;
+                    IG_LOG(L_INFO) << "Poses loaded from '" << POSE_FILE << "'" << std::endl;
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Save")) {
@@ -1061,8 +1061,8 @@ void UI::setTitle(const char* str)
     case SPPMode::Capped:
         sstream << " [Capped]";
         break;
-    case SPPMode::Continuos:
-        sstream << " [Continuos]";
+    case SPPMode::Continuous:
+        sstream << " [Continuous]";
         break;
     }
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());

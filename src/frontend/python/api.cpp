@@ -1,20 +1,19 @@
-#include <pybind11/eigen.h>
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
 
 #include "Logger.h"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
-namespace py = pybind11;
+namespace nb = nanobind;
+using namespace nb::literals;
+
 using namespace IG;
 
-void scene_module(py::module_& m);   // Defined in scene.cpp
-void runtime_module(py::module_& m); // Defined in runtime.cpp
+void scene_module(nb::module_& m);   // Defined in scene.cpp
+void runtime_module(nb::module_& m); // Defined in runtime.cpp
 
-PYBIND11_MODULE(pyignis, m)
+NB_MODULE(pyignis, m)
 {
     m.doc() = "Ignis python interface";
     m.attr("__version__") = MACRO_STRINGIFY(IGNIS_VERSION);

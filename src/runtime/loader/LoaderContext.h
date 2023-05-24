@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CacheManager.h"
 #include "LoaderOptions.h"
 #include "LoaderTechnique.h"
 #include "RuntimeSettings.h"
@@ -31,12 +32,13 @@ inline bool operator==(const Material& a, const Material& b)
 }
 
 struct LoaderCache {
-    std::unordered_map<std::string, std::any> ExportedData;    // Cache with already exported data and auxillary info
-    std::unordered_map<std::string, Vector3f> ExprComputation; // Cache with already computed expressions
+    std::unordered_map<std::string, std::any> ExportedData;                    // Cache with already exported data and auxillary info
+    std::unordered_map<std::string, Vector3f> ExprComputation;                 // Cache with already computed expressions
+    std::unordered_map<std::string, std::pair<size_t, size_t>> ExprResolution; // Cache with already approximative expression resolutions
 };
 
 constexpr size_t DefaultAlignment = sizeof(float) * 4;
-class LoaderContext {
+class IG_LIB LoaderContext {
     IG_CLASS_NON_COPYABLE(LoaderContext);
 
 public:
@@ -50,6 +52,7 @@ public:
     LoaderOptions Options;
 
     std::shared_ptr<LoaderCache> Cache;
+    std::shared_ptr<IG::CacheManager> CacheManager;
 
     std::shared_ptr<class LoaderTexture> Textures;
     std::unique_ptr<class LoaderLight> Lights;
@@ -78,10 +81,10 @@ public:
     BoundingBox SceneBBox;
     float SceneDiameter = 0.0f;
 
-    std::filesystem::path handlePath(const std::filesystem::path& path, const SceneObject& obj) const;
+    Path handlePath(const Path& path, const SceneObject& obj) const;
 
     std::unordered_map<std::string, size_t> RegisteredResources;
-    inline size_t registerExternalResource(const std::filesystem::path& path)
+    inline size_t registerExternalResource(const Path& path)
     {
         // TODO: Ensure canonical paths?
         auto it = RegisteredResources.find(path.generic_u8string());

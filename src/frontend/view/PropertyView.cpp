@@ -14,6 +14,21 @@ static inline void draw_header()
     ImGui::TableHeadersRow();
 }
 
+template <typename _Tp, typename _Hash, typename _Pred, typename _Alloc>
+static inline size_t getPropertyCount(const std::unordered_map<std::string, _Tp, _Hash, _Pred, _Alloc>& map, bool hide_internal)
+{
+    if (hide_internal) {
+        size_t counter = 0;
+        for (auto& param : map) {
+            if (!string_starts_with(param.first, "_"))
+                ++counter;
+        }
+        return counter;
+    } else {
+        return map.size();
+    }
+}
+
 bool ui_property_view(Runtime* runtime)
 {
     constexpr int TableFlags  = ImGuiTableFlags_PadOuterX;
@@ -24,7 +39,10 @@ bool ui_property_view(Runtime* runtime)
     auto& registry = runtime->accessParameters();
     bool updated   = false;
 
-    if (!registry.IntParameters.empty()) {
+    static bool hide_internal = true;
+    ImGui::Checkbox("Hide Internal", &hide_internal);
+
+    if (getPropertyCount(registry.IntParameters, hide_internal) != 0) {
         if (ImGui::CollapsingHeader("Integers", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_integers", 2, TableFlags)) {
                 // Header
@@ -32,17 +50,20 @@ bool ui_property_view(Runtime* runtime)
 
                 // Content
                 for (auto& param : registry.IntParameters) {
-                    ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(param.first.c_str());
-                    ImGui::TableNextColumn();
-                    const bool changeable = !string_starts_with(param.first, "_");
+                    const bool is_public = !string_starts_with(param.first, "_");
 
-                    if (changeable) {
-                        const std::string id = "##" + param.first;
-                        if (ImGui::InputInt(id.c_str(), &param.second, 1, 100, InputFlags))
-                            updated = true;
-                    } else {
-                        ImGui::Text("%i", param.second);
+                    if (is_public || !hide_internal) {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(param.first.c_str());
+                        ImGui::TableNextColumn();
+
+                        if (is_public) {
+                            const std::string id = "##" + param.first;
+                            if (ImGui::InputInt(id.c_str(), &param.second, 1, 100, InputFlags))
+                                updated = true;
+                        } else {
+                            ImGui::Text("%i", param.second);
+                        }
                     }
                 }
                 ImGui::EndTable();
@@ -50,7 +71,7 @@ bool ui_property_view(Runtime* runtime)
         }
     }
 
-    if (!registry.FloatParameters.empty()) {
+    if (getPropertyCount(registry.FloatParameters, hide_internal) != 0) {
         if (ImGui::CollapsingHeader("Numbers", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_numbers", 2, TableFlags)) {
                 // Header
@@ -58,20 +79,23 @@ bool ui_property_view(Runtime* runtime)
 
                 // Content
                 for (auto& param : registry.FloatParameters) {
-                    ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(param.first.c_str());
-                    ImGui::TableNextColumn();
-                    const bool changeable = !string_starts_with(param.first, "_");
+                    const bool is_public = !string_starts_with(param.first, "_");
 
-                    if (changeable) {
-                        const float min      = std::min(0.0f, std::floor(param.second));
-                        const float max      = std::max(1.0f, std::ceil(param.second));
-                        const std::string id = "##" + param.first;
-                        ImGui::SetNextItemWidth(-1);
-                        if (ImGui::SliderFloat(id.c_str(), &param.second, min, max, "%.3f", SliderFlags))
-                            updated = true;
-                    } else {
-                        ImGui::Text("%.3f", param.second);
+                    if (is_public || !hide_internal) {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(param.first.c_str());
+                        ImGui::TableNextColumn();
+
+                        if (is_public) {
+                            const float min      = std::min(0.0f, std::floor(param.second));
+                            const float max      = std::max(1.0f, std::ceil(param.second));
+                            const std::string id = "##" + param.first;
+                            ImGui::SetNextItemWidth(-1);
+                            if (ImGui::SliderFloat(id.c_str(), &param.second, min, max, "%.3f", SliderFlags))
+                                updated = true;
+                        } else {
+                            ImGui::Text("%.3f", param.second);
+                        }
                     }
                 }
                 ImGui::EndTable();
@@ -79,7 +103,7 @@ bool ui_property_view(Runtime* runtime)
         }
     }
 
-    if (!registry.VectorParameters.empty()) {
+    if (getPropertyCount(registry.VectorParameters, hide_internal) != 0) {
         if (ImGui::CollapsingHeader("Vectors", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_vectors", 2, TableFlags)) {
                 // Header
@@ -87,17 +111,20 @@ bool ui_property_view(Runtime* runtime)
 
                 // Content
                 for (auto& param : registry.VectorParameters) {
-                    ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(param.first.c_str());
-                    ImGui::TableNextColumn();
-                    const bool changeable = !string_starts_with(param.first, "_");
+                    const bool is_public = !string_starts_with(param.first, "_");
 
-                    if (changeable) {
-                        const std::string id = "##" + param.first;
-                        if (ImGui::InputFloat3(id.c_str(), param.second.data(), "%.3f", InputFlags))
-                            updated = true;
-                    } else {
-                        ImGui::Text("[%.3f, %.3f, %.3f]", param.second.x(), param.second.y(), param.second.z());
+                    if (is_public || !hide_internal) {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(param.first.c_str());
+                        ImGui::TableNextColumn();
+
+                        if (is_public) {
+                            const std::string id = "##" + param.first;
+                            if (ImGui::InputFloat3(id.c_str(), param.second.data(), "%.3f", InputFlags))
+                                updated = true;
+                        } else {
+                            ImGui::Text("[%.3f, %.3f, %.3f]", param.second.x(), param.second.y(), param.second.z());
+                        }
                     }
                 }
                 ImGui::EndTable();
@@ -105,7 +132,7 @@ bool ui_property_view(Runtime* runtime)
         }
     }
 
-    if (!registry.ColorParameters.empty()) {
+    if (getPropertyCount(registry.ColorParameters, hide_internal) != 0) {
         if (ImGui::CollapsingHeader("Colors", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::BeginTable("_table_colors", 2, TableFlags)) {
                 // Header
@@ -113,13 +140,16 @@ bool ui_property_view(Runtime* runtime)
 
                 // Content
                 for (auto& param : registry.ColorParameters) {
-                    ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(param.first.c_str());
-                    ImGui::TableNextColumn();
-                    const bool changeable = !string_starts_with(param.first, "_");
+                    const bool is_public = !string_starts_with(param.first, "_");
 
-                    if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (changeable ? ImGuiColorEditFlags_NoInputs : 0)))
-                        updated = true;
+                    if (is_public || !hide_internal) {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(param.first.c_str());
+                        ImGui::TableNextColumn();
+
+                        if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (is_public ? ImGuiColorEditFlags_NoInputs : 0)))
+                            updated = true;
+                    }
                 }
 
                 ImGui::EndTable();

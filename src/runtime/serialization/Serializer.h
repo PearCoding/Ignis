@@ -74,10 +74,10 @@ public:
     inline void read(ISerializable& v);
     template <typename T, typename Alloc>
     inline std::enable_if_t<is_trivial_serializable<T>::value, void>
-    read(std::vector<T, Alloc>& vec);
+    read(std::vector<T, Alloc>& vec, size_t size = 0);
     template <typename T, typename Alloc>
     inline std::enable_if_t<!is_trivial_serializable<T>::value, void>
-    read(std::vector<T, Alloc>& vec);
+    read(std::vector<T, Alloc>& vec, size_t size = 0);
     template <typename T1, typename T2>
     inline void read(std::unordered_map<T1, T2>& map);
 

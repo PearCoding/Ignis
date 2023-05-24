@@ -41,7 +41,7 @@ private:
     [[nodiscard]] std::string generateInfinite(ShadingTree& tree);
     [[nodiscard]] std::string generateFinite(ShadingTree& tree);
 
-    [[nodiscard]] std::filesystem::path generateLightSelectionCDF(ShadingTree& tree);
+    [[nodiscard]] Path generateLightSelectionCDF(ShadingTree& tree);
 
     std::vector<std::shared_ptr<Light>> mInfiniteLights;
     std::vector<std::shared_ptr<Light>> mFiniteLights;

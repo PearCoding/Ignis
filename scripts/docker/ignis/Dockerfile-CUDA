@@ -14,7 +14,7 @@ COPY $IG_DIR /ignis
 WORKDIR /ignis
 RUN ./scripts/docker/ignis/compile.sh
 
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04 as runtime
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04 as runtime
 
 LABEL maintainer="Ömercan Yazici" \
       description="Ignis Raytracer with CUDA GPU support" \

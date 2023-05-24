@@ -1,5 +1,7 @@
 set(SRC
   IG_Config.h
+  CacheManager.cpp
+  CacheManager.h
   CDF.cpp
   CDF.h
   Color.h
@@ -301,7 +303,8 @@ if(NOT WIN32)
 endif()
 
 target_link_libraries(ig_lib_runtime PUBLIC std::filesystem PRIVATE ${AnyDSL_runtime_LIBRARIES} ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB pexpr)
-target_include_directories(ig_lib_runtime PUBLIC ${eigen_SOURCE_DIR} PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS} ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/include)
+target_include_directories(ig_lib_runtime SYSTEM PUBLIC ${eigen_SOURCE_DIR})
+target_include_directories(ig_lib_runtime SYSTEM PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS} ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/include)
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 target_compile_definitions(ig_lib_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>" PRIVATE $<BUILD_INTERFACE:"IG_BUILD_LIB">)
 add_dependencies(ig_lib_runtime artic_c_interface)
@@ -332,5 +335,6 @@ endif()
 
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)
 add_checks(ig_lib_runtime)
+add_linker_options(ig_lib_runtime)
 set_target_properties(ig_lib_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 install(TARGETS ig_lib_runtime ${_IG_RUNTIME_SET} COMPONENT runtime)

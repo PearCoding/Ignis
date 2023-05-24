@@ -2,6 +2,8 @@
 
 #include "IG_Config.h"
 
+#include <mutex>
+
 namespace IG {
 class IG_LIB ScriptCompiler {
 public:
@@ -16,11 +18,13 @@ public:
 
     std::string prepare(const std::string& script) const;
     void* compile(const std::string& script, const std::string& function) const;
-    void loadStdLibFromDirectory(const std::filesystem::path& dir);
+    void loadStdLibFromDirectory(const Path& dir);
 
 private:
     std::string mStdLibOverride;
-    size_t mOptimizationLevel; 
+    size_t mOptimizationLevel;
     bool mVerbose;
+
+    mutable std::mutex mCompileMutex;
 };
 } // namespace IG

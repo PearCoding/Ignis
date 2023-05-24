@@ -24,6 +24,9 @@ ScriptCompiler::~ScriptCompiler()
 
 void* ScriptCompiler::compile(const std::string& script, const std::string& function) const
 {
+    // AnyDSL has no support for multi-threaded compile process :/
+    std::lock_guard<std::mutex> _guard(mCompileMutex);
+
     static bool once = false;
     if (!once) {
         const auto module_path = RuntimeInfo::modulePath();
@@ -71,7 +74,7 @@ std::string ScriptCompiler::prepare(const std::string& script) const
     return source.str();
 }
 
-static inline bool checkShaderFileName(const std::filesystem::path& path)
+static inline bool checkShaderFileName(const Path& path)
 {
     if (path.empty())
         return false;
@@ -88,7 +91,7 @@ static inline bool checkShaderFileName(const std::filesystem::path& path)
     return true;
 }
 
-void ScriptCompiler::loadStdLibFromDirectory(const std::filesystem::path& dir)
+void ScriptCompiler::loadStdLibFromDirectory(const Path& dir)
 {
     std::stringstream lib;
 

@@ -1,0 +1,68 @@
+{
+  "externals": [
+    {"filename": "two-planes-base.json"}
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "BackBottom",
+      "reflectance": [0.2, 0.8, 0.2]
+    }
+  ],
+  "entities": [
+    {
+      "name": "Back-Bottom",
+      "shape": "Bottom",
+      "bsdf": "BackBottom",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        2.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Sphere-Sphere",
+      "shape": "Sphere",
+      "bsdf": "Emission",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        1.0,
+        0.0,
+        2.25,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "name": "Sphere-Sphere",
+      "entity": "Sphere-Sphere",
+      "radiance": 10000
+    }
+  ]
+}

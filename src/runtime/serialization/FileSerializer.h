@@ -8,10 +8,10 @@ namespace IG {
 class FileSerializer : public Serializer {
 public:
     FileSerializer();
-    FileSerializer(const std::filesystem::path& path, bool readmode);
+    FileSerializer(const Path& path, bool readmode);
     virtual ~FileSerializer();
 
-    bool open(const std::filesystem::path& path, bool readmode);
+    bool open(const Path& path, bool readmode);
     void close();
 
     size_t memoryFootprint() const;

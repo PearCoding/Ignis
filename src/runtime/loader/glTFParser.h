@@ -5,6 +5,6 @@
 namespace IG {
 class glTFSceneParser {
 public:
-    static std::shared_ptr<Scene> loadFromFile(const std::filesystem::path& path);
+    static std::shared_ptr<Scene> loadFromFile(const Path& path);
 };
 } // namespace IG

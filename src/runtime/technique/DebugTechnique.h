@@ -6,7 +6,7 @@
 namespace IG {
 class DebugTechnique : public Technique {
 public:
-    DebugTechnique(const SceneObject& obj);
+    DebugTechnique(SceneObject& obj);
     ~DebugTechnique() = default;
 
     TechniqueInfo getInfo(const LoaderContext& ctx) const override;

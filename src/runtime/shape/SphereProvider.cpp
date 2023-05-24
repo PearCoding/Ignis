@@ -7,7 +7,7 @@
 #include "Logger.h"
 
 namespace IG {
-void SphereProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, const SceneObject& elem)
+void SphereProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, SceneObject& elem)
 {
     float radius    = 1;
     Vector3f origin = Vector3f::Zero();

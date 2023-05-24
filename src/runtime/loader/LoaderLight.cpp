@@ -442,19 +442,18 @@ std::string LoaderLight::generateLightSelector(std::string type, ShadingTree& tr
     return stream.str();
 }
 
-std::filesystem::path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
+Path LoaderLight::generateLightSelectionCDF(ShadingTree& tree)
 {
     const std::string exported_id = "_light_cdf_";
 
     const auto data = tree.context().Cache->ExportedData.find(exported_id);
     if (data != tree.context().Cache->ExportedData.end())
-        return std::any_cast<std::string>(data->second);
+        return std::any_cast<Path>(data->second);
 
     if (lightCount() == 0)
         return {}; // Fallback to null light selector
 
-    std::filesystem::create_directories("data/"); // Make sure this directory exists
-    std::string path = "data/light_cdf.bin";
+    const Path path = tree.context().CacheManager->directory() / "light_cdf.bin";
 
     std::vector<float> estimated_powers;
     estimated_powers.reserve(mFiniteLights.size());

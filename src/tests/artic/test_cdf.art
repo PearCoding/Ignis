@@ -58,22 +58,22 @@ fn test_cdf_1d_sample_disc_u_1() {
 fn test_cdf_1d_sample_cont_u_0() {
     let a = construct_cdf_1d_test();
     
-    let sample = a.sample_continuos(0);
-    let pdf    = a.pdf_continuos(sample.pos);
+    let sample = a.sample_continuous(0);
+    let pdf    = a.pdf_continuous(sample.pos);
 
     let mut err = 0:i32;
     if sample.pos != 0 {
-        ignis_test_fail("CDF1D Sample Continuos u=0: Expected pos=0 but got a different value");
+        ignis_test_fail("CDF1D Sample Continuous u=0: Expected pos=0 but got a different value");
         err++;
     }
 
     if sample.off != 0 {
-        ignis_test_fail("CDF1D Sample Continuos u=0: Expected off=0 but got a different value");
+        ignis_test_fail("CDF1D Sample Continuous u=0: Expected off=0 but got a different value");
         err++;
     }
 
     if sample.pdf != pdf.pdf { 
-        ignis_test_fail("CDF1D Sample Continuos u=0: Pdfs do not match");
+        ignis_test_fail("CDF1D Sample Continuous u=0: Pdfs do not match");
         err++;
     }
 
@@ -83,22 +83,22 @@ fn test_cdf_1d_sample_cont_u_0() {
 fn test_cdf_1d_sample_cont_u_1() {
     let a = construct_cdf_1d_test();
     
-    let sample = a.sample_continuos(1);
-    let pdf    = a.pdf_continuos(sample.pos);
+    let sample = a.sample_continuous(1);
+    let pdf    = a.pdf_continuous(sample.pos);
 
     let mut err = 0:i32;
     if sample.pos != 1 {
-        ignis_test_fail("CDF1D Sample Continuos u=1: Expected pos=1 but got a different value");
+        ignis_test_fail("CDF1D Sample Continuous u=1: Expected pos=1 but got a different value");
         err++;
     }
     
     if sample.off != 5 {
-        ignis_test_fail("CDF1D Sample Continuos u=1: Expected off=5 but got a different value");
+        ignis_test_fail("CDF1D Sample Continuous u=1: Expected off=5 but got a different value");
         err++;
     }
 
     if sample.pdf != pdf.pdf { 
-        ignis_test_fail("CDF1D Sample Continuos u=1: Pdfs do not match");
+        ignis_test_fail("CDF1D Sample Continuous u=1: Pdfs do not match");
         err++;
     }
 
@@ -108,17 +108,17 @@ fn test_cdf_1d_sample_cont_u_1() {
 fn test_cdf_1d_sample_cont_u_079() {
     let a = construct_cdf_1d_test();
     
-    let sample = a.sample_continuos(0.79);
-    let pdf    = a.pdf_continuos(sample.pos);
+    let sample = a.sample_continuous(0.79);
+    let pdf    = a.pdf_continuous(sample.pos);
 
     let mut err = 0:i32;    
     if sample.off != 4 {
-        ignis_test_fail("CDF1D Sample Continuos u=0.79: Expected off=4 but got a different value");
+        ignis_test_fail("CDF1D Sample Continuous u=0.79: Expected off=4 but got a different value");
         err++;
     }
 
     if sample.pdf != pdf.pdf { 
-        ignis_test_fail("CDF1D Sample Continuos u=0.79: Pdfs do not match");
+        ignis_test_fail("CDF1D Sample Continuous u=0.79: Pdfs do not match");
         err++;
     }
 
@@ -128,17 +128,17 @@ fn test_cdf_1d_sample_cont_u_079() {
 fn test_cdf_1d_sample_cont_u_08() {
     let a = construct_cdf_1d_test();
     
-    let sample = a.sample_continuos(0.8);
-    let pdf    = a.pdf_continuos(sample.pos);
+    let sample = a.sample_continuous(0.8);
+    let pdf    = a.pdf_continuous(sample.pos);
 
     let mut err = 0:i32;    
     if sample.off != 5 {
-        ignis_test_fail("CDF1D Sample Continuos u=0.8: Expected off=5 but got a different value");
+        ignis_test_fail("CDF1D Sample Continuous u=0.8: Expected off=5 but got a different value");
         err++;
     }
 
     if sample.pdf != pdf.pdf { 
-        ignis_test_fail("CDF1D Sample Continuos u=0.8: Pdfs do not match");
+        ignis_test_fail("CDF1D Sample Continuous u=0.8: Pdfs do not match");
         err++;
     }
 
@@ -149,11 +149,11 @@ fn test_cdf_1d_sample_cont_disc() {
     let a = construct_cdf_1d_test();
     
     let sample_disc = a.sample_discrete(0.57);
-    let sample_cont = a.sample_continuos(0.57);
+    let sample_cont = a.sample_continuous(0.57);
 
     let mut err = 0:i32;    
     if sample_disc.off != sample_cont.off {
-        ignis_test_fail("CDF1D Sample Continuos & Discrete: Expected offset to match eachother");
+        ignis_test_fail("CDF1D Sample Continuous & Discrete: Expected offset to match");
         err++;
     }
 

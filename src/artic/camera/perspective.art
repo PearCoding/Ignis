@@ -70,11 +70,11 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
 
-    fn @gen_ray(rnd: &mut RndState, coord: PixelCoord ) {
+    fn @gen_ray(rnd: RandomGenerator, coord: PixelCoord ) {
         let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
         let focus_pos  = vec3_mulf(global_dir, focal_length);
 
-        let aperature_coord = vec2_mulf(square_to_concentric_disk(make_vec2(randf(rnd), randf(rnd))), aperture_radius);
+        let aperature_coord = vec2_mulf(square_to_concentric_disk(make_vec2(rnd.next_f32(), rnd.next_f32())), aperture_radius);
         let aperature_pos   = mat3x3_mul(view, make_vec3(aperature_coord.x, aperature_coord.y, 0));
         let d               = vec3_normalize(vec3_sub(focus_pos, aperature_pos));
 

@@ -160,7 +160,7 @@ void extractMeshIndices(TriMesh& tri_mesh, CompressedStream& cin)
     }
 }
 
-TriMesh load(const std::filesystem::path& path, size_t shapeIndex)
+TriMesh load(const Path& path, size_t shapeIndex)
 {
     std::fstream stream(path, std::ios::in | std::ios::binary);
     if (!stream) {

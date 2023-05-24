@@ -139,7 +139,7 @@ void Runtime::checkCacheDirectory()
         IG_LOG(L_DEBUG) << "Cache directory " << dir << " occupies " << FormatMemory(size) << " of disk space" << std::endl;
 }
 
-bool Runtime::loadFromFile(const std::filesystem::path& path)
+bool Runtime::loadFromFile(const Path& path)
 {
     // Parse scene file
     IG_LOG(L_DEBUG) << "Parsing scene file" << std::endl;
@@ -154,14 +154,14 @@ bool Runtime::loadFromFile(const std::filesystem::path& path)
         if (mOptions.AddExtraEnvLight)
             scene->addConstantEnvLight();
 
-        return load(path, scene);
+        return load(path, scene.get());
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
     }
 }
 
-bool Runtime::loadFromString(const std::string& str, const std::filesystem::path& dir)
+bool Runtime::loadFromString(const std::string& str, const Path& dir)
 {
     // Parse scene string
     try {
@@ -176,19 +176,21 @@ bool Runtime::loadFromString(const std::string& str, const std::filesystem::path
         if (mOptions.AddExtraEnvLight)
             scene->addConstantEnvLight();
 
-        return load({}, scene);
+        return load({}, scene.get());
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
         return false;
     }
 }
 
-bool Runtime::loadFromScene(const std::shared_ptr<Scene>& scene)
+bool Runtime::loadFromScene(const Scene* scene)
 {
-    try {
-        if (mOptions.AddExtraEnvLight)
-            scene->addConstantEnvLight();
+    if (scene == nullptr) {
+        IG_LOG(L_ERROR) << "Loading error: Given scene pointer is null" << std::endl;
+        return false;
+    }
 
+    try {
         return load({}, scene);
     } catch (const std::runtime_error& err) {
         IG_LOG(L_ERROR) << "Loading error: " << err.what() << std::endl;
@@ -196,10 +198,12 @@ bool Runtime::loadFromScene(const std::shared_ptr<Scene>& scene)
     }
 }
 
-bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scene>& scene)
+bool Runtime::load(const Path& path, const Scene* scene)
 {
     LoaderOptions lopts;
     lopts.FilePath            = path;
+    lopts.EnableCache         = mOptions.EnableCache;
+    lopts.CachePath           = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_u8string())) : mOptions.CacheDir;
     lopts.Target              = mOptions.Target;
     lopts.IsTracer            = mOptions.IsTracer;
     lopts.Scene               = scene;
@@ -260,9 +264,8 @@ bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scen
     // Setup array of number of entities per material
     mEntityPerMaterial.clear();
     mEntityPerMaterial.reserve(ctx->Materials.size());
-    for (const auto& mat : ctx->Materials) {
+    for (const auto& mat : ctx->Materials)
         mEntityPerMaterial.emplace_back((int)mat.Count);
-    }
 
     // Merge global registry
     mGlobalRegistry.mergeFrom(ctx->GlobalRegistry);
@@ -272,7 +275,14 @@ bool Runtime::load(const std::filesystem::path& path, const std::shared_ptr<Scen
 
     // Preload camera orientation
     setCameraOrientationParameter(mInitialCameraOrientation);
-    return setupScene();
+    bool res = setupScene();
+
+    if (!res)
+        return false;
+
+    if (mOptions.WarnUnused)
+        scene->warnUnusedProperties();
+    return true;
 }
 
 void Runtime::step(bool ignoreDenoiser)
@@ -286,6 +296,8 @@ void Runtime::step(bool ignoreDenoiser)
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
         return;
     }
+
+    handleTime();
 
     if (mTechniqueInfo.VariantSelector) {
         const auto active = mTechniqueInfo.VariantSelector(mCurrentIteration);
@@ -322,8 +334,8 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
     settings.info      = info;
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
+    settings.user_seed = mOptions.Seed;
 
-    setParameter("__spi", (int)settings.spi);
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
 
     if (!info.LockFramebuffer)
@@ -341,6 +353,8 @@ void Runtime::trace(const std::vector<Ray>& rays)
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
         return;
     }
+
+    handleTime();
 
     if (mTechniqueInfo.VariantSelector) {
         const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
@@ -380,8 +394,8 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     settings.info      = info;
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
+    settings.user_seed = mOptions.Seed;
 
-    setParameter("__spi", (int)settings.spi);
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
 
     if (!info.LockFramebuffer)
@@ -419,7 +433,7 @@ void Runtime::reset()
     // No mCurrentFrameCount
 }
 
-const Statistics* Runtime::getStatistics() const
+const Statistics* Runtime::statistics() const
 {
     return mOptions.AcquireStats ? mDevice->getStatistics() : nullptr;
 }
@@ -511,6 +525,7 @@ bool Runtime::setupScene()
         }
     }
 
+    mDevice->releaseAll(); // Release all temporary stuff allocated while loading
     clearFramebuffer();
     return true;
 }
@@ -680,5 +695,19 @@ bool Runtime::hasDenoiser() const
 #else
     return false;
 #endif
+}
+
+void Runtime::handleTime()
+{
+    if (mCurrentIteration != 0)
+        return;
+
+    if (mCurrentFrame == 0) {
+        mStartTime = std::chrono::high_resolution_clock::now();
+        setParameter("__time", 0.0f);
+    } else {
+        const auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mStartTime);
+        setParameter("__time", (float)dur.count() / 1000.0f);
+    }
 }
 } // namespace IG

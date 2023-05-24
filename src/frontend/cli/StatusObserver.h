@@ -10,10 +10,11 @@ namespace IG {
 #define RESTORE_CURSOR "\33[u"
 class StatusObserver {
 public:
-    StatusObserver(bool beautify, uint64 updateCycleSeconds, uint64 targetIteration)
+    StatusObserver(bool beautify, uint64 updateCycleSeconds, uint64 targetIteration, uint64 targetTime)
         : mBeautify(beautify)
         , mUpdateCycleSeconds(updateCycleSeconds)
         , mTargetSamples(targetIteration)
+        , mTargetTime(targetTime)
         , mFirstTime(false)
     {
     }
@@ -73,6 +74,13 @@ public:
         const auto fullDurationAfterFirst = std::chrono::duration_cast<std::chrono::seconds>(now - mStartAfterFirst);
 
         if ((uint64)duration.count() >= mUpdateCycleSeconds) {
+            double progress = 0;
+            if (mTargetSamples != 0)
+                progress = currentSamples / double(mTargetSamples);
+            else if (mTargetTime != 0)
+                progress = fullDuration.count() / double(mTargetTime);
+            const float percentage = static_cast<float>(100 * progress);
+
             if (mBeautify) {
                 if (mFirstTime) {
                     std::cout << SAVE_CURSOR;
@@ -81,21 +89,19 @@ public:
                     std::cout << REMOVE_LAST_LINE << RESTORE_CURSOR;
                 }
 
-                if (mTargetSamples != 0)
-                    drawProgressbar(currentSamples / float(mTargetSamples));
+                if (mTargetSamples != 0 || mTargetTime != 0)
+                    drawProgressbar((float)progress);
             }
-            if (mTargetSamples != 0) {
-                const float percentage = 100 * (currentSamples / float(mTargetSamples));
+
+            if (mTargetSamples != 0 || mTargetTime != 0)
                 std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
-            }
 
             std::cout << "S: " << std::setw(ITER_OUTPUT_FIELD_SIZE) << currentSamples
                       << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
 
             if (mTargetSamples != 0) {
-                const int64_t fullDur  = fullDurationAfterFirst.count() > 0 ? fullDurationAfterFirst.count() : fullDuration.count();
-                const float percentage = 100 * (currentSamples / float(mTargetSamples));
-                const float etaFactor  = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
+                const int64_t fullDur = fullDurationAfterFirst.count() > 0 ? fullDurationAfterFirst.count() : fullDuration.count();
+                const float etaFactor = percentage > FltEps ? (100 - percentage) / percentage : 100.0f /* Just something high*/;
                 std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(static_cast<uint64>(fullDur * etaFactor));
             }
 
@@ -112,7 +118,7 @@ private:
     inline static void drawProgressbar(float perc)
     {
         constexpr size_t LENGTH = 20;
-        size_t full_count       = (size_t)std::floor(LENGTH * perc);
+        const size_t full_count = (size_t)std::floor(LENGTH * perc);
 
 #ifdef IG_CC_MSC
         std::cout << "{";
@@ -134,6 +140,7 @@ private:
     const bool mBeautify;
     const uint64 mUpdateCycleSeconds;
     const uint64 mTargetSamples;
+    const uint64 mTargetTime;
     std::chrono::high_resolution_clock::time_point mStart;
     std::chrono::high_resolution_clock::time_point mStartAfterFirst;
     std::chrono::high_resolution_clock::time_point mLastUpdate;

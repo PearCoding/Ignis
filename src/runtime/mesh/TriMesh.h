@@ -39,6 +39,9 @@ public:
     [[nodiscard]] float computeArea() const;
     [[nodiscard]] BoundingBox computeBBox() const;
 
+    /// Compute SHA256 based hash
+    [[nodiscard]] std::string computeHash() const;
+
     void transform(const Transformf& t);
 
     /// @brief Apply basic triangle subdivision

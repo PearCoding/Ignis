@@ -27,7 +27,7 @@ T swap_endian(T u)
 }
 
 namespace ply {
-static std::vector<uint32_t> triangulatePly(const std::filesystem::path& path,
+static std::vector<uint32_t> triangulatePly(const Path& path,
                                             const std::vector<Vector3f>& vertices, const std::vector<uint32_t>& glb_indices,
                                             bool& warned)
 {
@@ -88,7 +88,7 @@ struct Header {
     [[nodiscard]] inline bool hasIndices() const { return IndElem >= 0; }
 };
 
-static TriMesh read(const std::filesystem::path& path, std::istream& stream, const Header& header, bool ascii)
+static TriMesh read(const Path& path, std::istream& stream, const Header& header, bool ascii)
 {
     const auto readFloat = [&]() {
         float val = 0;
@@ -260,7 +260,7 @@ static inline bool isAllowedVertIndType(const std::string& str)
            || str == "uint";
 }
 
-TriMesh load(const std::filesystem::path& path)
+TriMesh load(const Path& path)
 {
     std::fstream stream(path, std::ios::in | std::ios::binary);
     if (!stream) {
@@ -379,6 +379,80 @@ TriMesh load(const std::filesystem::path& path)
     }
 
     return tri_mesh;
+}
+
+bool save(const TriMesh& mesh, const Path& path)
+{
+    if (mesh.vertices.empty() || mesh.faceCount() == 0)
+        return false;
+
+    const bool hasNormals = mesh.normals.size() == mesh.vertices.size();
+    const bool hasTexture = mesh.texcoords.size() == mesh.vertices.size();
+
+    std::ofstream out(path.generic_u8string(), std::ios::binary);
+
+    out << "ply\n"
+        << "format binary_little_endian 1.0\n"
+        << "element vertex " << mesh.vertices.size() << "\n"
+        << "property float x\n"
+        << "property float y\n"
+        << "property float z\n";
+    if (hasNormals) {
+        out << "property float nx\n"
+            << "property float ny\n"
+            << "property float nz\n";
+    }
+    if (hasTexture) {
+        out << "property float s\n"
+            << "property float t\n";
+    }
+
+    out << "element face " << mesh.faceCount() << "\n";
+    out << "property list uchar int vertex_indices\n";
+    out << "end_header\n";
+
+    for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+        // Vertices
+        {
+            const Vector3f v = mesh.vertices[i];
+            const float vx = v.x(), vy = v.y(), vz = v.z();
+            out.write(reinterpret_cast<const char*>(&vx), sizeof(vx));
+            out.write(reinterpret_cast<const char*>(&vy), sizeof(vy));
+            out.write(reinterpret_cast<const char*>(&vz), sizeof(vz));
+        }
+
+        // Normals
+        if (hasNormals) {
+            const Vector3f n = mesh.normals[i];
+            const float nx = n.x(), ny = n.y(), nz = n.z();
+            out.write(reinterpret_cast<const char*>(&nx), sizeof(nx));
+            out.write(reinterpret_cast<const char*>(&ny), sizeof(ny));
+            out.write(reinterpret_cast<const char*>(&nz), sizeof(nz));
+        }
+
+        // Textures
+        if (hasTexture) {
+            const Vector2f t = mesh.texcoords[i];
+            const float tx = t.x(), ty = t.y();
+            out.write(reinterpret_cast<const char*>(&tx), sizeof(tx));
+            out.write(reinterpret_cast<const char*>(&ty), sizeof(ty));
+        }
+    }
+
+    // Indices
+    const uint8 count = 3;
+    for (size_t i = 0; i < mesh.faceCount(); ++i) {
+        const int i0 = mesh.indices.at(i * 4 + 0);
+        const int i1 = mesh.indices.at(i * 4 + 1);
+        const int i2 = mesh.indices.at(i * 4 + 2);
+
+        out.write(reinterpret_cast<const char*>(&count), sizeof(count));
+        out.write(reinterpret_cast<const char*>(&i0), sizeof(i0));
+        out.write(reinterpret_cast<const char*>(&i1), sizeof(i1));
+        out.write(reinterpret_cast<const char*>(&i2), sizeof(i2));
+    }
+
+    return true;
 }
 } // namespace ply
 } // namespace IG

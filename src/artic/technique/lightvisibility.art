@@ -28,7 +28,7 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connec
     let offset:f32 = 0.001;
 
     fn @on_shadow( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , primary_payload: RayPayload
                  , secondary_payload: RayPayload
                  , mat: Material
@@ -74,20 +74,20 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connec
     }
 
     // Some surface was between the light source and the starting point -> There is no contribution from the light!
-    fn @on_advanced_shadow_hit(_ray: Ray, _pixel: PixelCoord, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
+    fn @on_advanced_shadow_hit(_ctx: ShadingContext, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
         let lvs   = unwrap_lvsecondarypayload(secondary_payload);
         let color = color_map(lvs.light);
         make_option(make_gray_color(color_luminance(color) * no_connection_factor))
     }
 
     // No surface was between the light source and the starting point -> There is a contribution from the light!
-    fn @on_advanced_shadow_miss(_ray: Ray, _pixel: PixelCoord, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
+    fn @on_advanced_shadow_miss(_ctx: ShadingContext, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
         let lvs = unwrap_lvsecondarypayload(secondary_payload);
         make_option(color_map(lvs.light))
     }
 
     fn @on_bounce( ctx: ShadingContext
-                , rnd: &mut RndState
+                , rnd: RandomGenerator
                 , payload: RayPayload
                 , mat: Material
         ) -> Option[Ray] {
@@ -114,7 +114,7 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connec
         on_miss        = TechniqueNoMissFunction,
         on_shadow      = on_shadow,
         on_bounce      = on_bounce,
-        on_shadow_hit  = on_advanced_shadow_hit,
+        on_shadow_hit  = on_advanced_shadow_hit,    
         on_shadow_miss = on_advanced_shadow_miss,
     }
 }

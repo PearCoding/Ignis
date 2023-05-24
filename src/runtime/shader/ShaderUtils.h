@@ -7,7 +7,7 @@ namespace IG {
 class ShapeProvider;
 class ShaderUtils {
 public:
-    static std::string constructDevice(const Target& target);
+    static std::string constructDevice(const LoaderContext& ctx);
     static std::string generateDatabase(const LoaderContext& ctx);
     static std::string generateShapeLookup(const LoaderContext& ctx);
     static std::string generateShapeLookup(const std::string& varname, ShapeProvider* provider, const LoaderContext& ctx);

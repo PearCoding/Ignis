@@ -20,27 +20,58 @@
 			"filename": "textures/environment/phalzer_forest_01_4k.exr"
 		},
 		{
-			"type": "checkerboard",
-			"name": "check",
-			"scale_x": 10,
-			"scale_y": 10,
-			"color0": [0,0,0],
-			"color1": [1,1,1]
+			"type": "bitmap",
+			"name": "metalplates_color",
+			"filename": "textures/MetalPlates006_Color.png"
 		},
 		{
 			"type": "bitmap",
-			"name": "bitmap",
-			"filter_type": "nearest",
-			"filename": "textures/maze.png"
+			"name": "metalplates_displacement",
+			"filename": "textures/MetalPlates006_Displacement.png"
+		},
+		{
+			"type": "bitmap",
+			"name": "metalplates_metalness",
+			"filename": "textures/MetalPlates006_Metalness.png"
+		},
+		{
+			"type": "bitmap",
+			"name": "metalplates_normal",
+			"filename": "textures/MetalPlates006_Normal.png"
+		},
+		{
+			"type": "bitmap",
+			"name": "metalplates_roughness",
+			"filename": "textures/MetalPlates006_Roughness.png"
+		},
+		{
+			"type": "bitmap",
+			"name": "wood_color",
+			"filename": "textures/Wood047_Color.png"
+		},
+		{
+			"type": "bitmap",
+			"name": "wood_displacement",
+			"filename": "textures/Wood047_Displacement.png"
+		},
+		{
+			"type": "bitmap",
+			"name": "wood_normal",
+			"filename": "textures/Wood047_Normal.png"
+		},
+		{
+			"type": "bitmap",
+			"name": "wood_roughness",
+			"filename": "textures/Wood047_Roughness.png"
 		}
 	],
 	"bsdfs": [
-		{"type":"diffuse", "name": "ground", "reflectance":"check"},
-		{"type":"diffuse", "name": "object", "reflectance":"bitmap"}
+		{"type":"principled", "name": "ground", "base_color":"wood_color", "roughness": "wood_roughness.r", "metallic": 0},
+		{"type":"principled", "name": "object", "base_color":"metalplates_color", "roughness": "metalplates_roughness.r", "metallic": "metalplates_metalness.r"}
 	],
 	"shapes": [
-		{"type":"rectangle", "name":"Bottom", "width":10, "height":8},
-		{"type":"icosphere", "name":"Object", "subdivision": 3, "displacement": "textures/maze.png", "displacement_amount": -0.1}
+		{"type":"rectangle", "name":"Bottom", "width":10, "height":8, "refinement": 0.002, "smooth_normals": true, "displacement": "textures/Wood047_Displacement.png", "displacement_amount": 0.1},
+		{"type":"icosphere", "name":"Object", "radius":0.9, "generic_uv": true, "subdivision": 4, "smooth_normals": true, "displacement": "textures/MetalPlates006_Displacement.png", "displacement_amount": 0.1}
 	],
 	"entities": [
 		{"name":"Bottom","shape":"Bottom", "bsdf":"ground", "transform": [{"translate":[0,0,-0.9]}]},

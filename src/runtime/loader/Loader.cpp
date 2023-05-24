@@ -25,7 +25,10 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     LoaderContext ctx;
     ctx.Options = opts;
 
-    ctx.Cache = std::make_shared<LoaderCache>();
+    // TODO: Combine both cache types?
+    ctx.Cache        = std::make_shared<LoaderCache>();
+    ctx.CacheManager = std::make_shared<IG::CacheManager>(opts.CachePath);
+    ctx.CacheManager->enable(opts.EnableCache);
 
     ctx.Textures  = std::make_shared<LoaderTexture>();
     ctx.Lights    = std::make_unique<LoaderLight>();
@@ -36,6 +39,8 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.Technique = std::make_unique<LoaderTechnique>();
     ctx.Camera    = std::make_unique<LoaderCamera>();
 
+    ctx.CacheManager->sync();
+
     ctx.Shapes->prepare(ctx);
     ctx.Entities->prepare(ctx);
     ctx.Textures->prepare(ctx);
@@ -44,13 +49,20 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.Media->prepare(ctx);
 
     // Load content
+
+    ctx.CacheManager->sync();
     if (!ctx.Shapes->load(ctx))
         return std::nullopt;
 
+    ctx.CacheManager->sync();
     if (!ctx.Entities->load(ctx))
         return std::nullopt;
 
+    ctx.CacheManager->sync();
     ctx.Lights->setup(ctx);
+
+    ctx.CacheManager->sync();
+
     IG_LOG(L_DEBUG) << "Got " << ctx.Materials.size() << " unique materials" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Lights->lightCount() << " lights" << std::endl;
     if (ctx.Lights->embeddedLightCount() > 0)

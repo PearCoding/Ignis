@@ -346,6 +346,7 @@ public:
         driver_settings.iter   = (int)settings.iteration;
         driver_settings.width  = (int)settings.width;
         driver_settings.height = (int)settings.height;
+        driver_settings.seed   = (int)settings.user_seed;
 
         if (settings.width != film_width || settings.height != film_height)
             resizeFramebuffer(settings.width, settings.height);
@@ -806,10 +807,8 @@ public:
         size = (int32_t)roundUp(size, 32);
 
         auto& buffers = devices[dev].buffers;
-        auto it       = buffers.find(name);
-        if (it != buffers.end() && it->second.Data.size() >= (int64_t)size) {
+        if (auto it = buffers.find(name); it != buffers.end() && it->second.Data.size() >= (int64_t)size)
             return it->second;
-        }
 
         _SECTION(SectionType::BufferRequests);
 
@@ -824,13 +823,24 @@ public:
         return buffers[name] = DeviceBuffer{ anydsl::Array<uint8_t>(dev, reinterpret_cast<uint8_t*>(ptr), size), 1 };
     }
 
+    inline void releaseBuffer(int32_t dev, const std::string& name)
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+
+        auto& buffers = devices[dev].buffers;
+
+        if (auto it = buffers.find(name); it != buffers.end()) {
+            _SECTION(SectionType::BufferReleases);
+            buffers.erase(it);
+        }
+    }
+
     inline void dumpBuffer(int32_t dev, const std::string& name, const std::string& filename)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
         auto& buffers = devices[dev].buffers;
-        auto it       = buffers.find(name);
-        if (it != buffers.end()) {
+        if (auto it = buffers.find(name); it != buffers.end()) {
             const size_t size = (size_t)it->second.Data.size();
 
             // Copy data to host
@@ -921,6 +931,13 @@ public:
             if (dev.second.buffers.count("__dbg_output"))
                 dumpDebugBuffer(dev.first, dev.second.buffers["__dbg_output"]);
         }
+    }
+
+    /// @brief Will release almost all device specific data
+    inline void releaseAll()
+    {
+        std::lock_guard<std::mutex> _guard(thread_mutex);
+        std::unordered_map<int32_t, DeviceData>().swap(devices);
     }
 
     // -------------------------------------------------------- Shader
@@ -1504,6 +1521,22 @@ public:
 const Image Interface::MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
 static std::unique_ptr<Interface> sInterface;
 
+// --------------------- Math stuff
+[[maybe_unused]] static unsigned int sPrevMathMode = 0;
+static void enableMathMode() {
+    // Force flush to zero mode for denormals
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+    sPrevMathMode = _mm_getcsr();
+    _mm_setcsr(sPrevMathMode | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+#endif
+}
+static void disableMathMode() {
+    // Reset mode
+#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
+    _mm_setcsr(sPrevMathMode);
+#endif
+}
+
 // --------------------- Device
 Device::Device(const Device::SetupSettings& settings)
 {
@@ -1511,11 +1544,6 @@ Device::Device(const Device::SetupSettings& settings)
     sInterface = std::make_unique<Interface>(settings);
 
     IG_LOG(L_INFO) << "Using device " << anydsl_device_name(sInterface->getDevID()) << std::endl;
-
-    // Force flush to zero mode for denormals
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-    _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
-#endif
 }
 
 Device::~Device()
@@ -1530,6 +1558,8 @@ void Device::assignScene(const SceneSettings& settings)
 
 void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
 {
+    enableMathMode();
+
     // Register host thread
     sInterface->registerThread();
 
@@ -1548,11 +1578,18 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
 #endif
 
     sInterface->unregisterThread();
+    
+    disableMathMode();
 }
 
 void Device::resize(size_t width, size_t height)
 {
     sInterface->resizeFramebuffer(width, height);
+}
+
+void Device::releaseAll()
+{
+    sInterface->releaseAll();
 }
 
 Device::AOVAccessor Device::getFramebuffer(const std::string& name)
@@ -1577,6 +1614,8 @@ const Statistics* Device::getStatistics()
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
 {
+    enableMathMode();
+
     // Register host thread
     sInterface->registerThread();
     sInterface->ensureFramebuffer();
@@ -1602,6 +1641,8 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     }
 
     sInterface->unregisterThread();
+    
+    disableMathMode();
 }
 
 GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_settings)
@@ -1640,6 +1681,8 @@ GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& dri
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
+    enableMathMode();
+    
     // Register host thread
     sInterface->registerThread();
     sInterface->ensureFramebuffer();
@@ -1673,11 +1716,15 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 
     sInterface->unregisterThread();
 
+    disableMathMode();
+
     return driver_output;
 }
 
 void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output)
 {
+    enableMathMode();
+
     // Register host thread
     sInterface->registerThread();
 
@@ -1690,6 +1737,8 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
     sInterface->scene.resource_map = copy;
 
     sInterface->unregisterThread();
+
+    disableMathMode();
 }
 
 template <typename T>

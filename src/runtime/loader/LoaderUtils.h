@@ -22,17 +22,17 @@ public:
     static std::string inlineVector(const Vector3f& pos);
     static std::string inlineColor(const Vector3f& color);
 
-    static TimePoint getTimePoint(const SceneObject& obj);
-    static MapLocation getLocation(const SceneObject& obj);
-    static ElevationAzimuth getEA(const SceneObject& obj);
-    static Vector3f getDirection(const SceneObject& obj);
+    static TimePoint getTimePoint(SceneObject& obj);
+    static MapLocation getLocation(SceneObject& obj);
+    static ElevationAzimuth getEA(SceneObject& obj);
+    static Vector3f getDirection(SceneObject& obj);
 
-    using CDF2DData = std::tuple<std::string, size_t, size_t>;
-    static CDF2DData setup_cdf2d(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate = false);
+    using CDF2DData = std::tuple<Path, size_t, size_t>;
+    static CDF2DData setup_cdf2d(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate = false);
     static CDF2DData setup_cdf2d(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate = false);
 
-    using CDF2DSATData = std::tuple<std::string, size_t, size_t>;
-    static CDF2DSATData setup_cdf2d_sat(LoaderContext& ctx, const std::string& filename, bool premultiplySin, bool compensate = false);
+    using CDF2DSATData = std::tuple<Path, size_t, size_t>;
+    static CDF2DSATData setup_cdf2d_sat(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate = false);
     static CDF2DSATData setup_cdf2d_sat(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate = false);
 };
 } // namespace IG

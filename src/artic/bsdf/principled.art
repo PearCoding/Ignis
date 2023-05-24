@@ -67,7 +67,6 @@ fn @compute_roughness(roughness: f32, anisotropic: f32) -> (f32, f32) {
 fn @getMicro(closure: Closure) -> microfacet::MicrofacetDistribution {
     let face_normal = shading::to_local(closure.surf.local, closure.surf.face_normal);
     microfacet::make_vndf_ggx_distribution(face_normal, super::mat3x3_identity(), closure.roughness_u, closure.roughness_v)
-    // microfacet::make_ggx_distribution(super::mat3x3_identity(), roughness_u, roughness_v)
 }
 
 fn @getReflectionMicro(closure: Closure) = getMicro(closure);
@@ -80,31 +79,17 @@ fn @getRefractionMicro(closure: Closure) = getMicro(if closure.thin {
         closure
     });
 
-fn @lerpFresnelTerm(closure: EvalClosure, r0: Color) -> Color {
-    //let cl = super::absolute_cos(closure.wi, closure.h);
-    let cl = shading::abs_cos_theta(closure.wi);
-
-    let front_eta = 1 / closure.general.ior;
-    let f0 = math::fresnel_dielectric(front_eta, 1);
-    let fl = math::fresnel_dielectric(front_eta, cl);
-    let fh = super::safe_div(fl - f0, 1 - f0);
-  
-    super::color_lerp(r0, color_builtins::white, fh)
-}
-
 fn @evalDisneyFresnelTerm(closure: EvalClosure) -> Color {
-    // let HdV = shading::abs_cos_theta(closure.wo);
     let HdV = super::absolute_cos(closure.wo, closure.h);
     let HdL = super::absolute_cos(closure.wi, closure.h);
 
     if HdV * HdL <= super::flt_eps { return(super::color_builtins::black) }
 
-    let front_eta =  1 / closure.general.ior;
-    let f1 = super::make_gray_color(math::fresnel_dielectric(front_eta, HdV));
+    let f1 = super::make_gray_color(math::fresnel_dielectric(closure.general.eta, HdV));
 
     let color = tint_color(closure.general.base_color);
     let a  = super::color_lerp(color_builtins::white, color, closure.general.specular_tint);
-    let r0 = super::color_lerp(super::color_mulf(a, super::schlick_r0(front_eta)), closure.general.base_color, closure.general.metallic);
+    let r0 = super::color_lerp(super::color_mulf(a, super::schlick_r0(closure.general.eta)), closure.general.base_color, closure.general.metallic);
     let f2 = super::schlick(r0, color_builtins::white, HdL);
 
     super::color_lerp(f1, f2, closure.general.metallic)
@@ -218,14 +203,18 @@ struct LobeDistribution {
 fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
     // if true { return(LobeDistribution{ diff_refl = 0.5, diff_trans = 0, spec_refl = 0.5, spec_trans = 0 }) }
 
+    let metallic_in   = all::clampf(closure.metallic, 0, 1);
+    let diff_trans_in = all::clampf(closure.diffuse_transmission, 0, 1);
+    let spec_trans_in = all::clampf(closure.specular_transmission, 0, 1);
+
     let abs_gen  = all::color_luminance(closure.base_color);
     let abs_spec = super::lerp(1:f32, all::color_luminance(tint_color(closure.base_color)), closure.specular_tint);
 
-    let diff_refl = all::clampf(abs_gen * (1 - closure.metallic) * (1 - closure.specular_transmission), 0, 1);
+    let diff_refl = all::clampf(abs_gen * (1 - metallic_in) * (1 - spec_trans_in), 0, 1);
     let F         = math::fresnel_dielectric(closure.eta, shading::abs_cos_theta(wo));
     let spec_refl = all::clampf(abs_spec * (1 - F) + F, 0, 1);
 
-    let has_transmission = closure.diffuse_transmission > 0 || closure.specular_transmission > 0;
+    let has_transmission = diff_trans_in > 0 || spec_trans_in > 0;
     if !has_transmission {
         let norm = diff_refl + spec_refl;
         if norm <= super::flt_eps {
@@ -234,8 +223,8 @@ fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
             LobeDistribution{ diff_refl = diff_refl / norm, diff_trans = 0, spec_refl = spec_refl / norm, spec_trans = 0 }
         } 
     } else {
-        let diff_trans = all::clampf(abs_gen * closure.diffuse_transmission * diff_refl, 0, 1);
-        let spec_trans = all::clampf((1 - F) * abs_gen * (1 - closure.metallic) * closure.specular_transmission, 0, 1);
+        let diff_trans = all::clampf(abs_gen * diff_trans_in * diff_refl, 0, 1);
+        let spec_trans = all::clampf((1 - F) * abs_gen * (1 - metallic_in) * spec_trans_in, 0, 1);
 
         let norm = diff_refl + spec_refl + diff_trans + spec_trans;
         if norm <= super::flt_eps {
@@ -308,7 +297,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
 
         let diffuse_weight = (if thin { 1:f32 } else { 1 - clampf(metallic, 0, 1) }) * (1 - clampf(specular_transmission, 0, 1));
         let trans_weight   = (1 - clampf(metallic, 0, 1)) * clampf(specular_transmission, 0, 1);
-        let spec_weight    = 1 - trans_weight;
+        let spec_weight    = 1:f32; // 1 - trans_weight; // Total reflection adds this up
 
         if !is_transmission {
             // Diffuse
@@ -404,17 +393,17 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             }
 
             let lobes = principled::calcLobeDistribution(closure, wo);
-            let pick  = randf(rnd);
+            let pick  = rnd.next_f32();
 
             let sample = if pick < lobes.diff_refl {
                 // Diffuse reflection
-                let s  = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+                let s  = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
                 let wi = shading::make_same_hemisphere(wo, s.dir);
                 DirSample { dir = wi,
                             pdf = s.pdf * lobes.diff_refl + specReflPdf_local(wo, wi) * lobes.spec_refl }
             } else if pick < lobes.diff_refl + lobes.diff_trans {
                 // Diffuse transmission
-                let s  = sample_cosine_hemisphere(randf(rnd), randf(rnd));
+                let s  = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
                 let wi = vec3_neg(shading::make_same_hemisphere(wo, s.dir));
                 DirSample { dir = wi,
                             pdf = s.pdf * lobes.diff_trans + specTransPdf_local(wo, wi) * lobes.spec_trans }

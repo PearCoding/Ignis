@@ -21,5 +21,7 @@ public:
         ShadingTree& Tree;
     };
     virtual void serialize(const SerializationInput& input) const = 0;
+
+    virtual std::pair<size_t, size_t> computeResolution(ShadingTree&) const { return { 1, 1 }; }
 };
 } // namespace IG

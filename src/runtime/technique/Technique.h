@@ -5,7 +5,8 @@
 namespace IG {
 class SceneObject;
 
-constexpr int32 DefaultMaxRayDepth = 64;
+constexpr int32 DefaultMaxRayDepth = 64; // This is quite large
+constexpr int32 DefaultMinRayDepth = 2;  // The first bounce should not be affected by rr (by default)
 class Technique {
 public:
     inline Technique(const std::string& type)

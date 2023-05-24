@@ -288,7 +288,7 @@ static inline void assignSpecification(KlemsComponent& component, KlemsComponent
     spec.entry_count = { component.row()->entryCount(), component.column()->entryCount() };
 }
 
-bool KlemsLoader::prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data, KlemsSpecification& spec)
+bool KlemsLoader::prepare(const Path& in_xml, const Path& out_data, KlemsSpecification& spec)
 {
     // Read Radiance based klems BSDF xml document
     pugi::xml_document doc;

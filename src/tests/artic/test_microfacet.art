@@ -39,15 +39,16 @@ fn test_microfacet_ggx_aniso() {
     err  
 }
 
+fn @make_test_random_generator() = create_random_generator(hash_combine(hash_init(), 42));
+
 fn test_microfacet_ggx_sample() {
     let mut err = 0;
 
-    let mut rnd = fnv_init();
-    rnd = fnv_hash(rnd, 42);
+    let rnd = make_test_random_generator();
 
     let (_, wo, _) = make_setup();
     let dst    = $microfacet::make_ggx_distribution(mat3x3_identity(), 0.05, 0.45);
-    let sample = dst.sample(&mut rnd, wo);
+    let sample = dst.sample(rnd, wo);
     let wi     = vec3_reflect(wo, sample.normal);
     
     let pdf1 = sample.pdf;
@@ -97,12 +98,11 @@ fn test_microfacet_beckmann_aniso() {
 fn test_microfacet_beckmann_sample() {
     let mut err = 0;
 
-    let mut rnd = fnv_init();
-    rnd = fnv_hash(rnd, 42);
+    let rnd = make_test_random_generator();
 
     let (_, wo, _) = make_setup();
     let dst    = $microfacet::make_beckmann_distribution(mat3x3_identity(), 0.05, 0.45);
-    let sample = dst.sample(&mut rnd, wo);
+    let sample = dst.sample(rnd, wo);
     let wi     = vec3_reflect(wo, sample.normal);
 
     let pdf1 = sample.pdf;
@@ -118,12 +118,11 @@ fn test_microfacet_beckmann_sample() {
 fn test_microfacet_vndf_ggx_sample() {
     let mut err = 0;
 
-    let mut rnd = fnv_init();
-    rnd = fnv_hash(rnd, 42);
+    let rnd = make_test_random_generator();
 
     let (_, wo, _) = make_setup();
     let dst    = $microfacet::make_vndf_ggx_distribution(make_vec3(0,0,1), mat3x3_identity(), 0.05, 0.45);
-    let sample = dst.sample(&mut rnd, wo);
+    let sample = dst.sample(rnd, wo);
     let wi     = vec3_reflect(wo, sample.normal);
 
     let pdf1 = sample.pdf;

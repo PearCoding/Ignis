@@ -4,6 +4,6 @@ namespace IG {
 enum class SPPMode {
     Fixed,
     Capped,
-    Continuos
+    Continuous
 };
 }

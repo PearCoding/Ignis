@@ -6,6 +6,7 @@
 #include "mesh/MtsSerializedFile.h"
 #include "mesh/ObjFile.h"
 #include "mesh/PlyFile.h"
+#include "serialization/FileSerializer.h"
 #include "serialization/VectorSerializer.h"
 #include "shader/ShaderUtils.h"
 
@@ -15,7 +16,7 @@
 
 namespace IG {
 
-inline TriMesh setup_mesh_triangle(const SceneObject& elem)
+inline TriMesh setup_mesh_triangle(SceneObject& elem)
 {
     const Vector3f p0 = elem.property("p0").getVector3(Vector3f(0, 0, 0));
     const Vector3f p1 = elem.property("p1").getVector3(Vector3f(1, 0, 0));
@@ -23,7 +24,7 @@ inline TriMesh setup_mesh_triangle(const SceneObject& elem)
     return TriMesh::MakeTriangle(p0, p1, p2);
 }
 
-inline TriMesh setup_mesh_rectangle(const SceneObject& elem)
+inline TriMesh setup_mesh_rectangle(SceneObject& elem)
 {
     if (elem.properties().count("p0") == 0) {
         const float width     = elem.property("width").getNumber(2.0f);
@@ -39,7 +40,7 @@ inline TriMesh setup_mesh_rectangle(const SceneObject& elem)
     }
 }
 
-inline TriMesh setup_mesh_cube(const SceneObject& elem)
+inline TriMesh setup_mesh_cube(SceneObject& elem)
 {
     const float width     = elem.property("width").getNumber(2.0f);
     const float height    = elem.property("height").getNumber(2.0f);
@@ -48,7 +49,7 @@ inline TriMesh setup_mesh_cube(const SceneObject& elem)
     return TriMesh::MakeBox(origin, Vector3f::UnitX() * width, Vector3f::UnitY() * height, Vector3f::UnitZ() * depth);
 }
 
-inline TriMesh setup_mesh_ico_sphere(const SceneObject& elem)
+inline TriMesh setup_mesh_ico_sphere(SceneObject& elem)
 {
     const Vector3f center     = elem.property("center").getVector3();
     const float radius        = elem.property("radius").getNumber(1.0f);
@@ -56,7 +57,7 @@ inline TriMesh setup_mesh_ico_sphere(const SceneObject& elem)
     return TriMesh::MakeIcoSphere(center, radius, subdivisions);
 }
 
-inline TriMesh setup_mesh_uv_sphere(const SceneObject& elem)
+inline TriMesh setup_mesh_uv_sphere(SceneObject& elem)
 {
     const Vector3f center = elem.property("center").getVector3();
     const float radius    = elem.property("radius").getNumber(1.0f);
@@ -65,7 +66,7 @@ inline TriMesh setup_mesh_uv_sphere(const SceneObject& elem)
     return TriMesh::MakeUVSphere(center, radius, stacks, slices);
 }
 
-inline TriMesh setup_mesh_cylinder(const SceneObject& elem)
+inline TriMesh setup_mesh_cylinder(SceneObject& elem)
 {
     const Vector3f baseCenter = elem.property("p0").getVector3();
     const Vector3f tipCenter  = elem.property("p1").getVector3(Vector3f(0, 0, 1));
@@ -84,7 +85,7 @@ inline TriMesh setup_mesh_cylinder(const SceneObject& elem)
     return TriMesh::MakeCylinder(baseCenter, baseRadius, tipCenter, tipRadius, sections, filled);
 }
 
-inline TriMesh setup_mesh_cone(const SceneObject& elem)
+inline TriMesh setup_mesh_cone(SceneObject& elem)
 {
     const Vector3f baseCenter = elem.property("p0").getVector3();
     const Vector3f tipCenter  = elem.property("p1").getVector3(Vector3f(0, 0, 1));
@@ -94,7 +95,7 @@ inline TriMesh setup_mesh_cone(const SceneObject& elem)
     return TriMesh::MakeCone(baseCenter, radius, tipCenter, sections, filled);
 }
 
-inline TriMesh setup_mesh_disk(const SceneObject& elem)
+inline TriMesh setup_mesh_disk(SceneObject& elem)
 {
     const Vector3f origin = elem.property("origin").getVector3();
     const Vector3f normal = elem.property("normal").getVector3(Vector3f(0, 0, 1));
@@ -103,7 +104,7 @@ inline TriMesh setup_mesh_disk(const SceneObject& elem)
     return TriMesh::MakeDisk(origin, normal, radius, sections);
 }
 
-inline TriMesh setup_mesh_gauss(const SceneObject& elem)
+inline TriMesh setup_mesh_gauss(SceneObject& elem)
 {
     // TODO: Add covariance based approach as well
     const Vector3f origin    = elem.property("origin").getVector3();
@@ -116,7 +117,7 @@ inline TriMesh setup_mesh_gauss(const SceneObject& elem)
     return TriMesh::MakeRadialGaussian(origin, normal * height, sigma, radius_scale, sections, slices);
 }
 
-inline TriMesh setup_mesh_gauss_lobe(const SceneObject& elem)
+inline TriMesh setup_mesh_gauss_lobe(SceneObject& elem)
 {
     const Vector3f origin    = elem.property("origin").getVector3();
     const Vector3f direction = elem.property("direction").getVector3(Vector3f(0, 0, 1));
@@ -136,7 +137,7 @@ inline TriMesh setup_mesh_gauss_lobe(const SceneObject& elem)
     return TriMesh::MakeGaussianLobe(origin, direction, xAxis, yAxis, cov, theta_size, phi_size, scale);
 }
 
-inline TriMesh setup_mesh_obj(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_obj(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     int shape_index     = elem.property("shape_index").getInteger(-1);
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
@@ -150,7 +151,7 @@ inline TriMesh setup_mesh_obj(const std::string& name, const SceneObject& elem, 
     return trimesh;
 }
 
-inline TriMesh setup_mesh_ply(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_ply(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load ply file " << filename << std::endl;
@@ -162,7 +163,7 @@ inline TriMesh setup_mesh_ply(const std::string& name, const SceneObject& elem, 
     return trimesh;
 }
 
-inline TriMesh setup_mesh_mitsuba(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_mitsuba(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     size_t shape_index  = elem.property("shape_index").getInteger(0);
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
@@ -175,7 +176,7 @@ inline TriMesh setup_mesh_mitsuba(const std::string& name, const SceneObject& el
     return trimesh;
 }
 
-inline TriMesh setup_mesh_external(const std::string& name, const SceneObject& elem, const LoaderContext& ctx)
+inline TriMesh setup_mesh_external(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
     if (filename.empty()) {
@@ -194,7 +195,7 @@ inline TriMesh setup_mesh_external(const std::string& name, const SceneObject& e
     return {};
 }
 
-inline TriMesh setup_mesh_inline(const std::string& name, const SceneObject& elem, const LoaderContext&)
+inline TriMesh setup_mesh_inline(const std::string& name, SceneObject& elem, const LoaderContext&)
 {
     auto propIndices   = elem.propertyOpt("indices");
     auto propVertices  = elem.propertyOpt("vertices");
@@ -304,30 +305,65 @@ struct BvhTemporary {
 };
 
 template <size_t N, size_t T>
-static uint64 setup_bvh(const TriMesh& mesh, SceneDatabase& dtb, std::mutex& mutex)
+static void serialize_bvh(Serializer& serializer, BvhTemporary<N, T>& bvh)
 {
-    IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
+    uint32 node_count = (uint32)bvh.nodes.size();
+    uint32 tri_count  = (uint32)bvh.tris.size();
+    uint32 _pad       = 0;
 
-    BvhTemporary<N, T> bvh;
-    build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
+    serializer | node_count;
+    serializer | tri_count; // Not really needed, but just dump it out
+    serializer | _pad;      // Padding
+    serializer | _pad;      // Padding
 
-    mutex.lock();
-    auto& bvhTable = dtb.FixTables["trimesh_primbvh"];
-    auto& bvhData  = bvhTable.addEntry(DefaultAlignment);
-    uint64 offset  = bvhTable.currentOffset() / sizeof(float);
-    VectorSerializer serializer(bvhData, false);
-    serializer.write((uint32)bvh.nodes.size());
-    serializer.write((uint32)bvh.tris.size()); // Not really needed, but just dump it out
-    serializer.write((uint32)0);               // Padding
-    serializer.write((uint32)0);               // Padding
-    serializer.write(bvh.nodes, true);
-    serializer.write(bvh.tris, true);
-    mutex.unlock();
-
-    return offset;
+    if (serializer.isReadMode()) {
+        serializer.read(bvh.nodes, node_count);
+        serializer.read(bvh.tris, tri_count);
+    } else {
+        serializer.write(bvh.nodes, true);
+        serializer.write(bvh.tris, true);
+    }
 }
 
-static void handleRefinement(TriMesh& mesh, const SceneObject& elem)
+template <size_t N, size_t T>
+static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::string& name, std::mutex& mutex)
+{
+    constexpr size_t MinFaceCountForCache = 500000;
+    IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
+
+    const Path path = ctx.CacheManager->directory() / ("_bvh_" + name + ".bin");
+    bool inCache                     = false;
+    const bool isEligible            = mesh.faceCount() > MinFaceCountForCache; // Do not waste effort for small meshes
+    if (isEligible && ctx.CacheManager->isEnabled()) {
+        const std::string hash = mesh.computeHash();
+        inCache                = ctx.CacheManager->checkAndUpdate("bvh_" + name, hash);
+    }
+
+    BvhTemporary<N, T> bvh;
+    if (!inCache || !std::filesystem::exists(path)) {
+        build_bvh<N, T>(mesh, bvh.nodes, bvh.tris);
+
+        if (ctx.CacheManager->isEnabled() && isEligible) {
+            FileSerializer serializer(path, false);
+            serialize_bvh(serializer, bvh);
+        }
+    } else {
+        FileSerializer serializer(path, true);
+        serialize_bvh(serializer, bvh);
+    }
+
+    {
+        std::lock_guard<std::mutex> _guard(mutex);
+        auto& bvhTable = ctx.Database.FixTables["trimesh_primbvh"];
+        auto& bvhData  = bvhTable.addEntry(DefaultAlignment);
+        uint64 offset  = bvhTable.currentOffset() / sizeof(float);
+        VectorSerializer serializer(bvhData, false);
+        serialize_bvh(serializer, bvh);
+        return offset;
+    }
+}
+
+static void handleRefinement(TriMesh& mesh, SceneObject& elem)
 {
     const float min_area = elem.property("refinement").getNumber(0);
     if (min_area <= FltEps)
@@ -363,7 +399,7 @@ static void applyDisplacement(TriMesh& mesh, const Image& image, float amount)
     if (mesh.normals.size() != mesh.vertices.size())
         mesh.computeVertexNormals();
 
-    if (mesh.texcoords.size() / 2 != mesh.vertices.size() / 3)
+    if (mesh.texcoords.size() != mesh.vertices.size())
         mesh.makeTexCoordsNormalized();
 
     // Apply displacement
@@ -379,7 +415,7 @@ static void applyDisplacement(TriMesh& mesh, const Image& image, float amount)
     }
 }
 
-static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, const SceneObject& elem)
+static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, SceneObject& elem)
 {
     const auto displacementProp = elem.property("displacement");
     if (!displacementProp.isValid() || displacementProp.type() != SceneProperty::PT_STRING)
@@ -394,6 +430,40 @@ static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, const Sc
     const float amount = elem.property("displacement_amount").getNumber(1.0f);
 
     applyDisplacement(mesh, image, amount);
+}
+
+static void handleModification(TriMesh& mesh, const LoaderContext& ctx, const std::string& name, SceneObject& elem)
+{
+    const size_t subdivisionCount  = elem.property("subdivision").getInteger(0);
+    const float min_area           = elem.property("refinement").getNumber(0);
+    const std::string displacement = elem.property("displacement").getString("");
+    const float amount             = elem.property("displacement_amount").getNumber(1.0f);
+
+    bool hasModification = subdivisionCount > 0 || min_area > 0 || !displacement.empty();
+    if (!hasModification)
+        return;
+
+    const Path path = ctx.CacheManager->directory() / ("_shape_" + name + ".ply");
+
+    bool inCache = false;
+    if (ctx.CacheManager->isEnabled()) {
+        const std::string hash = mesh.computeHash() + "_" + std::to_string(subdivisionCount) + "_" + std::to_string(min_area) + "_" + displacement + "_" + std::to_string(amount);
+        inCache                = ctx.CacheManager->checkAndUpdate("shape_" + name, hash);
+    }
+
+    if (!inCache || !std::filesystem::exists(path)) {
+        for (size_t i = 0; i < subdivisionCount; ++i)
+            mesh.subdivide();
+
+        handleRefinement(mesh, elem);
+        handleDisplacement(mesh, ctx, elem);
+
+        if (ctx.CacheManager->isEnabled())
+            ply::save(mesh, path);
+    } else {
+        IG_LOG(L_DEBUG) << "Loading modified mesh '" << name << "' from cache " << path << std::endl;
+        mesh = ply::load(path);
+    }
 
     // Re-Evaluate normals if necessary
     if (elem.property("smooth_normals").getBool(false))
@@ -407,7 +477,7 @@ static inline std::pair<uint32, uint32> split_u64_to_u32(uint64 a)
     return { uint32(a & 0xFFFFFFFF), uint32((a >> 32) & 0xFFFFFFFF) };
 }
 
-void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, const SceneObject& elem)
+void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std::string& name, SceneObject& elem)
 {
     TriMesh mesh;
     if (elem.pluginType() == "triangle") {
@@ -464,15 +534,13 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     else if (elem.property("smooth_normals").getBool(false))
         mesh.computeVertexNormals();
 
+    if (elem.property("generic_uv").getBool(false))
+        mesh.makeTexCoordsNormalized();
+
     if (!elem.property("transform").getTransform().matrix().isIdentity())
         mesh.transform(elem.property("transform").getTransform());
 
-    const size_t subdivisionCount = elem.property("subdivision").getInteger(0);
-    for (size_t i = 0; i < subdivisionCount; ++i)
-        mesh.subdivide();
-
-    handleRefinement(mesh, elem);
-    handleDisplacement(mesh, ctx, elem);
+    handleModification(mesh, ctx, name, elem);
 
     // Build bounding box
     BoundingBox bbox = mesh.computeBBox();
@@ -483,11 +551,11 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     // Setup bvh
     uint64 bvh_offset = 0;
     if (ctx.Options.Target.isGPU()) {
-        bvh_offset = setup_bvh<2, 1>(mesh, ctx.Database, mBvhMutex);
+        bvh_offset = setup_bvh<2, 1>(mesh, ctx, name, mBvhMutex);
     } else if (ctx.Options.Target.vectorWidth() < 8) {
-        bvh_offset = setup_bvh<4, 4>(mesh, ctx.Database, mBvhMutex);
+        bvh_offset = setup_bvh<4, 4>(mesh, ctx, name, mBvhMutex);
     } else {
-        bvh_offset = setup_bvh<8, 4>(mesh, ctx.Database, mBvhMutex);
+        bvh_offset = setup_bvh<8, 4>(mesh, ctx, name, mBvhMutex);
     }
 
     // Precompute approximative shapes outside the lock region

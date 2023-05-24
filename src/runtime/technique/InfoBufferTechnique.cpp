@@ -3,7 +3,7 @@
 #include "loader/Parser.h"
 
 namespace IG {
-InfoBufferTechnique::InfoBufferTechnique(const SceneObject& obj)
+InfoBufferTechnique::InfoBufferTechnique(SceneObject& obj)
     : Technique("infobuffer")
 {
     mMaxDepth       = obj.property("max_depth").getInteger(DefaultMaxRayDepth);

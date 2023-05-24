@@ -139,13 +139,12 @@ This mini tutorial is expecting some basic knowledge about CMake and the Windows
     8.  To run the frontends you might have to add multiple shared libraries (``*.dlls``) to the ``PATH`` environment variable or copy it next to the executables.
         Currently the shared libraries ``runtime.dll``, ``runtime_jit_artic.dll``, ``nvvm64.dll`` or ``nvvm64_40_0.dll``, ``tbb.dll``, ``SDL2.dll``, ``zlib.dll`` are known to be required.
         The list is not exhaustive however, as the final list of dependencies depends on the system, current state of development and other external factors.
-        If a module (e.g., ``ig_driver_avx2.dll``) can not been found, but exists on the filesystem, a reason for the error might be a missing shared library.
-        Use one of the many dll dependency viewers available on Windows to find the exact missing dll and copy it next to the build executable or add it to the ``PATH`` environment variable.
+        Use one of the many dll dependency viewers available on Windows to find missing dlls and copy it next to the build executable or add it to the ``PATH`` environment variable.
 
 Known Issues
 ------------
 
--   If you get a ``CommandLine Error: Option 'help-list' registred more than once!``, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
+-   If you get a ``CommandLine Error: Option 'help-list' registered more than once!``, most likely the AnyDSL LLVM library and system LLVM library with exposed symbols are loaded at the same time.
     A known cause is that ``igview`` and SDL are using a graphic driver which is loading the system LLVM library in the background.
     On Linux, using accelerated rendering load the X11 drivers, which in return load the system LLVM, which in return clash with the custom LLVM.
     Setting the environment variable ``SDL_RENDER_DRIVER=software`` and ``SDL_FRAMEBUFFER_ACCELERATION=0`` should be a good workaround. This will not prevent you of using the GPU for raytracing however, only the UI will be software rendered.
@@ -161,4 +160,4 @@ Known Issues
         Call Stack (most recent call first):
         build/_deps/llvm-src/llvm/tools/llvm-ar/CMakeLists.txt:20 (add_llvm_tool_symlink)
 
-    can be fixed by explicitly undefining the cmake variable ``CMAKE_CONFIGURATION_TYPES`` via ``-UCMAKE_CONFIGURATION_TYPES`` in the command line or in the ``scripts/setup/windows/config.json`` when using the automatic script.
+    can be fixed by explicitly unsetting the cmake variable ``CMAKE_CONFIGURATION_TYPES`` via ``-UCMAKE_CONFIGURATION_TYPES`` in the command line or in the ``scripts/setup/windows/config.json`` when using the automatic script.

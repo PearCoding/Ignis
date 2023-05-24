@@ -3,7 +3,7 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-void Medium::handleReferenceEntity(const SceneObject& obj)
+void Medium::handleReferenceEntity(SceneObject& obj)
 {
     mReferenceEntity = obj.property("reference").getString();
 }

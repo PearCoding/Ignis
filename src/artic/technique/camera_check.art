@@ -2,7 +2,7 @@ fn @make_camera_check_renderer(camera: Camera) -> Technique {
     let offset:f32 = 0.001;
 
      fn @on_shadow( ctx: ShadingContext
-                 , rnd: &mut RndState
+                 , rnd: RandomGenerator
                  , _: RayPayload
                  , _: RayPayload
                  , _: Material

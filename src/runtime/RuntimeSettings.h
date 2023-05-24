@@ -20,17 +20,25 @@ struct RuntimeOptions {
     bool AcquireStats      = false;
     bool DebugTrace        = false; // Show debug information regarding the calls on the device
     uint32 SPI             = 0;     // Detect automatically
+
+    size_t Seed = 0;
+
     IG::Target Target;
     std::string OverrideTechnique;
     std::string OverrideCamera;
     std::pair<uint32, uint32> OverrideFilmSize = { 0, 0 };
 
-    bool AddExtraEnvLight           = false; // User option to add a constant environment light (just to see something)
-    std::filesystem::path ScriptDir = {};    // Path to a new script directory, replacing the internal standard library
+    bool AddExtraEnvLight = false; // User option to add a constant environment light (just to see something)
+    Path ScriptDir        = {};    // Path to a new script directory, replacing the internal standard library
+
+    bool EnableCache = true;
+    Path CacheDir    = {};
 
     size_t ShaderOptimizationLevel = 3;
 
     bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
+
+    bool WarnUnused = true; // Warn about unused properties. They might indicate a typo or similar.
 
     DenoiserSettings Denoiser;
 

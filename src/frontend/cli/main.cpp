@@ -69,8 +69,8 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    if (cmd.SPP.value_or(0) <= 0) {
-        IG_LOG(L_ERROR) << "No valid spp count given" << std::endl;
+    if (cmd.RenderTime.value_or(0) <= 0 && cmd.SPP.value_or(0) <= 0) {
+        IG_LOG(L_ERROR) << "No valid spp count or render time given" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     if (cmd.SPP.has_value() && (cmd.SPP.value() % SPI) != 0)
         IG_LOG(L_WARNING) << "Given spp " << cmd.SPP.value() << " is not a multiple of the spi " << SPI << ". Using spp " << desired_iter * SPI << " instead" << std::endl;
 
-    StatusObserver observer(!cmd.NoColor, 2, desired_iter * SPI /* Approx */);
+    StatusObserver observer(!cmd.NoColor, 2, desired_iter * SPI /* Approx */, cmd.RenderTime.value_or(0));
     observer.begin();
 
     IG_LOG(L_INFO) << "Started rendering..." << std::endl;
@@ -133,7 +133,9 @@ int main(int argc, char** argv)
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
         samples_sec.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
-        if (samples_sec.size() == desired_iter)
+        if (desired_iter > 0 && samples_sec.size() == desired_iter)
+            break;
+        else if (cmd.RenderTime.has_value() && timer_render.duration_ms / 1000 > cmd.RenderTime.value())
             break;
     }
 
@@ -150,7 +152,7 @@ int main(int argc, char** argv)
 
     timer_all.stop();
 
-    auto stats = runtime->getStatistics();
+    auto stats = runtime->statistics();
     if (stats) {
         IG_LOG(L_INFO)
             << stats->dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats)

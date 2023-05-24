@@ -8,104 +8,14 @@ Ignis (module)
 
 Ignis python interface
 
-Methods
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`flushLog() -> None`
-
-  Flush internal logs
-
-- :pythonfunc:`loadFromFile(*args, **kwargs)`
-
-  Overloaded function.
-
-  1. :pythonfunc:`loadFromFile(arg0: str) -> {RuntimeWrap}`
-
-     Load a scene from file and generate a default runtime
-
-  2. :pythonfunc:`loadFromFile(arg0: str, arg1: {RuntimeOptions}) -> {RuntimeWrap}`
-
-     Load a scene from file and generate a runtime with given options
-
-- :pythonfunc:`loadFromScene(*args, **kwargs)`
-
-  Overloaded function.
-
-  1. :pythonfunc:`loadFromScene(arg0: {Scene}) -> {RuntimeWrap}`
-
-     Generate a default runtime from an already loaded scene
-
-  2. :pythonfunc:`loadFromScene(arg0: {Scene}, arg1: str) -> {RuntimeWrap}`
-
-     Generate a default runtime from an already loaded scene with directory for external resources
-
-  3. :pythonfunc:`loadFromScene(arg0: {Scene}, arg1: {RuntimeOptions}) -> {RuntimeWrap}`
-
-     Generate a runtime with given options from an already loaded scene
-
-  4. :pythonfunc:`loadFromScene(arg0: {Scene}, arg1: str, arg2: {RuntimeOptions}) -> {RuntimeWrap}`
-
-     Generate a runtime with given options from an already loaded scene with directory for external resources
-
-- :pythonfunc:`loadFromString(*args, **kwargs)`
-
-  Overloaded function.
-
-  1. :pythonfunc:`loadFromString(arg0: str) -> {RuntimeWrap}`
-
-     Load a scene from a string and generate a default runtime
-
-  2. :pythonfunc:`loadFromString(arg0: str, arg1: str) -> {RuntimeWrap}`
-
-     Load a scene from a string with directory for external resources and generate a default runtime
-
-  3. :pythonfunc:`loadFromString(arg0: str, arg1: {RuntimeOptions}) -> {RuntimeWrap}`
-
-     Load a scene from a string and generate a runtime with given options
-
-  4. :pythonfunc:`loadFromString(arg0: str, arg1: str, arg2: {RuntimeOptions}) -> {RuntimeWrap}`
-
-     Load a scene from a string with directory for external resources and generate a runtime with given options
-
-- :pythonfunc:`saveExr(arg0: str, arg1: buffer) -> bool`
-
-  Save an OpenEXR image to the filesystem
-
-- :pythonfunc:`setQuiet(arg0: bool) -> None`
-
-  Set True to disable all messages from the framework
-
-- :pythonfunc:`setVerbose(arg0: bool) -> None`
-
-  Set True to enable all messages from the framework, else only important messages will be shown
-
 
 .. _CPUArchitecture:
 
 CPUArchitecture
 -----------------------------------------------
 
-Enum holding supported CPU architectures
+- :pythonfunc:`Missing Documentation`
 
-Entries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-- :pythonfunc:`ARM`
-
-
-- :pythonfunc:`X86`
-
-
-- :pythonfunc:`Unknown`
-
-
-Properties
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`name`: :pythonfunc:`name(self: handle) -> str`
-
-- :pythonfunc:`value`: 
 
 
 .. _CameraOrientation:
@@ -130,30 +40,8 @@ Properties
 GPUArchitecture
 -----------------------------------------------
 
-Enum holding supported GPU architectures
+- :pythonfunc:`Missing Documentation`
 
-Entries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-- :pythonfunc:`AMD`
-
-
-- :pythonfunc:`Intel`
-
-
-- :pythonfunc:`Nvidia`
-
-
-- :pythonfunc:`Unknown`
-
-
-Properties
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`name`: :pythonfunc:`name(self: handle) -> str`
-
-- :pythonfunc:`value`: 
 
 
 .. _Ray:
@@ -183,76 +71,64 @@ Renderer runtime allowing control of simulation and access to results
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`Camera`: 
+- :pythonfunc:`Camera`: <anonymous>(self) -> str
 
-- :pythonfunc:`FrameCount`: 
+- :pythonfunc:`FrameCount`: <anonymous>(self) -> int
 
-- :pythonfunc:`FramebufferHeight`: 
+- :pythonfunc:`FramebufferHeight`: <anonymous>(self) -> int
 
-- :pythonfunc:`FramebufferWidth`: 
+- :pythonfunc:`FramebufferWidth`: <anonymous>(self) -> int
 
-- :pythonfunc:`InitialCameraOrientation`: 
+- :pythonfunc:`InitialCameraOrientation`: <anonymous>(self) -> CameraOrientation
 
-- :pythonfunc:`IterationCount`: 
+- :pythonfunc:`IterationCount`: <anonymous>(self) -> int
 
-- :pythonfunc:`SPI`: 
+- :pythonfunc:`SPI`: <anonymous>(self) -> int
 
-- :pythonfunc:`SampleCount`: 
+- :pythonfunc:`SampleCount`: <anonymous>(self) -> int
 
-- :pythonfunc:`Target`: 
+- :pythonfunc:`Target`: <anonymous>(self) -> Target
 
-- :pythonfunc:`Technique`: 
+- :pythonfunc:`Technique`: <anonymous>(self) -> str
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`clearFramebuffer(*args, **kwargs)`
+- :pythonfunc:`clearFramebuffer(self) -> None clearFramebuffer(self, arg: str, /) -> None`
 
-  Overloaded function.
 
-  1. :pythonfunc:`clearFramebuffer(self: {Runtime}) -> None`
 
-  2. :pythonfunc:`clearFramebuffer(self: {Runtime}, arg0: str) -> None`
+- :pythonfunc:`getFramebuffer(self, aov: str = '') -> CPUImage`
 
-- :pythonfunc:`getFramebuffer(self: {Runtime}, aov: str = '') -> memoryview`
 
-  
 
-- :pythonfunc:`incFrameCount(self: {Runtime}) -> None`
+- :pythonfunc:`incFrameCount(self) -> None`
 
-  
 
-- :pythonfunc:`reset(self: {Runtime}) -> None`
 
-  
+- :pythonfunc:`reset(self) -> None`
 
-- :pythonfunc:`setCameraOrientationParameter(self: {Runtime}, arg0: {CameraOrientation}) -> None`
 
-  
 
-- :pythonfunc:`setParameter(*args, **kwargs)`
+- :pythonfunc:`setCameraOrientationParameter(self, arg: {CameraOrientation}, /) -> None`
 
-  Overloaded function.
 
-  1. :pythonfunc:`setParameter(self: {Runtime}, arg0: str, arg1: int) -> None`
 
-  2. :pythonfunc:`setParameter(self: {Runtime}, arg0: str, arg1: float) -> None`
+- :pythonfunc:`setParameter(self, arg0: str, arg1: int, /) -> None setParameter(self, arg0: str, arg1: float, /) -> None setParameter(self, arg0: str, arg1: Vec3, /) -> None setParameter(self, arg0: str, arg1: Vec4, /) -> None`
 
-  3. :pythonfunc:`setParameter(self: {Runtime}, arg0: str, arg1: numpy.ndarray[numpy.float32[3, 1]]) -> None`
 
-  4. :pythonfunc:`setParameter(self: {Runtime}, arg0: str, arg1: numpy.ndarray[numpy.float32[4, 1]]) -> None`
 
-- :pythonfunc:`step(self: {Runtime}, ignoreDenoiser: bool = False) -> None`
+- :pythonfunc:`step(self, ignoreDenoiser: bool = False) -> None`
 
-  
 
-- :pythonfunc:`tonemap(self: {Runtime}, arg0: buffer) -> None`
 
-  
+- :pythonfunc:`tonemap(self, arg: CPUArray2d_UInt32, /) -> None`
 
-- :pythonfunc:`trace(self: {Runtime}, arg0: List[{Ray}]) -> memoryview`
 
-  
+
+- :pythonfunc:`trace(self, arg: list[{Ray}], /) -> list[Vec3]`
+
+
 
 
 .. _RuntimeOptions:
@@ -281,14 +157,11 @@ Properties
 
 - :pythonfunc:`SPI`: The requested sample per iteration. Can be 0 to set automatically
 
+- :pythonfunc:`Seed`: Seed for the random generators
+
 - :pythonfunc:`Target`: The target device
 
-Methods
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`makeDefault(trace: bool = False) -> {RuntimeOptions}`
-
-  
+- :pythonfunc:`WarnUnused`: Set False if you want to ignore warnings about unused property entries
 
 
 .. _RuntimeWrap:
@@ -301,14 +174,14 @@ Wrapper around the runtime used for proper runtime loading and shutdown
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`instance`: 
+- :pythonfunc:`instance`: <anonymous>(self) -> Runtime
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`shutdown(self: {RuntimeWrap}) -> None`
+- :pythonfunc:`shutdown(self) -> None`
 
-  
+
 
 
 .. _Scene:
@@ -321,82 +194,82 @@ Class representing a whole scene
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`bsdfs`: 
+- :pythonfunc:`bsdfs`: <anonymous>(self) -> dict[str, SceneObject]
 
-- :pythonfunc:`camera`: 
+- :pythonfunc:`camera`: <anonymous>(self) -> SceneObject
 
-- :pythonfunc:`entities`: 
+- :pythonfunc:`entities`: <anonymous>(self) -> dict[str, SceneObject]
 
-- :pythonfunc:`film`: 
+- :pythonfunc:`film`: <anonymous>(self) -> SceneObject
 
-- :pythonfunc:`lights`: 
+- :pythonfunc:`lights`: <anonymous>(self) -> dict[str, SceneObject]
 
-- :pythonfunc:`media`: 
+- :pythonfunc:`media`: <anonymous>(self) -> dict[str, SceneObject]
 
-- :pythonfunc:`shapes`: 
+- :pythonfunc:`shapes`: <anonymous>(self) -> dict[str, SceneObject]
 
-- :pythonfunc:`technique`: 
+- :pythonfunc:`technique`: <anonymous>(self) -> SceneObject
 
-- :pythonfunc:`textures`: 
+- :pythonfunc:`textures`: <anonymous>(self) -> dict[str, SceneObject]
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`addBSDF(self: {Scene}, arg0: str, arg1: {SceneObject}) -> None`
+- :pythonfunc:`addBSDF(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-  
 
-- :pythonfunc:`addConstantEnvLight(self: {Scene}) -> None`
 
-  
+- :pythonfunc:`addConstantEnvLight(self) -> None`
 
-- :pythonfunc:`addEntity(self: {Scene}, arg0: str, arg1: {SceneObject}) -> None`
 
-  
 
-- :pythonfunc:`addFrom(self: {Scene}, arg0: {Scene}) -> None`
+- :pythonfunc:`addEntity(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-  
 
-- :pythonfunc:`addLight(self: {Scene}, arg0: str, arg1: {SceneObject}) -> None`
 
-  
+- :pythonfunc:`addFrom(self, arg: {Scene}, /) -> None`
 
-- :pythonfunc:`addMedium(self: {Scene}, arg0: str, arg1: {SceneObject}) -> None`
 
-  
 
-- :pythonfunc:`addShape(self: {Scene}, arg0: str, arg1: {SceneObject}) -> None`
+- :pythonfunc:`addLight(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-  
 
-- :pythonfunc:`addTexture(self: {Scene}, arg0: str, arg1: {SceneObject}) -> None`
 
-  
+- :pythonfunc:`addMedium(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-- :pythonfunc:`bsdf(self: {Scene}, arg0: str) -> {SceneObject}`
 
-  
 
-- :pythonfunc:`entity(self: {Scene}, arg0: str) -> {SceneObject}`
+- :pythonfunc:`addShape(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-  
 
-- :pythonfunc:`light(self: {Scene}, arg0: str) -> {SceneObject}`
 
-  
+- :pythonfunc:`addTexture(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-- :pythonfunc:`medium(self: {Scene}, arg0: str) -> {SceneObject}`
 
-  
 
-- :pythonfunc:`shape(self: {Scene}, arg0: str) -> {SceneObject}`
+- :pythonfunc:`bsdf(self, arg: str, /) -> {SceneObject}`
 
-  
 
-- :pythonfunc:`texture(self: {Scene}, arg0: str) -> {SceneObject}`
 
-  
+- :pythonfunc:`entity(self, arg: str, /) -> {SceneObject}`
+
+
+
+- :pythonfunc:`light(self, arg: str, /) -> {SceneObject}`
+
+
+
+- :pythonfunc:`medium(self, arg: str, /) -> {SceneObject}`
+
+
+
+- :pythonfunc:`shape(self, arg: str, /) -> {SceneObject}`
+
+
+
+- :pythonfunc:`texture(self, arg: str, /) -> {SceneObject}`
+
+
 
 
 .. _SceneObject:
@@ -409,28 +282,28 @@ Class representing an object in the scene
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`baseDir`: 
+- :pythonfunc:`baseDir`: <anonymous>(self) -> os.PathLike
 
-- :pythonfunc:`pluginType`: 
+- :pythonfunc:`pluginType`: <anonymous>(self) -> str
 
-- :pythonfunc:`properties`: 
+- :pythonfunc:`properties`: <anonymous>(self) -> dict[str, SceneProperty]
 
-- :pythonfunc:`type`: 
+- :pythonfunc:`type`: <anonymous>(self) -> IG::SceneObject::Type
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`hasProperty(self: {SceneObject}, arg0: str) -> bool`
+- :pythonfunc:`hasProperty(self, arg: str, /) -> bool`
 
-  
 
-- :pythonfunc:`property(self: {SceneObject}, arg0: str) -> {SceneProperty}`
 
-  
+- :pythonfunc:`property(self, arg: str, /) -> {SceneProperty}`
 
-- :pythonfunc:`setProperty(self: {SceneObject}, arg0: str, arg1: {SceneProperty}) -> None`
 
-  
+
+- :pythonfunc:`setProperty(self, arg0: str, arg1: {SceneProperty}, /) -> None`
+
+
 
 
 .. _SceneParser:
@@ -443,13 +316,13 @@ Parser for standard JSON and glTF scene description
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`loadFromFile(self: {SceneParser}, path: str, flags: int = 13303) -> {Scene}`
+- :pythonfunc:`loadFromFile(self, path: os.PathLike, flags: int = 13303) -> {Scene}`
 
-  
 
-- :pythonfunc:`loadFromString(self: {SceneParser}, str: str, opt_dir: str = '', flags: int = 13303) -> {Scene}`
 
-  
+- :pythonfunc:`loadFromString(self, str: str, opt_dir: os.PathLike = '', flags: int = 13303) -> {Scene}`
+
+
 
 
 .. _SceneProperty:
@@ -462,90 +335,54 @@ Property of an object in the scene
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`type`: 
+- :pythonfunc:`type`: <anonymous>(self) -> IG::SceneProperty::Type
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`canBeNumber(self: {SceneProperty}) -> bool`
+- :pythonfunc:`canBeNumber(self) -> bool`
 
-  
 
-- :pythonfunc:`fromBool(arg0: bool) -> {SceneProperty}`
 
-  
+- :pythonfunc:`getBool(self, def: bool = False) -> bool`
 
-- :pythonfunc:`fromInteger(arg0: int) -> {SceneProperty}`
 
-  
 
-- :pythonfunc:`fromIntegerArray(arg0: List[int]) -> {SceneProperty}`
+- :pythonfunc:`getInteger(self, def: int = 0) -> int`
 
-  
 
-- :pythonfunc:`fromNumber(arg0: float) -> {SceneProperty}`
 
-  
+- :pythonfunc:`getIntegerArray(self) -> list[int]`
 
-- :pythonfunc:`fromNumberArray(arg0: List[float]) -> {SceneProperty}`
 
-  
 
-- :pythonfunc:`fromString(arg0: str) -> {SceneProperty}`
+- :pythonfunc:`getNumber(self, def: float = 0.0) -> float`
 
-  
 
-- :pythonfunc:`fromTransform(arg0: numpy.ndarray[numpy.float32[4, 4]]) -> {SceneProperty}`
 
-  
+- :pythonfunc:`getNumberArray(self) -> list[float]`
 
-- :pythonfunc:`fromVector2(arg0: numpy.ndarray[numpy.float32[2, 1]]) -> {SceneProperty}`
 
-  
 
-- :pythonfunc:`fromVector3(arg0: numpy.ndarray[numpy.float32[3, 1]]) -> {SceneProperty}`
+- :pythonfunc:`getString(self, def: str = '') -> str`
 
-  
 
-- :pythonfunc:`getBool(self: {SceneProperty}, def: bool = False) -> bool`
 
-  
+- :pythonfunc:`getTransform(self, def: Mat4x4 = [[1. 0. 0. 0.] [0. 1. 0. 0.] [0. 0. 1. 0.] [0. 0. 0. 1.]]) -> Mat4x4`
 
-- :pythonfunc:`getInteger(self: {SceneProperty}, def: int = 0) -> int`
 
-  
 
-- :pythonfunc:`getIntegerArray(self: {SceneProperty}) -> List[int]`
+- :pythonfunc:`getVector2(self, def: Vec2 = [0. 0.]) -> Vec2`
 
-  
 
-- :pythonfunc:`getNumber(self: {SceneProperty}, def: float = 0.0) -> float`
 
-  
+- :pythonfunc:`getVector3(self, def: Vec3 = [0. 0. 0.]) -> Vec3`
 
-- :pythonfunc:`getNumberArray(self: {SceneProperty}) -> List[float]`
 
-  
 
-- :pythonfunc:`getString(self: {SceneProperty}, def: str = '') -> str`
+- :pythonfunc:`isValid(self) -> bool`
 
-  
 
-- :pythonfunc:`getTransform(self: {SceneProperty}, def: numpy.ndarray[numpy.float32[4, 4]] = array([[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]], dtype=float32)) -> numpy.ndarray[numpy.float32[4, 4]]`
-
-  
-
-- :pythonfunc:`getVector2(self: {SceneProperty}, def: numpy.ndarray[numpy.float32[2, 1]] = array([0., 0.], dtype=float32)) -> numpy.ndarray[numpy.float32[2, 1]]`
-
-  
-
-- :pythonfunc:`getVector3(self: {SceneProperty}, def: numpy.ndarray[numpy.float32[3, 1]] = array([0., 0., 0.], dtype=float32)) -> numpy.ndarray[numpy.float32[3, 1]]`
-
-  
-
-- :pythonfunc:`isValid(self: {SceneProperty}) -> bool`
-
-  
 
 
 .. _Target:
@@ -558,56 +395,28 @@ Target specification the runtime is using
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`CPUArchitecture`: 
+- :pythonfunc:`CPUArchitecture`: <anonymous>(self) -> CPUArchitecture
 
-- :pythonfunc:`Device`: 
+- :pythonfunc:`Device`: <anonymous>(self) -> int
 
-- :pythonfunc:`GPUArchitecture`: 
+- :pythonfunc:`GPUArchitecture`: <anonymous>(self) -> GPUArchitecture
 
-- :pythonfunc:`IsCPU`: 
+- :pythonfunc:`IsCPU`: <anonymous>(self) -> bool
 
-- :pythonfunc:`IsGPU`: 
+- :pythonfunc:`IsGPU`: <anonymous>(self) -> bool
 
-- :pythonfunc:`IsValid`: 
+- :pythonfunc:`IsValid`: <anonymous>(self) -> bool
 
-- :pythonfunc:`ThreadCount`: 
+- :pythonfunc:`ThreadCount`: <anonymous>(self) -> int
 
-- :pythonfunc:`VectorWidth`: 
+- :pythonfunc:`VectorWidth`: <anonymous>(self) -> int
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`makeCPU(arg0: int, arg1: int) -> {Target}`
+- :pythonfunc:`toString(self) -> str`
 
-  
 
-- :pythonfunc:`makeGPU(arg0: {GPUArchitecture}, arg1: int) -> {Target}`
-
-  
-
-- :pythonfunc:`makeGeneric() -> {Target}`
-
-  
-
-- :pythonfunc:`makeSingle() -> {Target}`
-
-  
-
-- :pythonfunc:`pickBest() -> {Target}`
-
-  
-
-- :pythonfunc:`pickCPU() -> {Target}`
-
-  
-
-- :pythonfunc:`pickGPU(device: int = 0) -> {Target}`
-
-  
-
-- :pythonfunc:`toString(self: {Target}) -> str`
-
-  
 
 
 .. _SceneObject.Type:
@@ -615,45 +424,8 @@ Methods
 SceneObject.Type
 -----------------------------------------------
 
-Enum holding type of scene object
+- :pythonfunc:`Missing Documentation`
 
-Entries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-- :pythonfunc:`Bsdf`
-
-
-- :pythonfunc:`Camera`
-
-
-- :pythonfunc:`Entity`
-
-
-- :pythonfunc:`Film`
-
-
-- :pythonfunc:`Light`
-
-
-- :pythonfunc:`Medium`
-
-
-- :pythonfunc:`Shape`
-
-
-- :pythonfunc:`Technique`
-
-
-- :pythonfunc:`Texture`
-
-
-Properties
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`name`: :pythonfunc:`name(self: handle) -> str`
-
-- :pythonfunc:`value`: 
 
 
 .. _SceneParser.Flags:
@@ -661,51 +433,8 @@ Properties
 SceneParser.Flags
 -----------------------------------------------
 
-Flags modifying parsing behaviour and allowing partial scene loads
+- :pythonfunc:`Missing Documentation`
 
-Entries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-- :pythonfunc:`F_LoadCamera`
-
-
-- :pythonfunc:`F_LoadFilm`
-
-
-- :pythonfunc:`F_LoadTechnique`
-
-
-- :pythonfunc:`F_LoadBSDFs`
-
-
-- :pythonfunc:`F_LoadMedia`
-
-
-- :pythonfunc:`F_LoadLights`
-
-
-- :pythonfunc:`F_LoadTextures`
-
-
-- :pythonfunc:`F_LoadShapes`
-
-
-- :pythonfunc:`F_LoadEntities`
-
-
-- :pythonfunc:`F_LoadExternals`
-
-
-- :pythonfunc:`F_LoadAll`
-
-
-Properties
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`name`: :pythonfunc:`name(self: handle) -> str`
-
-- :pythonfunc:`value`: 
 
 
 .. _SceneProperty.Type:
@@ -713,45 +442,4 @@ Properties
 SceneProperty.Type
 -----------------------------------------------
 
-Enum holding type of scene property
-
-Entries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-- :pythonfunc:`None`
-
-
-- :pythonfunc:`Bool`
-
-
-- :pythonfunc:`Integer`
-
-
-- :pythonfunc:`Number`
-
-
-- :pythonfunc:`String`
-
-
-- :pythonfunc:`Transform`
-
-
-- :pythonfunc:`Vector2`
-
-
-- :pythonfunc:`Vector3`
-
-
-- :pythonfunc:`IntegerArray`
-
-
-- :pythonfunc:`NumberArray`
-
-
-Properties
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`name`: :pythonfunc:`name(self: handle) -> str`
-
-- :pythonfunc:`value`:
+- :pythonfunc:`Missing Documentation`

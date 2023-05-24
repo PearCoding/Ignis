@@ -5,7 +5,7 @@
 namespace IG {
 class OrthogonalCamera : public Camera {
 public:
-    OrthogonalCamera(const SceneObject& obj);
+    OrthogonalCamera(SceneObject& obj);
     ~OrthogonalCamera() = default;
 
     void serialize(const SerializationInput& input) const override;

@@ -9,12 +9,12 @@ fn @make_sun_light(id: i32, dir: Vec3, scene_bbox: BBox, cos_sun_angle: f32, col
     Light {
         id = id,
         sample_direct = @ |rnd, _| {
-            let sample = sample_uniform_cone(randf(rnd), randf(rnd), cos_sun_angle);
+            let sample = sample_uniform_cone(rnd.next_f32(), rnd.next_f32(), cos_sun_angle);
             let ndir   = mat3x3_mul(frame, sample.dir);
             make_direct_sample(vec3_expand(0), vec3_neg(ndir), color_mulf(color, 1 / (sun_area * sample.pdf)), make_delta_pdf(), sample.dir.z, flt_inf)
         },
         sample_emission = @ |rnd| {
-            let sample         = sample_uniform_cone(randf(rnd), randf(rnd), cos_sun_angle);
+            let sample         = sample_uniform_cone(rnd.next_f32(), rnd.next_f32(), cos_sun_angle);
             let ndir           = mat3x3_mul(frame, sample.dir);
             let (pos, pos_pdf) = env_sample_pos(rnd, vec3_neg(ndir), bbox_center(scene_bbox), scene_radius);
             make_emission_sample(pos, ndir, color_mulf(color, safe_div(1, pos_pdf * sun_area * sample.pdf)), pos_pdf, sun_area * sample.pdf, sample.dir.z)

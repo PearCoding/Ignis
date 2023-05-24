@@ -1,0 +1,14 @@
+{
+  "externals": [
+    {"filename": "three-planes-base.json"}
+  ],
+  "bsdfs": [
+    {
+      "type": "dielectric",
+      "name": "Back",
+      "int_ior": 1.52,
+      "ext_ior": 1,
+      "thin": true
+    }
+  ]
+}

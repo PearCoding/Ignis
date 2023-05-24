@@ -9,8 +9,9 @@ class ScriptCompiler;
 class Device;
 
 struct LoaderOptions {
-    std::filesystem::path FilePath;
-    std::shared_ptr<IG::Scene> Scene;
+    Path FilePath;
+    Path CachePath;
+    const IG::Scene* Scene;
     IG::Target Target;
     std::string CameraType;
     std::string TechniqueType;
@@ -21,6 +22,7 @@ struct LoaderOptions {
     bool IsTracer;
     bool ForceSpecialization;
     bool EnableTonemapping;
+    bool EnableCache;
     DenoiserSettings Denoiser;
 
     ScriptCompiler* Compiler;

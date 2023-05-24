@@ -19,6 +19,6 @@ struct TensorTreeSpecification {
 
 class TensorTreeLoader {
 public:
-    static bool prepare(const std::filesystem::path& in_xml, const std::filesystem::path& out_data, TensorTreeSpecification& spec);
+    static bool prepare(const Path& in_xml, const Path& out_data, TensorTreeSpecification& spec);
 };
 } // namespace IG

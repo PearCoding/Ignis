@@ -34,7 +34,7 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
     if (cache_data != input.Tree.context().Cache->ExportedData.end()) {
         baked = std::any_cast<ShadingTree::BakeOutputTexture>(cache_data->second);
     } else {
-        baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), ShadingTree::TextureBakeOptions{ 1024, 256, true });
+        baked = input.Tree.bakeTexture("radiance", *mLight, Vector3f::Ones(), ShadingTree::TextureBakeOptions{ 0, 0, 1024, 512, true });
 
         input.Tree.context().Cache->ExportedData[exported_id] = baked;
     }

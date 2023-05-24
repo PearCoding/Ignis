@@ -53,6 +53,8 @@ public:
 
     void addConstantEnvLight();
 
+    void warnUnusedProperties() const;
+
 private:
     using ObjectMap = std::unordered_map<std::string, std::shared_ptr<SceneObject>>;
 

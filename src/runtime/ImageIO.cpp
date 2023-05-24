@@ -62,7 +62,7 @@ EXRAttribute makeIntAttribute(const std::string_view& name, int data)
     return attr;
 }
 
-bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t height,
+bool ImageIO::save(const Path& path, size_t width, size_t height,
                    const std::vector<const float*>& layer_ptrs, const std::vector<std::string>& layer_names,
                    const ImageMetaData& metaData)
 {
@@ -119,14 +119,26 @@ bool ImageIO::save(const std::filesystem::path& path, size_t width, size_t heigh
         attributes.emplace_back(makeStringAttribute("igCameraType", metaData.CameraType.value()));
     if (metaData.TechniqueType.has_value())
         attributes.emplace_back(makeStringAttribute("igTechniqueType", metaData.TechniqueType.value()));
+    if (metaData.TargetString.has_value())
+        attributes.emplace_back(makeStringAttribute("igTarget", metaData.TargetString.value()));
     if (metaData.CameraEye.has_value())
         attributes.emplace_back(makeVec3Attribute("igCameraEye", metaData.CameraEye.value()));
     if (metaData.CameraUp.has_value())
         attributes.emplace_back(makeVec3Attribute("igCameraUp", metaData.CameraUp.value()));
     if (metaData.CameraDir.has_value())
         attributes.emplace_back(makeVec3Attribute("igCameraDir", metaData.CameraDir.value()));
+    if (metaData.Seed.has_value())
+        attributes.emplace_back(makeIntAttribute("igSeed", (int)metaData.Seed.value()));
     if (metaData.SamplePerPixel.has_value())
         attributes.emplace_back(makeIntAttribute("igSPP", (int)metaData.SamplePerPixel.value()));
+    if (metaData.SamplePerIteration.has_value())
+        attributes.emplace_back(makeIntAttribute("igSPI", (int)metaData.SamplePerIteration.value()));
+    if (metaData.Iteration.has_value())
+        attributes.emplace_back(makeIntAttribute("igIteration", (int)metaData.Iteration.value()));
+    if (metaData.Frame.has_value())
+        attributes.emplace_back(makeIntAttribute("igFrame", (int)metaData.Frame.value()));
+    if (metaData.RendertimeInSeconds.has_value())
+        attributes.emplace_back(makeIntAttribute("igRendertime", (int)metaData.RendertimeInSeconds.value()));
 
     if (!attributes.empty()) {
         header.custom_attributes     = attributes.data();

@@ -7,9 +7,9 @@ mod light_hierarchy {
     use super as all;
     use super::math_builtins;
 
-    type Vec3         = all::Vec3;
-    type RndState     = all::RndState;
-    type DeviceBuffer = all::DeviceBuffer;
+    type Vec3            = all::Vec3;
+    type RandomGenerator = all::RandomGenerator;
+    type DeviceBuffer    = all::DeviceBuffer;
 
     struct LightHierarchyEntry {
         pos:  Vec3,
@@ -56,12 +56,12 @@ mod light_hierarchy {
         1 / (1 + cr/cl)
     }
 
-    fn @random_select_left(rnd: &mut RndState, left: LightHierarchyEntry, right: LightHierarchyEntry, pos: Vec3) -> (bool, f32) {
+    fn @random_select_left(rnd: RandomGenerator, left: LightHierarchyEntry, right: LightHierarchyEntry, pos: Vec3) -> (bool, f32) {
         let prop = get_left_prop(left, right, pos);
-        (all::randf(rnd) < prop, prop)
+        (rnd.next_f32() < prop, prop)
     }
 
-    fn @sample_light_id(rnd: &mut RndState, pos: Vec3, data: DeviceBuffer) -> (i32, f32) {
+    fn @sample_light_id(rnd: RandomGenerator, pos: Vec3, data: DeviceBuffer) -> (i32, f32) {
         let mut pdf   = 1:f32;
         let mut entry = load_entry(0, data);
         while !entry.is_leaf {
@@ -96,7 +96,7 @@ mod light_hierarchy {
 }
 
 struct LightHierarchy {
-    sample: fn (&mut RndState, Vec3) -> (Light, f32),
+    sample: fn (RandomGenerator, Vec3) -> (Light, f32),
     pdf:    fn (Light, Vec3) -> f32
 }
 

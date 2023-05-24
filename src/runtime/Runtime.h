@@ -21,20 +21,22 @@ class IG_LIB Runtime {
     IG_CLASS_NON_MOVEABLE(Runtime);
 
 public:
+    using Timepoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
     explicit Runtime(const RuntimeOptions& opts);
     ~Runtime();
 
     /// Load from file and initialize
-    [[nodiscard]] bool loadFromFile(const std::filesystem::path& path);
+    [[nodiscard]] bool loadFromFile(const Path& path);
 
     /// Load from string and initialize
     /// @param str String containing valid scene description
     /// @param dir Optional directory containing external files if not given as absolute files inside the scene description
-    [[nodiscard]] bool loadFromString(const std::string& str, const std::filesystem::path& dir);
+    [[nodiscard]] bool loadFromString(const std::string& str, const Path& dir);
 
     /// Load from an already present scene and initialize
     /// @param scene Valid scene
-    [[nodiscard]] bool loadFromScene(const std::shared_ptr<Scene>& scene);
+    [[nodiscard]] bool loadFromScene(const Scene* scene);
 
     /// Do a single iteration in non-tracing mode
     void step(bool ignoreDenoiser = false);
@@ -76,12 +78,16 @@ public:
     [[nodiscard]] inline size_t currentIterationCount() const { return mCurrentIteration; }
     /// Return number of frames rendered so far
     [[nodiscard]] inline size_t currentFrameCount() const { return mCurrentFrame; }
+    /// Return timepoint when the rendering started
+    [[nodiscard]] inline Timepoint renderStartTime() const { return mStartTime; }
+    /// Return seed used for the random generator
+    [[nodiscard]] inline size_t seed() const { return mOptions.Seed; }
 
     /// Increase frame count (only used in interactive/realtime sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
     /// Return pointer to structure containing statistics
-    [[nodiscard]] const Statistics* getStatistics() const;
+    [[nodiscard]] const Statistics* statistics() const;
 
     /// Returns the name of the loaded technique
     [[nodiscard]] inline const std::string& technique() const { return mTechniqueName; }
@@ -111,7 +117,7 @@ public:
     void setParameter(const std::string& name, const Vector4f& value);
 
     /// Get read-only registry
-    [[nodiscard]] inline const ParameterSet& getParameters() const { return mGlobalRegistry; }
+    [[nodiscard]] inline const ParameterSet& parameters() const { return mGlobalRegistry; }
     /// Get modifiable registry. A reset might be needed when changing parameters!
     [[nodiscard]] inline ParameterSet& accessParameters() { return mGlobalRegistry; }
     /// Merge parameters from other registry
@@ -141,13 +147,14 @@ public:
 
 private:
     void checkCacheDirectory();
-    bool load(const std::filesystem::path& path, const std::shared_ptr<Scene>& scene);
+    bool load(const Path& path, const Scene* scene);
     bool setupScene();
     void shutdown();
     bool compileShaders();
     void* compileShader(const std::string& src, const std::string& func, const std::string& name);
     void stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant);
     void traceVariant(const std::vector<Ray>& rays, size_t variant);
+    void handleTime();
 
     const RuntimeOptions mOptions;
 
@@ -162,6 +169,8 @@ private:
     size_t mCurrentIteration;
     size_t mCurrentSampleCount;
     size_t mCurrentFrame;
+
+    Timepoint mStartTime;
 
     size_t mFilmWidth;
     size_t mFilmHeight;

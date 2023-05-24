@@ -13,7 +13,7 @@ struct Bsdf {
     // Evaluates the sampling probability density for a given pair of directions
     pdf: fn (Vec3, Vec3) -> f32,
     // Samples a direction
-    sample: fn (&mut RndState, Vec3, bool) -> Option[BsdfSample],
+    sample: fn (RandomGenerator, Vec3, bool) -> Option[BsdfSample],
     // Is true if the material is purely specular
     is_specular: bool
 }

@@ -52,7 +52,7 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
             } else if k >= 1 {
                 mat2.sample(rnd, out_dir, adjoint)
             } else {
-                if randf(rnd) < 1 - k {
+                if rnd.next_f32() < 1 - k {
                     if let Option[BsdfSample]::Some(s) = sample_mat(mat1, mat2, k) {
                         make_option(s)
                     } else {

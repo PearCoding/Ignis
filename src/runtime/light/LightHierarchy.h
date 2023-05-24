@@ -7,6 +7,6 @@ class Light;
 class ShadingTree;
 class LightHierarchy {
 public:
-    static std::filesystem::path setup(const std::vector<std::shared_ptr<Light>>& lights, ShadingTree& tree);
+    static Path setup(const std::vector<std::shared_ptr<Light>>& lights, ShadingTree& tree);
 };
 } // namespace IG

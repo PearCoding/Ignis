@@ -20,8 +20,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
     ShadingTree tree(ctx);
 
     stream << "#[export] fn ig_advanced_shadow_shader(settings: &Settings, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
-           << "  maybe_unused(settings);" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl
            << std::endl;
@@ -49,15 +48,13 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
         stream << ctx.Camera->generate(ctx) << std::endl;
 
-    stream << "  let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl;
-
     // Will define technique
     stream << ctx.Technique->generate(ctx) << std::endl
            << std::endl;
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl
            << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_advanced_shadow_shader(shader, technique, payload_info, first, last, spi, use_framebuffer, is_hit)" << std::endl
+           << "  device.handle_advanced_shadow_shader(shader, technique, payload_info, first, last, use_framebuffer, is_hit)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

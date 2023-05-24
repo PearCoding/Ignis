@@ -28,7 +28,7 @@ public:
         bool Vertical;
         float Value; // Field of View in radians
     };
-    static FOV extractFOV(const SceneObject& obj);
+    static FOV extractFOV(SceneObject& obj);
 
 private:
     std::string mType;

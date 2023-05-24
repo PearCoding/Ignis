@@ -1,7 +1,6 @@
 # This is a copy of the io_mesh_ply/export_ply.py (except the save function) from Blender
 # for the purpose of being a (proposed) fix for https://developer.blender.org/T99249
-# This file will be removed and the official function  will be used instead 
-# when the bug is fixed in some way
+# Will be removed soon.
 
 import bpy
 

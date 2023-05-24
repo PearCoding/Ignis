@@ -7,7 +7,7 @@
 
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
-static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuos", SPPMode::Continuos } };
+static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuous", SPPMode::Continuous } };
 
 class MyTransformer : public CLI::Validator {
 public:
@@ -124,6 +124,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         "-v,--verbose", [&]() { VerbosityLevel = L_DEBUG; }, "Set the verbosity level to 'debug'. Shortcut for --log-level debug");
 
     app.add_option("--log-level", VerbosityLevel, "Set the verbosity level")->transform(MyTransformer(LogLevelMap, CLI::ignore_case));
+    app.add_flag("--no-unused", NoUnused, "Do not warn about unused properties");
 
     app.add_flag("--no-color", NoColor, "Do not use decorations to make console output better");
 
@@ -161,9 +162,13 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     if (type == ApplicationType::View) {
         app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(MyTransformer(SPPModeMap, CLI::ignore_case))->default_str("fixed");
         app.add_flag_callback(
-            "--realtime", [&]() { this->SPPMode = SPPMode::Continuos; SPI = 1; SPP = 1; },
-            "Same as setting SPPMode='Continuos', SPI=1 and SPP=1 to emulate realtime rendering");
+            "--realtime", [&]() { this->SPPMode = SPPMode::Continuous; SPI = 1; SPP = 1; },
+            "Same as setting SPPMode='Continuous', SPI=1 and SPP=1 to emulate realtime rendering");
     }
+    if (type == ApplicationType::CLI)
+        app.add_option("--time", RenderTime, "Instead of spp, specify the maximum time in seconds to render")->excludes("--spp");
+
+    app.add_option("--seed", Seed, "Seed for the random generators. Depending on the technique this will enforce reproducibility");
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
     app.add_flag("--stats-full", AcquireFullStats, "Acquire all stats alongside rendering. Will be dumped at the end of the rendering session");
@@ -174,6 +179,9 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag("--dump-shader-full", DumpFullShader, "Dump produced shaders with standard library to files in the current working directory");
     app.add_flag("--dump-registry", DumpRegistry, "Dump global registry to standard output");
     app.add_flag("--dump-registry-full", DumpFullRegistry, "Dump global and internal constructed registry to standard output");
+
+    app.add_flag("--no-cache", NoCache, "Disable filesystem cache usage, which saves large computations for future runs and loads data from previous runs");
+    app.add_option("--cache-dir", CacheDir, "Set directory to cache large computations explicitly, else a directory based on the input file will be used");
 
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
 
@@ -387,6 +395,8 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.DumpRegistryFull = DumpFullRegistry;
     options.SPI              = SPI.value_or(0);
 
+    options.Seed = (size_t)Seed;
+
     options.OverrideTechnique = TechniqueType;
     options.OverrideCamera    = CameraType;
     if (Width.has_value() && Height.has_value())
@@ -399,8 +409,13 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;
     options.Denoiser.OnlyFirstIteration = DenoiserOnlyFirstIteration;
 
+    options.EnableCache = !NoCache;
+    options.CacheDir    = CacheDir;
+
     options.ScriptDir               = ScriptDir;
     options.ShaderOptimizationLevel = std::min<size_t>(3, ShaderOptimizationLevel);
+
+    options.WarnUnused = !NoUnused;
 
     // Check for power of two and round up if not the case
     uint64_t vectorWidth = options.Target.vectorWidth();

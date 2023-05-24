@@ -36,9 +36,9 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
  - implot <https://github.com/epezent/implot>
+ - nanobind <https://github.com/wjakob/nanobind>
  - PExpr <https://github.com/PearCoding/PExpr>
  - pugixml <https://github.com/zeux/pugixml>
- - pybind11 <https://github.com/pybind/pybind11>
  - RapidJSON <https://rapidjson.org/>
  - stb <https://github.com/nothings/stb>
  - tinyexr <https://github.com/syoyo/tinyexr>
@@ -52,6 +52,16 @@ Ignis is available on docker hub with some preconfigured flavours! [pearcoding/i
 
 More information is available here [docker/README.md](docker/README.md)
 
+## Branches
+
+Ignis has multiple branches here on Github.
+
+ - `master` The main branch. Is quite stable, fingers crossed.
+ - `development` Main development branch. Most recent stuff. Can be problematic to build. Bugs and errors included for free.
+ - `docs` Internal branch used to build the documentation automatically.
+ - `feature/*` Some upcoming but isolated features.
+ - `*` Everything else. Might be features, bug fixes or other upcoming pull requests.
+   
 ## Building
 
 Information about building Ignis is available in the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/building.html) or in the offline version of the documentation inside `docs/`

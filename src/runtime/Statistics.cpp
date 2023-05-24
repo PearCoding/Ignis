@@ -262,6 +262,7 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     dumpSectionStats("  |-PackedImageLoading", mSections[(size_t)SectionType::PackedImageLoading]);
     dumpSectionStats("  |-BufferLoading", mSections[(size_t)SectionType::BufferLoading]);
     dumpSectionStats("  |-BufferRequests", mSections[(size_t)SectionType::BufferRequests]);
+    dumpSectionStats("  |-BufferReleases", mSections[(size_t)SectionType::BufferReleases]);
     dumpSectionStats("  |-FramebufferUpdate", mSections[(size_t)SectionType::FramebufferUpdate]);
     dumpSectionStats("  |-AOVUpdate", mSections[(size_t)SectionType::AOVUpdate]);
     dumpSectionStats("  |-TonemapUpdate", mSections[(size_t)SectionType::TonemapUpdate]);

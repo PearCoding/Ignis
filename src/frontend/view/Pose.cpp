@@ -25,7 +25,7 @@ static void write_pose(const CameraPose& pose, std::ostream& out)
     out << " " << pose.Up[0] << " " << pose.Up[1] << " " << pose.Up[2];
 }
 
-void PoseManager::load(const std::filesystem::path& file)
+void PoseManager::load(const Path& file)
 {
     // Reset poses
     std::generate(mPoses.begin(), mPoses.end(), []() { return CameraPose(); });
@@ -41,7 +41,7 @@ void PoseManager::load(const std::filesystem::path& file)
     }
 }
 
-void PoseManager::save(const std::filesystem::path& file) const
+void PoseManager::save(const Path& file) const
 {
     std::ofstream stream(file);
     for (const auto& pose : mPoses) {

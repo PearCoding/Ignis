@@ -5,7 +5,7 @@
 namespace IG {
 class PhotonMappingTechnique : public Technique {
 public:
-    PhotonMappingTechnique(const SceneObject& obj);
+    PhotonMappingTechnique(SceneObject& obj);
     ~PhotonMappingTechnique() = default;
 
     bool hasDenoiserSupport() const override { return true; }
@@ -16,6 +16,7 @@ public:
 private:
     size_t mPhotonCount;
     size_t mMaxCameraDepth;
+    size_t mMinCameraDepth;
     size_t mMaxLightDepth;
     std::string mLightSelector;
     float mMergeRadius;
