@@ -24,6 +24,7 @@ struct GlareSettings {
 struct GlareOutput
 {
     float DGP;
+    float VerticalIlluminance;
 };
 
 

@@ -88,12 +88,13 @@ public:
     bool ToneMappingGamma                   = true;
     IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::ACES;
 
-    //Visualization
-    bool VisualizeGlare                     = true;
-    float VisualizeGlare_AvgLum             = 0.0f;
-    float VisualizeGlare_Multiplier         = 8.0f;
+    // Visualization
+    bool VisualizeGlare             = true;
+    float VisualizeGlare_AvgLum     = 0.0f;
+    float VisualizeGlare_Multiplier = 8.0f;
 
-    float VerticalIlluminance = 5.0f;
+    bool VisualizeGlare_AutoEV = true;
+    float VerticalIlluminance  = 5.0f;
     GlareOutput Glare;
 
     size_t CurrentAOV = 0;
@@ -646,7 +647,8 @@ public:
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
-        if (VisualizeGlare) Glare = Runtime->evaluateGlare(buf, GlareSettings{ aov_name.c_str(), 1.0f, LastLum.Max, LastLum.Avg, VisualizeGlare_Multiplier, VerticalIlluminance });
+        if (Runtime->options().Glare.Enabled && VisualizeGlare)
+            Glare = Runtime->evaluateGlare(buf, GlareSettings{ aov_name.c_str(), 1.0f, LastLum.Max, LastLum.Avg, VisualizeGlare_Multiplier, VisualizeGlare_AutoEV ? -1.0f : VerticalIlluminance });
 
         VisualizeGlare_AvgLum = LastLum.Avg;
 
@@ -885,12 +887,18 @@ public:
                 ImGui::Checkbox("Gamma", &ToneMappingGamma);
             }
 
-            if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
-                ImGui::Text("Avg. Luminance: %1.4f", VisualizeGlare_AvgLum);
-                ImGui::SliderFloat("Multiplier", &VisualizeGlare_Multiplier, 0.0, 20.0);
-                ImGui::SliderFloat("Vertical Illuminance", &VerticalIlluminance, 0.0, 500.0);
-                ImGui::Text("DGP: %1.3f", Glare.DGP);
+            if (Runtime->options().Glare.Enabled) {
+                if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
+                    ImGui::Text("Avg. Luminance: %1.4f", VisualizeGlare_AvgLum);
+                    ImGui::SliderFloat("Multiplier", &VisualizeGlare_Multiplier, 0.0, 20.0);
+                    ImGui::Checkbox("Automatic EV", &VisualizeGlare_AutoEV);
+                    if (!VisualizeGlare_AutoEV)
+                        ImGui::SliderFloat("EV", &VerticalIlluminance, 0.0, 500.0);
+                    else
+                        ImGui::Text("EV: %1.3f", Glare.VerticalIlluminance);
+                    ImGui::Text("DGP: %1.3f", Glare.DGP);
+                }
             }
 
             if (ImGui::CollapsingHeader("Poses")) {

@@ -70,7 +70,7 @@ void LoaderCamera::setup(const LoaderContext& ctx)
 std::string LoaderCamera::generate(LoaderContext& ctx) const
 {
     if (!mCamera)
-        return {};
+        return "  let camera = make_null_camera(); maybe_unused(camera);";
 
     std::stringstream stream;
     mCamera->serialize(Camera::SerializationInput{ stream, ctx });

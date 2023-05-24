@@ -204,6 +204,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_flag("--denoise", Denoise, "Apply denoiser if available");
         app.add_flag("--denoiser-follow-specular,!--denoiser-skip-specular", DenoiserFollowSpecular, "Follow specular paths or terminate at them");
         app.add_flag("--denoiser-aov-first-iteration,!--denoiser-aov-every-iteration", DenoiserOnlyFirstIteration, "Acquire scene normal, albedo and depth information every iteration or only at the first");
+    
+        app.add_flag("--glare", Glare, "Enable glare overlay");
     }
 
     if (type == ApplicationType::Trace) {
@@ -408,6 +410,8 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.Denoiser.Enabled            = Denoise;
     options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;
     options.Denoiser.OnlyFirstIteration = DenoiserOnlyFirstIteration;
+
+    options.Glare.Enabled = Glare;
 
     options.EnableCache = !NoCache;
     options.CacheDir    = CacheDir;

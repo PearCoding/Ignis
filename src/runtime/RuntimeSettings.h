@@ -9,6 +9,10 @@ struct DenoiserSettings {
     bool OnlyFirstIteration = true;  // Acquire AOV information only at the first iteration, or refine every iteration
 };
 
+struct GlareOptions {
+    bool Enabled = false;
+};
+
 struct RuntimeOptions {
     bool IsTracer          = false;
     bool IsInteractive     = false;
@@ -38,9 +42,10 @@ struct RuntimeOptions {
 
     bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
 
-    bool WarnUnused = true; // Warn about unused properties. They might indicate a typo or similar.
+    bool WarnUnused = true;           // Warn about unused properties. They might indicate a typo or similar.
 
     DenoiserSettings Denoiser;
+    GlareOptions Glare;
 
     inline static RuntimeOptions makeDefault(bool trace = false)
     {

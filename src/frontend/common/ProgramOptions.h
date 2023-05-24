@@ -75,6 +75,8 @@ public:
     bool DenoiserFollowSpecular     = false;
     bool DenoiserOnlyFirstIteration = false;
 
+    bool Glare = false;
+
     bool NoCache = false;
     Path CacheDir;
 

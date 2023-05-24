@@ -211,17 +211,20 @@ bool Runtime::load(const Path& path, const Scene* scene)
     lopts.EnableTonemapping   = mOptions.EnableTonemapping;
     lopts.Denoiser            = mOptions.Denoiser;
     lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
+    lopts.Glare               = mOptions.Glare;
     lopts.Compiler            = &mCompiler;
     lopts.Device              = mDevice.get();
 
     mHasSceneParameters = !scene->parameters().empty();
 
     // Print a warning if denoiser was requested but none is available
-    if (mOptions.Denoiser.Enabled && !lopts.Denoiser.Enabled && !mOptions.IsTracer && hasDenoiser())
+    if (mOptions.Denoiser.Enabled && !lopts.Denoiser.Enabled && !mOptions.IsTracer && !hasDenoiser())
         IG_LOG(L_WARNING) << "Trying to use denoiser but no denoiser is available" << std::endl;
 
     if (lopts.Denoiser.Enabled)
         IG_LOG(L_INFO) << "Using denoiser" << std::endl;
+    if (lopts.Glare.Enabled)
+        IG_LOG(L_INFO) << "Glare overlay enabled" << std::endl;
 
     // Extract technique
     setup_technique(lopts, mOptions);
@@ -258,7 +261,7 @@ bool Runtime::load(const Path& path, const Scene* scene)
     mTechniqueVariants        = std::move(ctx->TechniqueVariants);
     mResourceMap              = ctx->generateResourceMap();
 
-    if (ctx->Technique->hasDenoiserEnabled())
+    if (mOptions.Denoiser.Enabled && ctx->Technique->hasDenoiserEnabled())
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
 
     // Setup array of number of entities per material
@@ -555,7 +558,8 @@ bool Runtime::compileShaders()
                 compile(i, "tonemap", "ig_tonemap_shader", variant.TonemapShader, shaders.TonemapShader);
                 compile(i, "imageinfo", "ig_imageinfo_shader", variant.ImageinfoShader, shaders.ImageinfoShader);
             }
-            compile(i, "glare", "ig_glare_shader", variant.GlareShader, shaders.GlareShader);
+            if (mOptions.Glare.Enabled)
+                compile(i, "glare", "ig_glare_shader", variant.GlareShader, shaders.GlareShader);
             compile(i, "primary traversal", "ig_traversal_shader", variant.PrimaryTraversalShader, shaders.PrimaryTraversalShader);
             compile(i, "secondary traversal", "ig_traversal_shader", variant.SecondaryTraversalShader, shaders.SecondaryTraversalShader);
             compile(i, "ray generation", "ig_ray_generation_shader", variant.RayGenerationShader, shaders.RayGenerationShader);

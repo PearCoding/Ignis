@@ -145,6 +145,8 @@ public:
     /// Get a list of all available cameras
     [[nodiscard]] static std::vector<std::string> getAvailableCameraTypes();
 
+    /// Get options used while creating the runtime
+    [[nodiscard]] const RuntimeOptions& options() const { return mOptions; }
 private:
     void checkCacheDirectory();
     bool load(const Path& path, const Scene* scene);

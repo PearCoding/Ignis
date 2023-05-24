@@ -24,6 +24,7 @@ struct LoaderOptions {
     bool EnableTonemapping;
     bool EnableCache;
     DenoiserSettings Denoiser;
+    GlareOptions Glare;
 
     ScriptCompiler* Compiler;
     IG::Device* Device;

@@ -1523,14 +1523,16 @@ static std::unique_ptr<Interface> sInterface;
 
 // --------------------- Math stuff
 [[maybe_unused]] static unsigned int sPrevMathMode = 0;
-static void enableMathMode() {
+static void enableMathMode()
+{
     // Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
     sPrevMathMode = _mm_getcsr();
     _mm_setcsr(sPrevMathMode | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 #endif
 }
-static void disableMathMode() {
+static void disableMathMode()
+{
     // Reset mode
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
     _mm_setcsr(sPrevMathMode);
@@ -1578,7 +1580,7 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
 #endif
 
     sInterface->unregisterThread();
-    
+
     disableMathMode();
 }
 
@@ -1641,7 +1643,7 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     }
 
     sInterface->unregisterThread();
-    
+
     disableMathMode();
 }
 
@@ -1658,16 +1660,17 @@ GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& dri
     uint32_t* device_out_pixels = sInterface->is_gpu ? sInterface->getTonemapImageGPU() : out_pixels;
 
     ::GlareSettings settings;
-    settings.scale = driver_settings.Scale * inv_iter;
-    settings.max = driver_settings.LuminanceMax;
-    settings.avg = driver_settings.LuminanceAverage;
-    settings.mul = driver_settings.LuminanceMultiplier;
+    settings.scale                = driver_settings.Scale * inv_iter;
+    settings.max                  = driver_settings.LuminanceMax;
+    settings.avg                  = driver_settings.LuminanceAverage;
+    settings.mul                  = driver_settings.LuminanceMultiplier;
     settings.vertical_illuminance = driver_settings.VerticalIlluminance;
 
     ::GlareOutput output = sInterface->runGlareShader(in_pixels, device_out_pixels, settings);
 
     GlareOutput driver_output;
-    driver_output.DGP = output.dgp;
+    driver_output.DGP                 = output.dgp;
+    driver_output.VerticalIlluminance = output.vertical_illuminance;
 
     if (sInterface->is_gpu) {
         size_t size = sInterface->film_width * sInterface->film_height;
@@ -1682,7 +1685,7 @@ GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& dri
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
     enableMathMode();
-    
+
     // Register host thread
     sInterface->registerThread();
     sInterface->ensureFramebuffer();
