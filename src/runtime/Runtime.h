@@ -49,7 +49,7 @@ public:
     /// out_pixels should be of size width*height!
     void tonemap(uint32* out_pixels, const TonemapSettings& settings);
     /// out_pixels should be of size width*height!
-    void evaluateGlare(uint32* out_pixels, const GlareSettings& settings);
+    GlareOutput evaluateGlare(uint32* out_pixels, const GlareSettings& settings);
     /// A utility function to speed up utility information from the image
     ImageInfoOutput imageinfo(const ImageInfoSettings& settings);
 

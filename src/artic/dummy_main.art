@@ -70,5 +70,5 @@ fn ig_bake_shader(_settings: &Settings, _output: &mut [f32]) -> () {
 }
 
 #[export]
-fn ig_glare_shader(_settings: &Settings, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _g_settings: &GlareSettings) -> () {
+fn ig_glare_shader(_settings: &Settings, _in_pixels: &[f32], _out_pixels: &mut [u32], _width: i32, _height: i32, _g_settings: &GlareSettings, _output: &GlareOutput) -> () {
 }

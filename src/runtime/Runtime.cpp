@@ -610,15 +610,15 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
     mDevice->tonemap(out_pixels, settings);
 }
 
-void Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& settings) {
+GlareOutput Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& settings) {
     if (mTechniqueVariants.empty()) {
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return;
+        return GlareOutput{};
     }
 
     IG_ASSERT(mDevice, "Expected device to be available");
     if (mDevice)
-        mDevice->evaluateGlare(out_pixels, settings);
+        return mDevice->evaluateGlare(out_pixels, settings);
 }
 
 ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)

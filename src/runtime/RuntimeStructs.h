@@ -15,9 +15,17 @@ struct TonemapSettings {
 struct GlareSettings {
     const char* AOV;
     float Scale;
+    float LuminanceMax;
     float LuminanceAverage;
     float LuminanceMultiplier;
+    float VerticalIlluminance;
 };
+
+struct GlareOutput
+{
+    float DGP;
+};
+
 
 struct ImageInfoSettings {
     const char* AOV;

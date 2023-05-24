@@ -1,52 +1,148 @@
 struct GlareSettings {
+    max:f32,
     avg:f32,
     mul:f32,
-    scale:f32
+    scale:f32,
+    vertical_illuminance:f32
 }
 
-fn @ig_glare_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &GlareSettings) {
+struct GlareOutput {
+    dgp: f32
+}
+
+fn @ig_glare_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &GlareSettings, output: &mut GlareOutput) {
 
     let buffer_in  = device.make_buffer(in_pixels,  width * height * 3);
     let buffer_out = device.make_buffer(out_pixels as &[f32], width * height);
+
+    //let cam_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
+    let cam_up = registry::get_global_parameter_vec3("__camera_up", vec3_expand(0));
+    let cam_dir = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
+    let cam_right = vec3_cross(cam_dir, cam_up);
+
+    let cam_view = make_mat3x3(cam_right, cam_up, cam_dir);
 
     fn @store_pixel(index: i32, color: Color) {
         buffer_out.store_i32(index, bitcast[i32](make_byte_color(color)));
     }
 
-    let scale = settings.scale as f32;
+    let index_to_ndc = @|i:i32| {let x = i % width; let y = i / width; make_vec2((x as f32 / width as f32) * 2 - 1, (y as f32 / height as f32) * 2 - 1)};
+
+    // should get those from scene description
+    let aspect_ratio = 1.0 as f32;
+    let vertical_opening_angle = 180.0 as f32;
+    let cam_scale = compute_scale_from_vfov(vertical_opening_angle, aspect_ratio);
+
+    fn @calc_posindex(i: i32) -> f32 {
+        let ndc = index_to_ndc(i);
+
+        // assumes perspective camera
+        let ray_dir = vec3_normalize(mat3x3_mul(cam_view, make_vec3(ndc.x * cam_scale.x, ndc.y * cam_scale.y, 1.0)));
+
+        let vangle = math_builtins::acos(vec3_dot(cam_up, ray_dir)) - flt_pi / 2.0;
+        let hangle = flt_pi / 2.0 - math_builtins::acos(vec3_dot(cam_right, ray_dir));
+        let mut sigma = math_builtins::acos(vec3_dot(cam_dir, ray_dir));
+
+        let t = math_builtins::cos(sigma);
+        let hv = vec3_normalize(vec3_sub(vec3_mulf(ray_dir, 1.0 / t), ray_dir));
+        let mut tau = math_builtins::acos(vec3_dot(cam_up, hv));
+
+        let deg = 180.0 / flt_pi;
+        let mut fact = 0.8 as f32;
+
+        let mut phi = vangle;
+        
+        let mut theta = hangle;
+
+        if (phi == 0) {
+		phi = 0.00001;
+        }
+        if (sigma <= 0) {
+            sigma = -sigma;
+        }
+        if (theta == 0) {
+            theta = 0.0001;
+        }
+        tau = tau * deg;
+        sigma = sigma * deg;
+
+        let mut posindex = 0.0 as f32;
+        // position index calculation with Guth model
+        posindex = math_builtins::exp((35.2 - 0.31889 * tau - 1.22 * math_builtins::exp(-2 * tau / 9)) / 1000 * sigma + (21 + 0.26667 * tau - 0.002963 * tau * tau) / 100000 * sigma * sigma);
+        // position index calculation with KIM model
+        //posindex = math_builtins::exp ((sigma-(-0.000009*tau*tau*tau+0.0014*tau*tau+0.0866*tau+21.633))/(-0.000009*tau*tau*tau+0.0013*tau*tau+0.0853*tau+8.772));
+        
+        // use Iwata model below line of sight
+	    if (phi < 0.0) {
+            let d = 1.0 / math_builtins::tan(phi);
+            let s = math_builtins::tan(theta) / math_builtins::tan(phi);
+            let mut r = math_builtins::sqrt(1.0 / d * 1.0 / d + s * s / d / d);
+            if (r > 0.6) {
+                fact = 1.2;
+            }
+            if (r > 3) {
+                fact = 1.2;
+                r = 3.0;
+            }
+
+            posindex = 1.0 + fact * r;
+	    }
+		if (posindex > 16) {
+		    posindex = 16;
+        }
+
+        posindex
+    }
+
+    let scale = settings.scale;
     let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
     let get_pixel = @|i:i32| make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1);
     let luminance = @|col:Color| srgb_to_xyY(color_mulf(col, scale)).b; // Only luminance
 
-    let lum_source = (settings.avg * settings.mul) as f32;
+    let lum_max = settings.max;
+    let lum_source = (settings.avg * settings.mul);
+
+    let heatmap_low = make_color(0.0, 1.0, 0.0, 1.0);
+    let heatmap_hi = make_color(1.0, 0.0, 0.0, 1.0);
+
+    let c1 = 0.0000587 as f32;
+    let c2 = 0.0981 as f32;
+    let c3 = 0.16 as f32;
+    let a1 = 1.87 as f32;
+
+    let E_v = settings.vertical_illuminance;
+    let E_v_premul = math_builtins::pow(E_v, a1);
 
     // primary glare source scan
     for ind in device.parallel_range(0, width * height) {
-        let mut actual_igs = 0;
-        let mut igs = 0;
-
-        //let lum_thres = 2000.0;
-        //let lum_task = 0.0;
-
-        let mut last_was_glare_source = false;
-        let mut lum_total_max = 0.0 as f32;
         let current_color = get_pixel(ind);
         let act_lum = luminance(current_color);
 
         if (act_lum > lum_source) {
-            store_pixel(ind, make_color(1.0, 0.0, 0.0, 1.0));
-            if (act_lum > lum_total_max) {
-                lum_total_max = act_lum;
-            }
-
-            if (last_was_glare_source) {
-                //actual_igs = find_near_pgs()
-            }
-        } else {
-            last_was_glare_source = false;
+            // compute heatmap color
+            let max_diff = lum_max - lum_source;
+            let lum_diff = act_lum - lum_source;
+            let lerp_factor = lum_diff / max_diff;
+            let col = color_lerp(heatmap_low, heatmap_hi, lerp_factor * lerp_factor);
+            store_pixel(ind, col);
         }
     }
-    
 
+    let reduce_handler = device.parallel_reduce_handler;
+    let pixel_count = reduce[f32](reduce_handler, width * height, @|i:i32| {let v = luminance(get_pixel(i)); if (v > lum_source){1} else {0}}, @|a,b| {a+b});
+
+    let solid_angle = 2*flt_pi / ((width * height) as f32 / pixel_count);
+    let lum_acc = @|lum:f32| {(math_builtins::pow(lum, 2 as f32) * solid_angle) / (E_v_premul)};
+    
+    let reduce_output = reduce[f32](reduce_handler, width * height,
+        @|i:i32| {let v = luminance(get_pixel(i)); if (v > lum_source) {lum_acc(v) / math_builtins::pow(calc_posindex(i), 2 as f32)} else {0}},
+        @|a,b| {a + b}
+    );
+
+    let dgp_acc = reduce_output;
+    let source_dgp = math_builtins::log10(1 + dgp_acc);
+    output.dgp = c1 * E_v + c2 * source_dgp + c3;
+    //output.dgp = solid_angle;
+    
     device.sync();
 }

@@ -964,7 +964,7 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::Tonemap, {});
     }
 
-    inline void runGlareShader(float* in_pixels, uint32_t* device_out_pixels, ::GlareSettings& settings)
+    inline ::GlareOutput runGlareShader(float* in_pixels, uint32_t* device_out_pixels, ::GlareSettings& settings)
     {
 #ifdef IG_DEBUG_LOG_TRACE
         IG_LOG(L_DEBUG) << "TRACE> Glare Shader" << std::endl;
@@ -977,12 +977,15 @@ public:
         auto callback  = reinterpret_cast<Callback*>(shader_set.GlareShader.Exec);
         IG_ASSERT(callback != nullptr, "Expected Glare shader to be valid");
         setCurrentShader(0, 1, ShaderKey(shader_set.ID, ShaderType::Glare, 0), shader_set.GlareShader);
-        callback(&driver_settings, in_pixels, device_out_pixels, (int)film_width, (int)film_height, &settings);
+        ::GlareOutput output;
+        callback(&driver_settings, in_pixels, device_out_pixels, (int)film_width, (int)film_height, &settings, &output);
 
         checkDebugOutput();
 
         if (setup.acquire_stats)
             getThreadData()->stats.endShaderLaunch(ShaderType::Glare, {});
+
+        return output;
     }
 
     inline ::ImageInfoOutput runImageinfoShader(float* in_pixels, ::ImageInfoSettings& settings)
@@ -1601,7 +1604,7 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     sInterface->unregisterThread();
 }
 
-void Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_settings)
+GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_settings)
 {
 
     // Register host thread
@@ -1615,10 +1618,15 @@ void Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_set
 
     ::GlareSettings settings;
     settings.scale = driver_settings.Scale * inv_iter;
+    settings.max = driver_settings.LuminanceMax;
     settings.avg = driver_settings.LuminanceAverage;
     settings.mul = driver_settings.LuminanceMultiplier;
+    settings.vertical_illuminance = driver_settings.VerticalIlluminance;
 
-    sInterface->runGlareShader(in_pixels, device_out_pixels, settings);
+    ::GlareOutput output = sInterface->runGlareShader(in_pixels, device_out_pixels, settings);
+
+    GlareOutput driver_output;
+    driver_output.DGP = output.dgp;
 
     if (sInterface->is_gpu) {
         size_t size = sInterface->film_width * sInterface->film_height;
@@ -1626,6 +1634,8 @@ void Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_set
     }
 
     sInterface->unregisterThread();
+
+    return driver_output;
 }
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)

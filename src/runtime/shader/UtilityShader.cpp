@@ -22,10 +22,10 @@ std::string UtilityShader::setupGlare(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << "#[export] fn ig_glare_shader(settings: &Settings, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, glare_settings: &GlareSettings) -> () {" << std::endl
+    stream << "#[export] fn ig_glare_shader(settings: &Settings, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, glare_settings: &GlareSettings, output: &mut GlareOutput) -> () {" << std::endl
            << "  maybe_unused(settings);" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx.Options.Target) << std::endl
-           << "  ig_glare_pipeline(device, in_pixels, out_pixels, width, height, glare_settings)" << std::endl
+           << "  ig_glare_pipeline(device, in_pixels, out_pixels, width, height, glare_settings, output)" << std::endl
            << "}";
 
     return stream.str();

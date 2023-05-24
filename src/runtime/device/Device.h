@@ -58,7 +58,7 @@ public:
     const Statistics* getStatistics();
 
     void tonemap(uint32_t*, const TonemapSettings&);
-    void evaluateGlare(uint32_t*, const GlareSettings&);
+    GlareOutput evaluateGlare(uint32_t*, const GlareSettings&);
     ImageInfoOutput imageinfo(const ImageInfoSettings&);
     void bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output);
 };
