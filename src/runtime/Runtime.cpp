@@ -622,10 +622,13 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
         return;
     }
 
-    mDevice->tonemap(out_pixels, settings);
+    IG_ASSERT(mDevice, "Expected device to be available");
+    if (mDevice)
+        mDevice->tonemap(out_pixels, settings);
 }
 
-GlareOutput Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& settings) {
+GlareOutput Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& settings)
+{
     if (mTechniqueVariants.empty()) {
         IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
         return GlareOutput{};
@@ -634,6 +637,8 @@ GlareOutput Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& sett
     IG_ASSERT(mDevice, "Expected device to be available");
     if (mDevice)
         return mDevice->evaluateGlare(out_pixels, settings);
+    else
+        return GlareOutput{};
 }
 
 ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)
@@ -643,7 +648,11 @@ ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)
         return ImageInfoOutput{};
     }
 
-    return mDevice->imageinfo(settings);
+    IG_ASSERT(mDevice, "Expected device to be available");
+    if (mDevice)
+        return mDevice->imageinfo(settings);
+    else
+        return ImageInfoOutput{};
 }
 
 void Runtime::setParameter(const std::string& name, int value)
