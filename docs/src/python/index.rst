@@ -71,64 +71,54 @@ Renderer runtime allowing control of simulation and access to results
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`Camera`: <anonymous>(self) -> str
+- :pythonfunc:`Camera`: (self) -> str
 
-- :pythonfunc:`FrameCount`: <anonymous>(self) -> int
+- :pythonfunc:`FrameCount`: (self) -> int
 
-- :pythonfunc:`FramebufferHeight`: <anonymous>(self) -> int
+- :pythonfunc:`FramebufferHeight`: (self) -> int
 
-- :pythonfunc:`FramebufferWidth`: <anonymous>(self) -> int
+- :pythonfunc:`FramebufferWidth`: (self) -> int
 
-- :pythonfunc:`InitialCameraOrientation`: <anonymous>(self) -> CameraOrientation
+- :pythonfunc:`InitialCameraOrientation`: (self) -> :ref:`CameraOrientation`
 
-- :pythonfunc:`IterationCount`: <anonymous>(self) -> int
+- :pythonfunc:`IterationCount`: (self) -> int
 
-- :pythonfunc:`SPI`: <anonymous>(self) -> int
+- :pythonfunc:`SPI`: (self) -> int
 
-- :pythonfunc:`SampleCount`: <anonymous>(self) -> int
+- :pythonfunc:`SampleCount`: (self) -> int
 
-- :pythonfunc:`Target`: <anonymous>(self) -> Target
+- :pythonfunc:`Target`: (self) -> :ref:`Target`
 
-- :pythonfunc:`Technique`: <anonymous>(self) -> str
+- :pythonfunc:`Technique`: (self) -> str
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`clearFramebuffer(self) -> None clearFramebuffer(self, arg: str, /) -> None`
+- :pythonfunc:`clearFramebuffer(self) -> None`
 
-
+- :pythonfunc:`clearFramebuffer(self, arg: str, /) -> None`
 
 - :pythonfunc:`getFramebuffer(self, aov: str = '') -> CPUImage`
 
-
-
 - :pythonfunc:`incFrameCount(self) -> None`
-
-
 
 - :pythonfunc:`reset(self) -> None`
 
-
-
 - :pythonfunc:`setCameraOrientationParameter(self, arg: {CameraOrientation}, /) -> None`
 
+- :pythonfunc:`setParameter(self, arg0: str, arg1: int, /) -> None`
 
+- :pythonfunc:`setParameter(self, arg0: str, arg1: float, /) -> None`
 
-- :pythonfunc:`setParameter(self, arg0: str, arg1: int, /) -> None setParameter(self, arg0: str, arg1: float, /) -> None setParameter(self, arg0: str, arg1: Vec3, /) -> None setParameter(self, arg0: str, arg1: Vec4, /) -> None`
+- :pythonfunc:`setParameter(self, arg0: str, arg1: Vec3, /) -> None`
 
-
+- :pythonfunc:`setParameter(self, arg0: str, arg1: Vec4, /) -> None`
 
 - :pythonfunc:`step(self, ignoreDenoiser: bool = False) -> None`
 
-
-
 - :pythonfunc:`tonemap(self, arg: CPUArray2d_UInt32, /) -> None`
 
-
-
 - :pythonfunc:`trace(self, arg: list[{Ray}], /) -> list[Vec3]`
-
-
 
 
 .. _RuntimeOptions:
@@ -174,14 +164,12 @@ Wrapper around the runtime used for proper runtime loading and shutdown
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`instance`: <anonymous>(self) -> Runtime
+- :pythonfunc:`instance`: (self) -> :ref:`Runtime`
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`shutdown(self) -> None`
-
-
 
 
 .. _Scene:
@@ -194,82 +182,54 @@ Class representing a whole scene
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`bsdfs`: <anonymous>(self) -> dict[str, SceneObject]
+- :pythonfunc:`bsdfs`: (self) -> dict[str, :ref:`SceneObject`]
 
-- :pythonfunc:`camera`: <anonymous>(self) -> SceneObject
+- :pythonfunc:`camera`: (self) -> :ref:`SceneObject`
 
-- :pythonfunc:`entities`: <anonymous>(self) -> dict[str, SceneObject]
+- :pythonfunc:`entities`: (self) -> dict[str, :ref:`SceneObject`]
 
-- :pythonfunc:`film`: <anonymous>(self) -> SceneObject
+- :pythonfunc:`film`: (self) -> :ref:`SceneObject`
 
-- :pythonfunc:`lights`: <anonymous>(self) -> dict[str, SceneObject]
+- :pythonfunc:`lights`: (self) -> dict[str, :ref:`SceneObject`]
 
-- :pythonfunc:`media`: <anonymous>(self) -> dict[str, SceneObject]
+- :pythonfunc:`media`: (self) -> dict[str, :ref:`SceneObject`]
 
-- :pythonfunc:`shapes`: <anonymous>(self) -> dict[str, SceneObject]
+- :pythonfunc:`shapes`: (self) -> dict[str, :ref:`SceneObject`]
 
-- :pythonfunc:`technique`: <anonymous>(self) -> SceneObject
+- :pythonfunc:`technique`: (self) -> :ref:`SceneObject`
 
-- :pythonfunc:`textures`: <anonymous>(self) -> dict[str, SceneObject]
+- :pythonfunc:`textures`: (self) -> dict[str, :ref:`SceneObject`]
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`addBSDF(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-
-
 - :pythonfunc:`addConstantEnvLight(self) -> None`
-
-
 
 - :pythonfunc:`addEntity(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-
-
 - :pythonfunc:`addFrom(self, arg: {Scene}, /) -> None`
-
-
 
 - :pythonfunc:`addLight(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-
-
 - :pythonfunc:`addMedium(self, arg0: str, arg1: {SceneObject}, /) -> None`
-
-
 
 - :pythonfunc:`addShape(self, arg0: str, arg1: {SceneObject}, /) -> None`
 
-
-
 - :pythonfunc:`addTexture(self, arg0: str, arg1: {SceneObject}, /) -> None`
-
-
 
 - :pythonfunc:`bsdf(self, arg: str, /) -> {SceneObject}`
 
-
-
 - :pythonfunc:`entity(self, arg: str, /) -> {SceneObject}`
-
-
 
 - :pythonfunc:`light(self, arg: str, /) -> {SceneObject}`
 
-
-
 - :pythonfunc:`medium(self, arg: str, /) -> {SceneObject}`
-
-
 
 - :pythonfunc:`shape(self, arg: str, /) -> {SceneObject}`
 
-
-
 - :pythonfunc:`texture(self, arg: str, /) -> {SceneObject}`
-
-
 
 
 .. _SceneObject:
@@ -282,28 +242,22 @@ Class representing an object in the scene
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`baseDir`: <anonymous>(self) -> os.PathLike
+- :pythonfunc:`baseDir`: (self) -> os.PathLike
 
-- :pythonfunc:`pluginType`: <anonymous>(self) -> str
+- :pythonfunc:`pluginType`: (self) -> str
 
-- :pythonfunc:`properties`: <anonymous>(self) -> dict[str, SceneProperty]
+- :pythonfunc:`properties`: (self) -> dict[str, :ref:`SceneProperty`]
 
-- :pythonfunc:`type`: <anonymous>(self) -> IG::SceneObject::Type
+- :pythonfunc:`type`: (self) -> :ref:`SceneObject`::Type
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`hasProperty(self, arg: str, /) -> bool`
 
-
-
 - :pythonfunc:`property(self, arg: str, /) -> {SceneProperty}`
 
-
-
 - :pythonfunc:`setProperty(self, arg0: str, arg1: {SceneProperty}, /) -> None`
-
-
 
 
 .. _SceneParser:
@@ -318,11 +272,7 @@ Methods
 
 - :pythonfunc:`loadFromFile(self, path: os.PathLike, flags: int = 13303) -> {Scene}`
 
-
-
 - :pythonfunc:`loadFromString(self, str: str, opt_dir: os.PathLike = '', flags: int = 13303) -> {Scene}`
-
-
 
 
 .. _SceneProperty:
@@ -335,54 +285,32 @@ Property of an object in the scene
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`type`: <anonymous>(self) -> IG::SceneProperty::Type
+- :pythonfunc:`type`: (self) -> :ref:`SceneProperty`::Type
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`canBeNumber(self) -> bool`
 
-
-
 - :pythonfunc:`getBool(self, def: bool = False) -> bool`
-
-
 
 - :pythonfunc:`getInteger(self, def: int = 0) -> int`
 
-
-
 - :pythonfunc:`getIntegerArray(self) -> list[int]`
-
-
 
 - :pythonfunc:`getNumber(self, def: float = 0.0) -> float`
 
-
-
 - :pythonfunc:`getNumberArray(self) -> list[float]`
-
-
 
 - :pythonfunc:`getString(self, def: str = '') -> str`
 
-
-
 - :pythonfunc:`getTransform(self, def: Mat4x4 = [[1. 0. 0. 0.] [0. 1. 0. 0.] [0. 0. 1. 0.] [0. 0. 0. 1.]]) -> Mat4x4`
-
-
 
 - :pythonfunc:`getVector2(self, def: Vec2 = [0. 0.]) -> Vec2`
 
-
-
 - :pythonfunc:`getVector3(self, def: Vec3 = [0. 0. 0.]) -> Vec3`
 
-
-
 - :pythonfunc:`isValid(self) -> bool`
-
-
 
 
 .. _Target:
@@ -395,28 +323,26 @@ Target specification the runtime is using
 Properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- :pythonfunc:`CPUArchitecture`: <anonymous>(self) -> CPUArchitecture
+- :pythonfunc:`CPUArchitecture`: (self) -> :ref:`CPUArchitecture`
 
-- :pythonfunc:`Device`: <anonymous>(self) -> int
+- :pythonfunc:`Device`: (self) -> int
 
-- :pythonfunc:`GPUArchitecture`: <anonymous>(self) -> GPUArchitecture
+- :pythonfunc:`GPUArchitecture`: (self) -> :ref:`GPUArchitecture`
 
-- :pythonfunc:`IsCPU`: <anonymous>(self) -> bool
+- :pythonfunc:`IsCPU`: (self) -> bool
 
-- :pythonfunc:`IsGPU`: <anonymous>(self) -> bool
+- :pythonfunc:`IsGPU`: (self) -> bool
 
-- :pythonfunc:`IsValid`: <anonymous>(self) -> bool
+- :pythonfunc:`IsValid`: (self) -> bool
 
-- :pythonfunc:`ThreadCount`: <anonymous>(self) -> int
+- :pythonfunc:`ThreadCount`: (self) -> int
 
-- :pythonfunc:`VectorWidth`: <anonymous>(self) -> int
+- :pythonfunc:`VectorWidth`: (self) -> int
 
 Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`toString(self) -> str`
-
-
 
 
 .. _SceneObject.Type:
