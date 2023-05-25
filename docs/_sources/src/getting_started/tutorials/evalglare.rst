@@ -20,3 +20,5 @@ A quick and dirty tutorial to run a simple evalglare analysis.
 8.  Finally, run ``evalglare -vf output.vf -d`` from the Radiance tools.
 
     1.  This will output the DGP and many other measures. Have a look at the ``evalglare`` manual to understand them. 
+
+.. note:: You can use the python script scripts/ExtractRadView.py to generate a radiance view file for you directly from the settings inside the scene description.
