@@ -23,6 +23,7 @@ public:
     virtual std::optional<Vector3f> direction() const { return std::nullopt; }
     virtual std::optional<std::string> entity() const { return std::nullopt; }
 
+    virtual void precompute(ShadingTree&) { }
     virtual float computeFlux(ShadingTree&) const { return 0; }
 
     struct SerializationInput {

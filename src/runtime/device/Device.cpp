@@ -653,14 +653,6 @@ public:
         return proxy;
     }
 
-    inline SceneInfo loadSceneInfo(int32_t dev)
-    {
-        IG_UNUSED(dev);
-
-        return SceneInfo{ (int)entity_count,
-                          (int)scene.database->MaterialCount };
-    }
-
     inline const DynTableProxy& loadDyntable(int32_t dev, const char* name)
     {
         std::lock_guard<std::mutex> _guard(thread_mutex);
@@ -1466,8 +1458,8 @@ public:
     int getParameterInt(int32_t dev, const char* name, int def, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->IntParameters.count(name) > 0)
+        // IG_ASSERT(registry != nullptr, "No parameters available!"); // Might be unavailable in baking process
+        if (registry && registry->IntParameters.count(name) > 0)
             return registry->IntParameters.at(name);
         else
             return def;
@@ -1476,8 +1468,8 @@ public:
     float getParameterFloat(int32_t dev, const char* name, float def, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->FloatParameters.count(name) > 0)
+        // IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry && registry->FloatParameters.count(name) > 0)
             return registry->FloatParameters.at(name);
         else
             return def;
@@ -1486,8 +1478,8 @@ public:
     void getParameterVector(int32_t dev, const char* name, float defX, float defY, float defZ, float& outX, float& outY, float& outZ, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->VectorParameters.count(name) > 0) {
+        // IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry && registry->VectorParameters.count(name) > 0) {
             Vector3f param = registry->VectorParameters.at(name);
             outX           = param.x();
             outY           = param.y();
@@ -1502,8 +1494,8 @@ public:
     void getParameterColor(int32_t dev, const char* name, float defR, float defG, float defB, float defA, float& outR, float& outG, float& outB, float& outA, bool global)
     {
         const ParameterSet* registry = global ? current_parameters : getCurrentLocalRegistry(dev);
-        IG_ASSERT(registry != nullptr, "No parameters available!");
-        if (registry->ColorParameters.count(name) > 0) {
+        // IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry && registry->ColorParameters.count(name) > 0) {
             Vector4f param = registry->ColorParameters.at(name);
             outR           = param.x();
             outG           = param.y();
@@ -1522,20 +1514,21 @@ const Image Interface::MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 
 static std::unique_ptr<Interface> sInterface;
 
 // --------------------- Math stuff
-[[maybe_unused]] static unsigned int sPrevMathMode = 0;
-static void enableMathMode()
+[[maybe_unused]] thread_local unsigned int stPrevMathMode = 0;
+static inline void enableMathMode()
 {
     // Force flush to zero mode for denormals
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-    sPrevMathMode = _mm_getcsr();
-    _mm_setcsr(sPrevMathMode | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
+    stPrevMathMode = _mm_getcsr();
+    _mm_setcsr(stPrevMathMode | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 #endif
 }
-static void disableMathMode()
+
+static inline void disableMathMode()
 {
     // Reset mode
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-    _mm_setcsr(sPrevMathMode);
+    _mm_setcsr(stPrevMathMode);
 #endif
 }
 
@@ -1643,13 +1636,11 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     }
 
     sInterface->unregisterThread();
-
     disableMathMode();
 }
 
 GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_settings)
 {
-
     // Register host thread
     sInterface->registerThread();
 
@@ -1718,7 +1709,6 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
     driver_output.NegCount = output.neg_counter;
 
     sInterface->unregisterThread();
-
     disableMathMode();
 
     return driver_output;
@@ -1740,7 +1730,6 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
     sInterface->scene.resource_map = copy;
 
     sInterface->unregisterThread();
-
     disableMathMode();
 }
 
@@ -1814,11 +1803,6 @@ IG_EXPORT void ignis_load_bvh8_ent(int dev, const char* prim_type, Node8** nodes
     auto& bvh = sInterface->loadEntityBVH<IG::Bvh8Ent, Node8>(dev, prim_type);
     *nodes    = const_cast<Node8*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
-}
-
-IG_EXPORT void ignis_load_scene_info(int dev, SceneInfo* info)
-{
-    *info = sInterface->loadSceneInfo(dev);
 }
 
 static inline DynTableData assignDynTable(const IG::DynTableProxy& tbl)
@@ -1899,17 +1883,17 @@ IG_EXPORT void ignis_dbg_dump_buffer(int32_t dev, const char* name, const char* 
     sInterface->dumpBuffer(dev, name, filename);
 }
 
-IG_EXPORT void ignis_get_temporary_storage(int dev, TemporaryStorageHost* temp)
+IG_EXPORT void ignis_get_temporary_storage_host(int dev, TemporaryStorageHost* temp)
 {
     const auto& data          = sInterface->getTemporaryStorageHost(dev);
     temp->ray_begins          = const_cast<int32_t*>(data.ray_begins.data());
     temp->ray_ends            = const_cast<int32_t*>(data.ray_ends.data());
-    temp->entity_per_material = const_cast<int32_t*>(sInterface->scene.entity_per_material->data()); // Always on the host
+    temp->entity_per_material = const_cast<int32_t*>(sInterface->scene.entity_per_material->data());
 }
 
-IG_EXPORT void ignis_gpu_get_tmp_buffer(int dev, int** buf)
+IG_EXPORT void ignis_get_temporary_storage_device(int dev, TemporaryStorageDevice* temp)
 {
-    *buf = sInterface->getGPUTemporaryBuffer(dev).data();
+    temp->counter = sInterface->getGPUTemporaryBuffer(dev).data();
 }
 
 IG_EXPORT void ignis_get_primary_stream(int dev, int id, PrimaryStream* primary, int size)
@@ -1948,12 +1932,14 @@ IG_EXPORT void ignis_gpu_swap_secondary_streams(int dev)
 
 IG_EXPORT void ignis_register_thread()
 {
+    IG::enableMathMode();
     sInterface->registerThread();
 }
 
 IG_EXPORT void ignis_unregister_thread()
 {
     sInterface->unregisterThread();
+    IG::disableMathMode();
 }
 
 IG_EXPORT void ignis_handle_traverse_primary(int dev, int size)
@@ -2021,8 +2007,7 @@ IG_EXPORT void ignis_stats_begin_section(int id)
     if (!sInterface->setup.acquire_stats)
         return;
 
-    // TODO
-    IG_UNUSED(id);
+    sInterface->getThreadData()->stats.beginSection((IG::SectionType)id);
 }
 
 IG_EXPORT void ignis_stats_end_section(int id)
@@ -2030,8 +2015,7 @@ IG_EXPORT void ignis_stats_end_section(int id)
     if (!sInterface->setup.acquire_stats)
         return;
 
-    // TODO
-    IG_UNUSED(id);
+    sInterface->getThreadData()->stats.endSection((IG::SectionType)id);
 }
 
 IG_EXPORT void ignis_stats_add(int id, int value)

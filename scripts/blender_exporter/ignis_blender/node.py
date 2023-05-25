@@ -950,7 +950,7 @@ def _export_image(image, path, is_f32=False, keep_format=False):
         image.save_render(path)
 
 
-def _handle_image(ctx, image):
+def _handle_image(ctx, image: bpy.types.Image):
     tex_dir_name = get_prefs().tex_dir_name
 
     if image.source == 'GENERATED':
@@ -964,12 +964,14 @@ def _handle_image(ctx, image):
 
         return img_path
     elif image.source == 'FILE':
+        filepath = image.filepath_raw if image.filepath_raw is not None else image.filepath
         img_path = bpy.path.relpath(bpy.path.abspath(bpy.path.resolve_ncase(
-            image.filepath_raw), library=image.library), start=ctx.path).replace("\\", "/")
+            filepath), library=image.library), start=ctx.path).replace("\\", "/")
         if img_path.startswith("//"):
             img_path = img_path[2:]
 
-        export_image = image.packed_file or getattr(ctx.settings, "always_copy_images", False) or img_path == ''
+        export_image = image.packed_file or getattr(
+            ctx.settings, "always_copy_images", False) or img_path == ''
 
         if export_image:
             img_name = bpy.path.basename(img_path)
@@ -1014,7 +1016,11 @@ def _export_image_texture(ctx, node, output_name):
         print(f"Image node {node.name} has no image")
         return "color(0)"
 
-    img_path = _handle_image(ctx, node.image)
+    try:
+        img_path = _handle_image(ctx, node.image)
+    except Exception as excp:
+        print(f"Caught exception when handling image {tex_name}:", excp)
+        img_path = None
 
     if node.extension == "EXTEND":
         wrap_mode = "clamp"
@@ -1037,24 +1043,25 @@ def _export_image_texture(ctx, node, output_name):
         print(f"Not supported image color space {cs}")
         linear = False
 
-    # Make sure we do not add the same texture to the array.
-    # This is not necessary for memory or image loading,
-    # but can improve performance due to less shader complexity
-    key = (img_path, wrap_mode, filter_type, linear)
-    if key in ctx.result["_image_textures"]:
-        tex_name = ctx.result["_image_textures"][key]
-    else:
-        ctx.result["textures"].append(
-            {
-                "type": "image",
-                "name": tex_name,
-                "filename": img_path,
-                "wrap_mode": wrap_mode,
-                "filter_type": filter_type,
-                "linear": linear
-            }
-        )
-        ctx.result["_image_textures"][key] = tex_name
+    if img_path is not None:
+        # Make sure we do not add the same texture to the array.
+        # This is not necessary for memory or image loading,
+        # but can improve performance due to less shader complexity
+        key = (img_path, wrap_mode, filter_type, linear)
+        if key in ctx.result["_image_textures"]:
+            tex_name = ctx.result["_image_textures"][key]
+        else:
+            ctx.result["textures"].append(
+                {
+                    "type": "image",
+                    "name": tex_name,
+                    "filename": img_path,
+                    "wrap_mode": wrap_mode,
+                    "filter_type": filter_type,
+                    "linear": linear
+                }
+            )
+            ctx.result["_image_textures"][key] = tex_name
 
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
@@ -1139,7 +1146,9 @@ def _export_musgrave(ctx, node, output_name):
     ops = f"{uv}.xy"
     if node.musgrave_dimensions != '2D':
         print(f"Musgrave currently only supports 2d vectors")
-        return f"{uv}"
+
+    if node.musgrave_dimensions == '1D':
+        ops = f"vec3({uv})"
 
     scale = export_node(ctx, node.inputs["Scale"])
 

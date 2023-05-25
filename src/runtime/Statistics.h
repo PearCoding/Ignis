@@ -25,7 +25,21 @@ enum class ShaderType {
 };
 
 enum class SectionType {
-    ImageLoading = 0,
+    // This should be in sync with core/stats.art
+    GPUSortPrimary         = 0,
+    GPUSortSecondary       = 1,
+    GPUCompactPrimary      = 2,
+    GPUSortPrimaryReset    = 3,
+    GPUSortPrimaryCount    = 4,
+    GPUSortPrimaryScan     = 5,
+    GPUSortPrimarySort     = 6,
+    GPUSortPrimaryCollapse = 7,
+    // TODO: Add for CPU as well (vectorization kinda gets in the way though)
+    ImageInfoPercentile = 10,
+    ImageInfoError      = 11,
+    ImageInfoHistogram  = 12,
+
+    ImageLoading,
     PackedImageLoading,
     BufferLoading,
     BufferRequests,
@@ -97,9 +111,10 @@ public:
     [[nodiscard]] std::string dump(size_t totalMS, size_t iter, bool verbose) const;
 
 private:
+    using duration_t = Timer::duration;
     struct ShaderStats {
         Timer timer;
-        size_t elapsedMS    = 0;
+        duration_t elapsed  = duration_t(0);
         size_t count        = 0;
         size_t workload     = 0; // This might overflow, but who cares for statistical stuff after that huge number of iterations
         size_t max_workload = 0;
@@ -112,8 +127,8 @@ private:
 
     struct SectionStats {
         Timer timer;
-        size_t elapsedMS = 0;
-        size_t count     = 0;
+        duration_t elapsed = duration_t(0);
+        size_t count       = 0;
 
         SectionStats& operator+=(const SectionStats& other);
     };

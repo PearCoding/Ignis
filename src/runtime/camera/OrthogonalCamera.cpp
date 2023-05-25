@@ -41,7 +41,7 @@ void OrthogonalCamera::serialize(const SerializationInput& input) const
                  << "  let camera = make_orthogonal_camera(camera_eye, " << std::endl
                  << "    camera_dir, " << std::endl
                  << "    camera_up, " << std::endl
-                 << "    make_vec2(" << mScale << " * camera_scale, " << mScale << " * camera_scale / " << aspect_ratio << "), " << std::endl
+                 << "    make_vec2(camera_scale, camera_scale / " << aspect_ratio << "), " << std::endl
                  << "    settings.width, " << std::endl
                  << "    settings.height, " << std::endl
                  << "    " << mNearClip << ", " << std::endl

@@ -19,7 +19,7 @@ float CIELight::computeFlux(ShadingTree& tree) const
 {
     // TODO: Use new bake system!
     const float radius = tree.context().SceneDiameter / 2;
-    const float zenith = tree.computeNumber("zenith", *mLight, 1.0f);
+    const float zenith = tree.computeNumber("zenith", *mLight, 1.0f).Value;
     return zenith * Pi * radius * radius * (mHasGround ? 1.0f : 0.5f);
 }
 

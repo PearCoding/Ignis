@@ -269,6 +269,7 @@ void LoaderLight::setup(LoaderContext& ctx)
 {
     IG_LOG(L_DEBUG) << "Setup lights" << std::endl;
     loadLights(ctx);
+    precomputeLights(ctx);
     setupEmbedClasses();
     sortLights();
     setupInfiniteLightIDs(); // Infinite & Finite do not share the same id!
@@ -301,6 +302,15 @@ void LoaderLight::loadLights(LoaderContext& ctx)
         if (!found)
             IG_LOG(L_ERROR) << "No light type '" << light->pluginType() << "' available" << std::endl;
     }
+}
+
+void LoaderLight::precomputeLights(LoaderContext& ctx)
+{
+    ShadingTree tree(ctx);
+    for (const auto& light : mFiniteLights)
+        light->precompute(tree);
+    for (const auto& light : mInfiniteLights)
+        light->precompute(tree);
 }
 
 void LoaderLight::setupEmbedClasses()
@@ -425,14 +435,14 @@ std::string LoaderLight::generateLightSelector(std::string type, ShadingTree& tr
         if (hierarchy.empty()) {
             stream << uniformSelector << std::endl;
         } else {
-            stream << "  let light_selector = make_hierarchy_light_selector(infinite_lights, finite_lights, device.load_buffer(\"" << hierarchy.u8string() << "\"));" << std::endl;
+            stream << "  let light_selector = make_hierarchy_light_selector(infinite_lights, finite_lights, device.load_buffer(\"" << hierarchy.generic_u8string() << "\"));" << std::endl;
         }
     } else if (type == "simple") {
         auto cdf = generateLightSelectionCDF(tree);
         if (cdf.empty()) {
             stream << uniformSelector << std::endl;
         } else {
-            stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << cdf.u8string() << "\"), finite_lights.count, 0);" << std::endl
+            stream << "  let light_cdf = cdf::make_cdf_1d_from_buffer(device.load_buffer(\"" << cdf.generic_u8string() << "\"), finite_lights.count, 0);" << std::endl
                    << "  let light_selector = make_cdf_light_selector(infinite_lights, finite_lights, light_cdf);" << std::endl;
         }
     } else { // Default

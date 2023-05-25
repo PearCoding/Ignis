@@ -1,6 +1,7 @@
 #include <nanobind/eigen/dense.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/filesystem.h>
+#include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
@@ -186,7 +187,7 @@ void runtime_module(nb::module_& m)
                 // TODO: Add device specific access!
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
-                size_t shape[]      = { width, height, 3ul };
+                size_t shape[]      = { height, width, 3ul };
                 return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebuffer(aov).Data, 3, shape);
             },
             nb::arg("aov") = "")
@@ -203,7 +204,7 @@ void runtime_module(nb::module_& m)
             const size_t width  = r.framebufferWidth();
             const size_t height = r.framebufferHeight();
 
-            if (output.shape(0) != width || output.shape(1) != height)
+            if (output.shape(1) != width || output.shape(0) != height)
                 throw nb::buffer_error("Incompatible buffer: Buffer has not the correct shape matching the framebuffer size");
 
             // TODO: Check stride?
@@ -269,8 +270,8 @@ void runtime_module(nb::module_& m)
             "Generate a runtime with given options from an already loaded scene with directory for external resources")
         .def(
             "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu> b) {
-                size_t width  = b.shape(0);
-                size_t height = b.shape(1);
+                size_t width  = b.shape(1);
+                size_t height = b.shape(0);
 
                 if (width == 0 || height == 0 || b.shape(2) != 3)
                     throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");
@@ -280,8 +281,8 @@ void runtime_module(nb::module_& m)
             "Save an OpenEXR image to the filesystem")
         .def(
             "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> b) {
-                size_t width  = b.shape(0);
-                size_t height = b.shape(1);
+                size_t width  = b.shape(1);
+                size_t height = b.shape(0);
 
                 if (width == 0 || height == 0)
                     throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");

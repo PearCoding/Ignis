@@ -40,7 +40,12 @@ struct RuntimeOptions {
 
     size_t ShaderOptimizationLevel = 3;
 
-    bool ForceSpecialization = false; // Enforce specialization of generated shader for all parameters. This will increase compile time
+    enum class SpecializationMode {
+        Default = 0, // Depending on the parameter it will be embedded or not.
+        Force,       // Enforce specialization of generated shader for all parameters. This will increase compile time
+        Disable      // Disables specialization of generated shader for all parameters except structural.
+    };
+    SpecializationMode Specialization = SpecializationMode::Default;
 
     bool WarnUnused = true;           // Warn about unused properties. They might indicate a typo or similar.
 

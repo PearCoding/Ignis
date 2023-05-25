@@ -8,6 +8,7 @@
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
 static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuous", SPPMode::Continuous } };
+static const std::map<std::string, RuntimeOptions::SpecializationMode> SpecializationModeMap{ { "default", RuntimeOptions::SpecializationMode::Default }, { "force", RuntimeOptions::SpecializationMode::Force }, { "disable", RuntimeOptions::SpecializationMode::Disable } };
 
 class MyTransformer : public CLI::Validator {
 public:
@@ -188,7 +189,13 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_option("-O,--shader-optimization", ShaderOptimizationLevel, "Level of optimization applied to shaders. Range is [0, 3]. Level 0 will also add debug information")->default_val(ShaderOptimizationLevel);
 
     app.add_flag("--add-env-light", AddExtraEnvLight, "Add additional constant environment light. This is automatically done for glTF scenes without any lights");
-    app.add_flag("--force-specialization", ForceSpecialization, "Enforce specialization for parameters in shading tree. This will increase compile time drastically for potential runtime optimization");
+    app.add_option("--specialization", Specialization, "Set the type of specialization. Force will increase compile time drastically for potential runtime optimization.")->transform(MyTransformer(SpecializationModeMap, CLI::ignore_case))->default_str("default");
+    app.add_flag_callback(
+        "--force-specialization", [&]() { this->Specialization = RuntimeOptions::SpecializationMode::Force; },
+        "Enforce specialization for parameters in shading tree. This will increase compile time drastically for potential runtime optimization");
+    app.add_flag_callback(
+        "--disable-specialization", [&]() { this->Specialization = RuntimeOptions::SpecializationMode::Disable; },
+        "Disables specialization for parameters in shading tree. This might decrease compile time drastically for worse runtime optimization");
 
     if (type != ApplicationType::Trace) {
         if (type == ApplicationType::CLI) {
@@ -404,8 +411,8 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     if (Width.has_value() && Height.has_value())
         options.OverrideFilmSize = { Width.value(), Height.value() };
 
-    options.AddExtraEnvLight    = AddExtraEnvLight;
-    options.ForceSpecialization = ForceSpecialization;
+    options.AddExtraEnvLight = AddExtraEnvLight;
+    options.Specialization   = Specialization;
 
     options.Denoiser.Enabled            = Denoise;
     options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;

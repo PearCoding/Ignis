@@ -28,6 +28,7 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
 
             SurfaceElement {
                 is_entering = is_entering,
+                // point       = vec3_lerp2(tri.v0, tri.v1, tri.v2, hit.prim_coords.x, hit.prim_coords.y),
                 point       = vec3_add(ray.org, vec3_mulf(ray.dir, hit.distance)),
                 face_normal = if is_entering { face_normal } else { vec3_neg(face_normal) },
                 inv_area    = inv_area,
@@ -64,7 +65,8 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
                 local       = make_orthonormal_mat3x3(normal)
             }
         },
-        local_bbox = tri_mesh.bbox
+        local_bbox = tri_mesh.bbox,
+        primitive_count = tri_mesh.num_tris
     }
 }
 

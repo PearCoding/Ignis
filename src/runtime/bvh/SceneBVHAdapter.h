@@ -23,9 +23,9 @@ struct EntityObject {
     BoundingBox BBox;
     int32 EntityID;
     int32 ShapeID;
+    int32 MaterialID;
     int32 User1ID;
     int32 User2ID;
-    int32 User3ID;
     Matrix4f Local;
     uint32 Flags;
 
@@ -95,9 +95,9 @@ protected:
                       { in_obj.Local(0, 2), in_obj.Local(1, 2), in_obj.Local(2, 2) },
                       { in_obj.Local(0, 3), in_obj.Local(1, 3), in_obj.Local(2, 3) } } } },
                 in_obj.Flags,
+                in_obj.MaterialID,
                 in_obj.User1ID,
-                in_obj.User2ID,
-                in_obj.User3ID });
+                in_obj.User2ID });
         }
 
         // Add sentinel

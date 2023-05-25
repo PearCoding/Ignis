@@ -18,7 +18,7 @@ float SunLight::computeFlux(ShadingTree& tree) const
     // TODO: This is only an approximation
 
     constexpr float radius = 1; // TODO
-    return tree.computeNumber("irradiance", *mLight, 1.0f) * Pi * radius * radius;
+    return tree.computeNumber("irradiance", *mLight, 1.0f).Value * Pi * radius * radius;
 }
 
 void SunLight::serialize(const SerializationInput& input) const

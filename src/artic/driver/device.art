@@ -15,7 +15,7 @@ struct Device {
 
     //------------------------------------- Pipeline    
     // [Internal] Run full pipeline with the given scene info and spi
-    trace: fn (SceneInfo, Pipeline, PayloadInfo) -> (),
+    trace: fn (Scene, Pipeline, PayloadInfo) -> (),
 
     // [Internal] Generate rays
     generate_rays: fn (RayEmitter, PayloadInfo, GenerateRayInfo) -> i32, 
@@ -63,11 +63,6 @@ struct Device {
     //------------------------------------- Geometry
     // [Internal] Load the full scene bvh for a specific prim type
     load_scene_bvh: fn (&[u8]) -> SceneBvh,
-
-    // Load dynamic scene information
-    // If possible, a constant scene information should be used instead
-    // This is only useful for dynamic shaders
-    load_scene_info: fn () -> SceneInfo,
 
     // [Internal] Load a specific dyntable constructed in the loading process
     load_dyntable: fn (&[u8] /* Internal name */) -> DynTable,

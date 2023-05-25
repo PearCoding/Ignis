@@ -1,4 +1,5 @@
 #include "Statistics.h"
+#include "Logger.h"
 #include <sstream>
 
 namespace IG {
@@ -21,7 +22,7 @@ void Statistics::beginShaderLaunch(ShaderType type, size_t workload, size_t id)
 void Statistics::endShaderLaunch(ShaderType type, size_t id)
 {
     ShaderStats* stats = getStats(type, id);
-    stats->elapsedMS += stats->timer.stopMS();
+    stats->elapsed += std::chrono::duration_cast<duration_t>(stats->timer.stop());
 }
 
 void Statistics::beginSection(SectionType type)
@@ -34,12 +35,12 @@ void Statistics::beginSection(SectionType type)
 void Statistics::endSection(SectionType type)
 {
     SectionStats& stats = mSections[(size_t)type];
-    stats.elapsedMS += stats.timer.stopMS();
+    stats.elapsed += std::chrono::duration_cast<duration_t>(stats.timer.stop());
 }
 
 Statistics::ShaderStats& Statistics::ShaderStats::operator+=(const Statistics::ShaderStats& other)
 {
-    elapsedMS += other.elapsedMS;
+    elapsed += other.elapsed;
     count += other.count;
     workload += other.workload;
     max_workload = std::max(max_workload, other.max_workload);
@@ -50,7 +51,7 @@ Statistics::ShaderStats& Statistics::ShaderStats::operator+=(const Statistics::S
 
 Statistics::SectionStats& Statistics::SectionStats::operator+=(const Statistics::SectionStats& other)
 {
-    elapsedMS += other.elapsedMS;
+    elapsed += other.elapsed;
     count += other.count;
 
     return *this;
@@ -150,18 +151,18 @@ private:
 std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
 {
     DumpTable table;
-    const auto dumpInline = [&](const std::string& name, size_t count, size_t elapsedMS, float percentage = -1, size_t max_workload = 0, size_t min_workload = 0, bool skip_iter = false) {
+    const auto dumpInline = [&](const std::string& name, size_t count, duration_t elapsed, float percentage = -1, size_t max_workload = 0, size_t min_workload = 0, bool skip_iter = false) {
         std::vector<std::string> cols;
         cols.emplace_back(name);
 
         {
             std::stringstream bstream;
-            bstream << elapsedMS << "ms [" << count << "]";
+            bstream << elapsed << " [" << count << "]";
             cols.emplace_back(bstream.str());
         }
         if (!skip_iter && iter != 0) {
             std::stringstream bstream;
-            bstream << elapsedMS / iter << "ms [" << count / iter << "] per Iteration";
+            bstream << (elapsed / iter) << " [" << count / iter << "] per Iteration";
             cols.emplace_back(bstream.str());
         }
         if (percentage >= 0) {
@@ -180,16 +181,16 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     };
 
     const auto dumpStats = [&](const std::string& name, const ShaderStats& stats) {
-        dumpInline(name, stats.count, stats.elapsedMS);
+        dumpInline(name, stats.count, stats.elapsed);
     };
 
     const auto dumpStatsDetail = [&](const std::string& name, const ShaderStats& stats, size_t total_workload) {
-        dumpInline(name, stats.count, stats.elapsedMS, static_cast<float>(double(stats.workload) / double(total_workload)), stats.max_workload, stats.min_workload);
+        dumpInline(name, stats.count, stats.elapsed, static_cast<float>(double(stats.workload) / double(total_workload)), stats.max_workload, stats.min_workload);
     };
 
-    const auto dumpSectionStats = [&](const std::string& name, const SectionStats& stats) {
+    const auto dumpSectionStats = [&](const std::string& name, const SectionStats& stats, bool skipIter = true) {
         if (stats.count > 0)
-            dumpInline(name, stats.count, stats.elapsedMS, -1, 0, 0, true);
+            dumpInline(name, stats.count, stats.elapsed, -1, 0, 0, skipIter);
     };
 
     const auto dumpQuantity = [=](size_t count) {
@@ -212,6 +213,14 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     table.addRow({ "Statistics:" });
     table.addRow({ "  Shader:" });
     dumpStats("  |-Device", mDeviceStats);
+    dumpSectionStats("  ||-GPUSortPrimary", mSections[(size_t)SectionType::GPUSortPrimary], false);
+    dumpSectionStats("  |||-GPUSortPrimaryReset", mSections[(size_t)SectionType::GPUSortPrimaryReset], false);
+    dumpSectionStats("  |||-GPUSortPrimaryCount", mSections[(size_t)SectionType::GPUSortPrimaryCount], false);
+    dumpSectionStats("  |||-GPUSortPrimaryScan", mSections[(size_t)SectionType::GPUSortPrimaryScan], false);
+    dumpSectionStats("  |||-GPUSortPrimarySort", mSections[(size_t)SectionType::GPUSortPrimarySort], false);
+    dumpSectionStats("  |||-GPUSortPrimaryCollapse", mSections[(size_t)SectionType::GPUSortPrimaryCollapse], false);
+    dumpSectionStats("  ||-GPUSortSecondary", mSections[(size_t)SectionType::GPUSortSecondary], false);
+    dumpSectionStats("  ||-GPUCompactPrimary", mSections[(size_t)SectionType::GPUCompactPrimary], false);
     dumpStats("  |-PrimaryTraversal", mPrimaryTraversalStats);
     dumpStats("  |-SecondaryTraversal", mSecondaryTraversalStats);
     dumpStats("  |-RayGeneration", mRayGenerationStats);
@@ -248,8 +257,12 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
             dumpStats("  ||-@" + std::to_string(pair.first) + ">", pair.second);
     }
 
-    if (mImageInfoStats.count > 0)
+    if (mImageInfoStats.count > 0) {
         dumpStats("  |-ImageInfo", mImageInfoStats);
+        dumpSectionStats("  ||-ImageInfoPercentile", mSections[(size_t)SectionType::ImageInfoPercentile], false);
+        dumpSectionStats("  ||-ImageInfoError", mSections[(size_t)SectionType::ImageInfoError], false);
+        dumpSectionStats("  ||-ImageInfoHistogram", mSections[(size_t)SectionType::ImageInfoHistogram], false);
+    }
 
     if (mTonemapStats.count > 0)
         dumpStats("  |-Tonemap", mTonemapStats);

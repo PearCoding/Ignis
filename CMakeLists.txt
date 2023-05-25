@@ -196,6 +196,7 @@ if(IG_WITH_DOCUMENTATION)
 	add_subdirectory(docs)
 endif()
 
+add_subdirectory(scenes)
 add_subdirectory(scripts)
 
 # Handle install

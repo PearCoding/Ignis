@@ -16,7 +16,7 @@ def export_background(result, out_dir, depsgraph, settings):
 
     # Export basic world if no shading nodes are given
     if not scene.world.node_tree:
-        if scene.world.color[0] > 0 and scene.world.color[1] > 0 and scene.world.color[2] > 0:
+        if scene.world.color[0] > 0 or scene.world.color[1] > 0 or scene.world.color[2] > 0:
             result["lights"].append(
                 {"type": "env", "name": "__scene_world", "radiance": map_rgb(scene.world.color), "scale": 0.5, "transform": ENVIRONMENT_MAP_TRANSFORM})
         return

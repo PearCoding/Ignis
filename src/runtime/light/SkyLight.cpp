@@ -23,7 +23,7 @@ SkyLight::SkyLight(const std::string& name, const std::shared_ptr<SceneObject>& 
 float SkyLight::computeFlux(ShadingTree& tree) const
 {
     const float radius = tree.context().SceneDiameter / 2;
-    const float scale  = tree.computeNumber("scale", *mLight, 1.0f);
+    const float scale  = tree.computeNumber("scale", *mLight, 1.0f).Value;
     return mTotalFlux * scale * radius * radius;
 }
 

@@ -24,13 +24,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
            << std::endl;
 
     stream << ShaderUtils::generateDatabase(ctx) << std::endl;
-
-    stream << "  let scene  = Scene {" << std::endl
-           << "    info     = " << ShaderUtils::inlineSceneInfo(ctx, false) << "," << std::endl
-           << "    shapes   = shapes," << std::endl
-           << "    entities = entities," << std::endl
-           << "  };" << std::endl
-           << std::endl;
+    stream << ShaderUtils::inlineScene(ctx, false);
 
     ShadingTree tree(ctx);
     const bool requireLights = ctx.CurrentTechniqueVariantInfo().UsesLights;

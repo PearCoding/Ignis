@@ -16,7 +16,7 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME}")
 
 # TODO: Add scenes
 
-SET(CPACK_COMPONENTS_ALL runtime frontends plugins)
+SET(CPACK_COMPONENTS_ALL runtime frontends plugins scenes)
 if(TARGET ig_documentation)
     list(APPEND CPACK_COMPONENTS_ALL documentation)
 endif()
@@ -38,9 +38,10 @@ include(CPack)
 cpack_add_component(runtime DISPLAY_NAME "Runtime" DESCRIPTION "Necessary component containing runtime")
 cpack_add_component(frontends DISPLAY_NAME "Frontends" DESCRIPTION "Frontends to interact with the runtime" DEPENDS runtime)
 cpack_add_component(python DISPLAY_NAME "Python API" DESCRIPTION "Python 3+ API" DEPENDS runtime)
-cpack_add_component(tools DISPLAY_NAME "Extra tools" DESCRIPTION "Extra tools to work with data provided by the runtime" DEPENDS runtime)
+cpack_add_component(tools DISPLAY_NAME "Extra Tools" DESCRIPTION "Extra tools to work with data provided by the runtime" DEPENDS runtime)
 cpack_add_component(documentation DISPLAY_NAME "Documentation" DESCRIPTION "Offline version of the documentation")
 cpack_add_component(plugins DISPLAY_NAME "Plugins" DESCRIPTION "Plugin for external software like Blender")
+cpack_add_component(scenes DISPLAY_NAME "Scenes" DESCRIPTION "Small scenes for Ignis for showcasing or evaluation purposes")
 
 install(FILES "${CPACK_RESOURCE_FILE_LICENSE}" "${CPACK_RESOURCE_FILE_README}" TYPE DATA COMPONENT runtime)
 
@@ -56,7 +57,8 @@ if(IG_INSTALL_RUNTIME_DEPENDENCIES)
 
     set(search_dirs "$<TARGET_FILE_DIR:ig_lib_runtime>")
     if(IG_HAS_PYTHON_API)
-        list(APPEND search_dirs "$<TARGET_FILE_DIR:Python::Module>")
+        list(APPEND search_dirs "${Python_RUNTIME_LIBRARY_DIRS}")
+        list(APPEND search_dirs "${Python_RUNTIME_SABI_LIBRARY_DIRS}")
     endif()
     if(CUDAToolkit_FOUND)
         list(APPEND search_dirs "${CUDAToolkit_BIN_DIR}")

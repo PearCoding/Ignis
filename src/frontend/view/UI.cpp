@@ -107,6 +107,7 @@ public:
 
     float CurrentTravelSpeed = 1.0f;
     float CurrentZoom        = 1.0f; // Only important if orthogonal
+    float DefaultCameraScale = 1.0f;
 
     inline bool isAnyWindowShown() const { return ShowControl || ShowProperties || ShowInspector || ShowHelp; }
 
@@ -606,7 +607,7 @@ public:
 
         LastCameraPose = CameraPose(cam);
         if (Running && ZoomIsScale)
-            Runtime->setParameter("__camera_scale", CurrentZoom);
+            Runtime->setParameter("__camera_scale", DefaultCameraScale * CurrentZoom);
 
         return reset ? UI::InputResult::Reset : UI::InputResult::Continue;
     }
@@ -924,6 +925,13 @@ public:
             ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "Press F1 for help...");
         }
         ImGui::End();
+
+        // Disable annoying initial focus
+        static bool once = false;
+        if (!once) {
+            ImGui::SetWindowFocus(nullptr);
+            once = true;
+        }
     }
 
     UI::UpdateResult handlePropertyWindow()
@@ -980,6 +988,9 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     mInternal->Height        = runtime->framebufferHeight();
     mInternal->ShowDebugMode = showDebug;
     mInternal->ZoomIsScale   = runtime->camera() == "orthogonal";
+
+    if (auto it = runtime->parameters().FloatParameters.find("__camera_scale"); it != runtime->parameters().FloatParameters.end())
+        mInternal->DefaultCameraScale = it->second;
 
     mInternal->Window = SDL_CreateWindow(
         "Ignis",
