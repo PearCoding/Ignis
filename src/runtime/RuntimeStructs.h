@@ -21,12 +21,13 @@ struct GlareSettings {
     float VerticalIlluminance;
 };
 
-struct GlareOutput
-{
+struct GlareOutput {
     float DGP;
-    float VerticalIlluminance;
+    float VerticalIlluminance; // Automatically computed vertical illuminance
+    int NumPixels;             // Number of pixels of the glare source
+    float AvgLum;              // Average luminance of the glare source
+    float AvgOmega;            // Average omega of the glare source
 };
-
 
 struct ImageInfoSettings {
     const char* AOV;

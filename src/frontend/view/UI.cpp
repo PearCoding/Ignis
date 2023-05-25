@@ -91,7 +91,7 @@ public:
     // Visualization
     bool VisualizeGlare             = true;
     float VisualizeGlare_AvgLum     = 0.0f;
-    float VisualizeGlare_Multiplier = 8.0f;
+    float VisualizeGlare_Multiplier = 5.0f;
 
     bool VisualizeGlare_AutoEV = true;
     float VerticalIlluminance  = 5.0f;
@@ -649,7 +649,7 @@ public:
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
         if (Runtime->options().Glare.Enabled && VisualizeGlare)
-            Glare = Runtime->evaluateGlare(buf, GlareSettings{ aov_name.c_str(), 1.0f, LastLum.Max, LastLum.Avg, VisualizeGlare_Multiplier, VisualizeGlare_AutoEV ? -1.0f : VerticalIlluminance });
+            Glare = Runtime->evaluateGlare(buf, GlareSettings{ aov_name.c_str(), 1.0f, LastLum.SoftMax, LastLum.Avg, VisualizeGlare_Multiplier, VisualizeGlare_AutoEV ? -1.0f : VerticalIlluminance });
 
         VisualizeGlare_AvgLum = LastLum.Avg;
 
@@ -891,7 +891,14 @@ public:
             if (Runtime->options().Glare.Enabled) {
                 if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
                     ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
-                    ImGui::Text("Avg. Luminance: %1.4f", VisualizeGlare_AvgLum);
+                    ImGui::Text("Avg. Luminance: %1.4f Lux", 179 * VisualizeGlare_AvgLum);
+                    if(Glare.NumPixels > 0) {
+                        ImGui::Text("Avg. GS Luminance: %1.4f Lux", Glare.AvgLum);
+                        ImGui::Text("Avg. GS Omega: %1.4f", Glare.AvgOmega);
+                        ImGui::Text("GS Pixel No: %i", Glare.NumPixels);
+                    } else {
+                        ImGui::TextColored(ImVec4(1, 0, 0, 1), "No glare source detected!");
+                    }
                     ImGui::SliderFloat("Multiplier", &VisualizeGlare_Multiplier, 0.0, 20.0);
                     ImGui::Checkbox("Automatic EV", &VisualizeGlare_AutoEV);
                     if (!VisualizeGlare_AutoEV)

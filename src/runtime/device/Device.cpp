@@ -1662,6 +1662,9 @@ GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& dri
     GlareOutput driver_output;
     driver_output.DGP                 = output.dgp;
     driver_output.VerticalIlluminance = output.vertical_illuminance;
+    driver_output.AvgLum              = output.avg_lum;
+    driver_output.AvgOmega            = output.avg_omega;
+    driver_output.NumPixels           = output.num_pixels;
 
     if (sInterface->is_gpu) {
         size_t size = sInterface->film_width * sInterface->film_height;

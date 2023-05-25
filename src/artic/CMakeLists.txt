@@ -18,6 +18,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/core/bbox.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/cdf.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/color.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/colormap.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/cpu_common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/core/fresnel.art
