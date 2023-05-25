@@ -17,6 +17,9 @@ mv plane-array-klems_1.exr ref-plane-array-klems-back-rad.exr
 handle_scene "plane-array-tensortree"
 mv plane-array-tensortree_0.exr ref-plane-array-tensortree-front-rad.exr
 mv plane-array-tensortree_1.exr ref-plane-array-tensortree-back-rad.exr
+handle_scene "plane-array-tensortree-t3"
+mv plane-array-tensortree-t3_0.exr ref-plane-array-tensortree-t3-front-rad.exr
+mv plane-array-tensortree-t3_1.exr ref-plane-array-tensortree-t3-back-rad.exr
 handle_scene "sky-clear"
 handle_scene "sky-cloudy"
 handle_scene "sky-intermediate"

@@ -78,11 +78,15 @@ fn @tt_climb_tree(mut pos: Vec4, component: TensorTreeComponent) -> (i32, Vec4) 
 
 // Evaluates whole component and returns corresponding leaf value
 fn @tt_eval_component(_dbg: DebugOutput, in_dir: Vec3, out_dir: Vec3, component: TensorTreeComponent) -> f32 {
-    // TODO: Handle ndim==3!
-    let in_pos  = concentric_disk_to_square(vec2_neg(vec3_to_2(in_dir)));
     let out_pos = concentric_disk_to_square(vec3_to_2(out_dir));
-    
-    let io_pos = make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y);
+
+    let io_pos = if component.specification.ndim == 3 {
+        let in_t = (0.5 - flt_eps) - 0.5 * math_builtins::sqrt(in_dir.x * in_dir.x + in_dir.y * in_dir.y);
+        make_vec4(in_t, out_pos.x, out_pos.y, 0)
+    } else {
+        let in_pos = concentric_disk_to_square(vec2_neg(vec3_to_2(in_dir)));
+        make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y)
+    };
 
     let res = if component.specification.root_is_leaf {
         let value0 = component.value(0);
