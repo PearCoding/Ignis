@@ -84,6 +84,35 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
         posindex
     }
 
+    // Loosely adapted from pict_get_omega, pict_get_sangle and splane_normal
+    fn @calc_omega(pixel: PixelCoord) -> f32 {
+        fn @splane(p_a: Vec3, p_b: Vec3) -> Vec3 {
+            let e1 = p_a;
+            let e2 = vec3_sub(p_b, p_a);
+            let n  = vec3_cross(e1, e2);
+            if vec3_len2(n) > 0 { vec3_normalize(n) } else { make_vec3(0,0,0) }
+        }
+
+        let pseudo_rng = create_random_generator(42);
+        let r1 = camera.generate_ray(pseudo_rng, pixel).dir;
+        let r2 = camera.generate_ray(pseudo_rng, make_pixelcoord_from_xy(pixel.x  , pixel.y+1, pixel.w, pixel.h, 0, 0)).dir;
+        let r3 = camera.generate_ray(pseudo_rng, make_pixelcoord_from_xy(pixel.x+1, pixel.y+1, pixel.w, pixel.h, 0, 0)).dir;
+        let r4 = camera.generate_ray(pseudo_rng, make_pixelcoord_from_xy(pixel.x+1, pixel.y  , pixel.w, pixel.h, 0, 0)).dir;
+
+        let n1 = splane(r1, r2);
+        let n2 = splane(r2, r3);
+        let n3 = splane(r3, r4);
+        let n4 = splane(r4, r1);
+
+        let a1 = flt_pi - math_builtins::fabs(math_builtins::acos(vec3_dot(n1, n2)));
+        let a2 = flt_pi - math_builtins::fabs(math_builtins::acos(vec3_dot(n2, n3)));
+        let a3 = flt_pi - math_builtins::fabs(math_builtins::acos(vec3_dot(n3, n4)));
+        let a4 = flt_pi - math_builtins::fabs(math_builtins::acos(vec3_dot(n4, n1)));
+
+        let ang = a1 + a2 + a3 + a4;
+        ang - 2 * flt_pi
+    }
+
     let scale = settings.scale;
     let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
     let get_pixel = @|i:i32| make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1);
@@ -117,12 +146,13 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
                 let pseudo_rng = create_random_generator(42);
                 let ray = camera.generate_ray(pseudo_rng, pixel);
 
-                let cos_f = math_builtins::fabs(vec3_dot(normal, ray.dir));
-                let (diffx, diffy) = camera.differential(pixel);
-                let omega = 4 * flt_pi * vec3_len(vec3_cross(diffx, diffy)); // TODO: This is not the same as in radiance (pict_get_sangle)
+                let cos_f = math_builtins::fabs(vec3_dot(cam_dir, ray.dir));
+                let omega = calc_omega(pixel);
+                // let (diffx, diffy) = camera.differential(pixel);
+                // let omega = 4 * flt_pi * vec3_len(vec3_cross(diffx, diffy)); // TODO: This is not the same as in radiance (pict_get_sangle)
                 act_lum * cos_f * omega
             },
-            @|a,b| a + b) / (width) as f32 // TODO: Seems only dividing by width gets us close... but why?
+            @|a,b| a + b)
     } else {
         settings.vertical_illuminance
     };
