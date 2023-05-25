@@ -71,9 +71,6 @@ void InfoBufferTechnique::enable(TechniqueInfo& info, bool always, bool extend)
 bool InfoBufferTechnique::insertBody(const SerializationInput& input, size_t maxDepth, bool followSpecular)
 {
     const auto& info = input.Context.Technique->info();
-    if (!input.Context.Options.Glare.Enabled && !input.Context.Technique->hasDenoiserEnabled())
-        return false;
-
     if (input.Context.CurrentTechniqueVariant != info.Variants.size() - 1)
         return false;
 

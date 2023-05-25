@@ -116,10 +116,10 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
     let scale = settings.scale;
     let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
     let get_pixel = @|i:i32| make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1);
-    let luminance = @|col:Color| srgb_to_xyY(color_mulf(col, scale)).b; // Only luminance
+    let luminance = @|col:Color| color_builtins::white_efficiency * srgb_to_xyY(color_mulf(col, scale)).b; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
 
-    let lum_max = settings.max;
-    let lum_source = (settings.avg * settings.mul);
+    let lum_max    = color_builtins::white_efficiency * settings.max;
+    let lum_source = color_builtins::white_efficiency *(settings.avg * settings.mul);
 
     let heatmap_low = make_color(0.0, 1.0, 0.0, 1.0);
     let heatmap_hi = make_color(1.0, 0.0, 0.0, 1.0);
@@ -129,19 +129,13 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
     let c3 = 0.16 as f32;
     let a1 = 1.87 as f32;
 
-    let E_v = if settings.vertical_illuminance < 0 {
-        let normals = device.load_aov_image("Normals", 1/*Does not matter*/);
-        
+    let E_v = if settings.vertical_illuminance < 0 {        
         // Compute automatically
         device.parallel_reduce_f32(width * height,
             @|idx| -> f32 {
                 let pixel = make_pixelcoord_from_linear(idx, width, height, 0, 0);
                 let current_color = get_pixel(idx);
                 let act_lum = luminance(current_color);
-
-                let normal_c = normals.get(pixel);
-                let normal_v = color_to_vec3(normal_c);
-                let normal   = if vec3_len2(normal_v) > 0 { vec3_normalize(normal_v) } else { make_vec3(0,0,0) };
 
                 let pseudo_rng = create_random_generator(42);
                 let ray = camera.generate_ray(pseudo_rng, pixel);

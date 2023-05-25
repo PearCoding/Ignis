@@ -67,6 +67,10 @@ static orange  = super::Color { r = 1, g = 0.5, b = 0, a = 1 };
 // Color used to indicate true & false (we use blue instead of green, like Blender, for people with color vision deficiency)
 static true_color  = blue; 
 static false_color = red; 
+
+static max_efficiency   = 683:f32; // Defined maximum at 550 nm
+static white_efficiency = 179:f32; // Uniform white light (Standard illuminant E)
+static d65_efficiency   = 203:f32; // Standard illuminant D65
 }
 
 fn @xyz_to_srgb(c : Color) -> Color {
