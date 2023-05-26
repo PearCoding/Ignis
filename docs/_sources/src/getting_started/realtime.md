@@ -5,12 +5,12 @@ Ignis is not a rasterization based renderer like the ones used in most modern ga
 
 Using ``igview`` without an explicitly set ``spp`` (via ``--spp``) makes the rendering progressive, therefore only a single frame will be rendered.
 
-The realtime mode in ``igview`` emulates the frame rendering and can be modified to render in different ways.
+The realtime mode in ``igview`` emulates the frame rendering and can be modified to render in different ways. All options below expect a ``spp`` to show some results.
 
 Using the ``--spp-mode`` argument allows to set behavior when the target ``spp`` is reached. Available options are:
 
 - ``fixed`` The rendering will finish when the target ``spp`` is reached. Ultimately only rendering a single frame. This is the default.
-- ``capped`` The rendering will stop when the target ``spp`` is reached. The application will **not** close. Movement or other state changes will trigger a new rendering, however, ultimately only a single frame will be rendered.
+- ``capped`` The rendering will stop when the target ``spp`` is reached. The application will **not** close. Movement or other state changes will trigger a new rendering, however, still only a single frame will be rendered as the frame counter is not increased.
 - ``continuous`` The rendering will restart when the target ``spp`` is reached. The frame counter will be increased each restart. Movement or change of the rendering state will still increase the frame counter and restart the rendering preemptively.
 
-Using the ``--realtime`` command line argument will set ``spi=1``, ``spp=1`` and the ``spp-mode=continuous``. 
+Using the ``--realtime`` command line argument will set ``spi=1``, ``spp=1`` and ``spp-mode=continuous``. 

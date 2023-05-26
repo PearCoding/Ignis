@@ -2,13 +2,14 @@ Building
 ========
 
 The active development is done on a linux operating system (Ubuntu in particular).
-The raytracer is platform independent to a large extend and works on Linux, Windows and Mac OS operating systems.
+The raytracer is platform independent to a large extend and works on Linux, Windows and Mac OS operating systems. 
+A reasonable powerful machine is recommended to have any fun with raytracing.
 
 Linux & Mac OS
 --------------
 
-A quick and dirty tutorial to show how to setup AnyDSL and Ignis on a typical Linux OS.
-The following will need ``ccmake``, but works also with ``cmake-gui`` or with plain ``cmake`` as well.
+A quick and dirty tutorial to show how to setup AnyDSL and Ignis on a typical Linux OS or an Apple machine.
+The following will need ``cmake`` and a working C++ development environment.
 
 1.  Clone AnyDSL from https://github.com/AnyDSL/anydsl
 
@@ -20,13 +21,10 @@ The following will need ``ccmake``, but works also with ``cmake-gui`` or with pl
 2.  Clone Ignis from https://github.com/PearCoding/Ignis
 
     1.  Make sure all the dependencies listed in `README.md <https://github.com/PearCoding/Ignis/blob/master/README.md>`_ are installed.
-    2.  Run ``mkdir build && cd build && cmake ..``
-    3.  Run ``ccmake .`` inside the ``build/`` directory.
-    4.  Change ``AnyDSL_runtime_DIR`` to ``ANYDSL_ROOT/runtime/build/share/anydsl/cmake``, with ``ANYDSL_ROOT`` being the path to the root of the AnyDSL framework.
-    5.  Select the drivers you want to compile. All interesting options regarding Ignis start with ``IG_``
-    6.  Run ``cmake --build .`` inside the ``build/`` directory and get your second coffee.
+    2.  Run ``mkdir build && cd build && cmake -DAnyDSL_runtime_DIR="ANYDSL_ROOT/runtime/build/share/anydsl/cmake" ..``, with ``ANYDSL_ROOT`` being the path to the root of the AnyDSL framework.
+    3.  Run ``cmake --build .`` inside the ``build/`` directory and get your second coffee.
 
-3.  Run ``./bin/igview ../scenes/diamond_scene.json`` inside the ``build/`` directory to see if your setup works. This particular render requires the perspective camera and path tracer technique.
+3.  Run ``./bin/igview ../scenes/diamond_scene.json`` inside the ``build/`` directory to see if your setup works. You should be able to see three diamonds lit by an area light.
 
 .. NOTE:: MacOS CPU vectorization and GPU support is still very experimental and limited. 
 
@@ -53,7 +51,7 @@ To change from the single build configuration using ```Ninja`` to a multiconfig-
 Windows (Manual)
 ----------------
 
-.. NOTE:: It is recommended to use the new automatic windows setup instead of the following one!
+.. NOTE:: It is recommended to use the new automatic windows setup instead of the following one! It may also be outdated.
 
 This mini tutorial is expecting some basic knowledge about CMake and the Windows build system based on Visual Studio. I highly recommend using the CMake Ninja generator in favour of the Visual Studio ones, as Visual Studio as an IDE itself has support for both.
 
