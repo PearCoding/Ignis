@@ -107,7 +107,7 @@ public:
         const size_t height = device->framebufferHeight();
 
         if (mWidth != width || mHeight != height)
-            setupHost(width, height);
+            setupHost(width, height, device->isInteractive());
 
         const size_t framebufferSize = 3 * width * height;
         mColorBuffer.write(0, sizeof(float) * framebufferSize, color.Data);
@@ -139,7 +139,7 @@ public:
         const size_t height = device->framebufferHeight();
 
         if (mWidth != width || mHeight != height)
-            setupDevice(color.Data, normal.Data, albedo.Data, output.Data, width, height);
+            setupDevice(color.Data, normal.Data, albedo.Data, output.Data, width, height, device->isInteractive());
 
         if (mPrefilter) {
             mNormalFilter.execute();
@@ -149,7 +149,7 @@ public:
     }
 
 private:
-    inline void setupHost(size_t width, size_t height)
+    inline void setupHost(size_t width, size_t height, bool isInteractive)
     {
         const size_t framebufferSize = 3 * width * height;
 
@@ -158,11 +158,11 @@ private:
         mAlbedoBuffer = mDevice.newBuffer(sizeof(float) * framebufferSize);
         mOutputBuffer = mDevice.newBuffer(sizeof(float) * framebufferSize);
 
-        setup(width, height);
+        setup(width, height, isInteractive);
     }
 
     inline void setupDevice(const float* color, const float* normal, const float* albedo, float* output,
-                            size_t width, size_t height)
+                            size_t width, size_t height, bool isInteractive)
     {
         const size_t framebufferSize = 3 * width * height;
 
@@ -171,10 +171,10 @@ private:
         mAlbedoBuffer = mDevice.newBuffer(const_cast<float*>(albedo), sizeof(float) * framebufferSize);
         mOutputBuffer = mDevice.newBuffer(output, sizeof(float) * framebufferSize);
 
-        setup(width, height);
+        setup(width, height, isInteractive);
     }
 
-    inline void setup(size_t width, size_t height)
+    inline void setup(size_t width, size_t height, bool isInteractive)
     {
         // Main
         mMainFilter = mDevice.newFilter("RT");
@@ -182,6 +182,9 @@ private:
         mMainFilter.setImage("normal", mNormalBuffer, oidn::Format::Float3, width, height);
         mMainFilter.setImage("albedo", mAlbedoBuffer, oidn::Format::Float3, width, height);
         mMainFilter.setImage("output", mOutputBuffer, oidn::Format::Float3, width, height);
+
+        if (isInteractive)
+            mMainFilter.set("quality", oidn::Quality::Balanced);
 
         mMainFilter.set("hdr", true);
         if (mPrefilter)
@@ -193,12 +196,20 @@ private:
             mNormalFilter = mDevice.newFilter("RT");
             mNormalFilter.setImage("normal", mNormalBuffer, oidn::Format::Float3, width, height);
             mNormalFilter.setImage("output", mNormalBuffer, oidn::Format::Float3, width, height);
+
+            if (isInteractive)
+                mNormalFilter.set("quality", oidn::Quality::Balanced);
+
             mNormalFilter.commit();
 
             // Albedo
             mAlbedoFilter = mDevice.newFilter("RT");
             mAlbedoFilter.setImage("albedo", mAlbedoBuffer, oidn::Format::Float3, width, height);
             mAlbedoFilter.setImage("output", mAlbedoBuffer, oidn::Format::Float3, width, height);
+
+            if (isInteractive)
+                mAlbedoFilter.set("quality", oidn::Quality::Balanced);
+
             mAlbedoFilter.commit();
         }
 

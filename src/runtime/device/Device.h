@@ -17,8 +17,9 @@ class Device {
 public:
     struct SetupSettings {
         Target target;
-        bool acquire_stats = false;
-        bool debug_trace   = false;
+        bool AcquireStats  = false;
+        bool DebugTrace    = false;
+        bool IsInteractive = false;
     };
 
     struct SceneSettings {
@@ -57,6 +58,7 @@ public:
     [[nodiscard]] Target target() const;
     [[nodiscard]] size_t framebufferWidth() const;
     [[nodiscard]] size_t framebufferHeight() const;
+    [[nodiscard]] bool isInteractive() const;
 
     [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name);
     [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name);

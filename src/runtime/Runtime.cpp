@@ -113,8 +113,9 @@ Runtime::Runtime(const RuntimeOptions& opts)
 
     Device::SetupSettings settings;
     settings.target        = mOptions.Target;
-    settings.acquire_stats = mOptions.AcquireStats;
-    settings.debug_trace   = mOptions.DebugTrace;
+    settings.AcquireStats  = mOptions.AcquireStats;
+    settings.DebugTrace    = mOptions.DebugTrace;
+    settings.IsInteractive = mOptions.IsInteractive;
 
     IG_LOG(L_DEBUG) << "Init device" << std::endl;
     mDevice = std::make_unique<Device>(settings);
