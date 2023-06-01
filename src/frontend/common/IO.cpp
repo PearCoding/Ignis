@@ -78,7 +78,7 @@ bool saveImageOutput(const Path& path, const Runtime& runtime, const CameraOrien
     for (size_t aov = 0; aov < aov_count; ++aov) {
         const std::string aov_name = aov == 0 ? std::string{} : aovs[aov - 1];
 
-        const auto acc    = runtime.getFramebuffer(aov_name);
+        const auto acc    = runtime.getFramebufferForHost(aov_name);
         const float scale = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
         const float* src  = acc.Data;
         float* dst_r      = &images[width * height * (3 * aov + 0)];

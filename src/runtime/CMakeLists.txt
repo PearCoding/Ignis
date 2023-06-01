@@ -331,6 +331,14 @@ if(TARGET OpenImageDenoise::OpenImageDenoise)
   target_sources(ig_lib_runtime PRIVATE extra/oidn.cpp)
   target_link_libraries(ig_lib_runtime PRIVATE OpenImageDenoise::OpenImageDenoise)
   target_compile_definitions(ig_lib_runtime PRIVATE "IG_HAS_DENOISER")
+  
+  message(STATUS "Building with OIDN support")
+elseif(TARGET OpenImageDenoise)
+  target_sources(ig_lib_runtime PRIVATE extra/oidn.cpp)
+  target_link_libraries(ig_lib_runtime PRIVATE OpenImageDenoise)
+  target_compile_definitions(ig_lib_runtime PRIVATE "IG_HAS_DENOISER")
+  
+  message(STATUS "Building with OIDN support")
 endif()
 
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)

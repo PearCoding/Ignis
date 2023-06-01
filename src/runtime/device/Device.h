@@ -54,15 +54,20 @@ public:
 
     void releaseAll();
 
-    AOVAccessor getFramebuffer(const std::string& name);
+    [[nodiscard]] Target target() const;
+    [[nodiscard]] size_t framebufferWidth() const;
+    [[nodiscard]] size_t framebufferHeight() const;
+
+    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name);
+    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name);
     void clearFramebuffer(const std::string& name);
     void clearAllFramebuffer();
 
-    const Statistics* getStatistics();
+    [[nodiscard]] const Statistics* getStatistics();
 
     void tonemap(uint32_t*, const TonemapSettings&);
-    GlareOutput evaluateGlare(uint32_t*, const GlareSettings&);
-    ImageInfoOutput imageinfo(const ImageInfoSettings&);
+    [[nodiscard]] GlareOutput evaluateGlare(uint32_t*, const GlareSettings&);
+    [[nodiscard]] ImageInfoOutput imageinfo(const ImageInfoSettings&);
     void bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output);
 };
 } // namespace IG

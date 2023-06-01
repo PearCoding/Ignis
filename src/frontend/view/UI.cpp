@@ -167,7 +167,7 @@ public:
 
     [[nodiscard]] inline AOVAccessor currentPixels() const
     {
-        return Runtime->getFramebuffer(currentAOVName());
+        return Runtime->getFramebufferForHost(currentAOVName());
     }
 
     void changeAOV(int delta_aov)

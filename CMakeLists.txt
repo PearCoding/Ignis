@@ -121,7 +121,10 @@ find_package(TBB REQUIRED)
 find_package(ZLIB REQUIRED)
 
 if(IG_WITH_DENOISER)
-	find_package(OpenImageDenoise)
+	find_package(OpenImageDenoise) # TODO: This is deprecated and we should get rid of it
+	if(NOT OpenImageDenoise_FOUND)
+		find_package(OpenImageDenoise CONFIG)
+	endif()
 endif()
 
 include(cmake/GetDependencies.cmake)

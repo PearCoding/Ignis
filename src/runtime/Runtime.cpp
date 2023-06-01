@@ -376,7 +376,7 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     trace(rays);
 
     // Get result
-    const float* data_ptr = getFramebuffer({}).Data;
+    const float* data_ptr = getFramebufferForHost({}).Data;
     data.resize(rays.size() * 3);
     std::memcpy(data.data(), data_ptr, sizeof(float) * data.size());
 }
@@ -413,9 +413,14 @@ void Runtime::resizeFramebuffer(size_t width, size_t height)
     reset();
 }
 
-AOVAccessor Runtime::getFramebuffer(const std::string& name) const
+AOVAccessor Runtime::getFramebufferForHost(const std::string& name) const
 {
-    return mDevice->getFramebuffer(name);
+    return mDevice->getFramebufferForHost(name);
+}
+
+AOVAccessor Runtime::getFramebufferForDevice(const std::string& name) const
+{
+    return mDevice->getFramebufferForDevice(name);
 }
 
 void Runtime::clearFramebuffer()

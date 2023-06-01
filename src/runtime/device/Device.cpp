@@ -129,7 +129,7 @@ struct CPUData {
 thread_local CPUData* tlThreadData = nullptr;
 
 #ifdef IG_HAS_DENOISER
-void ignis_denoise(const float*, const float*, const float*, const float*, float*, size_t, size_t, size_t);
+void ignis_denoise(Device* device);
 #endif
 
 constexpr size_t GPUStreamBufferCount = 2;
@@ -179,6 +179,7 @@ public:
     };
     std::unordered_map<int32_t, DeviceData> devices;
 
+    Device* device_ptr;
     std::mutex thread_mutex;
     std::vector<std::unique_ptr<CPUData>> thread_data;
 
@@ -206,8 +207,9 @@ public:
 
     const bool is_gpu;
 
-    inline explicit Interface(const Device::SetupSettings& setup)
-        : entity_count(0)
+    inline explicit Interface(Device* device, const Device::SetupSettings& setup)
+        : device_ptr(device)
+        , entity_count(0)
         , film_width(0)
         , film_height(0)
         , setup(setup)
@@ -255,6 +257,27 @@ public:
         return scene.resource_map->at(id);
     }
 
+    /// @brief Ensure the given buffer is present with the same size as the host. Does not copy from host to device!
+    /// @tparam T 
+    /// @param dev 
+    /// @param dev_buffer 
+    /// @param host_buffer 
+    /// @return 
+    template <typename T>
+    inline anydsl::Array<T>& ensurePresentOnDevice(int32_t dev, anydsl::Array<T>& dev_buffer, const anydsl::Array<T>& host_buffer)
+    {
+        if (dev_buffer.size() != host_buffer.size()) {
+            void* ptr = anydsl_alloc(dev, sizeof(T) * host_buffer.size());
+            if (ptr == nullptr) {
+                IG_LOG(L_FATAL) << "Out of memory" << std::endl;
+                std::abort();
+            }
+            dev_buffer = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(ptr), host_buffer.size()));
+        }
+
+        return dev_buffer;
+    }
+
     inline void ensureFramebuffer()
     {
         const size_t expectedSize = film_width * film_height * 3;
@@ -271,11 +294,6 @@ public:
 
         host_pixels.Data = anydsl::Array<float>(expectedSize);
         std::fill(host_pixels.Data.begin(), host_pixels.Data.end(), 0.0f);
-
-#ifdef IG_HAS_DENOISER
-        if (aovs.count("Denoised") != 0)
-            aovs["Denoised"].HostOnly = true; // Always mapped, ignore data from device
-#endif
 
         for (auto& p : aovs) {
             p.second.Data = anydsl::Array<float>(expectedSize);
@@ -1348,6 +1366,31 @@ public:
         }
     }
 
+    inline Device::AOVAccessor getAOVImageForDevice(const std::string& aov_name)
+    {
+        if (!host_pixels.Data.data()) {
+            IG_LOG(L_ERROR) << "Framebuffer not yet initialized. Run a single iteration first" << std::endl;
+            return Device::AOVAccessor{ nullptr, 0 };
+        }
+
+        if (is_gpu) {
+            const int32_t dev = getDevID();
+            if (aov_name.empty() || aov_name == "Color") {
+                return Device::AOVAccessor{ devices[dev].film_pixels.data(), host_pixels.IterationCount };
+            } else {
+                const auto it = aovs.find(aov_name);
+                if (it == aovs.end()) {
+                    IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' access" << std::endl;
+                    return Device::AOVAccessor{ nullptr, 0 };
+                }
+
+                return Device::AOVAccessor{ ensurePresentOnDevice(dev, devices[dev].aovs[aov_name], aovs[aov_name].Data).data(), it->second.IterationCount };
+            }
+        } else {
+            return getAOVImage(aov_name);
+        }
+    }
+
     inline void markAOVAsUsed(const char* name, int iter)
     {
         const std::lock_guard<std::mutex> guard(thread_mutex);
@@ -1406,28 +1449,15 @@ public:
 #ifdef IG_HAS_DENOISER
     inline void denoise()
     {
-        if (aovs.count("Denoised") == 0)
+        if (aovs.count("Denoised") == 0 && host_pixels.IterationCount > 0)
             return;
 
-        const auto color  = getAOVImageForHost({});
-        const auto normal = getAOVImageForHost("Normals");
-        const auto albedo = getAOVImageForHost("Albedo");
-        const auto output = getAOVImageForHost("Denoised");
-
-        IG_ASSERT(color.Data, "Expected valid color data for denoiser");
-        IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
-        IG_ASSERT(albedo.Data, "Expected valid albedo data for denoiser");
-        IG_ASSERT(output.Data, "Expected valid output data for denoiser");
-
-        ignis_denoise(color.Data, normal.Data, albedo.Data, nullptr, output.Data, film_width, film_height, color.IterationCount);
+        ignis_denoise(device_ptr);
 
         // Make sure the iteration count resembles the input
         auto& outputAOV          = aovs["Denoised"];
-        outputAOV.IterationCount = color.IterationCount;
+        outputAOV.IterationCount = host_pixels.IterationCount;
         outputAOV.IterDiff       = 0;
-
-        // Map to device
-        mapAOVToDevice("Denoised", outputAOV, false);
     }
 #endif
 
@@ -1536,7 +1566,7 @@ static inline void disableMathMode()
 Device::Device(const Device::SetupSettings& settings)
 {
     IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
-    sInterface = std::make_unique<Interface>(settings);
+    sInterface = std::make_unique<Interface>(this, settings);
 
     IG_LOG(L_INFO) << "Using device " << anydsl_device_name(sInterface->getDevID()) << std::endl;
 }
@@ -1544,6 +1574,21 @@ Device::Device(const Device::SetupSettings& settings)
 Device::~Device()
 {
     sInterface.reset();
+}
+
+Target Device::target() const
+{
+    return sInterface->setup.target;
+}
+
+size_t Device::framebufferWidth() const
+{
+    return sInterface->film_width;
+}
+
+size_t Device::framebufferHeight() const
+{
+    return sInterface->film_height;
 }
 
 void Device::assignScene(const SceneSettings& settings)
@@ -1587,9 +1632,14 @@ void Device::releaseAll()
     sInterface->releaseAll();
 }
 
-Device::AOVAccessor Device::getFramebuffer(const std::string& name)
+Device::AOVAccessor Device::getFramebufferForHost(const std::string& name)
 {
     return sInterface->getAOVImageForHost(name);
+}
+
+Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name)
+{
+    return sInterface->getAOVImageForDevice(name);
 }
 
 void Device::clearAllFramebuffer()

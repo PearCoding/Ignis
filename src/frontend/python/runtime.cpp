@@ -178,7 +178,7 @@ void runtime_module(nb::module_& m)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
             size_t shape[] = { rays.size(), 3ul };
-            return nb::ndarray<nb::numpy, float, nb::shape<nb::any, 3>>(r.getFramebuffer({}).Data, 2, shape);
+            return nb::ndarray<nb::numpy, float, nb::shape<nb::any, 3>>(r.getFramebufferForHost({}).Data, 2, shape);
         })
         .def("reset", &Runtime::reset)
         .def(
@@ -188,7 +188,7 @@ void runtime_module(nb::module_& m)
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
-                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebuffer(aov).Data, 3, shape);
+                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebufferForHost(aov).Data, 3, shape);
             },
             nb::arg("aov") = "")
         .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> output) {
