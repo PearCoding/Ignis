@@ -16,9 +16,9 @@ If (!(Test-Path "$OIDN_ROOT")) {
 
 $EX_DIR=Get-ChildItem -Path "oidn*" -Directory
 
-robocopy "$($EX_DIR.FullName)\include" "$OIDN_ROOT\include" /mir
-robocopy "$($EX_DIR.FullName)\lib" "$OIDN_ROOT\lib" /mir
-robocopy "$($EX_DIR.FullName)\bin" "$OIDN_ROOT\bin" /mir
-robocopy "$($EX_DIR.FullName)\bin" "$BIN_ROOT\" "OpenImageDenoise*.dll" /mir
+robocopy "$($EX_DIR.FullName)\include" "$OIDN_ROOT\include" /mir  > $null
+robocopy "$($EX_DIR.FullName)\lib" "$OIDN_ROOT\lib" /mir > $null
+robocopy "$($EX_DIR.FullName)\bin" "$OIDN_ROOT\bin" /mir > $null
+robocopy "$($EX_DIR.FullName)\bin" "$BIN_ROOT\" "OpenImageDenoise*.dll" /mir > $null
 
 cd $CURRENT
