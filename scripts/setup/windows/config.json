@@ -19,5 +19,7 @@
     "GET_TBB": true,
     "TBB_URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.5.0/oneapi-tbb-2021.5.0-win.zip",
     "GET_SDL2": true,
-    "SDL2_URL":"https://github.com/libsdl-org/SDL/releases/download/release-2.24.0/SDL2-devel-2.24.0-VC.zip"
+    "SDL2_URL":"https://github.com/libsdl-org/SDL/releases/download/release-2.24.0/SDL2-devel-2.24.0-VC.zip",
+    "GET_OIDN": true,
+    "OIDN_URL": "https://github.com/OpenImageDenoise/oidn/releases/download/v2.0.0/oidn-2.0.0.x64.windows.zip"
 }

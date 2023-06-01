@@ -77,8 +77,8 @@ If($Config.GET_TBB) {
     & $PSScriptRoot\setup_tbb.ps1
 }
 
-If($Config.GET_SDL2) {
-    & $PSScriptRoot\setup_sdl2.ps1
+If($Config.GET_OIDN) {
+    & $PSScriptRoot\setup_oidn.ps1
 }
 
 if($Config.CONFIGURE_IGNIS) {

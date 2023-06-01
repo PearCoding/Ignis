@@ -44,6 +44,7 @@ $SDL2_INCLUDE="$DEPS_ROOT\SDL2\include".Replace("\", "/")
     -DZLIB_INCLUDE_DIR="$ZLIB_INCLUDE" `
     -DSDL2_LIBRARY="$SDL2_LIB" `
     -DSDL2_INCLUDE_DIR="$SDL2_INCLUDE" `
+    -DOpenImageDenoise_DIR="$DEPS_ROOT/oidn/lib/cmake/OpenImageDenoise-2.0.0" `
     -DIG_WITH_ASSERTS:BOOL=ON `
     "$IGNIS_ROOT"
 
