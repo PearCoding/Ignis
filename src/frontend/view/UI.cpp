@@ -11,7 +11,7 @@
 
 #if SDL_VERSION_ATLEAST(2, 0, 17)
 #include "backends/imgui_impl_sdl2.h"
-#include "backends/imgui_impl_sdlrenderer.h"
+#include "backends/imgui_impl_sdlrenderer2.h"
 #else
 #define USE_OLD_SDL
 // The following implementation is deprecated and only available for old SDL versions
@@ -1033,7 +1033,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
-    ImGui_ImplSDLRenderer_Init(mInternal->Renderer);
+    ImGui_ImplSDLRenderer2_Init(mInternal->Renderer);
 #else
     ImGuiSDL::Initialize(mInternal->Renderer, (int)mInternal->Width, (int)mInternal->Height);
 #endif
@@ -1052,7 +1052,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
 UI::~UI()
 {
 #ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer_Shutdown();
+    ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
 #else
     ImGuiSDL::Deinitialize();
@@ -1185,7 +1185,7 @@ UI::UpdateResult UI::update()
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
 #ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
 #endif
     ImGui::NewFrame();
@@ -1199,7 +1199,7 @@ UI::UpdateResult UI::update()
 
     ImGui::Render();
 #ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
 #else
     ImGuiSDL::Render(ImGui::GetDrawData());
 #endif
