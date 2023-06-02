@@ -21,6 +21,9 @@ CacheManager::CacheManager(const Path& cache_dir)
 
 CacheManager::~CacheManager()
 {
+    // Get rid of empty caches
+    if (std::filesystem::exists(mCacheDir) && std::filesystem::is_empty(mCacheDir))
+        std::filesystem::remove(mCacheDir);
 }
 
 void CacheManager::sync()
