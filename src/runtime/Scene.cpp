@@ -53,7 +53,7 @@ static void warnUnused(const std::string& prefix, const SceneObject& obj)
         if (!pair.second.isUsed()) {
             stream << pair.first;
             if (--unusedCount > 0)
-                stream << ",";
+                stream << ", ";
         }
     }
     stream << "]" << std::endl;

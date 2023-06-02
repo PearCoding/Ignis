@@ -25,8 +25,8 @@
 		{"name":"SubdivCube","shape":"SubdivBox", "bsdf":"object", "transform": [{"translate":[-4,-2,0]}, {"scale":0.5}]},
 		{"name":"Cylinder","shape":"Cylinder", "bsdf":"object", "transform": [{"translate":[0,-1,-1]}]},
 		{"name":"Cylinder2","shape":"Cylinder2", "bsdf":"object", "transform": [{"translate":[0,1,-1]}]},
-		{"name":"Cone","shape":"Cone", "bsdf":"object", "transform": [1,0,0,2, 0,1,0,-1, 0,0,-1,0]},
-		{"name":"Cone2","shape":"Cone2", "bsdf":"object", "transform": [1,0,0,2, 0,1,0,1, 0,0,-1,0]},
+		{"name":"Cone","shape":"Cone", "bsdf":"object", "transform": [{"translate":[2,-1,-0.5]}]},
+		{"name":"Cone2","shape":"Cone2", "bsdf":"object", "transform": [{"translate":[2,1,-0.5]}]},
 		{"name":"Disk","shape":"Disk", "bsdf":"object", "transform": [{"translate":[4,0,0]}]}
 	],
 	"lights": [

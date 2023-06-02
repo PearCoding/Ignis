@@ -745,7 +745,7 @@ inline static void addPlane(TriMesh& mesh, const Vector3f& origin, const Vector3
 }
 
 inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f& N, const Vector3f& Nx, const Vector3f& Ny,
-                           float radius, uint32 sections, bool fill_cap)
+                           float radius, uint32 sections, bool fill_cap, bool flip=false)
 {
     const float step = 1.0f / sections;
     const uint32 off = (uint32)mesh.vertices.size();
@@ -772,7 +772,10 @@ inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f
     for (uint32 i = 0; i < sections; ++i) {
         uint32 C  = i + start;
         uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;
-        mesh.indices.insert(mesh.indices.end(), { 0 + off, C + off, NC + off, 0 });
+        if(flip)
+            mesh.indices.insert(mesh.indices.end(), { 0 + off, NC + off, C + off, 0 });
+        else
+            mesh.indices.insert(mesh.indices.end(), { 0 + off, C + off, NC + off, 0 });
     }
 }
 
@@ -1039,7 +1042,7 @@ TriMesh TriMesh::MakeCylinder(const Vector3f& baseCenter, float baseRadius, cons
 
     addDisk(mesh, baseCenter, H, Nx, Ny, baseRadius, sections, fill_cap);
     const uint32 off = (uint32)mesh.vertices.size();
-    addDisk(mesh, topCenter, -H, Nx, Ny, topRadius, sections, fill_cap);
+    addDisk(mesh, topCenter, H, Nx, Ny, topRadius, sections, fill_cap, true);
 
     const uint32 start = fill_cap ? 1 : 0; // Skip disk origin
     for (uint32 i = 0; i < sections; ++i) {
