@@ -98,7 +98,9 @@ Methods
 
 - :pythonfunc:`clearFramebuffer(self, arg: str, /) -> None`
 
-- :pythonfunc:`getFramebuffer(self, aov: str = '') -> CPUImage`
+- :pythonfunc:`getFramebufferForDevice(self, aov: str = '') -> Image`
+
+- :pythonfunc:`getFramebufferForHost(self, aov: str = '') -> CPUImage`
 
 - :pythonfunc:`incFrameCount(self) -> None`
 

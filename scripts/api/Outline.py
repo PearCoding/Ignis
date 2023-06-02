@@ -23,6 +23,7 @@ def dir_class(c):
 
 
 def cleanup_doc(doc):
+    # TODO: Better separate header and actual documentation stuff
     return doc.replace("ignis.pyignis.", "").strip()
 
 
@@ -44,7 +45,9 @@ def sub_arrays(lines: str):
     lines = lines.replace(
         "ndarray[dtype=uint32, shape=(*, *), order='C', device='cpu']", "CPUArray2d_UInt32")
     lines = lines.replace(
-        "numpy.ndarray[dtype=float32, shape=(*, *, 3)]", "CPUImage")
+        "numpy.ndarray[dtype=float32, shape=(*, *, 3)]", "Image")
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(*, *, 3), order='C', device='cpu']", "CPUImage")
     lines = lines.replace(
         "numpy.ndarray[dtype=float32, shape=(*, 3)]", "list[Vec3]")
     lines = lines.replace("IG::", "")
@@ -115,7 +118,10 @@ def generate_doc(root):
     identifiers = get_class_names(ignis)
     identifiers.sort(key=len, reverse=True)
 
-    doc_str = ""
+    doc_str = "Python API\n"
+    doc_str += "==========\n"
+    doc_str += "\n"
+
     todo = [("Ignis (module)", root)]
     while len(todo) > 0:
         name, cur = todo.pop(0)
@@ -159,7 +165,7 @@ def generate_doc(root):
 
         doc_str += "\n"
 
-    return doc_str.rstrip()
+    return doc_str.rstrip() + "\n"
 
 
 if __name__ == "__main__":

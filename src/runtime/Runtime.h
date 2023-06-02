@@ -57,11 +57,11 @@ public:
 
     /// Will resize the framebuffer, clear it and reset rendering
     void resizeFramebuffer(size_t width, size_t height);
-    /// Return pointer to framebuffer. The given buffer is host only. This might trigger a device -> host copy operation.
+    /// Return pointer to framebuffer. The returned buffer is host only. This might trigger a device -> host copy operation.
     /// name == 'Color' or empty returns the actual framebuffer, else the corresponding AOV will be returned.
     /// @note If the same device is used to work with the framebuffer use getFramebufferForDevice instead.
     [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name) const;
-    /// Return pointer to framebuffer. The given buffer is device specific.
+    /// Return pointer to framebuffer. The returned buffer is device specific.
     /// name == 'Color' or empty returns the actual framebuffer, else the corresponding AOV will be returned.
     /// @note The host can not access the data pointed by the buffer without ensuring a device -> host map.
     [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name) const;

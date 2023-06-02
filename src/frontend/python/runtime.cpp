@@ -1,6 +1,6 @@
+#include "Runtime.h"
 #include "Image.h"
 #include "Logger.h"
-#include "Runtime.h"
 
 IG_BEGIN_IGNORE_WARNINGS
 #include <nanobind/eigen/dense.h>
@@ -184,13 +184,40 @@ void runtime_module(nb::module_& m)
         })
         .def("reset", &Runtime::reset)
         .def(
-            "getFramebuffer", [](const Runtime& r, const std::string& aov) {
-                // TODO: Iteration count?
-                // TODO: Add device specific access!
+            "getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
-                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebufferForHost(aov).Data, 3, shape);
+                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape);
+            },
+            nb::arg("aov") = "")
+        .def(
+            "getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
+                const size_t width  = r.framebufferWidth();
+                const size_t height = r.framebufferHeight();
+                size_t shape[]      = { height, width, 3ul };
+
+                const Target target = r.target();
+
+                int32_t deviceType = nb::device::cpu::value;
+                int32_t deviceId   = 0;
+                if (target.isGPU()) {
+                    deviceId = (int32_t)target.device();
+                    switch (target.gpuArchitecture()) {
+                    case GPUArchitecture::AMD:
+                        deviceType = nb::device::rocm::value;
+                        break;
+                    case GPUArchitecture::Intel:
+                        deviceType = nb::device::oneapi::value; // FIXME: Do not think this is the correct approach
+                        break;
+                    default:
+                    case GPUArchitecture::Nvidia:
+                        deviceType = nb::device::cuda::value;
+                        break;
+                    }
+                }
+
+                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId);
             },
             nb::arg("aov") = "")
         .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> output) {

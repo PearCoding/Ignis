@@ -20,7 +20,7 @@ def image_mean(runtime):
     if runtime.IterationCount == 0:
         return 0
 
-    pixels = np.asarray(runtime.getFramebuffer()) / runtime.IterationCount
+    pixels = np.asarray(runtime.getFramebufferForHost()) / runtime.IterationCount
     return np.average(luminance(pixels[:, :, 0], pixels[:, :, 1], pixels[:, :, 2]))
 
 

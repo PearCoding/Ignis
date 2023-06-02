@@ -16,7 +16,7 @@ def first_variant(scene_file):
             runtime.step()
 
         ignis.flushLog()
-        print(runtime.getFramebuffer())
+        print(runtime.getFramebufferForHost())
         print("DONE")
 
 
@@ -35,7 +35,7 @@ def second_variant(scene_file):
         runtime.step()
 
     ignis.flushLog()
-    print(runtime.getFramebuffer())
+    print(runtime.getFramebufferForHost())
     print("DONE")
 
     # You have to explicitly shutdown the context

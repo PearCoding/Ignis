@@ -20,5 +20,5 @@ if __name__ == "__main__":
             runtime.step()
 
         ignis.flushLog()
-        print(runtime.getFramebuffer())
+        print(runtime.getFramebufferForHost())
         print("DONE")
