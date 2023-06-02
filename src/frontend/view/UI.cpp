@@ -90,7 +90,6 @@ public:
 
     // Visualization
     bool VisualizeGlare             = true;
-    float VisualizeGlare_AvgLum     = 0.0f;
     float VisualizeGlare_Multiplier = 5.0f;
 
     bool VisualizeGlare_AutoEV = true;
@@ -651,8 +650,6 @@ public:
         if (Runtime->options().Glare.Enabled && VisualizeGlare)
             Glare = Runtime->evaluateGlare(buf, GlareSettings{ aov_name.c_str(), 1.0f, LastLum.SoftMax, LastLum.Avg, VisualizeGlare_Multiplier, VisualizeGlare_AutoEV ? -1.0f : VerticalIlluminance });
 
-        VisualizeGlare_AvgLum = LastLum.Avg;
-
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }
 
@@ -891,7 +888,7 @@ public:
             if (Runtime->options().Glare.Enabled) {
                 if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
                     ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
-                    ImGui::Text("Avg. Luminance: %1.4f Lux", 179 * VisualizeGlare_AvgLum);
+                    ImGui::Text("Avg. Luminance: %1.4f Lux", 179 * LastLum.Avg);
                     if(Glare.NumPixels > 0) {
                         ImGui::Text("Avg. GS Luminance: %1.4f Lux", Glare.AvgLum);
                         ImGui::Text("Avg. GS Omega: %1.4f", Glare.AvgOmega);
@@ -1043,7 +1040,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     mInternal->ShowProperties = runtime->hasSceneParameters();
 
     if (mInternal->Width < 350 || mInternal->Height < 500) {
-        IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 and F4 to show it" << std::endl;
+        IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 or F4 to show it" << std::endl;
         mInternal->ShowControl    = false;
         mInternal->ShowProperties = false;
     }

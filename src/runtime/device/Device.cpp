@@ -1290,11 +1290,12 @@ public:
             anydsl::copy(host.Data, device.aovs[name]);
     }
 
-    inline Device::AOVAccessor getAOVImage(const std::string& aov_name)
+    inline Device::AOVAccessor getAOVImageOnlyCPU(const std::string& aov_name)
     {
-        const int32_t dev = getDevID();
+        IG_ASSERT(!is_gpu, "Should only be called if not GPU");
+
         if (aov_name.empty() || aov_name == "Color")
-            return Device::AOVAccessor{ getFilmImage(dev), host_pixels.IterationCount };
+            return Device::AOVAccessor{ getFilmImage(0), host_pixels.IterationCount };
 
         const auto it = aovs.find(aov_name);
         if (it == aovs.end()) {
@@ -1302,13 +1303,7 @@ public:
             return Device::AOVAccessor{ nullptr, 0 };
         }
 
-        if (dev != 0) {
-            auto& device = devices[dev];
-            mapAOVToDevice(aov_name, it->second);
-            return Device::AOVAccessor{ device.aovs[aov_name].data(), it->second.IterationCount };
-        } else {
-            return Device::AOVAccessor{ it->second.Data.data(), it->second.IterationCount };
-        }
+        return Device::AOVAccessor{ it->second.Data.data(), it->second.IterationCount };
     }
 
     inline uint32_t* getTonemapImageGPU()
@@ -1362,7 +1357,7 @@ public:
                 return Device::AOVAccessor{ it->second.Data.data(), it->second.IterationCount };
             }
         } else {
-            return getAOVImage(aov_name);
+            return getAOVImageOnlyCPU(aov_name);
         }
     }
 
@@ -1387,7 +1382,7 @@ public:
                 return Device::AOVAccessor{ ensurePresentOnDevice(dev, devices[dev].aovs[aov_name], aovs[aov_name].Data).data(), it->second.IterationCount };
             }
         } else {
-            return getAOVImage(aov_name);
+            return getAOVImageOnlyCPU(aov_name);
         }
     }
 
@@ -1650,15 +1645,24 @@ const Statistics* Device::getStatistics()
     return sInterface->getFullStats();
 }
 
-void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
+static inline void enterDevice()
 {
     enableMathMode();
-
-    // Register host thread
     sInterface->registerThread();
     sInterface->ensureFramebuffer();
+}
 
-    const auto acc       = sInterface->getAOVImage(driver_settings.AOV);
+static inline void leaveDevice()
+{
+    sInterface->unregisterThread();
+    disableMathMode();
+}
+
+void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
+{
+    enterDevice();
+
+    const auto acc       = sInterface->getAOVImageForDevice(driver_settings.AOV);
     float* in_pixels     = acc.Data;
     const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
 
@@ -1678,16 +1682,14 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
         anydsl_copy(sInterface->getDevID(), device_out_pixels, 0, 0 /* Host */, out_pixels, 0, sizeof(uint32_t) * size);
     }
 
-    sInterface->unregisterThread();
-    disableMathMode();
+    leaveDevice();
 }
 
 GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_settings)
 {
-    // Register host thread
-    sInterface->registerThread();
+    enterDevice();
 
-    const auto acc       = sInterface->getAOVImage(driver_settings.AOV);
+    const auto acc       = sInterface->getAOVImageForDevice(driver_settings.AOV);
     float* in_pixels     = acc.Data;
     const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
 
@@ -1714,20 +1716,16 @@ GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& dri
         anydsl_copy(sInterface->getDevID(), device_out_pixels, 0, 0 /* Host */, out_pixels, 0, sizeof(uint32_t) * size);
     }
 
-    sInterface->unregisterThread();
+    leaveDevice();
 
     return driver_output;
 }
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
-    enableMathMode();
+    enterDevice();
 
-    // Register host thread
-    sInterface->registerThread();
-    sInterface->ensureFramebuffer();
-
-    const auto acc       = sInterface->getAOVImage(driver_settings.AOV);
+    const auto acc       = sInterface->getAOVImageForDevice(driver_settings.AOV);
     float* in_pixels     = acc.Data;
     const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
 
@@ -1754,18 +1752,14 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
     driver_output.NaNCount = output.nan_counter;
     driver_output.NegCount = output.neg_counter;
 
-    sInterface->unregisterThread();
-    disableMathMode();
+    leaveDevice();
 
     return driver_output;
 }
 
 void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output)
 {
-    enableMathMode();
-
-    // Register host thread
-    sInterface->registerThread();
+    enterDevice();
 
     // A bake shader does not access framebuffer and global registry
     const auto copy                = sInterface->scene.resource_map;
@@ -1775,8 +1769,7 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
 
     sInterface->scene.resource_map = copy;
 
-    sInterface->unregisterThread();
-    disableMathMode();
+    leaveDevice();
 }
 
 template <typename T>
@@ -1807,7 +1800,7 @@ IG_EXPORT void ignis_get_film_data(int dev, float** pixels, int* width, int* hei
 IG_EXPORT void ignis_get_aov_image(int dev, const char* name, float** aov_pixels)
 {
     IG_UNUSED(dev);
-    *aov_pixels = IG::sInterface->getAOVImage(name).Data;
+    *aov_pixels = IG::sInterface->getAOVImageForDevice(name).Data;
 }
 
 IG_EXPORT void ignis_mark_aov_as_used(const char* name, int iter)
