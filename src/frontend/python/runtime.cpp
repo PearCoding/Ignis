@@ -1,3 +1,8 @@
+#include "Image.h"
+#include "Logger.h"
+#include "Runtime.h"
+
+IG_BEGIN_IGNORE_WARNINGS
 #include <nanobind/eigen/dense.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/filesystem.h>
@@ -5,10 +10,7 @@
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
-
-#include "Image.h"
-#include "Logger.h"
-#include "Runtime.h"
+IG_END_IGNORE_WARNINGS
 
 namespace nb = nanobind;
 using namespace nb::literals;

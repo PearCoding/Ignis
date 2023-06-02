@@ -1,3 +1,7 @@
+#include "Scene.h"
+#include "loader/Parser.h"
+
+IG_BEGIN_IGNORE_WARNINGS
 #include <nanobind/eigen/dense.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/filesystem.h>
@@ -5,9 +9,7 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unordered_map.h>
 #include <nanobind/stl/vector.h>
-
-#include "Scene.h"
-#include "loader/Parser.h"
+IG_END_IGNORE_WARNINGS
 
 namespace nb = nanobind;
 using namespace nb::literals;
