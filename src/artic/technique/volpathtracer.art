@@ -83,10 +83,9 @@ fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_select
 
         let in_dir  = light_sample.dir;
         let out_dir = vec3_neg(ctx.ray.dir);
-        let dot     = vec3_dot(in_dir, ctx.surf.local.col(2));
 
         // TODO: Secondary rays do not take "passthrough" surface + media into account. Would be useful to add transmittance into account...
-        if dot > flt_eps && light_sample.cos > flt_eps {
+        if light_sample.cos > flt_eps {
             let mis = if light.delta || was_medium_interaction { 
                 1:f32
             } else {

@@ -1,7 +1,7 @@
 // Creates a physically-correct Phong BSDF
 fn @make_phong_bsdf(surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     eval = @ |in_dir, out_dir| {
-        let cosI = math_builtins::fabs(vec3_dot(in_dir, surf.local.col(2)));
+        let cosI = positive_cos(in_dir, surf.local.col(2));
         let cos  = positive_cos(in_dir, vec3_reflect(out_dir, surf.local.col(2)));
         color_mulf(ks, cosI * fastpow/*math_builtins::pow*/(cos, ns) * (ns + 2) / (2 * flt_pi))
     },
