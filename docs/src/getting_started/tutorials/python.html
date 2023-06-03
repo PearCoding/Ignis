@@ -9,6 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
+    <meta property="article:modified_time" content="2023-06-03T12:41:42+00:00" />
     <title>Using Ignis together with Python Jupyter notebooks &#8212; Ignis  documentation</title>
   
   
@@ -499,7 +500,7 @@ document.write(`
     <span class="k">with</span> <span class="n">ignis</span><span class="o">.</span><span class="n">loadFromScene</span><span class="p">(</span><span class="n">scene</span><span class="p">)</span> <span class="k">as</span> <span class="n">runtime</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">_i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">spp</span><span class="p">):</span>
             <span class="n">runtime</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
-        <span class="n">color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">runtime</span><span class="o">.</span><span class="n">getFramebuffer</span><span class="p">())</span> <span class="o">/</span> <span class="n">runtime</span><span class="o">.</span><span class="n">IterationCount</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">runtime</span><span class="o">.</span><span class="n">getFramebufferForHost</span><span class="p">())</span> <span class="o">/</span> <span class="n">runtime</span><span class="o">.</span><span class="n">IterationCount</span>
         <span class="k">return</span> <span class="n">color</span>
 </pre></div>
 </div>
@@ -624,7 +625,10 @@ simple <code class="docutils literal notranslate"><span class="pre">reinhard</sp
             
           </div>
           <footer class="bd-footer-content">
-            
+            <p class="last-updated">
+  Last updated on Jun 03, 2023.
+  <br/>
+</p>
           </footer>
         
       </main>
