@@ -8,8 +8,8 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
             mat2.eval(in_dir, out_dir)
         } else {
             color_lerp(mat1.eval(in_dir, out_dir),
-                    mat2.eval(in_dir, out_dir),
-                    k)
+                       mat2.eval(in_dir, out_dir),
+                       k)
         }
     };
 
@@ -21,8 +21,8 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
             mat2.pdf(in_dir, out_dir)
         } else {
             lerp(mat1.pdf(in_dir, out_dir),
-                mat2.pdf(in_dir, out_dir),
-                k)
+                 mat2.pdf(in_dir, out_dir),
+                 k)
         }
     };
 
@@ -39,7 +39,7 @@ fn @make_variadic_mix_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32) -> Bs
                         } else {
                             let p = lerp(s.pdf, mat_second.pdf(s.in_dir, out_dir), t);
                             let c = color_lerp(color_mulf(s.color, s.pdf), mat_second.eval(s.in_dir, out_dir), t);
-                            make_bsdf_sample(s.in_dir, p, color_divf(c, p), s.eta)
+                            make_option(s.{ pdf = p, color = color_divf(c, p) })
                         }
                     },
                     _ => opt
@@ -83,7 +83,7 @@ fn @make_add_bsdf(mat1: Bsdf, mat2: Bsdf) -> Bsdf {
             mat1.eval(in_dir, out_dir)
         } else {
             color_add(mat1.eval(in_dir, out_dir),
-                       mat2.eval(in_dir, out_dir))
+                      mat2.eval(in_dir, out_dir))
         }
     };
 

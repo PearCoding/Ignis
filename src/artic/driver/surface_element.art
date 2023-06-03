@@ -18,9 +18,3 @@ fn make_invalid_surface_element() = SurfaceElement {
     tex_coords  = vec2_expand(0),
     local       = mat3x3_identity()
 };
-
-fn @invert_surface_element(surf: SurfaceElement) = surf.{
-    is_entering = !surf.is_entering,
-    face_normal = vec3_neg(surf.face_normal),
-    local       = flip_orthonormal_mat3x3(surf.local)
-};
