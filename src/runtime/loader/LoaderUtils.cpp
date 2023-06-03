@@ -28,6 +28,7 @@ std::string LoaderUtils::inlineEntity(const Entity& entity)
 
     std::stringstream stream;
     stream << "Entity{ id = " << entity.ID
+           << ", mat_id = " << entity.MatID
            << ", local_mat = " << LoaderUtils::inlineMatrix34(localMat)
            << ", global_mat = " << LoaderUtils::inlineMatrix34(globalMat)
            << ", normal_mat = " << LoaderUtils::inlineMatrix(normalMat)

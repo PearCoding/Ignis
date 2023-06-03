@@ -11,6 +11,7 @@ struct Entity {
     Transformf Transform;
     std::string Name;
     uint32 ShapeID;
+    uint32 MatID;
     std::string BSDF;
 
     inline Matrix34f computeLocalMatrix() const

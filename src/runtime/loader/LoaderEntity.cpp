@@ -145,7 +145,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
 
             // Make sure the entity is added to the emissive list if it is associated with an area light
             if (ctx.Lights->isAreaLight(pair.first))
-                mEmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeID, ctx.Materials.at(materialID).BSDF } });
+                mEmissiveEntities.insert({ pair.first, Entity{ mEntityCount, transform, pair.first, shapeID, (uint32)materialID, ctx.Materials.at(materialID).BSDF } });
 
             const Matrix34f toLocal       = invTransform.matrix().block<3, 4>(0, 0);
             const Matrix34f toGlobal      = transform.matrix().block<3, 4>(0, 0);
@@ -163,14 +163,14 @@ bool LoaderEntity::load(LoaderContext& ctx)
 
             // Extract information for BVH building
             EntityObject obj;
-            obj.BBox     = entityBox;
-            obj.Local    = invTransform.matrix();
-            obj.EntityID = (int32)mEntityCount;
-            obj.ShapeID  = shapeID;
+            obj.BBox       = entityBox;
+            obj.Local      = invTransform.matrix();
+            obj.EntityID   = (int32)mEntityCount;
+            obj.ShapeID    = shapeID;
             obj.MaterialID = (int32_t)materialID;
-            obj.User1ID  = shape.User1ID;
-            obj.User2ID  = shape.User2ID;
-            obj.Flags    = entity_flags; // Only added to bvh
+            obj.User1ID    = shape.User1ID;
+            obj.User2ID    = shape.User2ID;
+            obj.Flags      = entity_flags; // Only added to bvh
 
             in_objs[shape.Provider].emplace_back(obj);
             mEntityCount++;
