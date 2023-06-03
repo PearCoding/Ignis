@@ -22,16 +22,18 @@ IG_BEGIN_IGNORE_WARNINGS
 #include "tiny_gltf.h"
 IG_END_IGNORE_WARNINGS
 
-[[maybe_unused]] constexpr std::string_view KHR_lights_punctual             = "KHR_lights_punctual";
-[[maybe_unused]] constexpr std::string_view KHR_materials_clearcoat         = "KHR_materials_clearcoat";
-[[maybe_unused]] constexpr std::string_view KHR_materials_emissive_strength = "KHR_materials_emissive_strength";
-[[maybe_unused]] constexpr std::string_view KHR_materials_ior               = "KHR_materials_ior";
-[[maybe_unused]] constexpr std::string_view KHR_materials_sheen             = "KHR_materials_sheen";
-[[maybe_unused]] constexpr std::string_view KHR_materials_translucency      = "KHR_materials_translucency";
-[[maybe_unused]] constexpr std::string_view KHR_materials_transmission      = "KHR_materials_transmission";
-[[maybe_unused]] constexpr std::string_view KHR_materials_unlit             = "KHR_materials_unlit";
-[[maybe_unused]] constexpr std::string_view KHR_materials_volume            = "KHR_materials_volume";
-[[maybe_unused]] constexpr std::string_view KHR_texture_transform           = "KHR_texture_transform";
+[[maybe_unused]] constexpr std::string_view KHR_lights_punctual                = "KHR_lights_punctual";
+[[maybe_unused]] constexpr std::string_view KHR_materials_clearcoat            = "KHR_materials_clearcoat";
+[[maybe_unused]] constexpr std::string_view KHR_materials_emissive_strength    = "KHR_materials_emissive_strength";
+[[maybe_unused]] constexpr std::string_view KHR_materials_ior                  = "KHR_materials_ior";
+[[maybe_unused]] constexpr std::string_view KHR_materials_sheen                = "KHR_materials_sheen";
+[[maybe_unused]] constexpr std::string_view KHR_materials_translucency         = "KHR_materials_translucency";
+[[maybe_unused]] constexpr std::string_view KHR_materials_diffuse_transmission = "KHR_materials_diffuse_transmission";
+[[maybe_unused]] constexpr std::string_view KHR_materials_transmission         = "KHR_materials_transmission";
+[[maybe_unused]] constexpr std::string_view KHR_materials_unlit                = "KHR_materials_unlit";
+[[maybe_unused]] constexpr std::string_view KHR_materials_volume               = "KHR_materials_volume";
+[[maybe_unused]] constexpr std::string_view KHR_texture_transform              = "KHR_texture_transform";
+// [[maybe_unused]] constexpr std::string_view KHR_materials_anisotropy                = "KHR_materials_anisotropy";                // TODO: This is easy to add if the spec would be more clear and useful for RT
 // [[maybe_unused]] constexpr std::string_view MSFT_packing_occlusionRoughnessMetallic = "MSFT_packing_occlusionRoughnessMetallic"; // TODO: This is simple to add
 // [[maybe_unused]] constexpr std::string_view MSFT_packing_normalRoughnessMetallic    = "MSFT_packing_normalRoughnessMetallic";    // TODO: This is simple to add
 // [[maybe_unused]] constexpr std::string_view ADOBE_materials_thin_transparency       = "ADOBE_materials_thin_transparency";       // TODO: We basically do this already
@@ -77,7 +79,7 @@ inline std::string handleURI(const std::string& uri)
 }
 
 static Path exportImage(const tinygltf::Image& img, const tinygltf::Model& model, int id,
-                                         const Path& cache_dir, const Path& in_dir)
+                        const Path& cache_dir, const Path& in_dir)
 {
     if (img.bufferView >= 0) {
         const tinygltf::BufferView& view = model.bufferViews[img.bufferView];
@@ -787,10 +789,22 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
             }
 
             bsdf->setProperty("thin", SceneProperty::fromBool(is_thin));
-        }
+        } else if (mat.extensions.count(KHR_materials_diffuse_transmission.data()) > 0) {
+            // Not ratified yet, but who cares
+            const auto& ext       = mat.extensions.at(KHR_materials_diffuse_transmission.data());
+            const std::string tex = handleTexture(ext, "diffuseTransmissionTexture", scene, model, directory);
 
-        // Not ratified yet, but who cares
-        if (mat.extensions.count(KHR_materials_translucency.data()) > 0) {
+            float factor = 0;
+            if (ext.Has("diffuseTransmissionFactor") && ext.Get("diffuseTransmissionFactor").IsNumber())
+                factor = static_cast<float>(ext.Get("diffuseTransmissionFactor").GetNumberAsDouble());
+
+            // No support for diffuseTransmissionColorFactor & diffuseTransmissionColorTexture
+            if (!tex.empty())
+                bsdf->setProperty("diffuse_transmission", SceneProperty::fromString(tex + ".a*" + std::to_string(factor)));
+            else
+                bsdf->setProperty("diffuse_transmission", SceneProperty::fromNumber(factor));
+        } else if (mat.extensions.count(KHR_materials_translucency.data()) > 0) {
+            // Old, deprecated name?
             const auto& ext       = mat.extensions.at(KHR_materials_translucency.data());
             const std::string tex = handleTexture(ext, "translucencyTexture", scene, model, directory);
 
@@ -950,8 +964,8 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
     for (const auto& mesh : model.meshes) {
         size_t primCount = 0;
         for (const auto& prim : mesh.primitives) {
-            const std::string name               = mesh.name + "_" + std::to_string(meshCount) + "_" + std::to_string(primCount);
-            const Path ply_path = cache_dir / "meshes" / (name + ".ply");
+            const std::string name = mesh.name + "_" + std::to_string(meshCount) + "_" + std::to_string(primCount);
+            const Path ply_path    = cache_dir / "meshes" / (name + ".ply");
 
             exportMeshPrimitive(ply_path, model, prim);
             auto obj = std::make_shared<SceneObject>(SceneObject::OT_SHAPE, "ply", directory);
