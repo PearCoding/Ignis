@@ -14,7 +14,7 @@ def __handle_dll():
             added_dirs.append(os.add_dll_directory(str(bin_dir)))
 
         for p in os.environ["PATH"].split(';'):
-            if p:
+            if p and os.path.exists(p):
                 added_dirs.append(os.add_dll_directory(p))
     return added_dirs
 
