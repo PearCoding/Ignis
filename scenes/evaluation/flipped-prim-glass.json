@@ -1,6 +1,6 @@
 {
 	"bsdfs": [
-		{"type":"glass", "name": "base", "int_ior":1.55}
+		{"type":"glass", "name": "Material", "int_ior":1.55}
 	],
   "externals": [
     {"filename": "flipped-prim-base.json"}
