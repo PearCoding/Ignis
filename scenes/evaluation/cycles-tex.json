@@ -43,20 +43,6 @@
   ],
   "bsdfs": [
     {
-      "type": "diffuse",
-      "name": "__bsdf_black",
-      "reflectance": 0
-    },
-    {
-      "type": "diffuse",
-      "name": "__bsdf_error",
-      "reflectance": [
-        1,
-        0.75,
-        0.8
-      ]
-    },
-    {
       "type": "principled",
       "name": "Material",
       "base_color": "_tex_0",
