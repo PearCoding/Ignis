@@ -2,6 +2,7 @@
     "LOCATION": "",
     "BUILD_DIR": "build/Release",
     "CONFIGURE_IGNIS": true,
+    "IGNIS_BUILD_TYPE": "Release",
     "GIT_BIN": "git",
     "CMAKE_BIN": "cmake",
     "CMAKE_EXTRA_ARGS": ["-GNinja", "-UCMAKE_CONFIGURATION_TYPES"],

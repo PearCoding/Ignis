@@ -16,7 +16,12 @@ If (!(Test-Path "$TBB_ROOT")) {
     Copy-Item -Recurse -Path "oneapi*\lib" -Destination "$TBB_ROOT\lib" > $null
 }
 
-cp "oneapi*\redist\intel64\vc14\tbb12.dll" "$BIN_ROOT\" > $null
-cp "oneapi*\redist\intel64\vc14\tbbmalloc.dll" "$BIN_ROOT\" > $null
+If ($Config.IGNIS_BUILD_TYPE == "Release") {
+    cp "oneapi*\redist\intel64\vc14\tbb12.dll" "$BIN_ROOT\" > $null
+    cp "oneapi*\redist\intel64\vc14\tbbmalloc.dll" "$BIN_ROOT\" > $null
+} else {
+    cp "oneapi*\redist\intel64\vc14\tbb12_debug.dll" "$BIN_ROOT\" > $null
+    cp "oneapi*\redist\intel64\vc14\tbbmalloc_debug.dll" "$BIN_ROOT\" > $null
+}
 
 cd $CURRENT
