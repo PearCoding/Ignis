@@ -96,6 +96,11 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
             let contrib = handle_color(color_mulf(
                 color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));
 
+            // No contribution to add, so do not shoot the ray to begin with.
+            if color_average(contrib) < flt_eps {
+                return(ShadowRay::None)
+            }
+
             if light.infinite {
                 return(make_simple_shadow_ray(
                     make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_shadow),

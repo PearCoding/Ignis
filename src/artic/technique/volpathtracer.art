@@ -99,6 +99,11 @@ fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_select
             let contrib = handle_color(color_mulf(
                 color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));
 
+            // No contribution to add, so do not shoot the ray to begin with.
+            if color_average(contrib) < flt_eps {
+                return(ShadowRay::None)
+            }
+
             if light.infinite {
                 let vol = color_mul(hitvol, medium.eval_inf(ctx.surf.point, in_dir));
                 return(make_simple_shadow_ray(
