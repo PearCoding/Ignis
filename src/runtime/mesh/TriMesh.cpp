@@ -320,10 +320,10 @@ static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices, const 
     return edges;
 }
 
-static std::array<uint32, 6> subdivideQuadToTriangle(uint32 q0, const Vector3f& v0,
-                                                     uint32 q1, const Vector3f& v1,
-                                                     uint32 q2, const Vector3f& v2,
-                                                     uint32 q3, const Vector3f& v3)
+static inline std::array<uint32, 6> subdivideQuadToTriangle(uint32 q0, const Vector3f& v0,
+                                                            uint32 q1, const Vector3f& v1,
+                                                            uint32 q2, const Vector3f& v2,
+                                                            uint32 q3, const Vector3f& v3)
 {
     // TODO: Would be nice to get rid of the normalization
     const Vector3f e01 = (v1 - v0).normalized();
@@ -635,7 +635,8 @@ std::optional<PlaneShape> TriMesh::getAsPlane() const
 
 std::optional<SphereShape> TriMesh::getAsSphere() const
 {
-    constexpr float SphereEPS = 1e-5f;
+    constexpr float SphereEPS   = 1e-5f;
+    constexpr float Sphere90EPS = 1e-7f;
 
     // A sphere requires a sufficient amount of resolution. We pick some empirical value
     if (faceCount() < 32)
@@ -655,16 +656,43 @@ std::optional<SphereShape> TriMesh::getAsSphere() const
     if (wh > SphereEPS || wd > SphereEPS || hd > SphereEPS)
         return std::nullopt;
 
-    // Compute squared radius from first vertex
-    const float radius2 = (origin - vertices.at(0)).squaredNorm();
+    // Compute squared radius from average
+    float radius2 = 0;
+    for (const auto& v : vertices)
+        radius2 += (origin - v).squaredNorm();
+    radius2 /= vertices.size();
     if (radius2 <= SphereEPS) // Points are not spheres... at least not here
         return std::nullopt;
 
     // Check if all vertices are spread around the origin by the given radius
-    for (size_t i = 1; i < vertices.size(); ++i) {
-        const float r2 = (origin - vertices.at(i)).squaredNorm();
+    for (const auto& v : vertices) {
+        const float r2 = (origin - v).squaredNorm();
         if (std::abs(r2 - radius2) > SphereEPS)
             return std::nullopt;
+    }
+
+    const auto getFaceNormal = [&](size_t t) {
+        Vector3f v0 = vertices.at(indices.at(t * 4 + 0));
+        Vector3f v1 = vertices.at(indices.at(t * 4 + 1));
+        Vector3f v2 = vertices.at(indices.at(t * 4 + 2));
+        return computeTriangleNormal(v0, v1, v2).normalized();
+    };
+
+    // Some more complex test to ensure not to detect our default cylinder as a sphere.
+    const size_t triangles = indices.size() / 4;
+    for (size_t t = 0; t < triangles; ++t) {
+        Vector3f N = getFaceNormal(t);
+        if (N.hasNaN()) // Zero area triangles are always bad
+            return std::nullopt;
+
+        // Check if any normal is 90° to eachother. This should never be the case for a sphere.
+        for (size_t t2 = 0; t2 < triangles; ++t2) {
+            if (t == t2)
+                continue;
+            Vector3f N2 = getFaceNormal(t2);
+            if (std::abs(N.dot(N2)) <= Sphere90EPS) // Be strict about the 90° rule. This might be insufficient if the sphere has too great resolution.
+                return std::nullopt;
+        }
     }
 
     // Make sure all sides have geometry present. This is not a perfect solution, but a huge improvement nevertheless
@@ -745,7 +773,7 @@ inline static void addPlane(TriMesh& mesh, const Vector3f& origin, const Vector3
 }
 
 inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f& N, const Vector3f& Nx, const Vector3f& Ny,
-                           float radius, uint32 sections, bool fill_cap, bool flip=false)
+                           float radius, uint32 sections, bool fill_cap, bool flip = false)
 {
     const float step = 1.0f / sections;
     const uint32 off = (uint32)mesh.vertices.size();
@@ -772,7 +800,7 @@ inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f
     for (uint32 i = 0; i < sections; ++i) {
         uint32 C  = i + start;
         uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;
-        if(flip)
+        if (flip)
             mesh.indices.insert(mesh.indices.end(), { 0 + off, NC + off, C + off, 0 });
         else
             mesh.indices.insert(mesh.indices.end(), { 0 + off, C + off, NC + off, 0 });
