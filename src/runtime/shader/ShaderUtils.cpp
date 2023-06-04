@@ -63,6 +63,9 @@ std::string ShaderUtils::generateDatabase(const LoaderContext& ctx)
 
 std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx)
 {
+    if (ctx.Shapes->shapeCount() == 0)
+        return "  let shapes = make_empty_shape_table();\n";
+
     std::vector<ShapeProvider*> provs;
     provs.reserve(ctx.Shapes->providers().size());
     for (const auto& p : ctx.Shapes->providers())
@@ -143,7 +146,7 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
 
     if (ctx.Options.SamplesPerIteration == 1) // Hardcode this case as some optimizations might apply
         stream << ctx.Options.SamplesPerIteration << " : i32";
-    else // Fallback to dynamic spi
+    else                                      // Fallback to dynamic spi
         stream << "settings.spi";
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1

@@ -146,7 +146,7 @@ fn @sum_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
 
 fn @positive_cos(a: Vec3, b: Vec3) -> f32 {
     let cos = vec3_dot(a, b);
-    if cos >= 0 { cos } else { 0 }
+    select(cos >= 0, cos, 0:f32)
 }
 
 fn @absolute_cos(a: Vec3, b: Vec3) = math_builtins::fabs(vec3_dot(a, b));

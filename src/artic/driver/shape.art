@@ -21,3 +21,14 @@ fn @load_shape_table(device: Device, gen: fn (u32, DeviceBuffer) -> Shape) -> Sh
     let dtb = device.load_dyntable("shapes");
     make_shape_table(dtb, gen)
 }
+
+fn @make_null_shape() = Shape {
+    surface_element           = @|_,_,_| make_invalid_surface_element(),
+    surface_element_for_point = @|_,_,_| make_invalid_surface_element(),
+    local_bbox                = make_empty_bbox(), 
+    primitive_count           = 0
+};
+
+fn @make_empty_shape_table() -> ShapeTable {
+    @ |_id| { make_null_shape() } 
+}
