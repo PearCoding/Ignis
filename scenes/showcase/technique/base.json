@@ -64,20 +64,6 @@
   "bsdfs": [
     {
       "type": "diffuse",
-      "name": "__bsdf_black",
-      "reflectance": 0
-    },
-    {
-      "type": "diffuse",
-      "name": "__bsdf_error",
-      "reflectance": [
-        1,
-        0.75,
-        0.8
-      ]
-    },
-    {
-      "type": "diffuse",
       "name": "LampSheet",
       "reflectance": "color(0.03251763433218002, 0.03251763433218002, 0.03251763433218002, 1.0)"
     },
