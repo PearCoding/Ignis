@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<size_t> size_distrib(0, MaxSize);
-    std::uniform_int_distribution<char> char_distrib(0, std::numeric_limits<char>::max());
+    std::uniform_int_distribution<int> char_distrib(0, std::numeric_limits<char>::max());
 
     for (size_t i = 0; i < iterations; ++i) {
         size_t size = size_distrib(gen);
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
         string.resize(size);
 
         for (auto& c : string)
-            c = char_distrib(gen);
+            c = (char)char_distrib(gen);
 
         func(string);
         std::cout << "." << std::flush;
