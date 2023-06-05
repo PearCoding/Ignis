@@ -277,16 +277,16 @@ Principled (:monosp:`principled`)
     - :code:`0.5`, :code:`0`
     - Yes
     - The microfacet roughness for specular, diffuse and sheen reflection and anisotropic terms. The roughness is computed via the GGX method. Can be specified explicitly using :paramtype:`roughness_u` and :paramtype:`roughness_v` instead. Anisotropic is the amount of anisotropy in the roughness distribution.
-  * - ior
+  * - ior, reflective_ior, refractive_ior
     - |number|
     - ~bk7   
     - Yes
-    - Specifies index of refraction.
-  * - ior_material
+    - Specifies index of refraction. To distinguish between the ior used for the reflective fresnel term use :paramtype:`reflective_ior` and for the actual refraction :paramtype:`refractive_ior`. If one of the latter two is specified, :paramtype:`ior` will be ignored.
+  * - ior_material, reflective_ior_material, refractive_ior_material
     - |string|
     - *None*
     - No
-    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`.
+    - Has to be one of the available presets listed :ref:`here <bsdf-dielectric-list>`. See above for the reflective and refractive use case.
   * - thin
     - |bool|
     - |false|

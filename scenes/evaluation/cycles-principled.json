@@ -11,17 +11,17 @@
     "near_clip": 0.10000000149011612,
     "far_clip": 100.0,
     "transform": [
-      -1.000000238418579,
+      -0.9999999403953552,
       0.0,
       0.0,
       0.0,
       0.0,
-      -1.3435885648505064e-07,
-      1.0000001192092896,
+      3.422854177870249e-08,
+      0.9999999403953552,
       -12.96484088897705,
       0.0,
-      1.0000001192092896,
-      -1.3435885648505064e-07,
+      0.9999999403953552,
+      3.422854177870249e-08,
       0.0,
       0.0,
       0.0,
@@ -45,89 +45,9 @@
   "bsdfs": [
     {
       "type": "principled",
-      "name": "Material.008",
-      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
-      "metallic": 0.0,
-      "roughness": 0.5,
-      "anisotropic": 0.0,
-      "sheen": 0.0,
-      "sheen_tint": 0.5,
-      "clearcoat": 0.0,
-      "clearcoat_roughness": 0.029999999329447746,
-      "flatness": 0.0,
-      "specular_transmission": 0.0,
-      "specular_tint": 0.0,
-      "ior": 1.45
-    },
-    {
-      "type": "principled",
-      "name": "Material.001",
-      "base_color": "color(0.8000000715255737, 0.2137010246515274, 0.07701645791530609, 1.0)",
-      "metallic": 0.0,
-      "roughness": 0.0,
-      "anisotropic": 0.0,
-      "sheen": 0.0,
-      "sheen_tint": 0.5,
-      "clearcoat": 0.0,
-      "clearcoat_roughness": 0.029999999329447746,
-      "flatness": 0.0,
-      "specular_transmission": 0.0,
-      "specular_tint": 0.0,
-      "ior": 1.45
-    },
-    {
-      "type": "principled",
-      "name": "Material.007",
-      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
-      "metallic": 0.0,
-      "roughness": 0.5,
-      "anisotropic": 0.0,
-      "sheen": 0.0,
-      "sheen_tint": 0.5,
-      "clearcoat": 0.0,
-      "clearcoat_roughness": 0.029999999329447746,
-      "flatness": 0.0,
-      "specular_transmission": 0.0,
-      "specular_tint": 0.0,
-      "ior": 1.0
-    },
-    {
-      "type": "principled",
-      "name": "Material.006",
+      "name": "Material.005",
       "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
       "metallic": 1.0,
-      "roughness": 1.0,
-      "anisotropic": 0.0,
-      "sheen": 0.0,
-      "sheen_tint": 0.5,
-      "clearcoat": 0.0,
-      "clearcoat_roughness": 0.029999999329447746,
-      "flatness": 0.0,
-      "specular_transmission": 0.0,
-      "specular_tint": 0.0,
-      "ior": 1.45
-    },
-    {
-      "type": "principled",
-      "name": "Material.004",
-      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
-      "metallic": 1.0,
-      "roughness": 0.0,
-      "anisotropic": 0.0,
-      "sheen": 0.0,
-      "sheen_tint": 0.5,
-      "clearcoat": 0.0,
-      "clearcoat_roughness": 0.029999999329447746,
-      "flatness": 0.0,
-      "specular_transmission": 0.0,
-      "specular_tint": 0.0,
-      "ior": 1.45
-    },
-    {
-      "type": "principled",
-      "name": "Material.009",
-      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
-      "metallic": 0.0,
       "roughness": 0.5,
       "anisotropic": 0.0,
       "sheen": 0.0,
@@ -137,7 +57,8 @@
       "flatness": 0.0,
       "specular_transmission": 0.0,
       "specular_tint": 0.0,
-      "ior": 1.45
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.4500000476837158
     },
     {
       "type": "principled",
@@ -153,7 +74,42 @@
       "flatness": 0.0,
       "specular_transmission": 0.0,
       "specular_tint": 0.0,
-      "ior": 1.45
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.4500000476837158
+    },
+    {
+      "type": "principled",
+      "name": "Material.007",
+      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "reflective_ior": 1.0,
+      "refractive_ior": 1.4500000476837158
+    },
+    {
+      "type": "principled",
+      "name": "Material.001",
+      "base_color": "color(0.8000000715255737, 0.2137010246515274, 0.07701645791530609, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.4500000476837158
     },
     {
       "type": "principled",
@@ -169,13 +125,31 @@
       "flatness": 0.0,
       "specular_transmission": 0.0,
       "specular_tint": 0.0,
-      "ior": 1.45
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.4500000476837158
     },
     {
       "type": "principled",
-      "name": "Material.005",
+      "name": "Material.006",
       "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
       "metallic": 1.0,
+      "roughness": 1.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.4500000476837158
+    },
+    {
+      "type": "principled",
+      "name": "Material.009",
+      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
+      "metallic": 0.0,
       "roughness": 0.5,
       "anisotropic": 0.0,
       "sheen": 0.0,
@@ -185,7 +159,42 @@
       "flatness": 0.0,
       "specular_transmission": 0.0,
       "specular_tint": 0.0,
-      "ior": 1.45
+      "reflective_ior": 1.7887885053796064,
+      "refractive_ior": 1.4500000476837158
+    },
+    {
+      "type": "principled",
+      "name": "Material.004",
+      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "metallic": 1.0,
+      "roughness": 0.0,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.4500000476837158
+    },
+    {
+      "type": "principled",
+      "name": "Material.008",
+      "base_color": "color(0.05998991057276726, 0.16459377110004425, 0.8000000715255737, 1.0)",
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.4500000476837158
     }
   ],
   "entities": [
@@ -210,8 +219,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.001-Suzanne.005",
@@ -234,8 +242,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.002-Suzanne.006",
@@ -258,8 +265,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.003-Suzanne.007",
@@ -282,8 +288,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.004-Suzanne.008",
@@ -306,8 +311,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.005-Suzanne.009",
@@ -330,8 +334,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.006-Suzanne.010",
@@ -354,8 +357,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.007-Suzanne.011",
@@ -378,8 +380,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
       "name": "Suzanne.008-Suzanne.012",
@@ -402,8 +403,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     }
   ],
   "lights": [

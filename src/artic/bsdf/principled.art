@@ -22,7 +22,8 @@ type Vec3 = all::Vec3;
 struct Closure {
     surf:                  SurfaceElement,
     base_color:            Color,
-    ior:                   f32,
+    reflective_ior:        f32,
+    refractive_ior:        f32,
     diffuse_transmission:  f32,
     specular_transmission: f32,
     specular_tint:         f32,
@@ -37,7 +38,8 @@ struct Closure {
     clearcoat_roughness:   f32,
     thin:                  bool,
 
-    eta: f32
+    reflective_eta: f32,
+    refractive_eta: f32
 }
 
 struct EvalClosure {
@@ -67,8 +69,8 @@ fn @getMicro(closure: Closure) -> microfacet::MicrofacetDistribution {
 fn @getReflectionMicro(closure: Closure) = getMicro(closure);
 fn @getRefractionMicro(closure: Closure) = getMicro(if closure.thin { 
         closure.{ 
-            roughness_u = super::clampf((0.65 * closure.ior - 0.35) * closure.roughness_u, 0, 1),
-            roughness_v = super::clampf((0.65 * closure.ior - 0.35) * closure.roughness_v, 0, 1)
+            roughness_u = super::clampf((0.65 * closure.refractive_ior - 0.35) * closure.roughness_u, 0, 1),
+            roughness_v = super::clampf((0.65 * closure.refractive_ior - 0.35) * closure.roughness_v, 0, 1)
         }
     } else { 
         closure
@@ -80,11 +82,11 @@ fn @evalDisneyFresnelTerm(closure: EvalClosure) -> Color {
 
     if HdV * HdL <= super::flt_eps { return(super::color_builtins::black) }
 
-    let f1 = super::make_gray_color(math::fresnel_dielectric(closure.general.eta, HdV));
+    let f1 = super::make_gray_color(math::fresnel_dielectric(closure.general.reflective_eta, HdV));
 
     let color = tint_color(closure.general.base_color);
     let a  = super::color_lerp(color_builtins::white, color, closure.general.specular_tint);
-    let r0 = super::color_lerp(super::color_mulf(a, super::schlick_r0(closure.general.eta)), closure.general.base_color, closure.general.metallic);
+    let r0 = super::color_lerp(super::color_mulf(a, super::schlick_r0(closure.general.reflective_eta)), closure.general.base_color, closure.general.metallic);
     let f2 = super::schlick(r0, color_builtins::white, HdL);
 
     super::color_lerp(f1, f2, closure.general.metallic)
@@ -147,18 +149,18 @@ fn @evalRefractionTerm(closure: EvalClosure) -> Color {
     let micro = getRefractionMicro(closure.general);
 
     let term = if closure.general.thin {
-        let fterm = math::fresnel_dielectric(closure.general.eta, shading::abs_cos_theta(closure.wo));
+        let fterm = math::fresnel_dielectric(closure.general.refractive_eta, shading::abs_cos_theta(closure.wo));
         let F     = fterm + (1 - fterm) * fterm / (fterm + 1);
         1 - F
     } else {
         let HdI = super::vec3_dot(closure.wi, closure.h);
         let HdO = super::vec3_dot(closure.wo, closure.h);
-        let F   = math::fresnel_dielectric(closure.general.eta, math_builtins::fabs(HdO));
+        let F   = math::fresnel_dielectric(closure.general.refractive_eta, math_builtins::fabs(HdO));
 
         let D = micro.D(closure.h);
         let G = micro.G(closure.wi, closure.wo, closure.h);
         
-        let jacob = shading::halfway_refractive_jacobian( closure.general.eta, HdI, HdO ); // ~ eta * eta * cos_h_i / (cos_h_i + eta * cos_h_o)^2
+        let jacob = shading::halfway_refractive_jacobian( closure.general.refractive_eta, HdI, HdO ); // ~ eta * eta * cos_h_i / (cos_h_i + eta * cos_h_o)^2
         let norm  = math_builtins::fabs(super::safe_div(HdO * jacob, shading::cos_theta(closure.wo))); // ~ cos_h_i * cos_h_o / (cos_o * ~cos_i~) * ...
         
         (1 - F) * D * G * norm
@@ -206,7 +208,7 @@ fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
     let abs_spec = super::lerp(1:f32, all::color_luminance(tint_color(closure.base_color)), closure.specular_tint);
 
     let diff_refl = all::clampf(abs_gen * (1 - metallic_in) * (1 - spec_trans_in), 0, 1);
-    let F         = math::fresnel_dielectric(closure.eta, shading::abs_cos_theta(wo));
+    let F         = math::fresnel_dielectric(closure.refractive_eta, shading::abs_cos_theta(wo));
     let spec_refl = all::clampf(abs_spec * (1 - F) + F, 0, 1);
 
     let has_transmission = diff_trans_in > 0 || spec_trans_in > 0;
@@ -235,7 +237,7 @@ fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
 // TODO: Change this to a abstract layered implementation
 fn @make_principled_bsdf(surf: SurfaceElement,
                      base_color: Color,
-                     ior: f32, diffuse_transmission: f32, specular_transmission: f32, specular_tint: f32,
+                     reflective_ior: f32, refractive_ior: f32, diffuse_transmission: f32, specular_transmission: f32, specular_tint: f32,
                      roughness_u: f32, roughness_v: f32, flatness: f32, metallic: f32, 
                      sheen: f32, sheen_tint: f32, clearcoat: f32, clearcoat_gloss: f32, clearcoat_roughness: f32,
                      thin: bool, clearcoat_top_only: bool) -> Bsdf {
@@ -246,7 +248,8 @@ fn @make_principled_bsdf(surf: SurfaceElement,
     let closure = principled::Closure {
         surf                  = surf,
         base_color            = base_color,
-        ior                   = ior,
+        reflective_ior        = reflective_ior,
+        refractive_ior        = refractive_ior,
         diffuse_transmission  = diffuse_transmission,
         specular_transmission = specular_transmission,
         specular_tint         = specular_tint,
@@ -260,7 +263,9 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         clearcoat_gloss       = clearcoat_gloss,
         clearcoat_roughness   = clearcoat_roughness,
         thin                  = thin,
-        eta                   = if surf.is_entering || thin { 1 / ior } else { ior },
+
+        reflective_eta        = if surf.is_entering || thin { 1 / reflective_ior } else { reflective_ior },
+        refractive_eta        = if surf.is_entering || thin { 1 / refractive_ior } else { refractive_ior },
     };
 
     fn @eval(in_dir : Vec3, out_dir : Vec3) -> Color {
@@ -274,7 +279,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             wi = wi,
             h  = shading::make_same_hemisphere(wo,
                 if is_transmission { 
-                    vec3_halfway_refractive(wi, wo, closure.eta)
+                    vec3_halfway_refractive(wi, wo, closure.refractive_eta)
                 } else { 
                     vec3_halfway(wi, wo)
                 }),
@@ -350,11 +355,11 @@ fn @make_principled_bsdf(surf: SurfaceElement,
         let pwo     = shading::make_positive_hemisphere(wo);
         let pwi     = vec3_neg(shading::make_positive_hemisphere(wi));
         let micro   = principled::getRefractionMicro(closure);
-        let H       = vec3_halfway_refractive(pwi, pwo, closure.eta);
+        let H       = vec3_halfway_refractive(pwi, pwo, closure.refractive_eta);
         let cos_h_i = vec3_dot(pwi, H);
         let cos_h_o = vec3_dot(pwo, H);
 
-        math_builtins::fabs(bound_spec_pdf(micro.pdf(pwi, pwo, H)) * shading::halfway_refractive_jacobian(closure.eta, cos_h_i, cos_h_o))
+        math_builtins::fabs(bound_spec_pdf(micro.pdf(pwi, pwo, H)) * shading::halfway_refractive_jacobian(closure.refractive_eta, cos_h_i, cos_h_o))
     }
 
     fn @pdf(in_dir: Vec3, out_dir: Vec3) -> f32 {            
@@ -418,13 +423,13 @@ fn @make_principled_bsdf(surf: SurfaceElement,
 
                     let cos_h_o = vec3_dot(pwo, H);
 
-                    if let Option[FresnelTerm]::Some(fr) = fresnel(closure.eta, cos_h_o) {
-                        let pwi = vec3_normalize(vec3_refract(pwo, H, closure.eta, cos_h_o, fr.cos_t));
+                    if let Option[FresnelTerm]::Some(fr) = fresnel(closure.refractive_eta, cos_h_o) {
+                        let pwi = vec3_normalize(vec3_refract(pwo, H, closure.refractive_eta, cos_h_o, fr.cos_t));
 
                         if !shading::is_same_hemisphere(pwo, pwi) && cos_h_o > flt_eps && -shading::cos_theta(pwi) > grazing_eps  {
                             let wi = vec3_neg(shading::make_same_hemisphere(wo, pwi));
                             DirSample { dir = wi, 
-                                        pdf = math_builtins::fabs(s.pdf * shading::halfway_refractive_jacobian(closure.eta, vec3_dot(pwi, H), cos_h_o)) * lobes.spec_trans + diffPdf_local(wo, wi) * lobes.diff_trans }
+                                        pdf = math_builtins::fabs(s.pdf * shading::halfway_refractive_jacobian(closure.refractive_eta, vec3_dot(pwi, H), cos_h_o)) * lobes.spec_trans + diffPdf_local(wo, wi) * lobes.diff_trans }
                         } else {
                             s_return(reject_bsdf_sample()) 
                         }
@@ -465,8 +470,8 @@ fn @make_principled_bsdf(surf: SurfaceElement,
             if sample.pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
-                let spread  = if adjoint && !closure.thin && !shading::is_same_hemisphere(wo, sample.dir) { 1 / (closure.eta * closure.eta) } else { 1 };
-                let s_eta   = if closure.thin || shading::is_same_hemisphere(wo, sample.dir) { 1 } else { closure.eta };
+                let spread  = if adjoint && !closure.thin && !shading::is_same_hemisphere(wo, sample.dir) { 1 / (closure.refractive_eta * closure.refractive_eta) } else { 1 };
+                let s_eta   = if closure.thin || shading::is_same_hemisphere(wo, sample.dir) { 1 } else { closure.refractive_eta };
                 let in_dir  = shading::to_world(surf.local, sample.dir);
                 
                 make_bsdf_sample(in_dir, sample.pdf, color_mulf(eval(in_dir, out_dir), spread / sample.pdf), s_eta)

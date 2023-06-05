@@ -66,7 +66,8 @@
       "flatness": 0.0,
       "specular_transmission": 0.0,
       "specular_tint": 0.0,
-      "ior": 1.45
+      "reflective_ior": 1.7887885053796064,
+      "refractive_ior": 1.4500000476837158
     },
     {
       "type": "transform",

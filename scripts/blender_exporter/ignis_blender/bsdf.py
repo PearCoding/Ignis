@@ -136,20 +136,17 @@ def _export_principled_bsdf(ctx, bsdf, export_name):
     clearcoat = export_node(ctx, bsdf.inputs["Clearcoat"])
     clearcoat_roughness = export_node(
         ctx, bsdf.inputs["Clearcoat Roughness"])
-    ior = export_node(ctx, bsdf.inputs["IOR"])
 
-    # FIXME: Does not work as intended
-    # has_transmission = try_extract_node_value(transmission, default=1) > 0
-
-    # if not has_transmission:
-    #     # Map specular variable to our IOR interpretation
-    #     ior = _map_specular_to_ior(specular)
+    refr_ior = export_node(ctx, bsdf.inputs["IOR"])
+    # Map specular variable to our IOR interpretation
+    refl_ior = _map_specular_to_ior(specular)
 
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name, "base_color": base_color, "metallic": metallic,
                            "roughness": roughness, "anisotropic": anisotropic, "sheen": sheen, "sheen_tint": sheen_tint,
                            "clearcoat": clearcoat, "clearcoat_roughness": clearcoat_roughness, "flatness": subsurface,
-                           "specular_transmission": transmission, "specular_tint": specular_tint, "ior": ior})
+                           "specular_transmission": transmission, "specular_tint": specular_tint,
+                           "reflective_ior": refl_ior, "refractive_ior": refr_ior})
 
 
 def _export_add_bsdf(ctx, bsdf, export_name):
