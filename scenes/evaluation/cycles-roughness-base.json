@@ -1,8 +1,7 @@
 {
   "technique": {
     "type": "path",
-    "max_depth": 32,
-    "clamp": 100.0
+    "max_depth": 32
   },
   "camera": {
     "type": "perspective",
@@ -42,8 +41,8 @@
     },
     {
       "type": "ply",
-      "name": "IcosphereHQ",
-      "filename": "meshes/IcosphereHQ.ply"
+      "name": "Mesh",
+      "filename": "meshes/Mesh.ply"
     }
   ],
   "bsdfs": [
@@ -51,28 +50,6 @@
       "type": "diffuse",
       "name": "Ground",
       "reflectance": "select(checkerboard(uvw * 10.0) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0))"
-    },
-    {
-      "type": "principled",
-      "name": "Material_inner",
-      "base_color": "mix(_tex_0((uvw).xy), max(_tex_0((uvw).xy), color(0.0, 0.002233547391369939, 0.5, 1.0)), clamp(1.0,0,1))",
-      "metallic": 0.95,
-      "roughness": 0.16,
-      "anisotropic": 0.0,
-      "sheen": 0.0,
-      "sheen_tint": 0.5,
-      "clearcoat": 0.0,
-      "clearcoat_roughness": 0.029999999329447746,
-      "flatness": 0.0,
-      "specular_transmission": 0.0,
-      "specular_tint": 0.0,
-      "ior": 1.45
-    },
-    {
-      "type": "transform",
-      "name": "Material",
-      "bsdf": "Material_inner",
-      "normal": "ensure_valid_reflection(Ng, V, bump(N, Nx, Ny, 1.0, (((luminance(_tex_0(((vec3(0.001, 0, 0) + uvw)).xy)))-(luminance(_tex_0((uvw).xy))))/0.001), (((luminance(_tex_0(((vec3(0.0, 0.001, 0) + uvw)).xy)))-(luminance(_tex_0((uvw).xy))))/0.001)))"
     }
   ],
   "entities": [
@@ -97,12 +74,11 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     },
     {
-      "name": "IcosphereHQ-IcosphereHQ",
-      "shape": "IcosphereHQ",
+      "name": "IcosphereHQ-Mesh",
+      "shape": "Mesh",
       "bsdf": "Material",
       "transform": [
         1.0,
@@ -121,8 +97,7 @@
         0.0,
         0.0,
         1.0
-      ],
-      "shadow_visible": true
+      ]
     }
   ],
   "lights": [

@@ -57,16 +57,11 @@ fn @tint_color(color: Color) -> Color {
 }
 fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(color_builtins::white, tint_color(color), tint);
 
-fn @compute_roughness(roughness: f32, anisotropic: f32) -> (f32, f32) {
-    let aspect = if ?anisotropic && anisotropic == 0 { 1 } else { math_builtins::sqrt[f32](1 - super::clampf(anisotropic, 0, 1) * 0.9) };
-    let ax	   = roughness * roughness / aspect;
-    let ay	   = roughness * roughness * aspect;
-    (ax, ay)
-}
-
 fn @getMicro(closure: Closure) -> microfacet::MicrofacetDistribution {
     let face_normal = shading::to_local(closure.surf.local, closure.surf.face_normal);
-    microfacet::make_vndf_ggx_distribution(face_normal, super::mat3x3_identity(), closure.roughness_u, closure.roughness_v)
+    microfacet::make_vndf_ggx_distribution(face_normal, super::mat3x3_identity(),
+        math_builtins::fmax[f32](1e-3, closure.roughness_u * closure.roughness_u),
+        math_builtins::fmax[f32](1e-3, closure.roughness_v * closure.roughness_v))
 }
 
 fn @getReflectionMicro(closure: Closure) = getMicro(closure);

@@ -47,7 +47,7 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
         input.Stream << "let ru = " << input.Tree.getInline("roughness_u") << ";"
                      << "let rv = " << input.Tree.getInline("roughness_v") << ";";
     } else {
-        input.Stream << "let (ru, rv) = principled::compute_roughness(" << input.Tree.getInline("roughness") << "," << input.Tree.getInline("anisotropic") << ");";
+        input.Stream << "let (ru, rv) = microfacet::compute_explicit(" << input.Tree.getInline("roughness") << "," << input.Tree.getInline("anisotropic") << ");";
     }
 
     input.Stream << "make_principled_bsdf(ctx.surf, "

@@ -56,8 +56,8 @@
       "type": "principled",
       "name": "Material_inner",
       "base_color": "mix(_tex_0((uvw).xy), max(_tex_0((uvw).xy), color(0.0, 0.002233547391369939, 0.5, 1.0)), clamp(1.0,0,1))",
-      "metallic": 0.949999988079071,
-      "roughness": 0.1599999964237213,
+      "metallic": 0.95,
+      "roughness": 0.16,
       "anisotropic": 0.0,
       "sheen": 0.0,
       "sheen_tint": 0.5,
@@ -66,7 +66,7 @@
       "flatness": 0.0,
       "specular_transmission": 0.0,
       "specular_tint": 0.0,
-      "ior": 1.7887885053796064
+      "ior": 1.45
     },
     {
       "type": "transform",

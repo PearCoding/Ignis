@@ -138,11 +138,12 @@ def _export_principled_bsdf(ctx, bsdf, export_name):
         ctx, bsdf.inputs["Clearcoat Roughness"])
     ior = export_node(ctx, bsdf.inputs["IOR"])
 
-    has_transmission = try_extract_node_value(transmission, default=1) > 0
+    # FIXME: Does not work as intended
+    # has_transmission = try_extract_node_value(transmission, default=1) > 0
 
-    if not has_transmission:
-        # Map specular variable to our IOR interpretation
-        ior = _map_specular_to_ior(specular)
+    # if not has_transmission:
+    #     # Map specular variable to our IOR interpretation
+    #     ior = _map_specular_to_ior(specular)
 
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name, "base_color": base_color, "metallic": metallic,
