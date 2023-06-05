@@ -272,6 +272,7 @@ void TriMesh::transform(const Transformf& t)
         n = transform.applyNormal(n);
 }
 
+/// @brief Simple pair key. It is associative (a,b) == (b,a)
 struct EdgeKey {
     uint32 A;
     uint32 B;
@@ -635,7 +636,7 @@ std::optional<PlaneShape> TriMesh::getAsPlane() const
 
 std::optional<SphereShape> TriMesh::getAsSphere() const
 {
-    constexpr float SphereEPS   = 1e-5f;
+    constexpr float SphereEPS   = 1e-4f;
     constexpr float Sphere90EPS = 1e-7f;
 
     // A sphere requires a sufficient amount of resolution. We pick some empirical value
@@ -650,9 +651,9 @@ std::optional<SphereShape> TriMesh::getAsSphere() const
         return std::nullopt;
 
     // Check if it is symmetric
-    const float wh = std::abs(bbox.diameter().x() - bbox.diameter().y());
-    const float wd = std::abs(bbox.diameter().x() - bbox.diameter().z());
-    const float hd = std::abs(bbox.diameter().y() - bbox.diameter().z());
+    const float wh = std::abs((bbox.diameter().x() - bbox.diameter().y()) / std::max(1e-5f, bbox.diameter().x() + bbox.diameter().y()));
+    const float wd = std::abs((bbox.diameter().x() - bbox.diameter().z()) / std::max(1e-5f, bbox.diameter().x() + bbox.diameter().z()));
+    const float hd = std::abs((bbox.diameter().y() - bbox.diameter().z()) / std::max(1e-5f, bbox.diameter().y() + bbox.diameter().z()));
     if (wh > SphereEPS || wd > SphereEPS || hd > SphereEPS)
         return std::nullopt;
 
@@ -672,27 +673,31 @@ std::optional<SphereShape> TriMesh::getAsSphere() const
     }
 
     const auto getFaceNormal = [&](size_t t) {
-        Vector3f v0 = vertices.at(indices.at(t * 4 + 0));
-        Vector3f v1 = vertices.at(indices.at(t * 4 + 1));
-        Vector3f v2 = vertices.at(indices.at(t * 4 + 2));
+        const Vector3f v0 = vertices.at(indices.at(t * 4 + 0));
+        const Vector3f v1 = vertices.at(indices.at(t * 4 + 1));
+        const Vector3f v2 = vertices.at(indices.at(t * 4 + 2));
         return computeTriangleNormal(v0, v1, v2).normalized();
     };
 
+    const auto halfEdges = computeHalfEdges();
+
     // Some more complex test to ensure not to detect our default cylinder as a sphere.
-    const size_t triangles = indices.size() / 4;
-    for (size_t t = 0; t < triangles; ++t) {
-        Vector3f N = getFaceNormal(t);
-        if (N.hasNaN()) // Zero area triangles are always bad
+    for (size_t id = 0; id < halfEdges.size(); ++id) {
+        const auto he = halfEdges[id];
+        if (he.Twin == NoHalfEdgeTwin)
+            continue;
+
+        const Vector3f N1 = getFaceNormal(id / 3);
+        if (N1.hasNaN()) // Zero area triangles are always bad
             return std::nullopt;
 
-        // Check if any normal is 90° to eachother. This should never be the case for a sphere.
-        for (size_t t2 = 0; t2 < triangles; ++t2) {
-            if (t == t2)
-                continue;
-            Vector3f N2 = getFaceNormal(t2);
-            if (std::abs(N.dot(N2)) <= Sphere90EPS) // Be strict about the 90° rule. This might be insufficient if the sphere has too great resolution.
-                return std::nullopt;
-        }
+        const Vector3f N2 = getFaceNormal(he.Twin / 3);
+        if (N2.hasNaN()) // Zero area triangles are always bad
+            return std::nullopt;
+
+        // Check if any normal is 90° to to its neighbors. This should never be the case for a sphere.
+        if (std::abs(N1.dot(N2)) <= Sphere90EPS)
+            return std::nullopt;
     }
 
     // Make sure all sides have geometry present. This is not a perfect solution, but a huge improvement nevertheless
@@ -723,6 +728,45 @@ std::optional<SphereShape> TriMesh::getAsSphere() const
 
     // The given sphere is only approximative. Texture coordinates are ignored and actual face connectivities (indices) are also neglected
     return shape;
+}
+
+std::vector<TriMesh::HalfEdge> TriMesh::computeHalfEdges() const
+{
+    const size_t triangles = faceCount();
+
+    std::vector<TriMesh::HalfEdge> halfEdges;
+    halfEdges.reserve(triangles * 3);
+
+    EdgeMap edges; // always [e0, e1]...
+    edges.reserve(triangles * 3);
+
+    for (size_t t = 0; t < triangles; ++t) {
+        const uint32 id = t * 3;
+        for (uint32 k = 0; k < 3 /*Triangle*/; ++k) {
+            const uint32 v  = indices[t * 4 + k];
+            const uint32 vn = indices[t * 4 + (k + 1) % 3];
+
+            HalfEdge he = {
+                v,
+                NoHalfEdgeTwin,   // Will be set later
+                id + (k + 1) % 3, // Next
+                id + (k + 2) % 3  // Previous
+            };
+
+            halfEdges.emplace_back(he);
+
+            // Setup half edge face twins
+            if (const auto it = edges.find(EdgeKey(v, vn)); it != edges.end()) {
+                IG_ASSERT(halfEdges[it->second].Vertex == vn, "Expected well oriented vertices");
+                halfEdges[id + k].Twin     = it->second;
+                halfEdges[it->second].Twin = id + k;
+            } else {
+                edges.emplace(EdgeKey(v, vn), id + k);
+            }
+        }
+    }
+
+    return halfEdges;
 }
 
 inline static void addTriangle(TriMesh& mesh, const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis)
@@ -809,6 +853,9 @@ inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f
 
 TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices)
 {
+    stacks = std::max<uint32>(2, stacks);
+    slices = std::max<uint32>(2, slices);
+
     TriMesh mesh;
 
     const uint32 count = slices * stacks;
@@ -816,12 +863,12 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
     mesh.normals.reserve(count);
     mesh.texcoords.reserve(count);
 
-    float drho   = 3.141592f / (float)stacks;
-    float dtheta = 2 * 3.141592f / (float)slices;
+    float drho   = Pi / (float)stacks;
+    float dtheta = 2 * Pi / (float)slices;
 
     // TODO: We create a 2*stacks of redundant vertices at the two critical points... remove them
     // Vertices
-    for (uint32 i = 0; i <= stacks; ++i) {
+    for (uint32 i = 0; i < stacks; ++i) {
         float rho  = (float)i * drho;
         float srho = std::sin(rho);
         float crho = std::cos(rho);
@@ -844,18 +891,15 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
     }
 
     // Indices
-    for (uint32 i = 0; i <= stacks; ++i) {
-        const uint32 currSliceOff = i * slices;
-        const uint32 nextSliceOff = ((i + 1) % (stacks + 1)) * slices;
+    mesh.indices.reserve(stacks * slices * 8);
+    for (uint32 i = 0; i < stacks - 1; ++i) {
+        const uint32 c = (i + 0) * slices;
+        const uint32 n = (i + 1) * slices;
 
         for (uint32 j = 0; j < slices; ++j) {
-            const uint32 nextJ = ((j + 1) % slices);
-            const uint32 id0   = currSliceOff + j;
-            const uint32 id1   = currSliceOff + nextJ;
-            const uint32 id2   = nextSliceOff + j;
-            const uint32 id3   = nextSliceOff + nextJ;
-
-            mesh.indices.insert(mesh.indices.end(), { id2, id3, id1, 0, id2, id1, id0, 0 });
+            const uint32 nj = (j + 1) % slices;
+            mesh.indices.insert(mesh.indices.end(), { c + j, n + j, n + nj, 0,
+                                                      c + j, n + nj, c + nj, 0 });
         }
     }
 
