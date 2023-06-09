@@ -41,8 +41,8 @@
     },
     {
       "type": "ply",
-      "name": "Mesh",
-      "filename": "meshes/Mesh.ply"
+      "name": "IcosphereHQ",
+      "filename": "meshes/IcosphereHQ.ply"
     }
   ],
   "bsdfs": [
@@ -78,7 +78,7 @@
     },
     {
       "name": "IcosphereHQ-Mesh",
-      "shape": "Mesh",
+      "shape": "IcosphereHQ",
       "bsdf": "Material",
       "transform": [
         1.0,
