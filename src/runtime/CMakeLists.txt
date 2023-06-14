@@ -90,6 +90,8 @@ set(SRC
   container/PointKdTree.h
   container/PointKdTree.inl
   container/PositionGetter.h
+  device/AnyDSLRuntime.cpp
+  device/AnyDSLRuntime.h
   device/Device.cpp
   device/Device.h
   device/ShaderKey.h
@@ -302,7 +304,7 @@ if(NOT WIN32)
   target_link_libraries(ig_lib_runtime PUBLIC Threads::Threads)
 endif()
 
-target_link_libraries(ig_lib_runtime PUBLIC std::filesystem PRIVATE ${AnyDSL_runtime_LIBRARIES} ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB pexpr)
+target_link_libraries(ig_lib_runtime PUBLIC std::filesystem PRIVATE ${AnyDSL_runtime_LIBRARIES} pugixml TBB::tbb TBB::tbbmalloc ZLIB::ZLIB pexpr)
 target_include_directories(ig_lib_runtime SYSTEM PUBLIC ${eigen_SOURCE_DIR})
 target_include_directories(ig_lib_runtime SYSTEM PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS} ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/include)
 target_include_directories(ig_lib_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)

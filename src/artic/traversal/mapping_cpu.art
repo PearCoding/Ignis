@@ -80,7 +80,7 @@ fn @make_cpu_node8(j: i32, nodes: &[Node8]) = Node {
 // Special bbox intersectors
 
 fn @make_cpu_entity_leaf(j: i32, objs: &[EntityLeaf1]) -> EntityLeaf {
-    let d  = make_cpu_buffer(&objs(j) as &[f32], 0);
+    let d  = make_cpu_shallow_buffer(&objs(j) as &[f32], 0);
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
     let m  = d.load_mat3x4(8);

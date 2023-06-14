@@ -22,7 +22,8 @@ fn @bake_texture2d(device: Device, func: fn(ShadingContext)->Color, w: i32, h: i
     }
     device.sync();
 
-    buffer_out.copy_to_host(0, size*4, output as &mut [i32]);
+    buffer_out.copy_to_host_async(0, size*4, output as &mut [i32]);
+    device.sync();
 }
 
 fn @sum_texture2d(device: Device, func: fn(ShadingContext)->Color, w: i32, h: i32) -> Color {

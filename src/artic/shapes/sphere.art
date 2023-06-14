@@ -74,7 +74,7 @@ fn @make_sphere_shape(sphere: Sphere) -> Shape {
 
 type SphereTable  = fn (i32) -> Sphere;
 
-fn @load_sphere(data: DeviceBuffer) -> Sphere {
+fn @load_sphere(data: ShallowBuffer) -> Sphere {
     let e0 = data.load_vec4(0);
     
     Sphere {

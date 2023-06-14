@@ -1,13 +1,50 @@
 #include "Target.h"
 #include "StringUtils.h"
 
-#include "anydsl_runtime.h"
+#include "AnyDSLRuntime.h"
 
 #if defined(IG_OS_WINDOWS)
 #include <intrin.h>
 #endif
 
+#include <unordered_set>
+
 namespace IG {
+struct SysLookup {
+    std::vector<AnyDSLDeviceInfo> Infos;
+    std::unordered_set<AnyDSLDeviceType> DeviceTypes;
+
+    inline static const SysLookup& instance()
+    {
+        static SysLookup sys;
+        return sys;
+    }
+
+private:
+    SysLookup()
+    {
+        setup();
+    }
+
+    inline void setup()
+    {
+        size_t count;
+        IG_CHECK_ANYDSL(anydslEnumerateDevices(&count, nullptr));
+
+        Infos.resize(count);
+        // Init
+        for (size_t i = 0; i < count; ++i) {
+            Infos[i].sType = AnyDSL_STRUCTURE_TYPE_DEVICE_INFO;
+            Infos[i].pNext = nullptr;
+        }
+
+        IG_CHECK_ANYDSL(anydslEnumerateDevices(&count, Infos.data()));
+
+        for (size_t i = 0; i < count; ++i)
+            DeviceTypes.emplace(Infos[i].deviceType);
+    }
+};
+
 Target::Target()
     : mInitialized(false)
     , mGPU(false)
@@ -85,11 +122,13 @@ GPUArchitecture Target::getGPUArchitectureFromString(const std::string& str)
 
 std::vector<std::string> Target::getAvailableCPUArchitectureNames()
 {
+    // All possible
     return { "ARM", "x86" };
 }
 
 std::vector<std::string> Target::getAvailableGPUArchitectureNames()
 {
+    // All possible
     return { "AMD", "Intel", "Nvidia" };
 }
 
@@ -337,23 +376,9 @@ Target Target::pickCPU()
 
 Target Target::pickGPU(size_t device)
 {
-#ifdef AnyDSL_runtime_HAS_CUDA_SUPPORT
-    bool hasNvidiaSupport = true;
-#else
-    bool hasNvidiaSupport = false;
-#endif
-
-#ifdef AnyDSL_runtime_HAS_HSA_SUPPORT
-    bool hasAMDSupport = true;
-#else
-    bool hasAMDSupport    = false;
-#endif
-
-    // TODO: Runtime check?
-
-    if (hasNvidiaSupport)
+    if (SysLookup::instance().DeviceTypes.count(AnyDSL_DEVICE_CUDA) > 0)
         return makeGPU(GPUArchitecture::Nvidia, device);
-    else if (hasAMDSupport)
+    else if (SysLookup::instance().DeviceTypes.count(AnyDSL_DEVICE_HSA) > 0)
         return makeGPU(GPUArchitecture::AMD, device);
     else
         return makeGPU(GPUArchitecture::Unknown, device);

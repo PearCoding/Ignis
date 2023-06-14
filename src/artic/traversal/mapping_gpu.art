@@ -6,7 +6,7 @@ struct Node2 {
     pad:    [i32 * 2]
 }
 
-fn @make_gpu_node(j: i32, nodes: &[Node2], accessor: DeviceBufferAccessor) -> Node {
+fn @make_gpu_node(j: i32, nodes: &[Node2], accessor: ShallowBufferAccessor) -> Node {
     let d = accessor(&nodes(j) as &[f32], 0);
     
     let bb0      = d.load_vec4( 0);
@@ -29,7 +29,7 @@ fn @make_gpu_node(j: i32, nodes: &[Node2], accessor: DeviceBufferAccessor) -> No
     }
 }
 
-fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], accessor: DeviceBufferAccessor) -> EntityLeaf {
+fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], accessor: ShallowBufferAccessor) -> EntityLeaf {
     let d  = accessor(&objs(j) as &[f32], 0);
     let e0 = d.load_vec4(0);
     let e1 = d.load_vec4(4);
@@ -45,7 +45,7 @@ fn @make_gpu_ent(j: i32, objs: &[EntityLeaf1], accessor: DeviceBufferAccessor) -
     )
 }
 
-fn @make_gpu_bvh2_ent(nodes: &[Node2], objs: &[EntityLeaf1], accessor: DeviceBufferAccessor) -> SceneBvh {
+fn @make_gpu_bvh2_ent(nodes: &[Node2], objs: &[EntityLeaf1], accessor: ShallowBufferAccessor) -> SceneBvh {
     SceneBvh {
         node     = @ |j| @make_gpu_node(j, nodes, accessor),
         ent      = @ |j| @make_gpu_ent( j, objs , accessor),

@@ -60,7 +60,7 @@ fn @load_simple_spot_lights(count: i32, id_off: i32, device: Device) -> LightTab
     LightTable {
         count = count,
         get   = @|id| {
-            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+            let data = shift_shallow_buffer(elem_s * id, elem_s, tbl);
 
             let position  = data.load_vec4(0);
             let direction = data.load_vec4(4);

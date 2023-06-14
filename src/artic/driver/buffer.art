@@ -7,11 +7,14 @@ struct DeviceBuffer {
     min_atomic_i32: fn (i32, i32) -> i32,
     max_atomic_i32: fn (i32, i32) -> i32,
 
-    load_i32_host:  fn (i32) -> i32,     // Load from device to host
-    store_i32_host: fn (i32, i32) -> (), // Store from host to device
+    load_i32_host:  fn (i32) -> i32,     // Load from device to host. Will sync
+    store_i32_host: fn (i32, i32) -> (), // Store from host to device. Will sync
 
-    copy_from_host: fn (i32, i32, &[i32]) -> (),     // Copy from device (s, e) to host (0, e-s)
-    copy_to_host:   fn (i32, i32, &mut [i32]) -> (), // Copy from host (0, e-s) to device (s, e)
+    copy_from_host_async: fn (i32, i32, &[i32]) -> (),     // Copy from device (s, e) to host (0, e-s). Async!
+    copy_to_host_async:   fn (i32, i32, &mut [i32]) -> (), // Copy from host (0, e-s) to device (s, e). Async!
+
+    fill_i32_host_async: fn (i32, i32, i32) -> (), // Fill buffer from the host side. Async!
+    fill_f32_host_async: fn (i32, i32, f32) -> (), // Fill buffer from the host side. Async!
 
     load_i32:       fn (i32) -> i32,
     load_f32:       fn (i32) -> f32,
@@ -35,9 +38,10 @@ struct DeviceBuffer {
     store_mat3x3:   fn (i32, Mat3x3) -> (),
     store_mat3x4:   fn (i32, Mat3x4) -> (),
     store_mat4x4:   fn (i32, Mat4x4) -> (),
+
+    handle:         u64,
     pointer:        fn (i32) -> &[f32],
     count:          i32, // Given in units of i32, not bytes! Zero if unknown
-    has_alignment:  bool // True if vec2, vec3, int2 and int3 are expected to be like vec4 or int4 in memory
 }
 
 fn @make_null_device_buffer() = DeviceBuffer {
@@ -47,8 +51,10 @@ fn @make_null_device_buffer() = DeviceBuffer {
     max_atomic_i32 = @|_, _| 0:i32,
     load_i32_host  = @|_| 0:i32,
     store_i32_host = @|_, _| {},
-    copy_from_host = @|_, _, _| {},
-    copy_to_host   = @|_, _, _| {},
+    copy_from_host_async = @|_, _, _| {},
+    copy_to_host_async   = @|_, _, _| {},
+    fill_i32_host_async  = @|_, _, _| {},
+    fill_f32_host_async  = @|_, _, _| {},
     load_i32       = @|_| 0:i32,
     load_f32       = @|_| 0:f32,
     load_vec2      = @|_| make_vec2(0,0),
@@ -71,9 +77,9 @@ fn @make_null_device_buffer() = DeviceBuffer {
     store_mat3x3   = @|_, _| {},
     store_mat3x4   = @|_, _| {},
     store_mat4x4   = @|_, _| {},
+    handle         = 0,
     pointer        = @|_| 0 as &[f32],
-    count          = 0,
-    has_alignment  = true
+    count          = 0
 };
 
 fn @shift_device_buffer(off: i32, count: i32, buffer: DeviceBuffer) = DeviceBuffer {
@@ -83,8 +89,10 @@ fn @shift_device_buffer(off: i32, count: i32, buffer: DeviceBuffer) = DeviceBuff
     max_atomic_i32 = @|id, v| buffer.max_atomic_i32(id + off, v),
     load_i32_host  = @|id| buffer.load_i32_host(id + off),
     store_i32_host = @|id, v| buffer.store_i32_host(id + off, v),
-    copy_from_host = @|s, e, ptr| buffer.copy_from_host(s + off, e + off, ptr),
-    copy_to_host   = @|s, e, ptr| buffer.copy_to_host(s + off, e + off, ptr),
+    copy_from_host_async = @|s, e, ptr| buffer.copy_from_host_async(s + off, e + off, ptr),
+    copy_to_host_async   = @|s, e, ptr| buffer.copy_to_host_async(s + off, e + off, ptr),
+    fill_i32_host_async  = @|s, e, v| buffer.fill_i32_host_async(s + off, e + off, v),
+    fill_f32_host_async  = @|s, e, v| buffer.fill_f32_host_async(s + off, e + off, v),
     load_i32       = @|id| buffer.load_i32(id + off),
     load_f32       = @|id| buffer.load_f32(id + off),
     load_vec2      = @|id| buffer.load_vec2(id + off),
@@ -107,10 +115,44 @@ fn @shift_device_buffer(off: i32, count: i32, buffer: DeviceBuffer) = DeviceBuff
     store_mat3x3   = @|id, v| buffer.store_mat3x3(id + off, v),
     store_mat3x4   = @|id, v| buffer.store_mat3x4(id + off, v),
     store_mat4x4   = @|id, v| buffer.store_mat4x4(id + off, v),
+    handle         = buffer.handle,
     pointer        = @|id| buffer.pointer(id + off),
-    count          = count,
-    has_alignment  = buffer.has_alignment
+    count          = count
+};
+
+// Shallow buffer. Granularity is 4 byte per index. Might be on the host or the device. Read only.
+struct ShallowBuffer {
+    load_i32:    fn (i32) -> i32,
+    load_f32:    fn (i32) -> f32,
+    load_vec2:   fn (i32) -> Vec2,
+    load_vec3:   fn (i32) -> Vec3,
+    load_vec4:   fn (i32) -> Vec4,
+    load_int2:   fn (i32) -> (i32, i32),
+    load_int3:   fn (i32) -> (i32, i32, i32),
+    load_int4:   fn (i32) -> (i32, i32, i32, i32),
+    load_mat3x3: fn (i32) -> Mat3x3,
+    load_mat3x4: fn (i32) -> Mat3x4,
+    load_mat4x4: fn (i32) -> Mat4x4,
+    pointer:     fn (i32) -> &[f32],
+    count:       i32, // Given in units of i32, not bytes! Zero if unknown.
+}
+
+fn @shift_shallow_buffer(off: i32, count: i32, buffer: ShallowBuffer) = ShallowBuffer {
+    load_i32    = @|id| buffer.load_i32(id + off),
+    load_f32    = @|id| buffer.load_f32(id + off),
+    load_vec2   = @|id| buffer.load_vec2(id + off),
+    load_vec3   = @|id| buffer.load_vec3(id + off),
+    load_vec4   = @|id| buffer.load_vec4(id + off),
+    load_int2   = @|id| buffer.load_int2(id + off),
+    load_int3   = @|id| buffer.load_int3(id + off),
+    load_int4   = @|id| buffer.load_int4(id + off),
+    load_mat3x3 = @|id| buffer.load_mat3x3(id + off),
+    load_mat3x4 = @|id| buffer.load_mat3x4(id + off),
+    load_mat4x4 = @|id| buffer.load_mat4x4(id + off),
+    pointer     = @|id| buffer.pointer(id + off),
+    count       = count
 };
 
 // Device buffer accessor
-type DeviceBufferAccessor = fn (&[f32], i32) -> DeviceBuffer;
+type DeviceBufferAccessor  = fn (u64, &[f32], i32) -> DeviceBuffer;
+type ShallowBufferAccessor = fn (&[f32], i32)      -> ShallowBuffer;

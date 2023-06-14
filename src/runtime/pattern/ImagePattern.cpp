@@ -58,7 +58,7 @@ void ImagePattern::serialize(const SerializationInput& input) const
 
     const size_t channel_count = Image::extractChannelCount(filename);
 
-    input.Stream << "  let img_" << tex_id << "_res_id = device.get_local_parameter_i32(\"img_" << tex_id << "\", 0);" << std::endl;
+    input.Stream << "  let img_" << tex_id << "_res_id = registry::get_local_parameter_i32(\"img_" << tex_id << "\", 0);" << std::endl;
     if (!force_unpacked && Image::isPacked(filename))
         input.Stream << "  let img_" << tex_id << " = device.load_packed_image_by_id(img_" << tex_id << "_res_id, " << channel_count << ", " << (linear ? "true" : "false") << ");" << std::endl;
     else

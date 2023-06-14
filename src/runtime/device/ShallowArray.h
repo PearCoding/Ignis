@@ -1,8 +1,6 @@
 #pragma once
 
-#include "IG_Config.h"
-
-#include <anydsl_runtime.hpp>
+#include "AnyDSLRuntime.h"
 
 /// Some arrays do not need new allocations at the host if the data is already provided and properly arranged.
 /// However, this assumes that the pointer is always properly aligned!
@@ -12,52 +10,52 @@ template <typename T>
 class ShallowArray {
 public:
     inline ShallowArray()
-        : device_mem()
-        , host_mem(nullptr)
-        , device(0)
-        , size_(0)
+        : mDeviceMem()
+        , mHostMem(nullptr)
+        , mDevice()
+        , mSize(0)
     {
     }
 
-    inline ShallowArray(int32_t dev, const T* ptr, size_t n)
-        : device_mem()
-        , host_mem(nullptr)
-        , device(dev)
-        , size_(n)
+    inline ShallowArray(const anydsl::Device& dev, const T* ptr, size_t n)
+        : mDeviceMem()
+        , mHostMem(nullptr)
+        , mDevice(dev)
+        , mSize(n)
     {
-        if (dev != 0) {
+        if (!dev.isHost()) {
             if (n != 0) {
-                device_mem = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(anydsl_alloc(dev, sizeof(T) * n)), n));
-                anydsl_copy(0, ptr, 0, dev, device_mem.data(), 0, sizeof(T) * n);
+                mDeviceMem = std::move(anydsl::Array<T>(dev, n));
+                IG_CHECK_ANYDSL(anydslCopyBufferFromHost(mDeviceMem.handle(), 0, sizeof(T) * n, ptr));
             }
         } else {
-            host_mem = ptr;
+            mHostMem = ptr;
         }
     }
 
-    inline ShallowArray(ShallowArray&&) = default;
+    inline ShallowArray(ShallowArray&&)            = default;
     inline ShallowArray& operator=(ShallowArray&&) = default;
 
     inline ~ShallowArray() = default;
 
-    inline const anydsl::Array<T>& device_data() const { return device_mem; }
-    inline const T* host_data() const { return host_mem; }
+    inline const anydsl::Array<T>& deviceData() const { return mDeviceMem; }
+    inline const T* hostData() const { return mHostMem; }
 
     inline const T* ptr() const
     {
-        if (is_host())
-            return host_data();
+        if (isHost())
+            return hostData();
         else
-            return device_data().data();
+            return deviceData().data();
     }
 
-    inline bool has_data() const { return ptr() != nullptr && size_ > 0; }
-    inline bool is_host() const { return host_mem != nullptr && device == 0; }
-    inline size_t size() const { return size_; }
+    inline bool hasData() const { return ptr() != nullptr && mSize > 0; }
+    inline bool isHost() const { return mHostMem != nullptr && mDevice.isHost(); }
+    inline size_t size() const { return mSize; }
 
 private:
-    anydsl::Array<T> device_mem;
-    const T* host_mem;
-    int32_t device;
-    size_t size_;
+    anydsl::Array<T> mDeviceMem;
+    const T* mHostMem;
+    anydsl::Device mDevice;
+    size_t mSize;
 };

@@ -3,8 +3,7 @@
 #include "RuntimeInfo.h"
 #include <fstream>
 
-#include <anydsl_jit.h>
-#include <anydsl_runtime.hpp>
+#include "device/AnyDSLRuntime.h"
 
 // Will be populated by api_collector
 extern const char* ig_api[];
@@ -32,29 +31,61 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
         const auto module_path = RuntimeInfo::modulePath();
         if (!module_path.empty()) {
             IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
-            anydsl_link(module_path.generic_string().c_str());
+            AnyDSLJITLinkInfo info{
+                AnyDSL_STRUCTURE_TYPE_JIT_LINK_INFO,
+                nullptr,
+                module_path.generic_string().c_str()
+            };
+            IG_CHECK_ANYDSL(anydslLinkJITLibrary(AnyDSL_NULL_HANDLE, 1, &info));
         }
-
-        const auto cache_dir = RuntimeInfo::cacheDirectory();
-        anydsl_set_cache_directory(cache_dir.generic_string().c_str());
         once = true;
     }
 
-#ifdef IG_DEBUG
-    anydsl_set_log_level(mVerbose ? 1 /* info */ : 4 /* error */);
-#else
-    anydsl_set_log_level(mVerbose ? 3 /* warn */ : 4 /* error */);
-#endif
+    const auto cache_dir = RuntimeInfo::cacheDirectory();
 
-    const int ret = anydsl_compile(script.c_str(), (uint32_t)script.length(), (uint32_t)mOptimizationLevel);
-    if (ret < 0)
+    AnyDSLJITCompileOptions options = {
+        AnyDSL_STRUCTURE_TYPE_JIT_COMPILE_OPTIONS,
+        nullptr,
+        (uint32_t)mOptimizationLevel,
+#if 0//def IG_DEBUG
+        mVerbose ? 1u /* info */ : 4u /* error */,
+#else
+        mVerbose ? 3u /* warn */ : 4u /* error */,
+#endif
+        AnyDSL_COMPILE_LANGUAGE_ARTIC_BIT,
+        AnyDSL_TRUE,
+        cache_dir.c_str()
+    };
+
+    AnyDSLJITCompileResult result = {
+        AnyDSL_STRUCTURE_TYPE_JIT_COMPILE_RESULT,
+        nullptr,
+        nullptr
+    };
+
+    AnyDSLJITModule module;
+    bool res = IG_CHECK_ANYDSL(anydslCompileJIT(script.c_str(), script.length(), &module, &options, &result));
+
+    if (result.logOutput)
+        IG_LOG(L_ERROR) << "JIT: " << result.logOutput << std::endl;
+
+    IG_CHECK_ANYDSL(anydslFreeJITCompileResult(&result));
+
+    if (!res)
         return nullptr;
 
-    void* callback = anydsl_lookup_function(ret, function.c_str());
-    if (callback == nullptr)
+    AnyDSLJITLookupInfo lookupInfo{
+        AnyDSL_STRUCTURE_TYPE_JIT_LOOKUP_INFO,
+        nullptr,
+        nullptr
+    };
+
+    res = IG_CHECK_ANYDSL(anydslLookupJIT(module, function.c_str(), &lookupInfo));
+
+    if (!res || lookupInfo.pHandle == nullptr)
         IG_LOG(L_ERROR) << "Could not find function '" << function << "' in compiled script" << std::endl;
 
-    return callback;
+    return const_cast<void*>(lookupInfo.pHandle);
 }
 
 std::string ScriptCompiler::prepare(const std::string& script) const

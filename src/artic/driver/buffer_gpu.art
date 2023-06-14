@@ -15,112 +15,184 @@ struct DeviceBufferGlobalElementAccessor {
     load_vi32: fn (&addrspace(1)[i32], i32) -> (i32, i32, i32, i32)
 }
 
-fn @make_gpu_buffer(dev: i32, p: &addrspace(1)[f32], count: i32, atomics: Atomics, access: DeviceBufferGlobalElementAccessor) -> DeviceBuffer {
-    DeviceBuffer {
-        add_atomic_i32 = @ |i, v| atomics.add_global_i32(&mut ((p as &mut [i32])(i)), v),
-        add_atomic_f32 = @ |i, v| atomics.add_global_f32(&mut ((p as &mut [f32])(i)), v),
-        min_atomic_i32 = @ |i, v| atomics.min_global_i32(&mut ((p as &mut [i32])(i)), v),
-        max_atomic_i32 = @ |i, v| atomics.max_global_i32(&mut ((p as &mut [i32])(i)), v),
-        load_i32_host  = @ |i| {
-            let mut host_data: i32;
-            runtime_copy(dev, &p(i) as &[i8], 0 /* Src Offset */, 0 /* Host */, &mut host_data as &mut [i8], 0 /* Dst Offset */, sizeof[i32]());
-            host_data
-        },
-        store_i32_host = @ |i, v| {
-            let host_data = v;
-            runtime_copy(0 /* Host */, &host_data as &[i8], 0 /* Src Offset */, dev, &p(i) as &mut [i8], 0 /* Dst Offset */, sizeof[i32]());
-        },
-        copy_from_host = @ |s, e, ptr| {
-            let size = e - s;
-            runtime_copy(0 /* Host */, ptr as &[i8], 0 /* Src Offset */, dev, &p(s) as &mut [i8], 0 /* Dst Offset */, sizeof[i32]() * size as i64);
-        },
-        copy_to_host   = @ |s, e, ptr| {
-            let size = e - s;
-            runtime_copy(dev, &p(s) as &[i8], 0 /* Src Offset */, 0 /* Host */, ptr as &mut [i8], 0 /* Dst Offset */, sizeof[i32]() * size as i64);
-        },
-        load_f32  = @ |i| access.load_f32(p, i),
-        load_i32  = @ |i| access.load_i32(p as &addrspace(1)[i32], i),
-        load_vec2 = @ |i| {
-            let v = access.load_vf32(p, i);
-            make_vec2(v.0, v.1)
-        },
-        load_vec3 = @ |i| {
-            let v = access.load_vf32(p, i);
-            make_vec3(v.0, v.1, v.2)
-        },
-        load_vec4 = @ |i| {
-            let v = access.load_vf32(p, i);
-            make_vec4(v.0, v.1, v.2, v.3)
-        },
-        load_int2 = @ |i| {
-            let v = access.load_vi32(p as &addrspace(1)[i32], i);
-            (v.0, v.1)
-        },
-        load_int3 = @ |i| {
-            let v = access.load_vi32(p as &addrspace(1)[i32], i);
-            (v.0, v.1, v.2)
-        },
-        load_int4 = @ |i| {
-            let v = access.load_vi32(p as &addrspace(1)[i32], i);
-            (v.0, v.1, v.2, v.3)
-        },
-        load_mat3x3 = @ |i| {
-            let v0 = access.load_vf32(p, i + 0);
-            let v1 = access.load_vf32(p, i + 4);
-            let v2 = access.load_vf32(p, i + 8);
-            make_mat3x3(make_vec3(v0.0, v0.1, v0.2),
-                        make_vec3(v0.3, v1.0, v1.1), 
-                        make_vec3(v1.2, v1.3, v2.0))
-        },
-        load_mat3x4 = @ |i| {
-            let v0 = access.load_vf32(p, i + 0);
-            let v1 = access.load_vf32(p, i + 4);
-            let v2 = access.load_vf32(p, i + 8);
-            make_mat3x4(make_vec3(v0.0, v0.1, v0.2),
-                        make_vec3(v0.3, v1.0, v1.1),
-                        make_vec3(v1.2, v1.3, v2.0),
-                        make_vec3(v2.1, v2.2, v2.3))
-        },
-        load_mat4x4 = @ |i| {
-            let v0 = access.load_vf32(p, i +  0);
-            let v1 = access.load_vf32(p, i +  4);
-            let v2 = access.load_vf32(p, i +  8);
-            let v3 = access.load_vf32(p, i + 12);
-            make_mat4x4(make_vec4(v0.0, v0.1, v0.2, v0.3),
-                        make_vec4(v1.0, v1.1, v1.2, v1.3),
-                        make_vec4(v2.0, v2.1, v2.2, v2.3), 
-                        make_vec4(v3.0, v3.1, v3.2, v3.3))
-        },
-        store_i32     = @ |i, v| { (p as &mut addrspace(1)[i32])(i) = v; },
-        store_f32     = @ |i, v| { (p as &mut addrspace(1)[f32])(i) = v; },
-        store_vec2    = @ |i, v| { let q = p as &mut addrspace(1)[f32]; q(i + 0) = v.x; q(i + 1) = v.y; },
-        store_vec3    = @ |i, v| { let q = p as &mut addrspace(1)[f32]; q(i + 0) = v.x; q(i + 1) = v.y; q(i + 2) = v.z; },
-        store_vec4    = @ |i, v| { let q = p as &mut addrspace(1)[f32]; q(i + 0) = v.x; q(i + 1) = v.y; q(i + 2) = v.z; q(i + 3) = v.w; },
-        store_int2    = @ |i, v1, v2|         { let q = p as &mut addrspace(1)[i32]; q(i + 0) = v1; q(i + 1) = v2; },
-        store_int3    = @ |i, v1, v2, v3|     { let q = p as &mut addrspace(1)[i32]; q(i + 0) = v1; q(i + 1) = v2; q(i + 2) = v3; },
-        store_int4    = @ |i, v1, v2, v3, v4| { let q = p as &mut addrspace(1)[i32]; q(i + 0) = v1; q(i + 1) = v2; q(i + 2) = v3; q(i + 3) = v4; },
-        store_mat3x3  = @ |i, v| { 
-            let q = p as &mut addrspace(1)[f32];
-            q(i + 0) = v.col(0).x; q(i + 1) = v.col(0).y; q(i + 2) = v.col(0).z;
-            q(i + 3) = v.col(1).x; q(i + 4) = v.col(1).y; q(i + 5) = v.col(1).z;
-            q(i + 6) = v.col(2).x; q(i + 7) = v.col(2).y; q(i + 8) = v.col(2).z;
-        },
-        store_mat3x4  = @ |i, v| { 
-            let q = p as &mut addrspace(1)[f32];
-            q(i + 0) = v.col(0).x; q(i +  1) = v.col(0).y; q(i +  2) = v.col(0).z;
-            q(i + 3) = v.col(1).x; q(i +  4) = v.col(1).y; q(i +  5) = v.col(1).z;
-            q(i + 6) = v.col(2).x; q(i +  7) = v.col(2).y; q(i +  8) = v.col(2).z;
-            q(i + 9) = v.col(3).x; q(i + 10) = v.col(3).y; q(i + 11) = v.col(3).z;
-        },
-        store_mat4x4  = @ |i, v| { 
-            let q = p as &mut addrspace(1)[f32];
-            q(i +  0) = v.col(0).x; q(i +  1) = v.col(0).y; q(i +  2) = v.col(0).z; q(i +  3) = v.col(0).w;
-            q(i +  4) = v.col(1).x; q(i +  5) = v.col(1).y; q(i +  6) = v.col(1).z; q(i +  7) = v.col(1).w;
-            q(i +  8) = v.col(2).x; q(i +  9) = v.col(2).y; q(i + 10) = v.col(2).z; q(i + 11) = v.col(2).w;
-            q(i + 12) = v.col(3).x; q(i + 13) = v.col(3).y; q(i + 14) = v.col(3).z; q(i + 15) = v.col(3).w;
-        },
-        pointer       = @ |i| &p(i) as &[f32],
-        count         = count,
-        has_alignment = true
-    }
-}
+fn @make_gpu_buffer(handle: u64, p: &addrspace(1)[f32], count: i32, atomics: Atomics, access: DeviceBufferGlobalElementAccessor) = DeviceBuffer {
+    add_atomic_i32 = @ |i, v| atomics.add_global_i32(&mut ((p as &mut [i32])(i)), v),
+    add_atomic_f32 = @ |i, v| atomics.add_global_f32(&mut ((p as &mut [f32])(i)), v),
+    min_atomic_i32 = @ |i, v| atomics.min_global_i32(&mut ((p as &mut [i32])(i)), v),
+    max_atomic_i32 = @ |i, v| atomics.max_global_i32(&mut ((p as &mut [i32])(i)), v),
+    load_i32_host  = @ |i| {
+        let mut host_data: i32;
+        anydsl_copy_buffer_to_host(&mut host_data as &mut [i8], handle, i as i64, sizeof[i32]());
+        anydsl_synchronize_buffer(handle);
+        host_data
+    },
+    store_i32_host = @ |i, v| {
+        let host_data = v;
+        anydsl_copy_buffer_from_host(&host_data as &[i8], handle, i as i64, sizeof[i32]());
+        anydsl_synchronize_buffer(handle);
+
+        // runtime_copy(0 /* Host */, &host_data as &[i8], 0 /* Src Offset */, dev, &p(i) as &mut [i8], 0 /* Dst Offset */, sizeof[i32]());
+    },
+    copy_from_host_async = @ |s, e, ptr| {
+        let size = e - s;
+        anydsl_copy_buffer_from_host(ptr as &[i8], handle, s as i64, sizeof[i32]() * size as i64);
+        // runtime_copy(0 /* Host */, ptr as &[i8], 0 /* Src Offset */, dev, &p(s) as &mut [i8], 0 /* Dst Offset */, sizeof[i32]() * size as i64);
+    },
+    copy_to_host_async = @ |s, e, ptr| {
+        let size = e - s;
+        anydsl_copy_buffer_to_host(ptr as &mut [i8], handle, s as i64, sizeof[i32]() * size as i64);
+        // runtime_copy(dev, &p(s) as &[i8], 0 /* Src Offset */, 0 /* Host */, ptr as &mut [i8], 0 /* Dst Offset */, sizeof[i32]() * size as i64);
+    },
+    
+    fill_i32_host_async = @|s, e, v| {
+        let size = e - s;
+        anydsl_fill_buffer(bitcast[u32](v), handle, s as i64, size as i64 /* Number of elements */)
+    },
+    fill_f32_host_async = @|s, e, v| {
+        let size = e - s;
+        anydsl_fill_buffer(bitcast[u32](v), handle, s as i64, size as i64 /* Number of elements */)
+    },
+
+    load_f32  = @ |i| access.load_f32(p, i),
+    load_i32  = @ |i| access.load_i32(p as &addrspace(1)[i32], i),
+    load_vec2 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec2(v.0, v.1)
+    },
+    load_vec3 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec3(v.0, v.1, v.2)
+    },
+    load_vec4 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec4(v.0, v.1, v.2, v.3)
+    },
+    load_int2 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1)
+    },
+    load_int3 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1, v.2)
+    },
+    load_int4 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1, v.2, v.3)
+    },
+    load_mat3x3 = @ |i| {
+        let v0 = access.load_vf32(p, i + 0);
+        let v1 = access.load_vf32(p, i + 4);
+        let v2 = access.load_vf32(p, i + 8);
+        make_mat3x3(make_vec3(v0.0, v0.1, v0.2),
+                    make_vec3(v0.3, v1.0, v1.1), 
+                    make_vec3(v1.2, v1.3, v2.0))
+    },
+    load_mat3x4 = @ |i| {
+        let v0 = access.load_vf32(p, i + 0);
+        let v1 = access.load_vf32(p, i + 4);
+        let v2 = access.load_vf32(p, i + 8);
+        make_mat3x4(make_vec3(v0.0, v0.1, v0.2),
+                    make_vec3(v0.3, v1.0, v1.1),
+                    make_vec3(v1.2, v1.3, v2.0),
+                    make_vec3(v2.1, v2.2, v2.3))
+    },
+    load_mat4x4 = @ |i| {
+        let v0 = access.load_vf32(p, i +  0);
+        let v1 = access.load_vf32(p, i +  4);
+        let v2 = access.load_vf32(p, i +  8);
+        let v3 = access.load_vf32(p, i + 12);
+        make_mat4x4(make_vec4(v0.0, v0.1, v0.2, v0.3),
+                    make_vec4(v1.0, v1.1, v1.2, v1.3),
+                    make_vec4(v2.0, v2.1, v2.2, v2.3), 
+                    make_vec4(v3.0, v3.1, v3.2, v3.3))
+    },
+    store_i32     = @ |i, v| { (p as &mut addrspace(1)[i32])(i) = v; },
+    store_f32     = @ |i, v| { (p as &mut addrspace(1)[f32])(i) = v; },
+    store_vec2    = @ |i, v| { let q = p as &mut addrspace(1)[f32]; q(i + 0) = v.x; q(i + 1) = v.y; },
+    store_vec3    = @ |i, v| { let q = p as &mut addrspace(1)[f32]; q(i + 0) = v.x; q(i + 1) = v.y; q(i + 2) = v.z; },
+    store_vec4    = @ |i, v| { let q = p as &mut addrspace(1)[f32]; q(i + 0) = v.x; q(i + 1) = v.y; q(i + 2) = v.z; q(i + 3) = v.w; },
+    store_int2    = @ |i, v1, v2|         { let q = p as &mut addrspace(1)[i32]; q(i + 0) = v1; q(i + 1) = v2; },
+    store_int3    = @ |i, v1, v2, v3|     { let q = p as &mut addrspace(1)[i32]; q(i + 0) = v1; q(i + 1) = v2; q(i + 2) = v3; },
+    store_int4    = @ |i, v1, v2, v3, v4| { let q = p as &mut addrspace(1)[i32]; q(i + 0) = v1; q(i + 1) = v2; q(i + 2) = v3; q(i + 3) = v4; },
+    store_mat3x3  = @ |i, v| { 
+        let q = p as &mut addrspace(1)[f32];
+        q(i + 0) = v.col(0).x; q(i + 1) = v.col(0).y; q(i + 2) = v.col(0).z;
+        q(i + 3) = v.col(1).x; q(i + 4) = v.col(1).y; q(i + 5) = v.col(1).z;
+        q(i + 6) = v.col(2).x; q(i + 7) = v.col(2).y; q(i + 8) = v.col(2).z;
+    },
+    store_mat3x4  = @ |i, v| { 
+        let q = p as &mut addrspace(1)[f32];
+        q(i + 0) = v.col(0).x; q(i +  1) = v.col(0).y; q(i +  2) = v.col(0).z;
+        q(i + 3) = v.col(1).x; q(i +  4) = v.col(1).y; q(i +  5) = v.col(1).z;
+        q(i + 6) = v.col(2).x; q(i +  7) = v.col(2).y; q(i +  8) = v.col(2).z;
+        q(i + 9) = v.col(3).x; q(i + 10) = v.col(3).y; q(i + 11) = v.col(3).z;
+    },
+    store_mat4x4  = @ |i, v| { 
+        let q = p as &mut addrspace(1)[f32];
+        q(i +  0) = v.col(0).x; q(i +  1) = v.col(0).y; q(i +  2) = v.col(0).z; q(i +  3) = v.col(0).w;
+        q(i +  4) = v.col(1).x; q(i +  5) = v.col(1).y; q(i +  6) = v.col(1).z; q(i +  7) = v.col(1).w;
+        q(i +  8) = v.col(2).x; q(i +  9) = v.col(2).y; q(i + 10) = v.col(2).z; q(i + 11) = v.col(2).w;
+        q(i + 12) = v.col(3).x; q(i + 13) = v.col(3).y; q(i + 14) = v.col(3).z; q(i + 15) = v.col(3).w;
+    },
+    handle        = handle,
+    pointer       = @ |i| &p(i) as &[f32],
+    count         = count
+};
+
+fn @make_gpu_shallow_buffer(p: &addrspace(1)[f32], count: i32, access: DeviceBufferGlobalElementAccessor) = ShallowBuffer {
+    load_f32  = @ |i| access.load_f32(p, i),
+    load_i32  = @ |i| access.load_i32(p as &addrspace(1)[i32], i),
+    load_vec2 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec2(v.0, v.1)
+    },
+    load_vec3 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec3(v.0, v.1, v.2)
+    },
+    load_vec4 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec4(v.0, v.1, v.2, v.3)
+    },
+    load_int2 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1)
+    },
+    load_int3 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1, v.2)
+    },
+    load_int4 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1, v.2, v.3)
+    },
+    load_mat3x3 = @ |i| {
+        let v0 = access.load_vf32(p, i + 0);
+        let v1 = access.load_vf32(p, i + 4);
+        let v2 = access.load_vf32(p, i + 8);
+        make_mat3x3(make_vec3(v0.0, v0.1, v0.2),
+                    make_vec3(v0.3, v1.0, v1.1), 
+                    make_vec3(v1.2, v1.3, v2.0))
+    },
+    load_mat3x4 = @ |i| {
+        let v0 = access.load_vf32(p, i + 0);
+        let v1 = access.load_vf32(p, i + 4);
+        let v2 = access.load_vf32(p, i + 8);
+        make_mat3x4(make_vec3(v0.0, v0.1, v0.2),
+                    make_vec3(v0.3, v1.0, v1.1),
+                    make_vec3(v1.2, v1.3, v2.0),
+                    make_vec3(v2.1, v2.2, v2.3))
+    },
+    load_mat4x4 = @ |i| {
+        let v0 = access.load_vf32(p, i +  0);
+        let v1 = access.load_vf32(p, i +  4);
+        let v2 = access.load_vf32(p, i +  8);
+        let v3 = access.load_vf32(p, i + 12);
+        make_mat4x4(make_vec4(v0.0, v0.1, v0.2, v0.3),
+                    make_vec4(v1.0, v1.1, v1.2, v1.3),
+                    make_vec4(v2.0, v2.1, v2.2, v2.3), 
+                    make_vec4(v3.0, v3.1, v3.2, v3.3))
+    },
+    pointer   = @ |i| &p(i) as &[f32],
+    count     = count
+};

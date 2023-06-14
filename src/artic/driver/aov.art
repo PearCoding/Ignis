@@ -69,3 +69,12 @@ fn @make_rv_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -
         }
     }
 }
+
+// TODO: Factor this out and just use the standard AOV interface
+fn @get_main_framebuffer_data() -> (&mut [f32], i32, i32) {
+    let mut film_pixels : &mut [f32];
+    let mut film_width  : i32;
+    let mut film_height : i32;
+    ignis_get_film_data(&mut film_pixels, &mut film_width, &mut film_height);
+    (film_pixels, film_width, film_height)
+}

@@ -9,10 +9,10 @@ struct Entity {
 
 type EntityTable = fn (i32) -> Entity;
 
-fn @make_entity_table(tbl: DeviceBuffer) -> EntityTable {
+fn @make_entity_table(tbl: ShallowBuffer) -> EntityTable {
     let elem_s = 36; // Given in floats. See LoaderEntity.cpp (optimized)
     @ |id| {
-        let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+        let data = shift_shallow_buffer(elem_s * id, elem_s, tbl);
 
         let local_mat  = data.load_mat3x4(0);
         let global_mat = data.load_mat3x4(12);

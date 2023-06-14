@@ -72,7 +72,7 @@ fn @make_trimesh_shape(tri_mesh: TriMesh) -> Shape {
 
 type TriMeshTable  = fn (i32) -> TriMesh;
 
-fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, _num_tex: i32, data: DeviceBuffer) -> TriMesh {
+fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, _num_tex: i32, data: ShallowBuffer) -> TriMesh {
     let bbox = make_bbox(data.load_vec3(4), data.load_vec3(8));
 
     let v_start   = 12;
@@ -90,7 +90,7 @@ fn @make_trimesh_from_buffer(num_face: i32, num_verts: i32, num_norms: i32, _num
     }
 }
 
-fn @load_trimesh(data: DeviceBuffer) -> TriMesh {
+fn @load_trimesh(data: ShallowBuffer) -> TriMesh {
     let (num_face, num_verts, num_norms, num_tex) = data.load_int4(0);
     make_trimesh_from_buffer(num_face, num_verts, num_norms, num_tex, data)
 }
@@ -143,7 +143,7 @@ fn @make_cpu_tri_prim(tris: &[Tri4]) -> fn (i32) -> Prim {
     }
 }
 
-fn @make_gpu_tri_prim(j: i32, tris: &[Tri1], accessor: DeviceBufferAccessor) -> Prim {
+fn @make_gpu_tri_prim(j: i32, tris: &[Tri1], accessor: ShallowBufferAccessor) -> Prim {
     let d = accessor(&tris(j) as &[f32], 0);
 
     let tri0    = d.load_vec4(0);
@@ -189,7 +189,7 @@ fn @make_cpu_bvh8_tri4(nodes: &[Node8], tris: &[Tri4]) = PrimBvh {
     arity = 8
 };
 
-fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], acc: DeviceBufferAccessor) -> PrimBvh {
+fn @make_gpu_bvh2_tri1(nodes: &[Node2], tris: &[Tri1], acc: ShallowBufferAccessor) -> PrimBvh {
     PrimBvh {
         node     = @ |j| @make_gpu_node(j, nodes, acc),
         prim     = @ |j| @make_gpu_tri_prim(j, tris, acc),
@@ -202,7 +202,7 @@ fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
     let dtb = device.load_fixtable("trimesh_primbvh");
 
     @ |off| {
-        let header      = shift_device_buffer(off as i32, 0, dtb);
+        let header      = shift_shallow_buffer(off as i32, 0, dtb);
         let leaf_offset = header.load_i32(0);
 
         if vector_width >= 8 {
@@ -219,10 +219,10 @@ fn @make_cpu_trimesh_bvh_table(device: Device, vector_width: i32) -> BVHTable {
 
 fn @make_gpu_trimesh_bvh_table(device: Device) -> BVHTable {
     let dtb = device.load_fixtable("trimesh_primbvh");
-    let acc = device.get_device_buffer_accessor();
+    let acc = device.get_shallow_buffer_accessor();
 
     @ |off| {
-        let header      = shift_device_buffer(off as i32, 0, dtb);
+        let header      = shift_shallow_buffer(off as i32, 0, dtb);
         let leaf_offset = header.load_i32(0);
 
         let nodes = header.pointer(4) as &[Node2];

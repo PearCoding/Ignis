@@ -13,7 +13,8 @@ fn test_add_reduction_gpu() -> bool {
     acc.sync();
 
     let mut value: i64;
-    runtime_copy(tmp.device, tmp.data as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[i64]());
+    copy_to_host(tmp, &mut value as &mut [i8], sizeof[i64]());
+    acc.sync();
     release(tmp);
 
     let result = (N as i64  - 1) * N as i64 / 2;
@@ -33,7 +34,8 @@ fn test_max_reduction_gpu() -> bool {
     acc.sync();
 
     let mut value: f32;
-    runtime_copy(tmp.device, tmp.data as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[f32]());
+    copy_to_host(tmp, &mut value as &mut [i8], sizeof[f32]());
+    acc.sync();
     release(tmp);
 
     let result = (N-1) as f32;

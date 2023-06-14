@@ -8,7 +8,7 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
     let size  = width * height;
     let scale = settings.scale;
 
-    let buffer_in = device.make_buffer(in_pixels, size * 3); 
+    let buffer_in = device.make_buffer_view(in_pixels, size * 3); 
     // Due to misalignment we can not make use of load_vec3
     let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
     let get_elem  = @|i:i32| srgb_to_xyY(color_mulf(make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1), scale)).b; // Only luminance
@@ -30,7 +30,8 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
     }
     host_arr(0) = bitcast[i32](flt_max);
 
-    global_data.copy_from_host(0, 8, host_arr);
+    global_data.copy_from_host_async(0, 8, host_arr);
+    device.sync();
 
     let do_soft = width > 10 && height > 10;
     if do_soft {
@@ -91,7 +92,8 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
 
     device.sync();
 
-    global_data.copy_to_host(0, 8, host_arr);
+    global_data.copy_to_host_async(0, 8, host_arr);
+    device.sync();
 
     if do_soft {
         output.soft_min = bitcast[f32](host_arr(0));
@@ -145,10 +147,10 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
         device.sync();
 
         // Copy histogram to host
-        dev_histogram_r.copy_to_host(0, histogram_bin_count, settings.histogram_r);
-        dev_histogram_g.copy_to_host(0, histogram_bin_count, settings.histogram_g);
-        dev_histogram_b.copy_to_host(0, histogram_bin_count, settings.histogram_b);
-        dev_histogram_l.copy_to_host(0, histogram_bin_count, settings.histogram_l);
+        dev_histogram_r.copy_to_host_async(0, histogram_bin_count, settings.histogram_r);
+        dev_histogram_g.copy_to_host_async(0, histogram_bin_count, settings.histogram_g);
+        dev_histogram_b.copy_to_host_async(0, histogram_bin_count, settings.histogram_b);
+        dev_histogram_l.copy_to_host_async(0, histogram_bin_count, settings.histogram_l);
         device.sync();
         stats::end_section(stats::Section::ImageInfoHistogram);
     }

@@ -3,7 +3,7 @@ fn @cpu_load_vec4(p: &[f32], elem: i32) {
     make_vec4(v(0), v(1), v(2), v(3)) 
 }
 
-fn @make_cpu_buffer(p: &[f32], count: i32) = DeviceBuffer {
+fn @make_cpu_buffer(handle: u64, p: &[f32], count: i32) = DeviceBuffer {
     add_atomic_i32 = @ |i, v| cpu_atomic_add_i32(&(p as &[i32])(i) as &mut i32, v),
     add_atomic_f32 = @ |i, v| cpu_atomic_add_f32(&mut ((p as &mut [f32])(i)), v),
     min_atomic_i32 = @ |i, v| cpu_atomic_min_i32(&mut ((p as &mut [i32])(i)), v),
@@ -12,14 +12,25 @@ fn @make_cpu_buffer(p: &[f32], count: i32) = DeviceBuffer {
     load_i32_host  = @ |i| (p as &[i32])(i),
     store_i32_host = @ |i, v| { (p as &mut [i32])(i) = v; },
 
-    copy_from_host = @ |s, e, ptr| {
+    copy_from_host_async = @ |s, e, ptr| {
         for i in safe_unroll(s, e) {
             (p as &mut [i32])(i) = ptr(i);
         }
     },
-    copy_to_host   = @ |s, e, ptr| {
+    copy_to_host_async = @ |s, e, ptr| {
         for i in safe_unroll(s, e) {
             ptr(i) = (p as &[i32])(i);
+        }
+    },
+    
+    fill_i32_host_async = @|s, e, v| {
+        for i in safe_unroll(s, e) {
+            (p as &mut [i32])(i) = v;
+        }
+    },
+    fill_f32_host_async = @|s, e, v| {
+        for i in safe_unroll(s, e) {
+            (p as &mut [f32])(i) = v;
         }
     },
 
@@ -85,21 +96,62 @@ fn @make_cpu_buffer(p: &[f32], count: i32) = DeviceBuffer {
         q(i +  8) = v.col(2).x; q(i +  9) = v.col(2).y; q(i + 10) = v.col(2).z; q(i + 11) = v.col(2).w;
         q(i + 12) = v.col(3).x; q(i + 13) = v.col(3).y; q(i + 14) = v.col(3).z; q(i + 15) = v.col(3).w;
     },
+    handle        = handle,
     pointer       = @ |i| &p(i) as &[f32],
-    count         = count,
-    has_alignment = false
+    count         = count
 };
 
 fn @load_cpu_buffer(filename: &[u8]) {
+    let mut handle   : u64;
     let mut ptr      : &[u8];
     let mut bytesize : i32;
-    ignis_load_buffer(0, filename, &mut ptr, &mut bytesize);
-    make_cpu_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
+    ignis_load_buffer(filename, &mut handle, &mut ptr, &mut bytesize);
+    make_cpu_buffer(handle, ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
 }
 
 fn @load_cpu_buffer_by_id(id: i32) {
+    let mut handle   : u64;
     let mut ptr      : &[u8];
     let mut bytesize : i32;
-    ignis_load_buffer_by_id(0, id, &mut ptr, &mut bytesize);
-    make_cpu_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
+    ignis_load_buffer_by_id(id, &mut handle, &mut ptr, &mut bytesize);
+    make_cpu_buffer(handle, ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
 }
+
+fn @make_cpu_shallow_buffer(p: &[f32], count: i32) = ShallowBuffer {
+    load_f32    = @ |i| p(i),
+    load_i32    = @ |i| (p as &[i32])(i),
+    load_vec2   = @ |i| { make_vec2(p(i + 0), p(i + 1)) },
+    load_vec3   = @ |i| { make_vec3(p(i + 0), p(i + 1), p(i + 2)) },
+    load_vec4   = @ |i| { let v = (&p(i) as &[simd[f32 * 4]])(0); make_vec4(v(0), v(1), v(2), v(3)) },
+    load_int2   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1)) },
+    load_int3   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2)) },
+    //load_int4   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2), q(i + 3)) },
+    load_int4   = @ |i| { let v = ((&p(i)) as &[simd[i32 * 4]])(0); (v(0), v(1), v(2), v(3)) },
+    load_mat3x3 = @ |i| {  
+        make_mat3x3(make_vec3(p(i + 0), p(i + 1), p(i + 2)),
+                    make_vec3(p(i + 3), p(i + 4), p(i + 5)),
+                    make_vec3(p(i + 6), p(i + 7), p(i + 8))) },
+    load_mat3x4 = @ |i| {
+        let q  = &p(i) as &[simd[f32 * 4]];
+        let v0 = q(0);
+        let v1 = q(1);
+        let v2 = q(2);
+        make_mat3x4(make_vec3(v0(0), v0(1), v0(2)),
+                    make_vec3(v0(3), v1(0), v1(1)),
+                    make_vec3(v1(2), v1(3), v2(0)),
+                    make_vec3(v2(1), v2(2), v2(3)))
+    },
+    load_mat4x4 = @ |i| {
+        let q  = &p(i) as &[simd[f32 * 4]];
+        let v0 = q(0);
+        let v1 = q(1);
+        let v2 = q(2);
+        let v3 = q(3);
+        make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
+                    make_vec4(v1(0), v1(1), v1(2), v1(3)),
+                    make_vec4(v2(0), v2(1), v2(2), v2(3)),
+                    make_vec4(v3(0), v3(1), v3(2), v3(3)))
+    },
+    pointer  = @ |i| &p(i) as &[f32],
+    count    = count
+};

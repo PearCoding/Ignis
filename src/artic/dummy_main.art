@@ -5,14 +5,11 @@ fn ig_callback_shader(_settings: &Settings) -> () {
     // Force the export of the primary and secondary stream types
     let mut primary : PrimaryStream;
     let mut secondary : SecondaryStream;
-    ignis_get_primary_stream(  0, 0, &mut primary,   0);
-    ignis_get_secondary_stream(0, 0, &mut secondary, 0);
+    ignis_get_primary_stream(  0, &mut primary,   0);
+    ignis_get_secondary_stream(0, &mut secondary, 0);
 
     let mut temp_host : TemporaryStorageHost;
-    ignis_get_temporary_storage_host(0, &mut temp_host);
-
-    let mut temp_dev : TemporaryStorageDevice;
-    ignis_get_temporary_storage_device(0, &mut temp_dev);
+    ignis_get_temporary_storage_host(&mut temp_host);
 
     let mut work_info : WorkInfo;
     ignis_get_work_info(&mut work_info);
@@ -23,16 +20,16 @@ fn ig_callback_shader(_settings: &Settings) -> () {
     let mut node8 : &[Node8];
     let mut entityleaf : &[EntityLeaf1];
     
-    ignis_load_bvh2_ent(0, "", &mut node2, &mut entityleaf);
-    ignis_load_bvh4_ent(0, "", &mut node4, &mut entityleaf);
-    ignis_load_bvh8_ent(0, "", &mut node8, &mut entityleaf);
+    ignis_load_bvh2_ent("", &mut node2, &mut entityleaf);
+    ignis_load_bvh4_ent("", &mut node4, &mut entityleaf);
+    ignis_load_bvh8_ent("", &mut node8, &mut entityleaf);
 
     // Force the export
     let mut tbl : DynTableData;
-    ignis_load_dyntable(0, "", &mut tbl);
+    ignis_load_dyntable("", &mut tbl);
 
     let mut rays : &[StreamRay];
-    ignis_load_rays(0, &mut rays);
+    ignis_load_rays(&mut rays);
 }
 
 #[export]

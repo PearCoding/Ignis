@@ -4,6 +4,7 @@
 #include "StringUtils.h"
 #include "loader/LoaderCamera.h"
 #include "loader/Parser.h"
+#include "device/AnyDSLRuntime.h"
 
 #include <chrono>
 #include <fstream>
@@ -93,6 +94,8 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mTechniqueVariantShaderSets()
 {
     checkCacheDirectory();
+    anydslInit(); // Setup log and other stuff
+    anydslInspect();
 
     // Configure compiler
     mCompiler.setOptimizationLevel(std::min<size_t>(3, mOptions.ShaderOptimizationLevel));

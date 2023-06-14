@@ -1,60 +1,61 @@
+
+
 struct ParallelReduceHandler {
-    is_gpu: bool,
-    dev_id: i32,
-    acc:    Accelerator,
-    config: GPUKernelConfiguration
+    is_gpu:  bool,
+    req_buf: DeviceRequestBufferFn,
+    acc:     Accelerator,
+    config:  GPUKernelConfiguration
 }
 
 fn @make_cpu_parallel_reduce_handler() = ParallelReduceHandler { 
-    is_gpu = false,
-    dev_id = 0,
-    acc    = undef[Accelerator](),
-    config = undef[GPUKernelConfiguration]() 
+    is_gpu  = false,
+    req_buf = undef[DeviceRequestBufferFn](),
+    acc     = undef[Accelerator](),
+    config  = undef[GPUKernelConfiguration]() 
 };
-fn @make_gpu_parallel_reduce_handler(dev_id: i32, acc: Accelerator, config: GPUKernelConfiguration) = ParallelReduceHandler {
-    is_gpu = true,
-    dev_id = dev_id,
-    acc    = acc,
-    config = config
+fn @make_gpu_parallel_reduce_handler(req_buf: DeviceRequestBufferFn, acc: Accelerator, config: GPUKernelConfiguration) = ParallelReduceHandler {
+    is_gpu  = true,
+    req_buf = req_buf,
+    acc     = acc,
+    config  = config
 };
 
 /// Used to abstract the T in a more generic way
 fn @reduce[T](handler: ParallelReduceHandler, n: i32, elem: fn (i32) -> T, op: fn (T, T) -> T) -> T {
     if handler.is_gpu {
-        gpu_handle_device_reduce[T](handler.dev_id, handler.acc, handler.config, n, elem, op)
+        gpu_handle_device_reduce[T](handler, n, elem, op)
     } else {
         cpu_reduce[T](n, elem, op)
     }
 }
 
 /// GPU specific
-fn @gpu_handle_device_reduce[T]( dev_id: i32
-                               , acc: Accelerator
-                               , config: GPUKernelConfiguration
+fn @gpu_handle_device_reduce[T]( handler: ParallelReduceHandler
                                , n: i32
                                , elem: fn (i32) -> T
                                , op: fn (T, T) -> T) -> T {
     fn @reducer(block_size: i32) -> T {
         // TODO: This forces us to only use one reduce call at a single time (which is fair tbh)
-        let mut tmp_ptr : &[u8];
-        ignis_request_buffer(dev_id, "__dev_tmp_reduce", &mut tmp_ptr, sizeof[T]() as i32, 0);
+        let tmp_buffer = handler.req_buf("__dev_tmp_reduce", round_up(sizeof[T]() as i32, sizeof[f32]() as i32) / sizeof[f32]() as i32);
 
-        let kernel_ptr = tmp_ptr as &mut addrspace(1)[T];
-        gpu_reduce[T](acc, n, block_size,
+        let kernel_ptr = tmp_buffer.pointer(0) as &mut addrspace(1)[T];
+        gpu_reduce[T](handler.acc, n, block_size,
             elem, op,
             @|v| kernel_ptr(0) = v
         );
-        acc.sync();
+        handler.acc.sync();
 
         let mut value: T;
-        runtime_copy(dev_id, tmp_ptr as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[T]());
+        tmp_buffer.copy_to_host_async(0, (sizeof[T]() / sizeof[f32]()) as i32, &mut value as &mut [i32]);
+        handler.acc.sync();
+        // runtime_copy(dev_id, tmp_ptr as &[i8], 0, 0 /* Host */, &mut value as &mut [i8], 0, sizeof[T]());
         
         value
     }
 
-    if n < config.block_size_parallel_reduce * 10 {
-        reducer(config.block_size_parallel_reduce / 2)      
+    if n < handler.config.block_size_parallel_reduce * 10 {
+        reducer(handler.config.block_size_parallel_reduce / 2)      
     } else {
-        reducer(config.block_size_parallel_reduce)
+        reducer(handler.config.block_size_parallel_reduce)
     }
 }

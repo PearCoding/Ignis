@@ -16,13 +16,13 @@ struct DynTableData {
 struct DynTable {
     count:  u64,
     lookup: fn (i32) -> LookupEntry,
-    data:   fn (u64) -> DeviceBuffer
+    data:   fn (u64) -> ShallowBuffer
 }
 
 fn @join_u32_to_u64(a: u32, b: u32) = ((b as u64) << 32) | (a as u64);
 fn @split_u64_to_u32(a: u64)        = ((a & 0xFFFFFFFF) as u32, ((a >> 32) & 0xFFFFFFFF) as u32);
 
-fn @make_dyntable(tbl: DynTableData, acc: DeviceBufferAccessor) -> DynTable {
+fn @make_dyntable(tbl: DynTableData, acc: ShallowBufferAccessor) -> DynTable {
     fn @get_lookup_entry(ind: i32) -> LookupEntry {
         // TODO: Check boundaries
         //tbl.header(ind)
@@ -35,7 +35,7 @@ fn @make_dyntable(tbl: DynTableData, acc: DeviceBufferAccessor) -> DynTable {
         }
     }
     
-    fn @get_table_entry(off: u64) -> DeviceBuffer {
+    fn @get_table_entry(off: u64) -> ShallowBuffer {
         // TODO: Check boundaries
         acc(&tbl.start(off) as &[f32], 0)
     }

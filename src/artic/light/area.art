@@ -302,7 +302,7 @@ fn @load_simple_area_lights(count: i32, id_off: i32, device: Device, shapes: Sha
     LightTable {
         count = count,
         get   = @|id| {
-            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+            let data = shift_shallow_buffer(elem_s * id, elem_s, tbl);
 
             let local_mat  = data.load_mat3x4(0);
             let global_mat = data.load_mat3x4(12);
@@ -331,7 +331,7 @@ fn @load_simple_plane_lights(count: i32, id_off: i32, device: Device) -> LightTa
     LightTable {
         count = count,
         get   = @|id| {
-            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+            let data = shift_shallow_buffer(elem_s * id, elem_s, tbl);
 
             let origin   = data.load_vec4(0);
             let x_axis   = data.load_vec4(4);
@@ -358,7 +358,7 @@ fn @load_simple_sphere_lights(count: i32, id_off: i32, device: Device) -> LightT
     LightTable {
         count = count,
         get   = @|id| {
-            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+            let data = shift_shallow_buffer(elem_s * id, elem_s, tbl);
 
             let local_mat  = data.load_mat3x4(0);
             let global_mat = data.load_mat3x4(12);

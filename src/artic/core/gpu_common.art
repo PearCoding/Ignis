@@ -20,12 +20,12 @@ fn @  nvvm_likely(cond: bool) = llvm_expect(cond,  true);
 fn @nvvm_unlikely(cond: bool) = llvm_expect(cond, false);
 
 // Simple ranged for
-fn @gpu_exec_1d(acc: Accelerator, dim: i32, block_size: i32, body: fn (WorkItem) -> ()) {
+fn @gpu_exec_1d(acc: Accelerator, name: &[u8], dim: i32, block_size: i32, body: fn (WorkItem) -> ()) {
     // Helper function that deduces the appropriate grid size that is at least larger
     // or equal to `dim`x1x1, and that is a multiple of the block size.
     let grid  = (round_up(dim, block_size), 1, 1);
     let block = (block_size, 1, 1);
-    acc.exec(body)(grid, block);
+    acc.exec_named(name, body)(grid, block);
 }
 
 // Based on https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf with a single warp
@@ -46,7 +46,7 @@ fn @gpu_reduce[T](acc: Accelerator, n: i32, block_size: i32, elem: fn (i32) -> T
         // Not worth pulling out the complex algorithm...
         let grid  = (block_size, 1, 1);
         let block = (block_size, 1, 1);
-        for work_item in acc.exec(grid, block) {
+        acc.exec_named("reduce_simple", @|work_item| {
             let shared = reserve_shared[T](block_size);
             let tid    = work_item.tidx();
             if tid < n {
@@ -62,11 +62,11 @@ fn @gpu_reduce[T](acc: Accelerator, n: i32, block_size: i32, elem: fn (i32) -> T
             }
 
             if tid == 0 { result(shared(0)); } 
-        }
+        })(grid, block);
     } else {
         let grid  = (block_size, 1, 1);
         let block = (block_size, 1, 1);
-        for work_item in acc.exec(grid, block) {
+        acc.exec_named("reduce_complex", @|work_item| {
             let shared = reserve_shared[T](block_size);
             let tid    = work_item.tidx();
 
@@ -85,7 +85,7 @@ fn @gpu_reduce[T](acc: Accelerator, n: i32, block_size: i32, elem: fn (i32) -> T
             }
 
             if tid == 0 { result(shared(0)); } 
-        }
+        })(grid, block);
     }
 }
 

@@ -3,18 +3,18 @@ mod registry {
     use super as all;
 
     fn @get_global_parameter_i32(name: &[u8], def: i32) -> i32 {
-        super::ignis_get_parameter_i32(0, name, def, true)
+        super::ignis_get_parameter_i32(name, def, true)
     }
 
     fn @get_global_parameter_f32(name: &[u8], def: f32) -> f32 {
-        super::ignis_get_parameter_f32(0, name, def, true)
+        super::ignis_get_parameter_f32(name, def, true)
     }
 
     fn @get_global_parameter_vec3(name: &[u8], def: all::Vec3) -> all::Vec3 {
         let mut x: f32;
         let mut y: f32;
         let mut z: f32;
-        super::ignis_get_parameter_vector(0, name, def.x, def.y, def.z, &mut x, &mut y, &mut z, true);
+        super::ignis_get_parameter_vector(name, def.x, def.y, def.z, &mut x, &mut y, &mut z, true);
         super::make_vec3(x, y, z)
     }
 
@@ -23,33 +23,32 @@ mod registry {
         let mut g: f32;
         let mut b: f32;
         let mut a: f32;
-        super::ignis_get_parameter_color(0, name, def.r, def.g, def.b, def.a, &mut r, &mut g, &mut b, &mut a, true);
+        super::ignis_get_parameter_color(name, def.r, def.g, def.b, def.a, &mut r, &mut g, &mut b, &mut a, true);
         super::make_color(r, g, b, a)
     }
 
-    // Use the functions below via the device interface and not directly from here
-    fn @get_local_parameter_i32(dev: i32, name: &[u8], def: i32) -> i32 {
-        super::ignis_get_parameter_i32(dev, name, def, false)
+    fn @get_local_parameter_i32(i32, name: &[u8], def: i32) -> i32 {
+        super::ignis_get_parameter_i32(name, def, false)
     }
 
-    fn @get_local_parameter_f32(dev: i32, name: &[u8], def: f32) -> f32 {
-        super::ignis_get_parameter_f32(dev, name, def, false)
+    fn @get_local_parameter_f32(name: &[u8], def: f32) -> f32 {
+        super::ignis_get_parameter_f32(name, def, false)
     }
 
-    fn @get_local_parameter_vec3(dev: i32, name: &[u8], def: all::Vec3) -> all::Vec3 {
+    fn @get_local_parameter_vec3(name: &[u8], def: all::Vec3) -> all::Vec3 {
         let mut x: f32;
         let mut y: f32;
         let mut z: f32;
-        super::ignis_get_parameter_vector(dev, name, def.x, def.y, def.z, &mut x, &mut y, &mut z, false);
+        super::ignis_get_parameter_vector(name, def.x, def.y, def.z, &mut x, &mut y, &mut z, false);
         super::make_vec3(x, y, z)
     }
 
-    fn @get_local_parameter_color(dev: i32, name: &[u8], def: all::Color) -> all::Color {
+    fn @get_local_parameter_color(name: &[u8], def: all::Color) -> all::Color {
         let mut r: f32;
         let mut g: f32;
         let mut b: f32;
         let mut a: f32;
-        super::ignis_get_parameter_color(dev, name, def.r, def.g, def.b, def.a, &mut r, &mut g, &mut b, &mut a, false);
+        super::ignis_get_parameter_color(name, def.r, def.g, def.b, def.a, &mut r, &mut g, &mut b, &mut a, false);
         super::make_color(r, g, b, a)
     }
 }
