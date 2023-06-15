@@ -1,5 +1,6 @@
 #include "DJMeasuredBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/LoaderContext.h"
 #include "loader/ShadingTree.h"
 #include "measured/djmeasured.h"
@@ -52,4 +53,6 @@ void DJMeasuredBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<DJMeasuredBSDF> sMeasuredBSDF("djmeasured");
 } // namespace IG

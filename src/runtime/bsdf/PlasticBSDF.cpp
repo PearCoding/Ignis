@@ -1,5 +1,6 @@
 #include "PlasticBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -39,4 +40,7 @@ void PlasticBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<PlasticBSDF> sPlasticBSDF("plastic", "roughplastic" /* Deprecated */);
+
 } // namespace IG

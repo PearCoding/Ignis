@@ -21,4 +21,6 @@ void IgnoreBSDF::serialize(const SerializationInput& input) const
                  << "  let bsdf_" << bsdf_id << " = bsdf_" << input.Tree.getClosureID(other) << ";" << std::endl;
     input.Tree.endClosure();
 }
+
+//static BSDFRegister<IgnoreBSDF> sIgnoreBSDF();
 } // namespace IG

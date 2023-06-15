@@ -33,4 +33,6 @@ void DoubleSidedBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<DoubleSidedBSDF> sDSBSDF("twosided", "doublesided");
 } // namespace IG

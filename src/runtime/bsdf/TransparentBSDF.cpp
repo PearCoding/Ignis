@@ -1,5 +1,6 @@
 #include "TransparentBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -18,4 +19,6 @@ void TransparentBSDF::serialize(const SerializationInput& input) const
                  << input.Tree.getInline("color") << ");" << std::endl;
     input.Tree.endClosure();
 }
+
+static BSDFRegister<TransparentBSDF> sTransparentBSDF("transparent");
 } // namespace IG

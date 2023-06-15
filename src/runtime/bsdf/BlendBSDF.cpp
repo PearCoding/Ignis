@@ -57,4 +57,17 @@ void BlendBSDF::serialize(const SerializationInput& input) const
     }
     input.Tree.endClosure();
 }
+
+static std::shared_ptr<BSDF> bsdf_add(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<BlendBSDF>(BlendBSDF::Type::Add, name, obj);
+}
+static BSDFRawRegister sAddBSDF(bsdf_add, "add");
+
+static std::shared_ptr<BSDF> bsdf_mix(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<BlendBSDF>(BlendBSDF::Type::Mix, name, obj);
+}
+static BSDFRawRegister sMixBSDF(bsdf_mix, "blend", "mix");
+
 } // namespace IG

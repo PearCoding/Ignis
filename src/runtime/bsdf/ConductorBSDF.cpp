@@ -1,5 +1,6 @@
 #include "ConductorBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -31,4 +32,8 @@ void ConductorBSDF::serialize(const SerializationInput& input) const
                  << "md_" << bsdf_id << "(ctx));" << std::endl;
     input.Tree.endClosure();
 }
+
+// Register
+static BSDFRegister<ConductorBSDF> sConductorBSDF("mirror", "conductor", "roughconductor" /* Deprecated */);
+
 } // namespace IG

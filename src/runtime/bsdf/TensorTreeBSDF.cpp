@@ -1,5 +1,6 @@
 #include "TensorTreeBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/LoaderContext.h"
 #include "loader/LoaderUtils.h"
 #include "loader/ShadingTree.h"
@@ -66,8 +67,8 @@ void TensorTreeBSDF::serialize(const SerializationInput& input) const
 
     const auto data = setup_tensortree(name(), mBSDF, input.Tree.context());
 
-    const Path buffer_path = std::get<0>(data);
-    const TensorTreeSpecification spec      = std::get<1>(data);
+    const Path buffer_path             = std::get<0>(data);
+    const TensorTreeSpecification spec = std::get<1>(data);
 
     size_t res_id             = input.Tree.context().registerExternalResource(buffer_path);
     const std::string bsdf_id = input.Tree.currentClosureID();
@@ -81,4 +82,7 @@ void TensorTreeBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<TensorTreeBSDF> sTTBSDF("tensortree");
+
 } // namespace IG

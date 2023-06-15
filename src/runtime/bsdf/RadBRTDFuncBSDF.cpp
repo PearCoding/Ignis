@@ -1,5 +1,6 @@
 #include "RadBRTDFuncBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -31,4 +32,6 @@ void RadBRTDFuncBSDF::serialize(const SerializationInput& input) const
                  << input.Tree.getInline("transmission_diffuse") << ");" << std::endl;
     input.Tree.endClosure();
 }
+
+static BSDFRegister<RadBRTDFuncBSDF> sRadBRTDBSDF("rad_brtdfunc");
 } // namespace IG
