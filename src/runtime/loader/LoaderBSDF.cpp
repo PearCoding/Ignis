@@ -19,8 +19,10 @@
 #include "bsdf/PhongBSDF.h"
 #include "bsdf/PlasticBSDF.h"
 #include "bsdf/PrincipledBSDF.h"
+#include "bsdf/RadBRTDFuncBSDF.h"
 #include "bsdf/TensorTreeBSDF.h"
 #include "bsdf/TransformBSDF.h"
+#include "bsdf/TransparentBSDF.h"
 
 namespace IG {
 
@@ -119,20 +121,30 @@ static std::shared_ptr<BSDF> bsdf_doublesided(const std::string& name, const std
     return std::make_shared<PlasticBSDF>(name, obj);
 }
 
+static std::shared_ptr<BSDF> bsdf_rad_brtdfunc(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<RadBRTDFuncBSDF>(name, obj);
+}
+
+static std::shared_ptr<BSDF> bsdf_transparent(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<TransparentBSDF>(name, obj);
+}
+
 using BSDFLoader = std::shared_ptr<BSDF> (*)(const std::string& name, const std::shared_ptr<SceneObject>& obj);
 static const struct {
     const char* Name;
     BSDFLoader Loader;
 } _generators[] = {
     { "diffuse", bsdf_diffuse },
-    { "roughdiffuse", bsdf_diffuse }, // Deprecated
-    { "glass", bsdf_dielectric },     // Deprecated
+    { "roughdiffuse", bsdf_diffuse },       // Deprecated
+    { "glass", bsdf_dielectric },           // Deprecated
     { "dielectric", bsdf_dielectric },
     { "roughdielectric", bsdf_dielectric }, // Deprecated
     { "thindielectric", bsdf_dielectric },  // Deprecated
     { "mirror", bsdf_conductor },           // Deprecated
     { "conductor", bsdf_conductor },
-    { "roughconductor", bsdf_conductor }, // Deprecated
+    { "roughconductor", bsdf_conductor },   // Deprecated
     { "phong", bsdf_phong },
     { "principled", bsdf_principled },
     { "plastic", bsdf_plastic },
@@ -152,6 +164,8 @@ static const struct {
     { "transform", bsdf_transform },
     { "twosided", bsdf_ignore }, // Deprecated
     { "doublesided", bsdf_doublesided },
+    { "rad_brtdfunc", bsdf_rad_brtdfunc },
+    { "transparent", bsdf_transparent },
     { "", nullptr }
 };
 

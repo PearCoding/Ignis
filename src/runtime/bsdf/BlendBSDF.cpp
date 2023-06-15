@@ -33,7 +33,7 @@ void BlendBSDF::serialize(const SerializationInput& input) const
             input.Stream << input.Tree.pullHeader()
                          << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
                          << "bsdf_" << input.Tree.getClosureID(first) << "(ctx), "
-                         << "bsdf_" << input.Tree.getClosureID(first) << "(ctx));" << std::endl;
+                         << "bsdf_" << input.Tree.getClosureID(first) << "(ctx), 0);" << std::endl;
         }
     } else {
         if (mType == Type::Mix)
@@ -52,7 +52,7 @@ void BlendBSDF::serialize(const SerializationInput& input) const
             input.Stream << input.Tree.pullHeader()
                          << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
                          << "bsdf_" << input.Tree.getClosureID(first) << "(ctx), "
-                         << "bsdf_" << input.Tree.getClosureID(second) << "(ctx));" << std::endl;
+                         << "bsdf_" << input.Tree.getClosureID(second) << "(ctx), 0);" << std::endl;
         }
     }
     input.Tree.endClosure();

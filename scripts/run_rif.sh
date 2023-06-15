@@ -102,9 +102,10 @@ DEF=$(cat "$SCRIPT_DIR/rtrace_default.txt")
 VWARGS="-x $WIDTH -y $HEIGHT"
 TRARGS="-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ld -ov -ffc -h+ $EXTRA_ARGS"
 
-oconv $SCENES >$TMP_OCT || exit 1
+oconv $SCENES > $TMP_OCT || exit 1
 
 if [[ ${#VIEWS[@]} == 1 ]]; then
+    echo "Rendering $OUTPUT.exr"
     #rpict ${VIEWS[0]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
     vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT >$TMP_HDR || exit 1
     hdr2exr "$TMP_HDR" "$OUTPUT.exr"
@@ -112,6 +113,7 @@ if [[ ${#VIEWS[@]} == 1 ]]; then
 else
     for i in ${!VIEWS[@]}; do
         view_output="${OUTPUT%%.*}_$i" # Expand given output filename
+        echo "[$i] Rendering $view_output.exr"
         #rpict ${VIEWS[$i]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
         vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT >$TMP_HDR || exit 1
         hdr2exr "$TMP_HDR" "$view_output.exr"

@@ -1,0 +1,26 @@
+// This file contains some BSDFs for Radiance compliance. Enjoy ;D
+// All BSDFs can be described via PExpr, but this way we can optimize the sampling strategy a bit.
+
+// Compute standard brtdfunc from Radiance. 
+// Note that the sample strategy does not absorb the ray as it is the case in Radiance. 
+// This is to NOT introduce a coupling towards RR inside the BSDF.
+fn @make_rad_brtdfunc_bsdf(surf: SurfaceElement,
+        refl_spec: Color, trns_spec: Color, dir_diff: Color,
+        refl_f_diff: Color, refl_b_diff: Color, trns_diff: Color) -> Bsdf {
+    //let oN = if surf.is_entering { surf.local.col(2) } else { vec3_neg(surf.local.col(2)) }; // Original normal
+
+    // Perfect specular part
+    let spec_bsdf = make_add_bsdf(make_mirror_bsdf(surf, refl_spec), make_perfect_refraction_bsdf(surf, trns_spec), safe_div(color_average(trns_spec), color_average(refl_spec) + color_average(trns_spec)));
+    
+    // TODO: directional component
+
+    let refl_diff_bsdf = make_lambertian_bsdf(surf, select(surf.is_entering, refl_f_diff, refl_b_diff));
+
+    // TODO: Diffuse transmission
+
+    let sum_spec      = color_average(color_add(refl_spec, trns_spec));
+    let sum_refl_diff = color_average(color_add(refl_f_diff, refl_b_diff));
+    let final_bsdf    = make_add_bsdf(refl_diff_bsdf, spec_bsdf, safe_div(sum_spec, sum_refl_diff + sum_spec));
+
+    final_bsdf
+}

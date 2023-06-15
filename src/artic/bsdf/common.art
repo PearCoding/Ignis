@@ -18,12 +18,7 @@ fn @make_error_bsdf(surf: SurfaceElement) = Bsdf {
 };
 
 // Creates a BSDF that passthroughs all rays and behaves like a refractive interface with ior = 1
-fn @make_passthrough_bsdf(_surf: SurfaceElement) = Bsdf {
-    eval        = @ |_, _| color_builtins::black,
-    pdf         = @ |_, _| 0,
-    sample      = @ |_, out_dir, _| make_bsdf_sample(vec3_neg(out_dir), 1, color_builtins::white, 1),
-    is_specular = true
-};
+fn @make_passthrough_bsdf(surf: SurfaceElement) = make_perfect_refraction_bsdf(surf, color_builtins::white);
 
 // Allows some bsdfs to be handled as double-sided thin objects. 
 // Most stuff does NOT need it! Support of this should better be integrated in the BSDF itself.
