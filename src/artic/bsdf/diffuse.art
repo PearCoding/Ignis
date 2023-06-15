@@ -1,4 +1,4 @@
-// Creates a purely two-sided diffuse BSDF
+// Creates a purely diffuse BSDF
 fn @make_lambertian_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
     eval   = @ |in_dir, _| color_mulf(kd, positive_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
     pdf    = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
@@ -6,6 +6,17 @@ fn @make_lambertian_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
         let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
         let gdir   = mat3x3_mul(surf.local, sample.dir);
         make_bsdf_sample(gdir, sample.pdf, kd, 1)
+    },
+    is_specular = false
+};
+
+fn @make_lambertian_transmission_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
+    eval   = @ |in_dir, _| color_mulf(kd, -negative_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
+    pdf    = @ |in_dir, _| cosine_hemisphere_pdf(-negative_cos(in_dir, surf.local.col(2))),
+    sample = @ |rnd, _, _| {
+        let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
+        let gdir   = mat3x3_mul(surf.local, sample.dir);
+        make_bsdf_sample(vec3_neg(gdir), sample.pdf, kd, 1)
     },
     is_specular = false
 };

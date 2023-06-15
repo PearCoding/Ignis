@@ -64,6 +64,8 @@ set(SRC
   bsdf/PrincipledBSDF.h
   bsdf/RadBRTDFuncBSDF.cpp
   bsdf/RadBRTDFuncBSDF.h
+  bsdf/RadRoosBSDF.cpp
+  bsdf/RadRoosBSDF.h
   bsdf/TensorTreeBSDF.cpp
   bsdf/TensorTreeBSDF.h
   bsdf/TransformBSDF.cpp
