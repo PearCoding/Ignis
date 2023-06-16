@@ -38,12 +38,13 @@ fn @color_min_index(c: Color)     = vec3_min_index(color_to_vec3(c));
 
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
 fn @is_white(c: Color) = (c.r == 1 && c.g == 1 && c.b == 1);
-fn @is_equal_eps(a: Color, b: Color, eps: f32) -> bool {
+fn @color_is_equal_eps(a: Color, b: Color, eps: f32) -> bool {
     let diff = color_abs(color_sub(a, b));
     diff.r <= eps && diff.g <= eps && diff.b <= eps
 }
-fn @is_black_eps(c: Color, eps: f32) = is_equal_eps(c, color_builtins::black, eps);
-fn @is_white_eps(c: Color, eps: f32) = is_equal_eps(c, color_builtins::white, eps);
+fn @is_black_eps(c: Color, eps: f32) = color_is_equal_eps(c, color_builtins::black, eps);
+fn @is_white_eps(c: Color, eps: f32) = color_is_equal_eps(c, color_builtins::white, eps);
+fn @color_is_finite(c: Color)        = math_builtins::isfinite(c.r) && math_builtins::isfinite(c.g) && math_builtins::isfinite(c.b);
 
 fn @vec3_to_color(v: Vec3)  = make_color(v.x, v.y, v.z, 1);
 fn @vec4_to_color(v: Vec4)  = make_color(v.x, v.y, v.z, v.w);

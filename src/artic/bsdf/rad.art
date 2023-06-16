@@ -30,6 +30,9 @@ fn @make_rad_brtdfunc_bsdf(surf: SurfaceElement,
 
 // Roos model on top of the brtdfunc implementation. 
 // The approach is based on the original implementation by Jan Wienold from Sep 2012.
+// Information about the standard Roos model:
+// Roos, A., Polato, P., Van Nijnatten, P.A., Hutchins, M.G., Olive, F. and Anderson, C. (2001),
+// Angular-dependent optical properties of low-e and solar control windows—: Simulations versus measurements
 fn @make_rad_roos_bsdf(surf: SurfaceElement, cosN: f32,
     tau_t0: f32, tau_p: f32, tau_q: f32,
     rf_r0:  f32, rf_p:  f32, rf_q:  f32,

@@ -54,7 +54,7 @@ fn @tint_color(color: Color) -> Color {
     if lum <= super::flt_eps {
         color_builtins::white
     } else {
-        super::color_divf(color, lum)
+        super::color_mulf(color, super::safe_div(1, lum))
     }
 }
 fn @sheen_tint_color(color: Color, tint: f32) = super::color_lerp(color_builtins::white, tint_color(color), tint);
@@ -214,20 +214,20 @@ fn @calcLobeDistribution(closure: Closure, wo: Vec3) -> LobeDistribution {
     let has_transmission = diff_trans_in > 0 || spec_trans_in > 0;
     if !has_transmission {
         let norm = diff_refl + spec_refl;
-        if norm <= super::flt_eps {
-            LobeDistribution{ diff_refl = 1, diff_trans = 0, spec_refl = 0, spec_trans = 0 }
-        } else {
+        if norm > super::flt_eps {
             LobeDistribution{ diff_refl = diff_refl / norm, diff_trans = 0, spec_refl = spec_refl / norm, spec_trans = 0 }
+        } else {
+            LobeDistribution{ diff_refl = 1, diff_trans = 0, spec_refl = 0, spec_trans = 0 }
         } 
     } else {
         let diff_trans = all::clampf(abs_gen * diff_trans_in * diff_refl, 0, 1);
         let spec_trans = all::clampf((1 - F) * abs_gen * (1 - metallic_in) * spec_trans_in, 0, 1);
 
         let norm = diff_refl + spec_refl + diff_trans + spec_trans;
-        if norm <= super::flt_eps {
-            LobeDistribution{ diff_refl = 1, diff_trans = 0, spec_refl = 0, spec_trans = 0 }
-        } else {
+        if norm > super::flt_eps {
             LobeDistribution{ diff_refl = diff_refl / norm, diff_trans = diff_trans / norm, spec_refl = spec_refl / norm, spec_trans = spec_trans / norm }
+        } else { 
+            LobeDistribution{ diff_refl = 1, diff_trans = 0, spec_refl = 0, spec_trans = 0 }
         }
     }
 }
@@ -243,7 +243,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                      thin: bool, clearcoat_top_only: bool) -> Bsdf {
     let micro_eps   = 1e-5:f32; // Pdf epsilon for microfacet samples
     let grazing_eps = 1e-5:f32; // Extreme grazing angles should be avoided
-    fn @bound_spec_pdf(v: f32) = select(v <= micro_eps, 0:f32, v);
+    fn @bound_spec_pdf(v: f32) = select(v > micro_eps, v, 0:f32);
 
     let closure = principled::Closure {
         surf                  = surf,
@@ -467,14 +467,14 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 }
             };
 
-            if sample.pdf <= flt_eps {
-                reject_bsdf_sample()
-            } else {
+            if sample.pdf > flt_eps && math_builtins::isfinite(sample.pdf) {
                 let spread  = if adjoint && !closure.thin && !shading::is_same_hemisphere(wo, sample.dir) { 1 / (closure.refractive_eta * closure.refractive_eta) } else { 1 };
                 let s_eta   = if closure.thin || shading::is_same_hemisphere(wo, sample.dir) { 1 } else { closure.refractive_eta };
                 let in_dir  = shading::to_world(surf.local, sample.dir);
                 
                 make_bsdf_sample(in_dir, sample.pdf, color_mulf(eval(in_dir, out_dir), spread / sample.pdf), s_eta)
+            } else {
+                reject_bsdf_sample()
             }
         },
         is_specular = false // We prevent a roughness = 0, so no chance to be specular
