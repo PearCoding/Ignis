@@ -868,7 +868,7 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
 
     // TODO: We create a 2*stacks of redundant vertices at the two critical points... remove them
     // Vertices
-    for (uint32 i = 0; i < stacks; ++i) {
+    for (uint32 i = 0; i <= stacks; ++i) {
         float rho  = (float)i * drho;
         float srho = std::sin(rho);
         float crho = std::cos(rho);
@@ -892,14 +892,14 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
 
     // Indices
     mesh.indices.reserve(stacks * slices * 8);
-    for (uint32 i = 0; i < stacks - 1; ++i) {
+    for (uint32 i = 0; i < stacks; ++i) {
         const uint32 c = (i + 0) * slices;
         const uint32 n = (i + 1) * slices;
 
         for (uint32 j = 0; j < slices; ++j) {
             const uint32 nj = (j + 1) % slices;
-            mesh.indices.insert(mesh.indices.end(), { c + j, n + j, n + nj, 0,
-                                                      c + j, n + nj, c + nj, 0 });
+            mesh.indices.insert(mesh.indices.end(), { n + j, n + nj, c + nj, 0,
+                                                      n + j, c + nj, c + j, 0 });
         }
     }
 
