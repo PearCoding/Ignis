@@ -62,10 +62,16 @@ set(SRC
   bsdf/PlasticBSDF.h
   bsdf/PrincipledBSDF.cpp
   bsdf/PrincipledBSDF.h
+  bsdf/RadBRTDFuncBSDF.cpp
+  bsdf/RadBRTDFuncBSDF.h
+  bsdf/RadRoosBSDF.cpp
+  bsdf/RadRoosBSDF.h
   bsdf/TensorTreeBSDF.cpp
   bsdf/TensorTreeBSDF.h
   bsdf/TransformBSDF.cpp
   bsdf/TransformBSDF.h
+  bsdf/TransparentBSDF.cpp
+  bsdf/TransparentBSDF.h
   bvh/BvhNAdapter.h
   bvh/NArityBvh.h
   bvh/SceneBVHAdapter.h

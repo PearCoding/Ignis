@@ -1,5 +1,6 @@
 #include "DielectricBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -38,4 +39,7 @@ void DielectricBSDF::serialize(const SerializationInput& input) const
                  << (thin ? "true" : "false") << ");" << std::endl;
     input.Tree.endClosure();
 }
+
+static BSDFRegister<DielectricBSDF> sDielectricBSDF("glass" /* Deprecated */, "dielectric", "roughdielectric" /* Deprecated */, "thindielectric" /* Deprecated */);
+
 } // namespace IG

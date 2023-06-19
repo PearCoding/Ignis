@@ -1,0 +1,17 @@
+{
+  "externals": [
+    {"filename": "two-planes-base.json"}
+  ],
+  "bsdfs": [
+    {
+      "type": "rad_brtdfunc",
+      "name": "Back",
+      "reflection_specular":      [0.2, 0.2, 0.3],
+      "transmission_specular":    [0.3, 0.3, 0.2],
+      "directional_diffuse":      [0,0,0],
+      "reflection_front_diffuse": [0.6, 0.6, 0.7],
+      "reflection_back_diffuse":  [0.6, 0.6, 0.7],
+      "transmission_diffuse":     [0,0,0]
+    }
+  ]
+}

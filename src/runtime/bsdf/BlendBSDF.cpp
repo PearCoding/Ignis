@@ -33,7 +33,7 @@ void BlendBSDF::serialize(const SerializationInput& input) const
             input.Stream << input.Tree.pullHeader()
                          << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
                          << "bsdf_" << input.Tree.getClosureID(first) << "(ctx), "
-                         << "bsdf_" << input.Tree.getClosureID(first) << "(ctx));" << std::endl;
+                         << "bsdf_" << input.Tree.getClosureID(first) << "(ctx), 0);" << std::endl;
         }
     } else {
         if (mType == Type::Mix)
@@ -52,9 +52,22 @@ void BlendBSDF::serialize(const SerializationInput& input) const
             input.Stream << input.Tree.pullHeader()
                          << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_add_bsdf("
                          << "bsdf_" << input.Tree.getClosureID(first) << "(ctx), "
-                         << "bsdf_" << input.Tree.getClosureID(second) << "(ctx));" << std::endl;
+                         << "bsdf_" << input.Tree.getClosureID(second) << "(ctx), 0);" << std::endl;
         }
     }
     input.Tree.endClosure();
 }
+
+static std::shared_ptr<BSDF> bsdf_add(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<BlendBSDF>(BlendBSDF::Type::Add, name, obj);
+}
+static BSDFRawRegister sAddBSDF(bsdf_add, "add");
+
+static std::shared_ptr<BSDF> bsdf_mix(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<BlendBSDF>(BlendBSDF::Type::Mix, name, obj);
+}
+static BSDFRawRegister sMixBSDF(bsdf_mix, "blend", "mix");
+
 } // namespace IG

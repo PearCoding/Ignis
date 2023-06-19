@@ -1,5 +1,6 @@
 #include "PrincipledBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -89,4 +90,6 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<PrincipledBSDF> sPrincipledBSDF("principled");
 } // namespace IG

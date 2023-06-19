@@ -1,5 +1,6 @@
 #include "PassthroughBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -16,4 +17,7 @@ void PassthroughBSDF::serialize(const SerializationInput& input) const
     input.Stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_passthrough_bsdf(ctx.surf);" << std::endl;
     input.Tree.endClosure();
 }
+
+static BSDFRegister<PassthroughBSDF> sPassthroughBSDF("passthrough", "null");
+
 } // namespace IG

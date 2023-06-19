@@ -1,0 +1,56 @@
+// This file contains some BSDFs for Radiance compliance. Enjoy ;D
+// All BSDFs can be described via PExpr, but this way we can optimize the sampling strategy a bit.
+
+// Compute standard brtdfunc from Radiance. 
+// Note that the sample strategy does not absorb the ray as it is the case in Radiance. 
+// This is to NOT introduce a coupling towards RR inside the BSDF.
+fn @make_rad_brtdfunc_bsdf(surf: SurfaceElement,
+        refl_spec: Color, trns_spec: Color, dir_diff: Color,
+        refl_f_diff: Color, refl_b_diff: Color, trns_diff: Color) -> Bsdf {
+    //let oN = if surf.is_entering { surf.local.col(2) } else { vec3_neg(surf.local.col(2)) }; // Original normal
+
+    // Note: As our renderer does not handle direct components in any special way, it is just another diffuse component
+    let refl_diff = color_add(select(surf.is_entering, refl_f_diff, refl_b_diff), dir_diff);
+
+    // Perfect specular part
+    let spec_bsdf = make_add_bsdf(make_mirror_bsdf(surf, refl_spec), make_perfect_refraction_bsdf(surf, trns_spec), safe_div(color_average(trns_spec), color_average(refl_spec) + color_average(trns_spec)));
+    
+    // Diffuse component
+    let refl_diff_bsdf = make_lambertian_bsdf(surf, refl_diff);
+    let trns_diff_bsdf = make_lambertian_transmission_bsdf(surf, trns_diff);
+    let diff_bsdf      = make_add_bsdf(refl_diff_bsdf, trns_diff_bsdf, safe_div(color_average(trns_diff), color_average(refl_diff) + color_average(trns_diff)));
+
+    // Combination
+    let sum_spec   = color_average(color_add(refl_spec, trns_spec));
+    let sum_diff   = color_average(color_add(refl_diff, trns_diff));
+    let final_bsdf = make_add_bsdf(diff_bsdf, spec_bsdf, safe_div(sum_spec, sum_diff + sum_spec));
+
+    final_bsdf
+}
+
+// Roos model on top of the brtdfunc implementation. 
+// The approach is based on the original implementation by Jan Wienold from Sep 2012.
+// Information about the standard Roos model:
+// Roos, A., Polato, P., Van Nijnatten, P.A., Hutchins, M.G., Olive, F. and Anderson, C. (2001),
+// Angular-dependent optical properties of low-e and solar control windows—: Simulations versus measurements
+fn @make_rad_roos_bsdf(surf: SurfaceElement, cosN: f32,
+    tau_t0: f32, tau_p: f32, tau_q: f32,
+    rf_r0:  f32, rf_p:  f32, rf_q:  f32,
+    refl_f_diff: Color, refl_b_diff: Color, trns_diff: Color) -> Bsdf {
+
+    let a = 8:f32;
+    let b = @|q:f32| 0.25 / q;
+    let c = @|_p:f32, q:f32| 1 - a - b(q);
+
+    let alpha = @|q:f32| 5.2 + 0.7 * q;
+    let beta  = 2:f32;
+    let gamma = @|p:f32,q:f32| (5.26 + 0.06 * p) + (0.73 + 0.04 * p) * q;
+
+    let z = math_builtins::acos(math_builtins::fabs(clampf(cosN, -1, 1))) * 0.636619772368; 
+    let tau = tau_t0 * (1 - a * math_builtins::pow(z, alpha(tau_q))-b(tau_q) * math_builtins::pow(z, beta) - c(tau_p, tau_q) * math_builtins::pow(z, gamma(tau_p, tau_q)));
+    let rf  = rf_r0 + (1 - rf_r0) * math_builtins::pow(z, gamma(rf_p, rf_q));
+
+    make_rad_brtdfunc_bsdf(surf,
+                make_gray_color(rf), make_gray_color(tau), color_builtins::black,
+                refl_f_diff, refl_b_diff, trns_diff)
+}

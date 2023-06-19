@@ -56,4 +56,17 @@ void MaskBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static std::shared_ptr<BSDF> bsdf_mask(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<MaskBSDF>(MaskBSDF::Type::Mask, name, obj);
+}
+static BSDFRawRegister sMaskBSDF(bsdf_mask, "mask");
+
+static std::shared_ptr<BSDF> bsdf_cutoff(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<MaskBSDF>(MaskBSDF::Type::Cutoff, name, obj);
+}
+static BSDFRawRegister sCutoffBSDF(bsdf_cutoff, "cutoff");
+
 } // namespace IG

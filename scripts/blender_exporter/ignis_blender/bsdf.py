@@ -83,9 +83,8 @@ def _export_refraction_bsdf(ctx, bsdf, export_name):
 
 
 def _export_transparent_bsdf(ctx, bsdf, export_name):
-    reflectance = export_node(ctx, bsdf.inputs["Color"])
-    return {"type": "dielectric", "name": export_name,
-            "specular_reflectance": reflectance, "specular_transmittance": reflectance, "ext_ior": 1, "int_ior": 1}
+    color = export_node(ctx, bsdf.inputs["Color"])
+    return {"type": "transparent", "name": export_name, "color": color}
 
 
 def _export_translucent_bsdf(ctx, bsdf, export_name):

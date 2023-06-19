@@ -175,9 +175,9 @@ fn @g_1_smith(local: Mat3x3, w: Vec3, _m: Vec3, alpha_u: f32, alpha_v: f32) -> f
 }
 
 fn @ndf_beckmann(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
-    let cosZ = all::vec3_dot(local.col(2), m);
-    let cosX = all::vec3_dot(local.col(0), m);
-    let cosY = all::vec3_dot(local.col(1), m);
+    let cosZ = all::vec3_dot(local.col(2), m); // cosTheta
+    let cosX = all::vec3_dot(local.col(0), m); // cosPhi * sinTheta
+    let cosY = all::vec3_dot(local.col(1), m); // sinPhi * sinTheta
 
     let kx = cosX / alpha_u;
     let ky = cosY / alpha_v;

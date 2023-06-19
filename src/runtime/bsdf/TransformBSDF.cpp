@@ -44,4 +44,7 @@ void TransformBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<TransformBSDF> sTransformBSDF("transform");
+
 } // namespace IG
