@@ -60,8 +60,9 @@ public:
     [[nodiscard]] size_t framebufferHeight() const;
     [[nodiscard]] bool isInteractive() const;
 
-    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name);
-    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name);
+    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name, bool sync = true);
+    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name, bool sync = true);
+    void mapFramebufferToDevice(const std::string& name); // Explicit mapping used in some tools
     void clearFramebuffer(const std::string& name);
     void clearAllFramebuffer();
 

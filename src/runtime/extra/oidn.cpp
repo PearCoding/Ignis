@@ -72,7 +72,7 @@ public:
             if (!target.isGPU())
                 return false;
             if (target.gpuArchitecture() == GPUArchitecture::AMD)
-                return true;         // TODO: Device number!
+                return true; // TODO: Device number!
             return false;
         case oidn::DeviceType::SYCL: // TODO: Sycl is not necessarily Intel only
             if (!target.isGPU())
@@ -257,7 +257,7 @@ public:
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
         const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised");
+        const auto output = device->getFramebufferForHost("Denoised", false);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -275,6 +275,8 @@ public:
             mAlbedoFilter.execute();
         }
         mMainFilter.execute();
+
+        device->mapFramebufferToDevice("Denoised");
     }
 
 private:

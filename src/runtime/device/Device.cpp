@@ -91,9 +91,8 @@ struct ShaderStats {
 };
 struct AOV {
     anydsl::Array<float> Data;
-    bool Mapped           = false;
-    bool HostOnly         = false;
-    int IterDiff          = 0; // Addition to the upcoming iteration counter at the end of an iteration
+    bool Dirty            = false; // If true, host & device are out of sync
+    int IterDiff          = 0;     // Addition to the upcoming iteration counter at the end of an iteration
     size_t IterationCount = 0;
 };
 
@@ -294,10 +293,8 @@ public:
     {
         const size_t expectedSize = mFilmWidth * mFilmHeight * 3;
 
-        if (mHostFramebuffer.Data.data() && (size_t)mHostFramebuffer.Data.size() >= expectedSize) {
-            resetFramebufferAccess();
+        if (mHostFramebuffer.Data.data() && (size_t)mHostFramebuffer.Data.size() >= expectedSize)
             return;
-        }
 
         if (mSceneSettings.aov_map) {
             for (const auto& name : *mSceneSettings.aov_map)
@@ -326,10 +323,10 @@ public:
 
     inline void resetFramebufferAccess()
     {
-        mHostFramebuffer.Mapped = false;
+        mHostFramebuffer.Dirty = true;
 
         for (auto& p : mAOVs)
-            p.second.Mapped = false;
+            p.second.Dirty = true;
     }
 
     // Does not sync!
@@ -1289,7 +1286,7 @@ public:
 
     // ---------------------------------------------------- Framebuffer/AOV stuff
 
-    inline anydsl::Array<float> createFramebuffer() const
+    inline anydsl::Array<float> createAOV() const
     {
         auto film_size = mFilmWidth * mFilmHeight * 3;
         auto arr       = anydsl::Array<float>(mTargetedDevice, film_size);
@@ -1310,7 +1307,7 @@ public:
         if (isGPU()) {
             if (mDeviceData.film_pixels.size() != mHostFramebuffer.Data.size()) {
                 _SECTION(SectionType::FramebufferUpdate);
-                mDeviceData.film_pixels = createFramebuffer();
+                mDeviceData.film_pixels = createAOV();
                 anydsl::copy(mHostFramebuffer.Data, mDeviceData.film_pixels);
                 sync();
             }
@@ -1320,21 +1317,37 @@ public:
         }
     }
 
-    inline void mapAOVToDevice(const std::string& name, const AOV& host, bool onlyAtCreation = true)
+    inline void mapAOVToDevice(const std::string& aov_name, AOV& host, bool onlyAtCreation = true)
     {
         if (mTargetedDevice.isHost()) // Device is host
             return;
 
         bool created = false;
-        if (mDeviceData.aovs[name].size() != host.Data.size()) {
+        if (mDeviceData.aovs[aov_name].size() != host.Data.size()) {
             _SECTION(SectionType::AOVUpdate);
-            mDeviceData.aovs[name] = createFramebuffer();
-            created                = true;
+            mDeviceData.aovs[aov_name] = createAOV();
+            created                    = true;
         }
 
         if (!onlyAtCreation || created) {
-            anydsl::copy(host.Data, mDeviceData.aovs[name]);
+            anydsl::copy(host.Data, mDeviceData.aovs[aov_name]);
             sync();
+            host.Dirty = false;
+        }
+    }
+
+    inline void mapAOVToDevice(const std::string& aov_name, bool onlyAtCreation = true)
+    {
+        if (mTargetedDevice.isHost()) // Device is host
+            return;
+
+        if (aov_name.empty() || aov_name == "Color") {
+            mapAOVToDevice(aov_name, mHostFramebuffer, onlyAtCreation);
+        } else {
+            if (const auto it = mAOVs.find(aov_name); it != mAOVs.end())
+                mapAOVToDevice(aov_name, it->second, onlyAtCreation);
+            else
+                IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' mapping" << std::endl;
         }
     }
 
@@ -1369,7 +1382,7 @@ public:
         return mDeviceData.tonemap_pixels;
     }
 
-    inline Device::AOVAccessor getAOVImageForHost(const std::string& aov_name)
+    inline Device::AOVAccessor getAOVImageForHost(const std::string& aov_name, bool shouldSync = true)
     {
         if (!mHostFramebuffer.Data.data()) {
             IG_LOG(L_ERROR) << "Framebuffer not yet initialized. Run a single iteration first" << std::endl;
@@ -1378,11 +1391,11 @@ public:
 
         if (isGPU()) {
             if (aov_name.empty() || aov_name == "Color") {
-                if (!mHostFramebuffer.Mapped && mDeviceData.film_pixels.data() != nullptr) {
+                if (shouldSync && mHostFramebuffer.Dirty && mDeviceData.film_pixels.data() != nullptr) {
                     _SECTION(SectionType::FramebufferHostUpdate);
                     anydsl::copy(mDeviceData.film_pixels, mHostFramebuffer.Data);
                     sync();
-                    mHostFramebuffer.Mapped = true;
+                    mHostFramebuffer.Dirty = false;
                 }
                 return Device::AOVAccessor{ mHostFramebuffer.Data.data(), mHostFramebuffer.IterationCount };
             } else {
@@ -1392,11 +1405,11 @@ public:
                     return Device::AOVAccessor{ nullptr, 0 };
                 }
 
-                if (!it->second.HostOnly && !it->second.Mapped && mDeviceData.aovs[aov_name].data() != nullptr) {
+                if (shouldSync && it->second.Dirty && mDeviceData.aovs[aov_name].data() != nullptr) {
                     _SECTION(SectionType::AOVHostUpdate);
                     anydsl::copy(mDeviceData.aovs[aov_name], it->second.Data);
                     sync();
-                    it->second.Mapped = true;
+                    it->second.Dirty = false;
                 }
                 return Device::AOVAccessor{ it->second.Data.data(), it->second.IterationCount };
             }
@@ -1405,8 +1418,9 @@ public:
         }
     }
 
-    inline Device::AOVAccessor getAOVImageForDevice(const std::string& aov_name)
+    inline Device::AOVAccessor getAOVImageForDevice(const std::string& aov_name, bool shouldSync = true)
     {
+        IG_UNUSED(shouldSync);
         if (!mHostFramebuffer.Data.data()) {
             IG_LOG(L_ERROR) << "Framebuffer not yet initialized. Run a single iteration first" << std::endl;
             return Device::AOVAccessor{ nullptr, 0 };
@@ -1436,12 +1450,15 @@ public:
         const std::string aov_name = name ? std::string(name) : std::string{};
         if (aov_name.empty() || aov_name == "Color") {
             mHostFramebuffer.IterDiff = iter;
+            mHostFramebuffer.Dirty    = true;
         } else {
-            const auto it = mAOVs.find(aov_name);
-            if (it == mAOVs.end())
-                IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' access" << std::endl;
-            else
+
+            if (const auto it = mAOVs.find(aov_name); it != mAOVs.end()) {
                 it->second.IterDiff = iter;
+                it->second.Dirty    = true;
+            } else {
+                IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' access" << std::endl;
+            }
         }
     }
 
@@ -1465,15 +1482,15 @@ public:
 
             mHostFramebuffer.IterationCount = 0;
             mHostFramebuffer.IterDiff       = 0;
+            mHostFramebuffer.Dirty          = false;
         } else {
             auto& aov          = mAOVs.at(aov_name);
             aov.IterationCount = 0;
             aov.IterDiff       = 0;
+            aov.Dirty          = false;
             clearArray(aov.Data);
             clearArray(mDeviceData.aovs[aov_name]);
         }
-
-        sync();
     }
 
 #ifdef IG_HAS_DENOISER
@@ -1613,16 +1630,25 @@ void Device::assignScene(const SceneSettings& settings)
     sInterface->assignScene(settings);
 }
 
-void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
+static inline void enterDevice()
 {
     enableMathMode();
-
-    // Register host thread
     sInterface->registerThread();
+    sInterface->ensureFramebuffer();
+}
 
+static inline void leaveDevice()
+{
+    sInterface->unregisterThread();
+    disableMathMode();
+}
+
+void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
+{
     sInterface->updateForRender(shaderSet, settings, parameterSet);
 
-    sInterface->ensureFramebuffer();
+    enterDevice();
+
     sInterface->runDeviceShader();
     sInterface->present();
 
@@ -1631,9 +1657,7 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
         sInterface->denoise();
 #endif
 
-    sInterface->unregisterThread();
-
-    disableMathMode();
+    leaveDevice();
 }
 
 void Device::resize(size_t width, size_t height)
@@ -1646,42 +1670,36 @@ void Device::releaseAll()
     sInterface->releaseAll();
 }
 
-Device::AOVAccessor Device::getFramebufferForHost(const std::string& name)
+Device::AOVAccessor Device::getFramebufferForHost(const std::string& name, bool sync)
 {
-    return sInterface->getAOVImageForHost(name);
+    return sInterface->getAOVImageForHost(name, sync);
 }
 
-Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name)
+Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name, bool sync)
 {
-    return sInterface->getAOVImageForDevice(name);
+    return sInterface->getAOVImageForDevice(name, sync);
+}
+
+void Device::mapFramebufferToDevice(const std::string& name)
+{
+    sInterface->mapAOVToDevice(name, false);
 }
 
 void Device::clearAllFramebuffer()
 {
     sInterface->clearAllAOVs();
+    sInterface->sync();
 }
 
 void Device::clearFramebuffer(const std::string& name)
 {
     sInterface->clearAOV(name);
+    sInterface->sync();
 }
 
 const Statistics* Device::getStatistics()
 {
     return sInterface->getFullStats();
-}
-
-static inline void enterDevice()
-{
-    enableMathMode();
-    sInterface->registerThread();
-    sInterface->ensureFramebuffer();
-}
-
-static inline void leaveDevice()
-{
-    sInterface->unregisterThread();
-    disableMathMode();
 }
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
