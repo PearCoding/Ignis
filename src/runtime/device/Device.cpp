@@ -1037,9 +1037,8 @@ public:
 
     inline ::GlareOutput runGlareShader(float* in_pixels, uint32_t* device_out_pixels, ::GlareSettings& settings)
     {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Glare Shader" << std::endl;
-#endif
+        if (mSetupSettings.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Glare Shader" << std::endl;
 
         if (hasStatisticAquisition())
             getThreadData()->stats.beginShaderLaunch(ShaderType::Glare, 1, {});

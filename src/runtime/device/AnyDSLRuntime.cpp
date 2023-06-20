@@ -41,6 +41,10 @@ static std::array<const char*, 4> sDeviceTypes = {
 
 void anydslInspect()
 {
+    // Only inspect if we actually display it.
+    if (IG_LOGGER.verbosity() == L_DEBUG)
+        return;
+
     size_t count = 0;
     if (anydslEnumerateDevices(&count, nullptr) != AnyDSL_SUCCESS) {
         IG_LOG(L_ERROR) << "AnyDSL: Could not enumerate devices." << std::endl;
@@ -52,7 +56,7 @@ void anydslInspect()
         return;
     }
 
-    IG_LOG(L_INFO) << "Found " << count << " AnyDSL devices" << std::endl;
+    IG_LOG(L_DEBUG) << "Found " << count << " AnyDSL devices" << std::endl;
 
     std::vector<AnyDSLDeviceInfo> infos(count);
     for (size_t i = 0; i < count; ++i) {
@@ -108,7 +112,7 @@ void anydslInspect()
                    << "   - Free MB                  : " << (cudaFeatures.freeMemory / (1024 * 1024)) << std::endl;
         }
 
-        IG_LOG(L_INFO) << stream.str();
+        IG_LOG(L_DEBUG) << stream.str();
     }
 }
 
