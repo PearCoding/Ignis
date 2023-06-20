@@ -1518,7 +1518,6 @@ public:
     int getParameterInt(const char* name, int def, bool global)
     {
         const ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
-        // IG_ASSERT(registry != nullptr, "No parameters available!"); // Might be unavailable in baking process
         if (registry && registry->IntParameters.count(name) > 0)
             return registry->IntParameters.at(name);
         else
@@ -1528,7 +1527,6 @@ public:
     float getParameterFloat(const char* name, float def, bool global)
     {
         const ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
-        // IG_ASSERT(registry != nullptr, "No parameters available!");
         if (registry && registry->FloatParameters.count(name) > 0)
             return registry->FloatParameters.at(name);
         else
@@ -1538,7 +1536,6 @@ public:
     void getParameterVector(const char* name, float defX, float defY, float defZ, float& outX, float& outY, float& outZ, bool global)
     {
         const ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
-        // IG_ASSERT(registry != nullptr, "No parameters available!");
         if (registry && registry->VectorParameters.count(name) > 0) {
             Vector3f param = registry->VectorParameters.at(name);
             outX           = param.x();
@@ -1554,7 +1551,6 @@ public:
     void getParameterColor(const char* name, float defR, float defG, float defB, float defA, float& outR, float& outG, float& outB, float& outA, bool global)
     {
         const ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
-        // IG_ASSERT(registry != nullptr, "No parameters available!");
         if (registry && registry->ColorParameters.count(name) > 0) {
             Vector4f param = registry->ColorParameters.at(name);
             outR           = param.x();
@@ -1597,8 +1593,6 @@ Device::Device(const Device::SetupSettings& settings)
 {
     IG_ASSERT(sInterface == nullptr, "Only a single instance allowed!");
     sInterface = std::make_unique<Interface>(this, settings);
-
-    // TODO: Dump information
 }
 
 Device::~Device()
