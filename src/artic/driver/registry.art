@@ -27,7 +27,7 @@ mod registry {
         super::make_color(r, g, b, a)
     }
 
-    fn @get_local_parameter_i32(i32, name: &[u8], def: i32) -> i32 {
+    fn @get_local_parameter_i32(name: &[u8], def: i32) -> i32 {
         super::ignis_get_parameter_i32(name, def, false)
     }
 
