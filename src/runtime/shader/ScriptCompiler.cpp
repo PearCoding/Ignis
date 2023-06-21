@@ -28,33 +28,43 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
 
     static bool once = false;
     if (!once) {
-        const auto module_path = RuntimeInfo::modulePath();
+        const auto module_path        = RuntimeInfo::modulePath().generic_string();
+        // const auto module_path_anydsl = RuntimeInfo::modulePathAnyDSL().generic_string();
+
+        std::vector<AnyDSLJITLinkInfo> infos;
         if (!module_path.empty()) {
             IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
-            AnyDSLJITLinkInfo info{
-                AnyDSL_STRUCTURE_TYPE_JIT_LINK_INFO,
-                nullptr,
-                module_path.generic_string().c_str()
-            };
-            IG_CHECK_ANYDSL(anydslLinkJITLibrary(AnyDSL_NULL_HANDLE, 1, &info));
+            auto& info           = infos.emplace_back();
+            info.sType           = AnyDSL_STRUCTURE_TYPE_JIT_LINK_INFO;
+            info.pNext           = nullptr;
+            info.libraryFilename = module_path.c_str();
+        }
+        // if (module_path_anydsl != module_path && !module_path_anydsl.empty()) {
+        //     IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path_anydsl << std::endl;
+        //     auto& info           = infos.emplace_back();
+        //     info.sType           = AnyDSL_STRUCTURE_TYPE_JIT_LINK_INFO;
+        //     info.pNext           = nullptr;
+        //     info.libraryFilename = module_path_anydsl.c_str();
+        // }
+
+        if (!infos.empty()) {
+            IG_CHECK_ANYDSL(anydslLinkJITLibrary(AnyDSL_NULL_HANDLE, infos.size(), infos.data()));
         }
         once = true;
     }
-
-    const auto cache_dir = RuntimeInfo::cacheDirectory();
 
     AnyDSLJITCompileOptions options = {
         AnyDSL_STRUCTURE_TYPE_JIT_COMPILE_OPTIONS,
         nullptr,
         (uint32_t)mOptimizationLevel,
-#if 0//def IG_DEBUG
+#if 0 // def IG_DEBUG
         mVerbose ? 1u /* info */ : 4u /* error */,
 #else
         mVerbose ? 3u /* warn */ : 4u /* error */,
 #endif
         AnyDSL_COMPILE_LANGUAGE_ARTIC_BIT,
         AnyDSL_TRUE,
-        cache_dir.c_str()
+        nullptr
     };
 
     AnyDSLJITCompileResult result = {

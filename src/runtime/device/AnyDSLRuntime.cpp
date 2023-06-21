@@ -1,5 +1,6 @@
 #include "AnyDSLRuntime.h"
 #include "Logger.h"
+#include "RuntimeInfo.h"
 
 namespace IG {
 
@@ -30,6 +31,15 @@ void anydslInit()
     };
 
     anydslCreateLogReportCallback(&info, &sLogReportClb);
+
+    const auto cache_dir = RuntimeInfo::cacheDirectory();
+
+    AnyDSLOptions options = {
+        AnyDSL_STRUCTURE_TYPE_OPTIONS,
+        nullptr,
+        cache_dir.c_str()
+    };
+    anydslSetOptions(&options);
 }
 
 static std::array<const char*, 4> sDeviceTypes = {

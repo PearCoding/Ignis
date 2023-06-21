@@ -1,5 +1,7 @@
 #include "RuntimeInfo.h"
 #include "Logger.h"
+#include "device/AnyDSLRuntime.h"
+
 #include <sstream>
 
 #ifdef IG_OS_LINUX
@@ -54,13 +56,13 @@ Path RuntimeInfo::executablePath()
 #endif
 }
 
-Path RuntimeInfo::modulePath()
+static inline Path getModulePath(void* func)
 {
 #if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
 #if __USE_GNU
     Dl_info dl_info;
-    dladdr((void*)&Target::pickGPU, &dl_info);
-    return (dl_info.dli_fname);
+    dladdr(func, &dl_info);
+    return dl_info.dli_fname;
 #else
     return {}; // TODO
 #endif
@@ -69,7 +71,7 @@ Path RuntimeInfo::modulePath()
     HMODULE hm             = NULL;
 
     if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           (LPCWSTR)&Target::pickGPU, &hm)
+                           (LPCWSTR)func, &hm)
         == 0) {
         int ret = GetLastError();
         IG_LOG(L_ERROR) << "GetModuleHandleExW failed, error = " << ret << std::endl;
@@ -83,6 +85,16 @@ Path RuntimeInfo::modulePath()
     }
     return path;
 #endif
+}
+
+Path RuntimeInfo::modulePath()
+{
+    return getModulePath((void*)&Target::pickGPU);
+}
+
+Path RuntimeInfo::modulePathAnyDSL()
+{
+    return getModulePath((void*)&anydslGetDevice);
 }
 
 Path RuntimeInfo::cacheDirectory()
