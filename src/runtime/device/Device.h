@@ -2,13 +2,13 @@
 
 #include "RuntimeStructs.h"
 #include "Target.h"
+#include "statistics/Statistics.h"
 #include "technique/TechniqueInfo.h"
 #include "technique/TechniqueVariant.h"
 #include <vector>
 
 namespace IG {
 
-class Statistics;
 struct SceneDatabase;
 
 class Device {
@@ -66,7 +66,8 @@ public:
     void clearFramebuffer(const std::string& name);
     void clearAllFramebuffer();
 
-    [[nodiscard]] const Statistics* getStatistics();
+    [[nodiscard]] Statistics getStatisticsForHost();
+    [[nodiscard]] Statistics getStatisticsForDevice();
 
     void tonemap(uint32_t*, const TonemapSettings&);
     [[nodiscard]] GlareOutput evaluateGlare(uint32_t*, const GlareSettings&);

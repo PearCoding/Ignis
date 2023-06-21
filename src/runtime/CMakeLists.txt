@@ -25,8 +25,6 @@ set(SRC
   SceneProperty.h
   SHA256.cpp
   SHA256.h
-  Statistics.cpp
-  Statistics.h
   StringUtils.cpp
   StringUtils.h
   Timer.h
@@ -100,6 +98,7 @@ set(SRC
   device/AnyDSLRuntime.h
   device/Device.cpp
   device/Device.h
+  device/DeviceTimer.h
   device/ShaderKey.h
   device/ShallowArray.h
   device/Target.cpp
@@ -260,6 +259,12 @@ set(SRC
   shape/TriMeshProvider.cpp
   shape/TriMeshProvider.h
   shape/TriShape.h
+  statistics/SmallShaderKey.h
+  statistics/StatisticHandler.cpp
+  statistics/StatisticHandler.h
+  statistics/Statistics.cpp
+  statistics/Statistics.h
+  statistics/StatisticTypes.h
   table/DynTable.h
   table/FixTable.h
   table/SceneDatabase.h

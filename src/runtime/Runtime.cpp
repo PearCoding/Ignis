@@ -445,9 +445,14 @@ void Runtime::reset()
     // No mCurrentFrameCount
 }
 
-const Statistics* Runtime::statistics() const
+Statistics Runtime::statisticsForHost() const
 {
-    return mOptions.AcquireStats ? mDevice->getStatistics() : nullptr;
+    return mDevice->getStatisticsForHost();
+}
+
+Statistics Runtime::statisticsForDevice() const
+{
+    return mDevice->getStatisticsForDevice();
 }
 
 static void dumpRegistries(std::ostream& stream, const std::string& name, const ShaderOutput<void*>& shader)

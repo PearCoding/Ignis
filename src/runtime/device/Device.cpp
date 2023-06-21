@@ -3,7 +3,7 @@
 #include "Logger.h"
 #include "RuntimeStructs.h"
 #include "ShaderKey.h"
-#include "Statistics.h"
+#include "statistics/TieStatisticHandler.h"
 #include "table/SceneDatabase.h"
 
 #include "generated_interface.h"
@@ -32,8 +32,8 @@
 #endif
 #endif
 
-#define _SECTION(type)                                                  \
-    const auto sectionClosure = getThreadData()->stats.section((type)); \
+#define _SECTION(type)                           \
+    const auto sectionClosure = section((type)); \
     IG_UNUSED(sectionClosure)
 
 namespace IG {
@@ -118,7 +118,7 @@ struct CPUData {
     DeviceStream cpu_primary;
     DeviceStream cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
-    Statistics stats;
+    StatisticHandler stats;
     const ParameterSet* current_local_registry = nullptr;
     ShaderKey current_shader_key               = ShaderKey(0, ShaderType::Device, 0);
     std::unordered_map<ShaderKey, ShaderStats, ShaderKeyHash> shader_stats;
@@ -157,6 +157,7 @@ private:
         std::unordered_map<std::string, DeviceBuffer> buffers;
         std::unordered_map<std::string, DynTableProxy> dyntables;
         std::unordered_map<std::string, DeviceBuffer> fixtables;
+        TieStatisticHandler stats;
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
@@ -209,8 +210,6 @@ private:
     TechniqueVariantShaderSet mCurrentShaderSet;
     Settings mCurrentDriverSettings;
 
-    Statistics mAccumulatedStats;
-
     static const Image MissingImage;
 
 public:
@@ -221,7 +220,6 @@ public:
         , mFilmHeight(0)
         , mSetupSettings(setup)
         , mCurrentDriverSettings()
-        , mAccumulatedStats()
     {
         mCurrentDriverSettings.device       = (int)setup.target.device();
         mCurrentDriverSettings.thread_count = (int)setup.target.threadCount();
@@ -370,6 +368,8 @@ public:
 
         mTargetedDevice = anydsl::Device(platform, mCurrentDriverSettings.device);
         mHostDevice     = anydsl::Device(anydsl::Platform::Host);
+
+        mDeviceData.stats.setDevices(mHostDevice, mTargetedDevice);
     }
 
     inline void setupThreadData()
@@ -379,6 +379,7 @@ public:
         if (isGPU()) {
             tlThreadData            = mThreadData.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
             tlThreadData->ref_count = 1;
+            tlThreadData->stats.setDevice(mHostDevice);
         } else {
             const size_t req_threads = mSetupSettings.target.threadCount() == 0 ? std::thread::hardware_concurrency() : mSetupSettings.target.threadCount();
             const size_t max_threads = req_threads + 1 /* Host */;
@@ -386,6 +387,7 @@ public:
             mAvailableThreadData.clear();
             for (size_t t = 0; t < max_threads; ++t) {
                 CPUData* ptr = mThreadData.emplace_back(std::make_unique<CPUData>()).get();
+                ptr->stats.setDevice(mTargetedDevice);
                 mAvailableThreadData.push(ptr);
             }
         }
@@ -987,8 +989,12 @@ public:
     inline void releaseAll()
     {
         std::lock_guard<std::mutex> _guard(mThreadMutex);
+
+        auto stats = std::move(mDeviceData.stats); // Save stats
+
         mDeviceData = std::move(DeviceData());
         mDeviceData.setupLinks(); // Reconnect
+        mDeviceData.stats = std::move(stats);
     }
 
     // -------------------------------------------------------- Shader
@@ -997,8 +1003,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Device Shader" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::Device, 1, {});
+        beginShaderLaunch(ShaderType::Device, 1, {});
 
         using Callback = decltype(ig_callback_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.DeviceShader.Exec);
@@ -1008,8 +1013,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::Device, {});
+        endShaderLaunch(ShaderType::Device, {});
     }
 
     inline void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, ::TonemapSettings& settings)
@@ -1017,8 +1021,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Tonemap Shader" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::Tonemap, 1, {});
+        beginShaderLaunch(ShaderType::Tonemap, 1, {});
 
         using Callback = decltype(ig_tonemap_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.TonemapShader.Exec);
@@ -1028,8 +1031,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::Tonemap, {});
+        endShaderLaunch(ShaderType::Tonemap, {});
     }
 
     inline ::GlareOutput runGlareShader(float* in_pixels, uint32_t* device_out_pixels, ::GlareSettings& settings)
@@ -1037,8 +1039,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Glare Shader" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::Glare, 1, {});
+        beginShaderLaunch(ShaderType::Glare, 1, {});
 
         using Callback = decltype(ig_glare_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.GlareShader.Exec);
@@ -1049,8 +1050,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::Glare, {});
+        endShaderLaunch(ShaderType::Glare, {});
 
         return output;
     }
@@ -1060,8 +1060,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Imageinfo Shader" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::ImageInfo, 1, {});
+        beginShaderLaunch(ShaderType::ImageInfo, 1, {});
 
         using Callback = decltype(ig_imageinfo_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.ImageinfoShader.Exec);
@@ -1073,8 +1072,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::ImageInfo, {});
+        endShaderLaunch(ShaderType::ImageInfo, {});
 
         return output;
     }
@@ -1084,8 +1082,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Primary Traversal Shader [S=" << size << "]" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::PrimaryTraversal, size, {});
+        beginShaderLaunch(ShaderType::PrimaryTraversal, size, {});
 
         using Callback = decltype(ig_traversal_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.PrimaryTraversalShader.Exec);
@@ -1095,8 +1092,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::PrimaryTraversal, {});
+        endShaderLaunch(ShaderType::PrimaryTraversal, {});
     }
 
     inline void runSecondaryTraversalShader(int size)
@@ -1104,8 +1100,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Secondary Traversal Shader [S=" << size << "]" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::SecondaryTraversal, size, {});
+        beginShaderLaunch(ShaderType::SecondaryTraversal, size, {});
 
         using Callback = decltype(ig_traversal_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.SecondaryTraversalShader.Exec);
@@ -1115,8 +1110,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::SecondaryTraversal, {});
+        endShaderLaunch(ShaderType::SecondaryTraversal, {});
     }
 
     inline int runRayGenerationShader(int next_id, int size, int xmin, int ymin, int xmax, int ymax)
@@ -1124,8 +1118,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Ray Generation Shader [S=" << size << ", I=" << next_id << "]" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::RayGeneration, (xmax - xmin) * (ymax - ymin), {});
+        beginShaderLaunch(ShaderType::RayGeneration, (xmax - xmin) * (ymax - ymin), {});
 
         using Callback = decltype(ig_ray_generation_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.RayGenerationShader.Exec);
@@ -1135,8 +1128,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::RayGeneration, {});
+        endShaderLaunch(ShaderType::RayGeneration, {});
         return ret;
     }
 
@@ -1145,8 +1137,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Miss Shader [S=" << first << ", E=" << last << "]" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::Miss, last - first, {});
+        beginShaderLaunch(ShaderType::Miss, last - first, {});
 
         using Callback = decltype(ig_miss_shader);
         auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.MissShader.Exec);
@@ -1156,8 +1147,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::Miss, {});
+        endShaderLaunch(ShaderType::Miss, {});
     }
 
     inline void runHitShader(int material_id, int first, int last)
@@ -1165,8 +1155,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Hit Shader [M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::Hit, last - first, material_id);
+        beginShaderLaunch(ShaderType::Hit, last - first, material_id);
 
         using Callback = decltype(ig_hit_shader);
         IG_ASSERT(material_id >= 0 && material_id < (int)mCurrentShaderSet.HitShaders.size(), "Expected material id for hit shaders to be valid");
@@ -1178,8 +1167,7 @@ public:
 
         checkDebugOutput();
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::Hit, material_id);
+        endShaderLaunch(ShaderType::Hit, material_id);
     }
 
     inline bool useAdvancedShadowHandling()
@@ -1195,8 +1183,7 @@ public:
             if (mSetupSettings.DebugTrace)
                 IG_LOG(L_DEBUG) << "TRACE> Advanced Hit Shader [I=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
-            if (hasStatisticAquisition())
-                getThreadData()->stats.beginShaderLaunch(ShaderType::AdvancedShadowHit, last - first, material_id);
+            beginShaderLaunch(ShaderType::AdvancedShadowHit, last - first, material_id);
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(material_id >= 0 && material_id < (int)mCurrentShaderSet.AdvancedShadowHitShaders.size(), "Expected material id for advanced shadow hit shaders to be valid");
@@ -1208,14 +1195,12 @@ public:
 
             checkDebugOutput();
 
-            if (hasStatisticAquisition())
-                getThreadData()->stats.endShaderLaunch(ShaderType::AdvancedShadowHit, material_id);
+            endShaderLaunch(ShaderType::AdvancedShadowHit, material_id);
         } else {
             if (mSetupSettings.DebugTrace)
                 IG_LOG(L_DEBUG) << "TRACE> Advanced Miss Shader [I=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
-            if (hasStatisticAquisition())
-                getThreadData()->stats.beginShaderLaunch(ShaderType::AdvancedShadowMiss, last - first, material_id);
+            beginShaderLaunch(ShaderType::AdvancedShadowMiss, last - first, material_id);
 
             using Callback = decltype(ig_advanced_shadow_shader);
             IG_ASSERT(material_id >= 0 && material_id < (int)mCurrentShaderSet.AdvancedShadowMissShaders.size(), "Expected material id for advanced shadow miss shaders to be valid");
@@ -1227,8 +1212,7 @@ public:
 
             checkDebugOutput();
 
-            if (hasStatisticAquisition())
-                getThreadData()->stats.endShaderLaunch(ShaderType::AdvancedShadowMiss, material_id);
+            endShaderLaunch(ShaderType::AdvancedShadowMiss, material_id);
         }
     }
 
@@ -1244,16 +1228,14 @@ public:
             if (mSetupSettings.DebugTrace)
                 IG_LOG(L_DEBUG) << "TRACE> Callback Shader [T=" << type << "]" << std::endl;
 
-            if (hasStatisticAquisition())
-                getThreadData()->stats.beginShaderLaunch(ShaderType::Callback, 1, type);
+            beginShaderLaunch(ShaderType::Callback, 1, type);
 
             setCurrentShader(1, ShaderKey(mCurrentShaderSet.ID, ShaderType::Callback, (uint32)type), output);
             callback(&mCurrentDriverSettings);
 
             checkDebugOutput();
 
-            if (hasStatisticAquisition())
-                getThreadData()->stats.endShaderLaunch(ShaderType::Callback, type);
+            endShaderLaunch(ShaderType::Callback, type);
         }
     }
 
@@ -1264,8 +1246,7 @@ public:
         if (mSetupSettings.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Bake Shader" << std::endl;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.beginShaderLaunch(ShaderType::Bake, 1, {});
+        beginShaderLaunch(ShaderType::Bake, 1, {});
 
         const auto copy             = mSceneSettings.resource_map;
         mSceneSettings.resource_map = resource_map;
@@ -1280,8 +1261,7 @@ public:
 
         mSceneSettings.resource_map = copy;
 
-        if (hasStatisticAquisition())
-            getThreadData()->stats.endShaderLaunch(ShaderType::Bake, {});
+        endShaderLaunch(ShaderType::Bake, {});
     }
 
     // ---------------------------------------------------- Framebuffer/AOV stuff
@@ -1520,15 +1500,113 @@ public:
             p.second.IterationCount = (size_t)std::max<int64_t>(0, (int64_t)p.second.IterationCount + p.second.IterDiff);
             p.second.IterDiff       = 0;
         }
+
+        if (isGPU()) {
+            mDeviceData.stats.finalize();
+        } else {
+            for (const auto& data : mThreadData)
+                data->stats.finalize();
+        }
     }
 
-    inline Statistics* getFullStats()
+    inline void beginShaderLaunch(ShaderType type, size_t workload, size_t id)
     {
-        mAccumulatedStats.reset();
-        for (const auto& data : mThreadData)
-            mAccumulatedStats.add(data->stats);
+        if (!hasStatisticAquisition())
+            return;
 
-        return &mAccumulatedStats;
+        if (isGPU())
+            mDeviceData.stats.beginShaderLaunch(type, workload, id);
+        else
+            getThreadData()->stats.beginShaderLaunch(type, workload, id);
+    }
+
+    inline void endShaderLaunch(ShaderType type, size_t id)
+    {
+        if (!hasStatisticAquisition())
+            return;
+
+        if (isGPU())
+            mDeviceData.stats.endShaderLaunch(type, id);
+        else
+            getThreadData()->stats.endShaderLaunch(type, id);
+    }
+
+    inline void beginSection(SectionType type)
+    {
+        if (!hasStatisticAquisition())
+            return;
+
+        if (isGPU())
+            mDeviceData.stats.beginSection(type);
+        else
+            getThreadData()->stats.beginSection(type);
+    }
+
+    inline void endSection(SectionType type)
+    {
+        if (!hasStatisticAquisition())
+            return;
+
+        if (isGPU())
+            mDeviceData.stats.endSection(type);
+        else
+            getThreadData()->stats.endSection(type);
+    }
+
+    inline void increaseQuantity(Quantity quant, size_t value)
+    {
+        if (!hasStatisticAquisition())
+            return;
+
+        if (isGPU())
+            mDeviceData.stats.increase(quant, value);
+        else
+            getThreadData()->stats.increase(quant, value);
+    }
+
+    class SectionClosure {
+    private:
+        Interface& Parent;
+        SectionType Type;
+
+    public:
+        inline SectionClosure(Interface& parent, SectionType type)
+            : Parent(parent)
+            , Type(type)
+        {
+            Parent.beginSection(Type);
+        }
+
+        inline ~SectionClosure()
+        {
+            Parent.endSection(Type);
+        }
+    };
+
+    [[nodiscard]] inline SectionClosure section(SectionType type)
+    {
+        return SectionClosure(*this, type);
+    }
+
+    inline Statistics getStatisticsForHost()
+    {
+        if (isGPU()) {
+            return mDeviceData.stats.first().statistics();
+        } else {
+            Statistics accum;
+            for (const auto& data : mThreadData)
+                accum.add(data->stats.statistics());
+
+            return accum;
+        }
+    }
+
+    inline Statistics getStatisticsForDevice()
+    {
+        if (isGPU())
+            return mDeviceData.stats.second().statistics();
+        else
+            return getStatisticsForHost(); // Same as device
     }
 
     // Access parameters
@@ -1650,6 +1728,7 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
     enterDevice();
 
     sInterface->runDeviceShader();
+    sInterface->sync();
     sInterface->present();
 
 #ifdef IG_HAS_DENOISER
@@ -1657,6 +1736,7 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
         sInterface->denoise();
 #endif
 
+    sInterface->sync();
     leaveDevice();
 }
 
@@ -1697,9 +1777,14 @@ void Device::clearFramebuffer(const std::string& name)
     sInterface->sync();
 }
 
-const Statistics* Device::getStatistics()
+Statistics Device::getStatisticsForHost()
 {
-    return sInterface->getFullStats();
+    return sInterface->getStatisticsForHost();
+}
+
+Statistics Device::getStatisticsForDevice()
+{
+    return sInterface->getStatisticsForDevice();
 }
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)
@@ -1721,11 +1806,10 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
 
     sInterface->runTonemapShader(in_pixels, device_out_pixels, settings);
 
-    if (sInterface->isGPU()) {
+    if (sInterface->isGPU())
         anydslCopyBufferToHost(sInterface->getTonemapImageGPU().handle(), 0, sInterface->getTonemapImageGPU().size() * sizeof(uint32_t), out_pixels);
-        sInterface->sync();
-    }
 
+    sInterface->sync();
     leaveDevice();
 }
 
@@ -1755,11 +1839,10 @@ GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& dri
     driver_output.AvgOmega            = output.avg_omega;
     driver_output.NumPixels           = output.num_pixels;
 
-    if (sInterface->isGPU()) {
+    if (sInterface->isGPU())
         anydslCopyBufferToHost(sInterface->getTonemapImageGPU().handle(), 0, sInterface->getTonemapImageGPU().size() * sizeof(uint32_t), out_pixels);
-        sInterface->sync();
-    }
 
+    sInterface->sync();
     leaveDevice();
 
     return driver_output;
@@ -1796,6 +1879,7 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
     driver_output.NaNCount = output.nan_counter;
     driver_output.NegCount = output.neg_counter;
 
+    sInterface->sync();
     leaveDevice();
 
     return driver_output;
@@ -2078,25 +2162,16 @@ IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float def
 // Stats
 IG_EXPORT void ignis_stats_begin_section(int id)
 {
-    if (!sInterface->hasStatisticAquisition())
-        return;
-
-    sInterface->getThreadData()->stats.beginSection((IG::SectionType)id);
+    sInterface->beginSection((IG::SectionType)id);
 }
 
 IG_EXPORT void ignis_stats_end_section(int id)
 {
-    if (!sInterface->hasStatisticAquisition())
-        return;
-
-    sInterface->getThreadData()->stats.endSection((IG::SectionType)id);
+    sInterface->endSection((IG::SectionType)id);
 }
 
 IG_EXPORT void ignis_stats_add(int id, int value)
 {
-    if (!sInterface->hasStatisticAquisition())
-        return;
-
-    sInterface->getThreadData()->stats.increase((IG::Quantity)id, static_cast<uint64_t>(value));
+    sInterface->increaseQuantity((IG::Quantity)id, static_cast<uint64_t>(value));
 }
 }

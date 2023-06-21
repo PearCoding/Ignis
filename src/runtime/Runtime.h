@@ -2,7 +2,6 @@
 
 #include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
-#include "Statistics.h"
 #include "camera/CameraOrientation.h"
 #include "device/Device.h"
 #include "loader/Loader.h"
@@ -13,6 +12,7 @@ namespace IG {
 
 struct LoaderOptions;
 class Scene;
+class Statistics;
 
 using AOVAccessor = Device::AOVAccessor;
 
@@ -91,8 +91,10 @@ public:
     /// Increase frame count (only used in interactive/realtime sessions)
     inline void incFrameCount() { mCurrentFrame++; }
 
-    /// Return pointer to structure containing statistics
-    [[nodiscard]] const Statistics* statistics() const;
+    /// Return statistical data for the host side
+    [[nodiscard]] Statistics statisticsForHost() const;
+    /// Return statistical data for the device side. Depending on the target, this might be the same as the host
+    [[nodiscard]] Statistics statisticsForDevice() const;
 
     /// Returns the name of the loaded technique
     [[nodiscard]] inline const std::string& technique() const { return mTechniqueName; }
@@ -152,6 +154,7 @@ public:
 
     /// Get options used while creating the runtime
     [[nodiscard]] const RuntimeOptions& options() const { return mOptions; }
+
 private:
     void checkCacheDirectory();
     bool load(const Path& path, const Scene* scene);

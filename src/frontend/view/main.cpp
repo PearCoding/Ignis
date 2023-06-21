@@ -246,19 +246,24 @@ int main(int argc, char** argv)
 
     timer_all.stop();
 
-    auto stats = runtime->statistics();
-    if (stats) {
-        IG_LOG(L_INFO)
-            << stats->dump(timer_all.duration_ms, totalIter, cmd.AcquireFullStats)
-            << "  Iterations: " << runtime->currentIterationCount() << " (total: " << totalIter << ")" << std::endl
-            << "  SPP: " << runtime->currentSampleCount() << std::endl
-            << "  SPI: " << SPI << std::endl
-            << "  Time: " << beautiful_time(timer_all.duration_ms) << std::endl
-            << "    Loading> " << beautiful_time(timer_loading.duration_ms) << std::endl
-            << "    Input>   " << beautiful_time(timer_input.duration_ms) << std::endl
-            << "    UI>      " << beautiful_time(timer_ui.duration_ms) << std::endl
-            << "    Render>  " << beautiful_time(timer_render.duration_ms) << std::endl
-            << "    Saving>  " << beautiful_time(timer_saving.duration_ms) << std::endl;
+    if (cmd.AcquireStats || cmd.AcquireFullStats) {
+        auto& stream = IG_LOG_UNSAFE(L_INFO);
+        if (runtime->target().isCPU()) {
+            stream << runtime->statisticsForHost().dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats);
+        } else {
+            stream << runtime->statisticsForHost().dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats, " [Host]")
+                   << runtime->statisticsForDevice().dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats, " [Device]");
+        }
+
+        stream << "  Iterations: " << runtime->currentIterationCount() << " (total: " << totalIter << ")" << std::endl
+               << "  SPP: " << runtime->currentSampleCount() << std::endl
+               << "  SPI: " << SPI << std::endl
+               << "  Time: " << beautiful_time(timer_all.duration_ms) << std::endl
+               << "    Loading> " << beautiful_time(timer_loading.duration_ms) << std::endl
+               << "    Input>   " << beautiful_time(timer_input.duration_ms) << std::endl
+               << "    UI>      " << beautiful_time(timer_ui.duration_ms) << std::endl
+               << "    Render>  " << beautiful_time(timer_render.duration_ms) << std::endl
+               << "    Saving>  " << beautiful_time(timer_saving.duration_ms) << std::endl;
     }
 
     runtime.reset();

@@ -1,5 +1,7 @@
 #include "Statistics.h"
 #include "Logger.h"
+
+#include <iomanip>
 #include <sstream>
 
 namespace IG {
@@ -9,38 +11,36 @@ Statistics::Statistics()
     std::fill(mQuantities.begin(), mQuantities.end(), 0);
 }
 
-void Statistics::beginShaderLaunch(ShaderType type, size_t workload, size_t id)
+void Statistics::add(ShaderType type, size_t id, const ShaderStats& stats)
 {
-    ShaderStats* stats = getStats(type, id);
-    stats->timer.start();
-    stats->count++;
-    stats->workload += workload;
-    stats->max_workload = std::max(stats->max_workload, workload);
-    stats->min_workload = std::min(stats->min_workload, workload);
+    const auto& p = mShaders.try_emplace(SmallShaderKey(type, id), stats);
+    if (!p.second)
+        p.first->second += stats;
 }
 
-void Statistics::endShaderLaunch(ShaderType type, size_t id)
+void Statistics::add(SectionType type, const SectionStats& stats)
 {
-    ShaderStats* stats = getStats(type, id);
-    stats->elapsed += std::chrono::duration_cast<duration_t>(stats->timer.stop());
+    mSections[(size_t)type] += stats;
 }
 
-void Statistics::beginSection(SectionType type)
+void Statistics::add(Quantity quantity, uint64 value)
 {
-    SectionStats& stats = mSections[(size_t)type];
-    stats.timer.start();
-    stats.count++;
+    mQuantities[(size_t)quantity] += value;
 }
 
-void Statistics::endSection(SectionType type)
+void Statistics::sync(ShaderType type, size_t id, float ms)
 {
-    SectionStats& stats = mSections[(size_t)type];
-    stats.elapsed += std::chrono::duration_cast<duration_t>(stats.timer.stop());
+    mShaders[SmallShaderKey(type, id)].elapsedMS = ms;
+}
+
+void Statistics::sync(SectionType type, float ms)
+{
+    mSections[(size_t)type].elapsedMS = ms;
 }
 
 Statistics::ShaderStats& Statistics::ShaderStats::operator+=(const Statistics::ShaderStats& other)
 {
-    elapsed += other.elapsed;
+    elapsedMS += other.elapsedMS;
     count += other.count;
     workload += other.workload;
     max_workload = std::max(max_workload, other.max_workload);
@@ -51,7 +51,7 @@ Statistics::ShaderStats& Statistics::ShaderStats::operator+=(const Statistics::S
 
 Statistics::SectionStats& Statistics::SectionStats::operator+=(const Statistics::SectionStats& other)
 {
-    elapsed += other.elapsed;
+    elapsedMS += other.elapsedMS;
     count += other.count;
 
     return *this;
@@ -59,21 +59,8 @@ Statistics::SectionStats& Statistics::SectionStats::operator+=(const Statistics:
 
 void Statistics::add(const Statistics& other)
 {
-    mDeviceStats += other.mDeviceStats;
-    mPrimaryTraversalStats += other.mPrimaryTraversalStats;
-    mSecondaryTraversalStats += other.mSecondaryTraversalStats;
-    mRayGenerationStats += other.mRayGenerationStats;
-    mMissStats += other.mMissStats;
-    for (const auto& pair : other.mHitStats)
-        mHitStats[pair.first] += pair.second;
-    for (const auto& pair : other.mAdvancedShadowHitStats)
-        mAdvancedShadowHitStats[pair.first] += pair.second;
-    for (const auto& pair : other.mAdvancedShadowMissStats)
-        mAdvancedShadowMissStats[pair.first] += pair.second;
-    for (const auto& pair : other.mCallbackStats)
-        mCallbackStats[pair.first] += pair.second;
-    mTonemapStats += other.mTonemapStats;
-    mImageInfoStats += other.mImageInfoStats;
+    for (const auto& p : other.mShaders)
+        mShaders[p.first] += p.second;
 
     for (size_t i = 0; i < other.mQuantities.size(); ++i)
         mQuantities[i] += other.mQuantities[i];
@@ -148,21 +135,26 @@ private:
     std::vector<std::vector<std::string>> mData;
 };
 
-std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
+std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose, const std::string& suffixFirstRow) const
 {
     DumpTable table;
-    const auto dumpInline = [&](const std::string& name, size_t count, duration_t elapsed, float percentage = -1, size_t max_workload = 0, size_t min_workload = 0, bool skip_iter = false) {
+    const auto dumpInline = [&](const std::string& name, size_t count, float elapsedMS, float percentage = -1, size_t workload = 0, size_t max_workload = 0, size_t min_workload = 0, bool skip_iter = false) {
         std::vector<std::string> cols;
         cols.emplace_back(name);
 
         {
             std::stringstream bstream;
-            bstream << elapsed << " [" << count << "]";
+            bstream << std::fixed << std::setprecision(2) << elapsedMS << " ms [" << count << "]";
             cols.emplace_back(bstream.str());
         }
         if (!skip_iter && iter != 0) {
             std::stringstream bstream;
-            bstream << (elapsed / iter) << " [" << count / iter << "] per Iteration";
+            bstream << std::fixed << std::setprecision(2) << (elapsedMS / iter) << " ms [" << count / iter << "] per Iteration";
+            cols.emplace_back(bstream.str());
+        }
+        if (count > 1) {
+            std::stringstream bstream;
+            bstream << std::fixed << std::setprecision(2) << (elapsedMS / count) << " ms per Call";
             cols.emplace_back(bstream.str());
         }
         if (percentage >= 0) {
@@ -173,7 +165,7 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
             }
             {
                 std::stringstream bstream;
-                bstream << "(min " << min_workload << ", max " << max_workload << ") per call";
+                bstream << "(min " << min_workload << ", avg " << std::fixed << std::setprecision(2) << (double(workload) / count) << ", max " << max_workload << ") per Call";
                 cols.emplace_back(bstream.str());
             }
         }
@@ -181,16 +173,26 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     };
 
     const auto dumpStats = [&](const std::string& name, const ShaderStats& stats) {
-        dumpInline(name, stats.count, stats.elapsed);
+        dumpInline(name, stats.count, stats.elapsedMS);
+    };
+
+    const auto dumpStatsBasic = [&](const std::string& name, ShaderType type) {
+        ShaderStats stats = mShaders.count(SmallShaderKey(type)) > 0 ? mShaders.at(SmallShaderKey(type)) : ShaderStats();
+        dumpStats(name, stats);
+    };
+
+    const auto dumpStatsBasicVar = [&](const std::string& name, ShaderType type) {
+        if (mShaders.count(SmallShaderKey(type)) > 0)
+            dumpStats(name, mShaders.at(SmallShaderKey(type)));
     };
 
     const auto dumpStatsDetail = [&](const std::string& name, const ShaderStats& stats, size_t total_workload) {
-        dumpInline(name, stats.count, stats.elapsed, static_cast<float>(double(stats.workload) / double(total_workload)), stats.max_workload, stats.min_workload);
+        dumpInline(name, stats.count, stats.elapsedMS, static_cast<float>(double(stats.workload) / double(total_workload)), stats.workload, stats.max_workload, stats.min_workload);
     };
 
     const auto dumpSectionStats = [&](const std::string& name, const SectionStats& stats, bool skipIter = true) {
         if (stats.count > 0)
-            dumpInline(name, stats.count, stats.elapsed, -1, 0, 0, skipIter);
+            dumpInline(name, stats.count, stats.elapsedMS, -1, 0, 0, 0, skipIter);
     };
 
     const auto dumpQuantity = [=](size_t count) {
@@ -199,20 +201,21 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
         return bstream.str();
     };
 
-    const auto sumMap = [](const std::map<size_t, ShaderStats>& map) {
+    const auto sumMap = [&](ShaderType type) {
         ShaderStats a;
-        for (const auto& pair : map)
-            a += pair.second;
+        for (const auto& pair : mShaders)
+            if (pair.first.type() == type)
+                a += pair.second;
         return a;
     };
 
     // Get all hits information
-    ShaderStats totalHits = sumMap(mHitStats);
+    const ShaderStats totalHits = sumMap(ShaderType::Hit);
 
     // Dump
-    table.addRow({ "Statistics:" });
+    table.addRow({ "Statistics" + suffixFirstRow + ":" });
     table.addRow({ "  Shader:" });
-    dumpStats("  |-Device", mDeviceStats);
+    dumpStatsBasic("  |-Device", ShaderType::Device);
     dumpSectionStats("  ||-GPUSortPrimary", mSections[(size_t)SectionType::GPUSortPrimary], false);
     dumpSectionStats("  |||-GPUSortPrimaryReset", mSections[(size_t)SectionType::GPUSortPrimaryReset], false);
     dumpSectionStats("  |||-GPUSortPrimaryCount", mSections[(size_t)SectionType::GPUSortPrimaryCount], false);
@@ -221,54 +224,60 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     dumpSectionStats("  |||-GPUSortPrimaryCollapse", mSections[(size_t)SectionType::GPUSortPrimaryCollapse], false);
     dumpSectionStats("  ||-GPUSortSecondary", mSections[(size_t)SectionType::GPUSortSecondary], false);
     dumpSectionStats("  ||-GPUCompactPrimary", mSections[(size_t)SectionType::GPUCompactPrimary], false);
-    dumpStats("  |-PrimaryTraversal", mPrimaryTraversalStats);
-    dumpStats("  |-SecondaryTraversal", mSecondaryTraversalStats);
-    dumpStats("  |-RayGeneration", mRayGenerationStats);
-    dumpStats("  |-Miss", mMissStats);
+    dumpStatsBasic("  |-PrimaryTraversal", ShaderType::PrimaryTraversal);
+    dumpStatsBasic("  |-SecondaryTraversal", ShaderType::SecondaryTraversal);
+    dumpStatsBasic("  |-RayGeneration", ShaderType::RayGeneration);
+    dumpStatsBasic("  |-Miss", ShaderType::Miss);
     dumpStats("  |-Hits", totalHits);
 
     if (verbose) {
-        for (const auto& pair : mHitStats)
-            dumpStatsDetail("  ||-@" + std::to_string(pair.first), pair.second, totalHits.workload);
+        for (const auto& pair : mShaders) {
+            if (pair.first.type() == ShaderType::Hit)
+                dumpStatsDetail("  ||-@" + std::to_string(pair.first.subID()), pair.second, totalHits.workload);
+        }
     }
 
-    if (!mAdvancedShadowHitStats.empty() || !mAdvancedShadowMissStats.empty()) {
-        ShaderStats totalAdvHits = sumMap(mAdvancedShadowHitStats);
-        ShaderStats totalAdvMiss = sumMap(mAdvancedShadowMissStats);
-
+    const ShaderStats totalAdvHits = sumMap(ShaderType::AdvancedShadowHit);
+    const ShaderStats totalAdvMiss = sumMap(ShaderType::AdvancedShadowMiss);
+    if (totalAdvHits.count > 0 || totalAdvMiss.count > 0) {
         table.addRow({ "  |-AdvancedShadow" });
 
         dumpStats("  ||-Miss", totalAdvHits);
         if (verbose) {
-            for (const auto& pair : mAdvancedShadowMissStats)
-                dumpStatsDetail("  |||-@" + std::to_string(pair.first), pair.second, totalHits.workload);
+            for (const auto& pair : mShaders) {
+                if (pair.first.type() == ShaderType::AdvancedShadowMiss)
+                    dumpStatsDetail("  |||-@" + std::to_string(pair.first.subID()), pair.second, totalHits.workload);
+            }
         }
 
         dumpStats("  ||-Hits", totalAdvMiss);
         if (verbose) {
-            for (const auto& pair : mAdvancedShadowHitStats)
-                dumpStatsDetail("  |||-@" + std::to_string(pair.first), pair.second, totalHits.workload);
+            for (const auto& pair : mShaders) {
+                if (pair.first.type() == ShaderType::AdvancedShadowHit)
+                    dumpStatsDetail("  |||-@" + std::to_string(pair.first.subID()), pair.second, totalHits.workload);
+            }
         }
     }
 
-    if (!mCallbackStats.empty()) {
-        table.addRow({ "  |-Callback" });
-        for (const auto& pair : mCallbackStats)
-            dumpStats("  ||-@" + std::to_string(pair.first) + ">", pair.second);
+    const ShaderStats totalCallback = sumMap(ShaderType::Callback);
+    if (totalCallback.count > 0) {
+        dumpStats("  |-Callback", totalCallback);
+        for (const auto& pair : mShaders) {
+            if (pair.first.type() == ShaderType::Callback)
+                dumpStats("  ||-@" + std::to_string(pair.first.subID()) + ">", pair.second);
+        }
     }
 
-    if (mImageInfoStats.count > 0) {
-        dumpStats("  |-ImageInfo", mImageInfoStats);
+    if (mShaders.count(SmallShaderKey(ShaderType::ImageInfo)) > 0) {
+        dumpStatsBasic("  |-ImageInfo", ShaderType::ImageInfo);
         dumpSectionStats("  ||-ImageInfoPercentile", mSections[(size_t)SectionType::ImageInfoPercentile], false);
         dumpSectionStats("  ||-ImageInfoError", mSections[(size_t)SectionType::ImageInfoError], false);
         dumpSectionStats("  ||-ImageInfoHistogram", mSections[(size_t)SectionType::ImageInfoHistogram], false);
     }
 
-    if (mTonemapStats.count > 0)
-        dumpStats("  |-Tonemap", mTonemapStats);
-
-    if (mBakeStats.count > 0)
-        dumpStats("  |-Bake", mBakeStats);
+    dumpStatsBasicVar("  |-Tonemap", ShaderType::Tonemap);
+    dumpStatsBasicVar("  |-Glare", ShaderType::Glare);
+    dumpStatsBasicVar("  |-Bake", ShaderType::Bake);
 
     table.addRow({ "  Sections:" });
     dumpSectionStats("  |-ImageLoading", mSections[(size_t)SectionType::ImageLoading]);
@@ -292,34 +301,4 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose) const
     return table.print(false, true);
 }
 
-Statistics::ShaderStats* Statistics::getStats(ShaderType type, size_t id)
-{
-    switch (type) {
-    default:
-    case ShaderType::Device:
-        return &mDeviceStats;
-    case ShaderType::PrimaryTraversal:
-        return &mPrimaryTraversalStats;
-    case ShaderType::SecondaryTraversal:
-        return &mSecondaryTraversalStats;
-    case ShaderType::RayGeneration:
-        return &mRayGenerationStats;
-    case ShaderType::Miss:
-        return &mMissStats;
-    case ShaderType::Hit:
-        return &mHitStats[id];
-    case ShaderType::AdvancedShadowHit:
-        return &mAdvancedShadowHitStats[id];
-    case ShaderType::AdvancedShadowMiss:
-        return &mAdvancedShadowMissStats[id];
-    case ShaderType::Callback:
-        return &mHitStats[id];
-    case ShaderType::Tonemap:
-        return &mTonemapStats;
-    case ShaderType::ImageInfo:
-        return &mImageInfoStats;
-    case ShaderType::Bake:
-        return &mBakeStats;
-    }
-}
 } // namespace IG
