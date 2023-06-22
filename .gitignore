@@ -71,3 +71,6 @@ scripts/docker/ignis/tmp/
 
 # Do not export imgui settings
 imgui.ini
+
+# You have to get the file (also called trans_refl.cal) yourself.
+scenes/evaluation/radiance/roos.cal
