@@ -34,8 +34,8 @@ fn @make_rad_brtdfunc_bsdf(surf: SurfaceElement,
 // Roos, A., Polato, P., Van Nijnatten, P.A., Hutchins, M.G., Olive, F. and Anderson, C. (2001),
 // Angular-dependent optical properties of low-e and solar control windows—: Simulations versus measurements
 fn @make_rad_roos_bsdf(surf: SurfaceElement, cosN: f32,
-    tau_t0: f32, tau_p: f32, tau_q: f32,
-    rf_r0:  f32, rf_p:  f32, rf_q:  f32,
+    trns_w: f32, trns_p: f32, trns_q: f32,
+    refl_w:  f32, refl_p:  f32, refl_q:  f32,
     refl_f_diff: Color, refl_b_diff: Color, trns_diff: Color) -> Bsdf {
 
     let a = 8:f32;
@@ -47,8 +47,8 @@ fn @make_rad_roos_bsdf(surf: SurfaceElement, cosN: f32,
     let gamma = @|p:f32,q:f32| (5.26 + 0.06 * p) + (0.73 + 0.04 * p) * q;
 
     let z = math_builtins::acos(math_builtins::fabs(clampf(cosN, -1, 1))) * 0.636619772368; 
-    let tau = tau_t0 * (1 - a * math_builtins::pow(z, alpha(tau_q))-b(tau_q) * math_builtins::pow(z, beta) - c(tau_p, tau_q) * math_builtins::pow(z, gamma(tau_p, tau_q)));
-    let rf  = rf_r0 + (1 - rf_r0) * math_builtins::pow(z, gamma(rf_p, rf_q));
+    let tau = trns_w * (1 - a * math_builtins::pow(z, alpha(trns_q))-b(trns_q) * math_builtins::pow(z, beta) - c(trns_p, trns_q) * math_builtins::pow(z, gamma(trns_p, trns_q)));
+    let rf  = refl_w + (1 - refl_w) * math_builtins::pow(z, gamma(refl_p, refl_q));
 
     make_rad_brtdfunc_bsdf(surf,
                 make_gray_color(rf), make_gray_color(tau), color_builtins::black,

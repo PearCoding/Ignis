@@ -15,7 +15,8 @@ void TransparentBSDF::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
     input.Tree.addColor("color", *mBSDF, Vector3f::Ones());
     const std::string bsdf_id = input.Tree.currentClosureID();
-    input.Stream << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_perfect_refraction_bsdf(ctx.surf, "
+    input.Stream << input.Tree.pullHeader()
+                 << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_perfect_refraction_bsdf(ctx.surf, "
                  << input.Tree.getInline("color") << ");" << std::endl;
     input.Tree.endClosure();
 }

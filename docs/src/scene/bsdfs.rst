@@ -452,6 +452,31 @@ Cutoff (:monosp:`cutoff`)
 .. subfigend::
   :label: fig-cutoff
 
+.. _bsdf-transparent:
+
+Transparent (:monosp:`transparent`)
+-----------------------------------
+
+.. objectparameters::
+
+  * - color
+    - |color|
+    - :code:`1`
+    - Yes
+    - Color tint of the transparent material.
+
+.. subfigstart::
+
+.. subfigure::  images/bsdf_transparent.jpg
+  :align: center
+  
+  Transparent
+
+.. subfigend::
+  :label: fig-transparent
+
+.. WARNING:: The :monosp:`transparent` bsdf should be used carefully, as simple techniques like Next-Event Estimation still intersect the object geometry.
+
 .. _bsdf-passthrough:
 
 Passthrough (:monosp:`passthrough`)
@@ -619,8 +644,6 @@ Klems (:monosp:`klems`)
     - Yes
     - Up vector
 
-.. WARNING:: The :monosp:`klems` bsdf is still experimental and has some issues.
-
 .. _bsdf-tensortree:
 
 TensorTree (:monosp:`tensortree`)
@@ -643,6 +666,101 @@ TensorTree (:monosp:`tensortree`)
     - :code:`(0,0,1)`
     - Yes
     - Up vector
+
+.. _bsdf-rad-brtdfunc:
+
+Radiance BRTDfunc (:monosp:`rad_brtdfunc`)
+------------------------------------------
+
+.. objectparameters::
+
+  * - reflection_specular   
+    - |color|
+    - :code:`1`
+    - Yes
+    - Tint of the specular reflection lobe.
+  * - transmission_specular
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the specular transmission lobe.
+	* - direct_diffuse
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the direct diffuse lobe. In contrary to Radiance, Ignis has no special handling of direct light connections (NEE) inside materials. The lobe is simply added to the diffuse lobes below.
+	* - reflection_front_diffuse
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the front-side diffuse lobe.
+	*	- reflection_back_diffuse
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the back-side diffuse lobe.
+	* -	transmission_diffuse
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the diffuse transmission lobe. This emulates translucency.
+
+.. subfigstart::
+
+.. subfigure::  images/bsdf_rad_brtdfunc.jpg
+  :align: center
+  
+  An example BRTDfunc rendered inside Ignis
+
+.. subfigend::
+  :label: fig-rad-brtdfunc
+
+.. _bsdf-rad-roos:
+
+Radiance Roos model (:monosp:`rad_roos`)
+----------------------------------------
+
+Roos model based on the paper:
+Roos, A., Polato, P., Van Nijnatten, P.A., Hutchins, M.G., Olive, F. and Anderson, C. (2001),
+Angular-dependent optical properties of low-e and solar control windows—: Simulations versus measurements
+
+.. objectparameters::
+
+  * - refl_w, refl_p, refl_q   
+    - |number|
+    - :code:`0`
+    - Yes
+    - Roos parameters for the reflection.
+  * - trns_w, trns_p, trns_q   
+    - |number|
+    - :code:`0`
+    - Yes
+    - Roos parameters for the transmission.
+  * - reflection_front_diffuse
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the front-side diffuse lobe.
+	* - reflection_back_diffuse
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the back-side diffuse lobe.
+	* - transmission_diffuse
+    - |color|
+    - :code:`0`
+    - Yes
+    - Tint of the diffuse transmission lobe. This emulates translucency.
+
+.. subfigstart::
+
+.. subfigure::  images/bsdf_rad_roos.jpg
+  :align: center
+  
+  An example BRTDfunc rendered inside Ignis
+
+.. subfigend::
+  :label: fig-rad-roos
 
 .. _bsdf-dielectric-list:
 
