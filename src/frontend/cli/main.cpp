@@ -7,6 +7,8 @@
 #include "Timer.h"
 #include "config/Build.h"
 
+#include <fstream>
+
 using namespace IG;
 
 struct SectionTimer {
@@ -168,6 +170,12 @@ int main(int argc, char** argv)
                << "    Loading> " << beautiful_time(timer_loading.duration_ms) << std::endl
                << "    Render>  " << beautiful_time(timer_render.duration_ms) << std::endl
                << "    Saving>  " << beautiful_time(timer_saving.duration_ms) << std::endl;
+    }
+
+    if (!cmd.StatsFile.empty()) {
+        IG_LOG(L_INFO) << "Writing profiling data to " << cmd.StatsFile << std::endl;
+        std::ofstream out_json(cmd.StatsFile);
+        out_json << runtime->statisticsForDevice().dumpAsJSON();
     }
 
     runtime.reset();

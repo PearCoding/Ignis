@@ -23,6 +23,12 @@ public:
         mSecondHandler.reset();
     }
 
+    inline void startIteration()
+    {
+        mFirstHandler.startIteration();
+        mSecondHandler.startIteration();
+    }
+
     inline void beginShaderLaunch(ShaderType type, size_t workload, size_t id)
     {
         mFirstHandler.beginShaderLaunch(type, workload, id);

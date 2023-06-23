@@ -173,6 +173,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
     app.add_flag("--stats-full", AcquireFullStats, "Acquire all stats alongside rendering. Will be dumped at the end of the rendering session");
+    app.add_option("--stats-file", StatsFile, "Acquire useful stats alongside rendering and dump all into the given file");
 
     app.add_flag("--debug-trace", DebugTrace, "Dump information regarding calls on the device. Will slow down execution and produce a lot of output!");
 
@@ -211,7 +212,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_flag("--denoise", Denoise, "Apply denoiser if available");
         app.add_flag("--denoiser-follow-specular,!--denoiser-skip-specular", DenoiserFollowSpecular, "Follow specular paths or terminate at them");
         app.add_flag("--denoiser-aov-first-iteration,!--denoiser-aov-every-iteration", DenoiserOnlyFirstIteration, "Acquire scene normal, albedo and depth information every iteration or only at the first");
-    
+
         app.add_flag("--glare", Glare, "Enable glare overlay");
     }
 
@@ -396,7 +397,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.IsInteractive = Type == ApplicationType::View;
 
     options.Target           = Target;
-    options.AcquireStats     = AcquireStats || AcquireFullStats;
+    options.AcquireStats     = AcquireStats || AcquireFullStats || !StatsFile.empty();
     options.DebugTrace       = DebugTrace;
     options.DumpShader       = DumpShader || DumpFullShader;
     options.DumpShaderFull   = DumpFullShader;

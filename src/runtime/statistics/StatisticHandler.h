@@ -10,9 +10,12 @@ public:
 
     inline void setDevice(const anydsl::Device& device)
     {
-        mDevice = device; // Be careful with this.
+        mDevice              = device; // Be careful with this.
+        mStartIterationEvent = anydsl::Event(device);
         reset();
     }
+
+    void startIteration();
 
     inline void reset()
     {
@@ -34,9 +37,14 @@ public:
     inline const Statistics& statistics() const { return mStatistics; }
 
 private:
+    void pushToStream(const SmallShaderKey& key);
+    void pushToStream(const SectionType& key);
+
     anydsl::Device mDevice;
+    anydsl::Event mStartIterationEvent;
 
     std::unordered_map<SmallShaderKey, DeviceTimer, SmallShaderKeyHash> mShaders;
+    std::unordered_map<SmallShaderKey, size_t, SmallShaderKeyHash> mShaderPayload;
     std::vector<DeviceTimer> mSections;
 
     Statistics mStatistics;

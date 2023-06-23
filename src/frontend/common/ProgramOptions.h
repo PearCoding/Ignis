@@ -60,6 +60,7 @@ public:
 
     int Seed = 0;
 
+    Path StatsFile;
     bool AcquireStats     = false;
     bool AcquireFullStats = false;
     bool DebugTrace       = false;

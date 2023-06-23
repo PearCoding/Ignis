@@ -399,6 +399,13 @@ public:
         updateSettings(settings);
         mCurrentRenderSettings = settings;
         mCurrentParameters     = parameterSet;
+
+        if (isGPU()) {
+            mDeviceData.stats.startIteration();
+        } else {
+            for (const auto& data : mThreadData)
+                data->stats.startIteration();
+        }
     }
 
     inline void updateSettings(const Device::RenderSettings& settings)

@@ -1,26 +1,68 @@
 #include "Statistics.h"
+#include "Color.h"
 #include "Logger.h"
+#include "config/Version.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+#include <rapidjson/istreamwrapper.h>
+
 namespace IG {
+constexpr size_t InitialStreamSize = 4096;
 Statistics::Statistics()
-    : mQuantities()
+    : mCurrentStream(0)
+    , mQuantities()
 {
     std::fill(mQuantities.begin(), mQuantities.end(), 0);
+    for (size_t i = 0; i < mStreams.size(); ++i)
+        mStreams[i].reserve(InitialStreamSize);
 }
 
-void Statistics::add(ShaderType type, size_t id, const ShaderStats& stats)
+void Statistics::nextStream()
 {
-    const auto& p = mShaders.try_emplace(SmallShaderKey(type, id), stats);
-    if (!p.second)
-        p.first->second += stats;
+    consume();
+    mCurrentStream = (mCurrentStream + 1) % mStreams.size();
+    currentStream().clear();
 }
 
-void Statistics::add(SectionType type, const SectionStats& stats)
+void Statistics::record(const Timestamp& stats)
 {
-    mSections[(size_t)type] += stats;
+    currentStream().push_back(stats);
+}
+
+void Statistics::consume()
+{
+    // Sort based on the start
+    std::sort(currentStream().begin(), currentStream().end(),
+              [](const Timestamp& a, const Timestamp& b) { return a.offsetStartMS < b.offsetStartMS; });
+
+    // Distribute data to respective places
+    for (auto& timestamp : currentStream()) {
+        if (!timestamp.dirty)
+            continue;
+
+        if (std::holds_alternative<SmallShaderKey>(timestamp.type)) {
+            const auto type = std::get<SmallShaderKey>(timestamp.type);
+
+            auto& stats = mShaders.try_emplace(type).first->second;
+            stats.count += 1;
+            stats.elapsedMS += (timestamp.offsetEndMS - timestamp.offsetStartMS);
+            stats.workload += timestamp.workload;
+            stats.minWorkload = std::min(stats.minWorkload, timestamp.workload);
+            stats.maxWorkload = std::max(stats.maxWorkload, timestamp.workload);
+        } else {
+            const auto type = std::get<SectionType>(timestamp.type);
+
+            auto& stats = mSections[(size_t)type];
+            stats.count += 1;
+            stats.elapsedMS += (timestamp.offsetEndMS - timestamp.offsetStartMS);
+        }
+        timestamp.dirty = false;
+    }
 }
 
 void Statistics::add(Quantity quantity, uint64 value)
@@ -28,23 +70,13 @@ void Statistics::add(Quantity quantity, uint64 value)
     mQuantities[(size_t)quantity] += value;
 }
 
-void Statistics::sync(ShaderType type, size_t id, float ms)
-{
-    mShaders[SmallShaderKey(type, id)].elapsedMS = ms;
-}
-
-void Statistics::sync(SectionType type, float ms)
-{
-    mSections[(size_t)type].elapsedMS = ms;
-}
-
 Statistics::ShaderStats& Statistics::ShaderStats::operator+=(const Statistics::ShaderStats& other)
 {
     elapsedMS += other.elapsedMS;
     count += other.count;
     workload += other.workload;
-    max_workload = std::max(max_workload, other.max_workload);
-    min_workload = std::min(min_workload, other.min_workload);
+    maxWorkload = std::max(maxWorkload, other.maxWorkload);
+    minWorkload = std::min(minWorkload, other.minWorkload);
 
     return *this;
 }
@@ -67,7 +99,51 @@ void Statistics::add(const Statistics& other)
 
     for (size_t i = 0; i < other.mSections.size(); ++i)
         mSections[i] += other.mSections[i];
+
+    // Take the largest stream
+    if (lastStream().size() < other.lastStream().size())
+        mStreams[(mCurrentStream - 1) % mStreams.size()] = other.lastStream();
 }
+
+const static std::unordered_map<ShaderType, const char*> ShaderTypeName = {
+    { ShaderType::Device, "Device" },
+    { ShaderType::PrimaryTraversal, "PrimaryTraversal" },
+    { ShaderType::SecondaryTraversal, "SecondaryTraversal" },
+    { ShaderType::RayGeneration, "RayGeneration" },
+    { ShaderType::Hit, "Hit" },
+    { ShaderType::Miss, "Miss" },
+    { ShaderType::AdvancedShadowHit, "AdvancedShadowHit" },
+    { ShaderType::AdvancedShadowMiss, "AdvancedShadowMiss" },
+    { ShaderType::Callback, "Callback" },
+    { ShaderType::Tonemap, "Tonemap" },
+    { ShaderType::Glare, "Glare" },
+    { ShaderType::ImageInfo, "ImageInfo" },
+    { ShaderType::Bake, "Bake" },
+};
+
+const static std::unordered_map<SectionType, const char*> SectionTypeName = {
+    { SectionType::GPUSortPrimary, "GPUSortPrimary" },
+    { SectionType::GPUSortSecondary, "GPUSortSecondary" },
+    { SectionType::GPUCompactPrimary, "GPUCompactPrimary" },
+    { SectionType::GPUSortPrimaryReset, "GPUSortPrimaryReset" },
+    { SectionType::GPUSortPrimaryCount, "GPUSortPrimaryCount" },
+    { SectionType::GPUSortPrimaryScan, "GPUSortPrimaryScan" },
+    { SectionType::GPUSortPrimarySort, "GPUSortPrimarySort" },
+    { SectionType::GPUSortPrimaryCollapse, "GPUSortPrimaryCollapse" },
+    { SectionType::ImageInfoPercentile, "ImageInfoPercentile" },
+    { SectionType::ImageInfoError, "ImageInfoError" },
+    { SectionType::ImageInfoHistogram, "ImageInfoHistogram" },
+    { SectionType::ImageLoading, "ImageLoading" },
+    { SectionType::PackedImageLoading, "PackedImageLoading" },
+    { SectionType::BufferLoading, "BufferLoading" },
+    { SectionType::BufferRequests, "BufferRequests" },
+    { SectionType::BufferReleases, "BufferReleases" },
+    { SectionType::FramebufferUpdate, "FramebufferUpdate" },
+    { SectionType::AOVUpdate, "AOVUpdate" },
+    { SectionType::TonemapUpdate, "TonemapUpdate" },
+    { SectionType::FramebufferHostUpdate, "FramebufferHostUpdate" },
+    { SectionType::AOVHostUpdate, "AOVHostUpdate" },
+};
 
 class DumpTable {
 public:
@@ -187,7 +263,7 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose, const st
     };
 
     const auto dumpStatsDetail = [&](const std::string& name, const ShaderStats& stats, size_t total_workload) {
-        dumpInline(name, stats.count, stats.elapsedMS, static_cast<float>(double(stats.workload) / double(total_workload)), stats.workload, stats.max_workload, stats.min_workload);
+        dumpInline(name, stats.count, stats.elapsedMS, static_cast<float>(double(stats.workload) / double(total_workload)), stats.workload, stats.maxWorkload, stats.minWorkload);
     };
 
     const auto dumpSectionStats = [&](const std::string& name, const SectionStats& stats, bool skipIter = true) {
@@ -301,4 +377,305 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose, const st
     return table.print(false, true);
 }
 
+std::string Statistics::dumpAsJSON() const
+{
+    std::stringstream json;
+    json << "{" << std::endl;
+
+    json << "\"version\":[" << IG_VERSION_MAJOR << "," << IG_VERSION_MINOR << "," << IG_VERSION_PATCH << "]," << std::endl;
+
+    // Dump timestamps
+    json << "\"streams\": [" << std::endl;
+    for (size_t i = 0; i < mStreams.size(); ++i) {
+        const auto& stream = mStreams[i];
+        json << "[";
+        for (size_t k = 0; k < stream.size(); ++k) {
+            const auto& timestamp = stream.at(k);
+
+            int type  = 0;
+            int subid = -1;
+            if (std::holds_alternative<SmallShaderKey>(timestamp.type)) {
+                const auto stype = std::get<SmallShaderKey>(timestamp.type);
+                type             = (int)stype.type();
+                subid            = (int)stype.subID();
+            } else {
+                type = (int)std::get<SectionType>(timestamp.type);
+            }
+
+            json << "{"
+                 << "\"type\":" << type << ","
+                 << "\"sub_id\":" << subid << ","
+                 << "\"start_ms\":" << timestamp.offsetStartMS << ","
+                 << "\"end_ms\":" << timestamp.offsetEndMS << ","
+                 << "\"workload\":" << timestamp.workload
+                 << "}";
+
+            if (k + 1 < stream.size())
+                json << "," << std::endl;
+        }
+        json << "]";
+        if (i + 1 < mStreams.size())
+            json << "," << std::endl;
+    }
+    json << "]," << std::endl;
+
+    // Dump quantities
+    json << "\"quantities\": [" << std::endl;
+    for (size_t i = 0; i < mQuantities.size(); ++i) {
+        json << "{"
+             << "\"type\":" << i << ","
+             << "\"value\":" << mQuantities.at(i)
+             << "}";
+
+        if (i + 1 < mQuantities.size())
+            json << "," << std::endl;
+    }
+    json << "]," << std::endl;
+
+    // Means
+    json << "\"means\": [" << std::endl;
+    for (const auto& p : mShaders) {
+        json << "{"
+             << "\"type\":" << (size_t)p.first.type() << ","
+             << "\"sub_id\":" << p.first.subID() << ","
+             << "\"count\":" << p.second.count << ","
+             << "\"total_elapsed_ms\":" << p.second.elapsedMS << ","
+             << "\"total_workload\":" << p.second.workload << ","
+             << "\"min_workload\":" << p.second.minWorkload << ","
+             << "\"max_workload\":" << p.second.maxWorkload
+             << "}," << std::endl;
+    }
+    for (size_t i = 0; i < mSections.size(); ++i) {
+        json << "{"
+             << "\"type\":" << i << ","
+             << "\"sub_id\":-1,"
+             << "\"count\":" << mSections[i].count << ","
+             << "\"total_elapsed_ms\":" << mSections[i].elapsedMS << ","
+             << "\"total_workload\":0,"
+             << "\"min_workload\":0,"
+             << "\"max_workload\":0"
+             << "}";
+
+        if (i + 1 < mSections.size())
+            json << "," << std::endl;
+    }
+    json << "]" << std::endl;
+
+    json << "}" << std::endl;
+    return json.str();
+}
+
+constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag | rapidjson::kParseEscapedApostropheFlag;
+bool Statistics::loadFromJSON(const std::string& jsonStr)
+{
+    rapidjson::Document doc;
+    if (doc.Parse<JsonFlags>(jsonStr.c_str()).HasParseError()) {
+        IG_LOG(L_ERROR) << "JSON[" << doc.GetErrorOffset() << "]: " << rapidjson::GetParseError_En(doc.GetParseError()) << std::endl;
+        return false;
+    }
+
+    if (!doc.IsObject()) {
+        IG_LOG(L_ERROR) << "JSON: Expected root element to be an object." << std::endl;
+        return false;
+    }
+
+    // Check version
+    if (doc.HasMember("version")) {
+        if (!doc["version"].IsArray()) {
+            IG_LOG(L_ERROR) << "JSON: Expected 'version' element to be an array" << std::endl;
+            return false;
+        }
+
+        const auto arr = doc["version"].GetArray();
+        if (arr.Size() != 3) {
+            IG_LOG(L_ERROR) << "JSON: Expected version element to be of size 3." << std::endl;
+            return false;
+        }
+
+        if (arr[0].GetInt() != IG_VERSION_MAJOR || arr[1].GetInt() != IG_VERSION_MINOR || arr[2].GetInt() != IG_VERSION_PATCH) {
+            IG_LOG(L_ERROR) << "JSON: Expected version to be "
+                            << IG_VERSION_MAJOR << "." << IG_VERSION_MINOR << "." << IG_VERSION_PATCH << " but got "
+                            << arr[0].GetInt() << "." << arr[1].GetInt() << "." << arr[2].GetInt() << std::endl;
+            return false;
+        }
+    } else {
+        IG_LOG(L_ERROR) << "JSON: Expected version element to be available." << std::endl;
+        return false;
+    }
+
+    // Get timestamps
+    if (doc.HasMember("streams")) {
+        if (!doc["streams"].IsArray()) {
+            IG_LOG(L_ERROR) << "JSON: Expected 'streams' element to be an array" << std::endl;
+            return false;
+        }
+
+        const auto arr = doc["streams"].GetArray();
+        for (size_t i = 0; i < arr.Size(); ++i) {
+            if (i >= mStreams.size()) {
+                IG_LOG(L_WARNING) << "JSON: Got too many streams. Ignoring" << std::endl;
+                break;
+            }
+
+            if (!arr[i].IsArray()) {
+                IG_LOG(L_ERROR) << "JSON: Expected 'streams' child elements to be an array" << std::endl;
+                return false;
+            }
+
+            const auto stream = arr[i].GetArray();
+            for (size_t k = 0; k < stream.Size(); ++k) {
+                if (!stream[k].IsObject()) {
+                    IG_LOG(L_ERROR) << "JSON: Expected timestamp entries to be an object" << std::endl;
+                    return false;
+                }
+
+                const auto timestampObj = stream[k].GetObject();
+
+                int type   = 0;
+                int sub_id = -1;
+                if (const auto it = timestampObj.FindMember("type"); it != timestampObj.MemberEnd()) {
+                    if (it->value.IsInt())
+                        type = it->value.GetInt();
+                }
+                if (const auto it = timestampObj.FindMember("sub_id"); it != timestampObj.MemberEnd()) {
+                    if (it->value.IsInt())
+                        sub_id = it->value.GetInt();
+                }
+
+                Timestamp timestamp = sub_id >= 0 ? Timestamp{ SmallShaderKey((ShaderType)type, (uint32)sub_id) } : Timestamp{ (SectionType)type }; // Default
+
+                if (const auto it = timestampObj.FindMember("start_ms"); it != timestampObj.MemberEnd()) {
+                    if (it->value.IsNumber())
+                        timestamp.offsetStartMS = it->value.GetFloat();
+                }
+                if (const auto it = timestampObj.FindMember("end_ms"); it != timestampObj.MemberEnd()) {
+                    if (it->value.IsNumber())
+                        timestamp.offsetEndMS = it->value.GetFloat();
+                }
+                if (const auto it = timestampObj.FindMember("workload"); it != timestampObj.MemberEnd()) {
+                    if (it->value.IsUint64())
+                        timestamp.workload = it->value.GetUint64();
+                }
+
+                mStreams[i].push_back(std::move(timestamp));
+            }
+        }
+    }
+
+    // Get quantities
+    if (doc.HasMember("quantities")) {
+        if (!doc["quantities"].IsArray()) {
+            IG_LOG(L_ERROR) << "JSON: Expected 'quantities' element to be an array" << std::endl;
+            return false;
+        }
+
+        const auto arr = doc["quantities"].GetArray();
+        for (size_t i = 0; i < arr.Size(); ++i) {
+            if (!arr[i].IsObject()) {
+                IG_LOG(L_ERROR) << "JSON: Expected quantity entries to be an object" << std::endl;
+                return false;
+            }
+
+            const auto quantObj = arr[i].GetObject();
+
+            uint32 type  = 0;
+            uint64 value = 0;
+            if (const auto it = quantObj.FindMember("type"); it != quantObj.MemberEnd()) {
+                if (it->value.IsUint())
+                    type = it->value.GetUint();
+            }
+            if (const auto it = quantObj.FindMember("value"); it != quantObj.MemberEnd()) {
+                if (it->value.IsUint64())
+                    value = it->value.GetUint64();
+            }
+
+            if (type >= mQuantities.size()) {
+                IG_LOG(L_ERROR) << "JSON: Given quantity type is invalid" << std::endl;
+                return false;
+            }
+            mQuantities[type] = value;
+        }
+    }
+
+    // Get means
+    if (doc.HasMember("means")) {
+        if (!doc["means"].IsArray()) {
+            IG_LOG(L_ERROR) << "JSON: Expected 'means' element to be an array" << std::endl;
+            return false;
+        }
+
+        const auto arr = doc["means"].GetArray();
+        for (size_t i = 0; i < arr.Size(); ++i) {
+            if (!arr[i].IsObject()) {
+                IG_LOG(L_ERROR) << "JSON: Expected mean entries to be an object" << std::endl;
+                return false;
+            }
+
+            const auto meanObj = arr[i].GetObject();
+
+            int type   = 0;
+            int sub_id = -1;
+            if (const auto it = meanObj.FindMember("type"); it != meanObj.MemberEnd()) {
+                if (it->value.IsInt())
+                    type = it->value.GetInt();
+            }
+            if (const auto it = meanObj.FindMember("sub_id"); it != meanObj.MemberEnd()) {
+                if (it->value.IsInt())
+                    sub_id = it->value.GetInt();
+            }
+
+            float totalElapsedMS = 0;
+            size_t count         = 0;
+            size_t totalWorkload = 0;
+            size_t minWorkload   = 0;
+            size_t maxWorkload   = 0;
+
+            if (const auto it = meanObj.FindMember("total_elapsed_ms"); it != meanObj.MemberEnd()) {
+                if (it->value.IsNumber())
+                    totalElapsedMS = it->value.GetFloat();
+            }
+            if (const auto it = meanObj.FindMember("count"); it != meanObj.MemberEnd()) {
+                if (it->value.IsUint64())
+                    count = it->value.GetUint64();
+            }
+            if (const auto it = meanObj.FindMember("total_workload"); it != meanObj.MemberEnd()) {
+                if (it->value.IsUint64())
+                    totalWorkload = it->value.GetUint64();
+            }
+            if (const auto it = meanObj.FindMember("min_workload"); it != meanObj.MemberEnd()) {
+                if (it->value.IsUint64())
+                    minWorkload = it->value.GetUint64();
+            }
+            if (const auto it = meanObj.FindMember("max_workload"); it != meanObj.MemberEnd()) {
+                if (it->value.IsUint64())
+                    maxWorkload = it->value.GetUint64();
+            }
+
+            if (sub_id >= 0) {
+                if (type >= (int)ShaderType::_COUNT) {
+                    IG_LOG(L_ERROR) << "JSON: Given mean type is invalid" << std::endl;
+                    return false;
+                }
+
+                auto& stats       = mShaders.try_emplace(SmallShaderKey((ShaderType)type, sub_id)).first->second;
+                stats.count       = count;
+                stats.elapsedMS   = totalElapsedMS;
+                stats.workload    = totalWorkload;
+                stats.minWorkload = minWorkload;
+                stats.maxWorkload = maxWorkload;
+            } else {
+                if (type >= (int)SectionType::_COUNT) {
+                    IG_LOG(L_ERROR) << "JSON: Given mean type is invalid" << std::endl;
+                    return false;
+                }
+
+                auto& stats     = mSections[type];
+                stats.count     = count;
+                stats.elapsedMS = totalElapsedMS;
+            }
+        }
+    }
+
+    return true;
+}
 } // namespace IG
