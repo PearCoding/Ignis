@@ -755,6 +755,7 @@ public:
         if (it != images.end())
             return it->second;
 
+        sync();
         _SECTION(SectionType::ImageLoading);
 
         IG_LOG(L_DEBUG) << "Loading image '" << filename << "' (C=" << expected_channels << ")" << std::endl;
@@ -784,6 +785,7 @@ public:
         if (it != images.end())
             return it->second;
 
+        sync();
         _SECTION(SectionType::PackedImageLoading);
 
         IG_LOG(L_DEBUG) << "Loading (packed) image '" << filename << "' (C=" << expected_channels << ")" << std::endl;
@@ -835,6 +837,7 @@ public:
         if (it != buffers.end())
             return it->second;
 
+        sync();
         _SECTION(SectionType::BufferLoading);
 
         IG_LOG(L_DEBUG) << "Loading buffer '" << filename << "'" << std::endl;
@@ -861,6 +864,7 @@ public:
         if (auto it = buffers.find(name); it != buffers.end() && it->second.Data.size() >= (int64_t)size)
             return it->second;
 
+        sync();
         _SECTION(SectionType::BufferRequests);
 
         IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;

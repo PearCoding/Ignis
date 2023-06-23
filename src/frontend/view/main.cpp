@@ -249,13 +249,14 @@ int main(int argc, char** argv)
     if (cmd.AcquireStats || cmd.AcquireFullStats) {
         auto& stream = IG_LOG_UNSAFE(L_INFO);
         if (runtime->target().isCPU()) {
-            stream << runtime->statisticsForHost().dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats);
+            stream << runtime->statisticsForHost().dump(timer_all.duration_ms, totalIter, cmd.AcquireFullStats);
         } else {
-            stream << runtime->statisticsForHost().dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats, " [Host]")
-                   << runtime->statisticsForDevice().dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats, " [Device]");
+            stream << runtime->statisticsForHost().dump(timer_all.duration_ms, totalIter, cmd.AcquireFullStats, " [Host]")
+                   << runtime->statisticsForDevice().dump(timer_all.duration_ms, totalIter, cmd.AcquireFullStats, " [Device]");
         }
 
         stream << "  Iterations: " << runtime->currentIterationCount() << " (total: " << totalIter << ")" << std::endl
+               << "  Frames: " << frames << std::endl
                << "  SPP: " << runtime->currentSampleCount() << std::endl
                << "  SPI: " << SPI << std::endl
                << "  Time: " << beautiful_time(timer_all.duration_ms) << std::endl
