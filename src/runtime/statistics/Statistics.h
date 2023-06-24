@@ -22,6 +22,14 @@ public:
         bool dirty          = true; // If false, it is already consumed
     };
 
+    struct MeanEntry {
+        float totalElapsedMS = 0;
+        size_t count         = 0;
+        size_t totalWorkload = 0; // This might overflow, but who cares for statistical stuff after that huge number of iterations
+        size_t maxWorkload   = 0;
+        size_t minWorkload   = std::numeric_limits<size_t>::max();
+    };
+
     Statistics();
 
     inline void reset()
@@ -38,10 +46,14 @@ public:
     void add(Quantity quantity, uint64 value);
     void add(const Statistics& other);
 
-    [[nodiscard]] std::string dump(size_t totalMS, size_t iter, bool verbose, const std::string& suffixFirstRow = {}) const;
+    [[nodiscard]] MeanEntry entry(ShaderType type, uint32 sub_id = 0) const;
+    [[nodiscard]] MeanEntry entry(SectionType type) const;
 
-    [[nodiscard]] std::string dumpAsJSON() const;
-    bool loadFromJSON(const std::string& jsonStr);
+    [[nodiscard]] inline uint64 quantity(Quantity type) const { return mQuantities.at((size_t)type); }
+
+    [[nodiscard]] std::string dump(size_t totalMS, size_t iter, bool verbose, const std::string& suffixFirstRow = {}) const;
+    [[nodiscard]] std::string dumpAsJSON(float totalMS) const;
+    bool loadFromJSON(const std::string& jsonStr, float* pTotalMS);
 
     /// @brief Consume current stream and fillup the average informations.
     void consume();

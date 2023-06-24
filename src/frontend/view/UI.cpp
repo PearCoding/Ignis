@@ -3,20 +3,7 @@
 #include "Pose.h"
 #include "Runtime.h"
 
-#include <SDL.h>
-
-#include "imgui.h"
-#include "imgui_markdown.h"
-#include "implot.h"
-
-#if SDL_VERSION_ATLEAST(2, 0, 17)
-#include "backends/imgui_impl_sdl2.h"
-#include "backends/imgui_impl_sdlrenderer2.h"
-#else
-#define USE_OLD_SDL
-// The following implementation is deprecated and only available for old SDL versions
-#include "imgui_old_sdl.h"
-#endif
+#include "UIGlue.h"
 
 #include "Inspector.h"
 #include "PropertyView.h"
@@ -181,59 +168,6 @@ public:
         MM_Pan
     };
 
-#ifdef USE_OLD_SDL
-    void handleOldSDL(const SDL_Event& event)
-    {
-        ImGuiIO& io = ImGui::GetIO();
-
-        switch (event.type) {
-        case SDL_TEXTINPUT:
-            io.AddInputCharactersUTF8(event.text.text);
-            break;
-        case SDL_KEYUP:
-        case SDL_KEYDOWN: {
-            int key = event.key.keysym.scancode;
-            IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
-            io.KeysDown[key] = (event.type == SDL_KEYDOWN);
-            io.KeyShift      = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-            io.KeyCtrl       = ((SDL_GetModState() & KMOD_CTRL) != 0);
-            io.KeyAlt        = ((SDL_GetModState() & KMOD_ALT) != 0);
-#ifdef _WIN32
-            io.KeySuper = false;
-#else
-            io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
-#endif
-        } break;
-        case SDL_MOUSEWHEEL:
-            if (event.wheel.x > 0)
-                io.MouseWheelH += 1;
-            if (event.wheel.x < 0)
-                io.MouseWheelH -= 1;
-            if (event.wheel.y > 0)
-                io.MouseWheel += 1;
-            if (event.wheel.y < 0)
-                io.MouseWheel -= 1;
-            break;
-        default:
-            break;
-        }
-    }
-
-    void handleOldSDLMouse()
-    {
-        ImGuiIO& io = ImGui::GetIO();
-
-        int mouseX, mouseY;
-        const int buttons = SDL_GetMouseState(&mouseX, &mouseY);
-
-        // Setup low-level inputs (e.g. on Win32, GetKeyboardState(), or write to those fields from your Windows message loop handlers, etc.)
-        io.DeltaTime    = 1.0f / 60.0f;
-        io.MousePos     = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
-        io.MouseDown[0] = buttons & SDL_BUTTON(SDL_BUTTON_LEFT);
-        io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
-    }
-#endif
-
     // Events
     UI::InputResult handleEvents(CameraProxy& cam)
     {
@@ -271,11 +205,7 @@ public:
         SDL_Event event;
         const bool hover = isAnyWindowShown() && (ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
         while (SDL_PollEvent(&event)) {
-#ifndef USE_OLD_SDL
-            ImGui_ImplSDL2_ProcessEvent(&event);
-#else
-            handleOldSDL(event);
-#endif
+            IGGui::processSDLEventForImGUI(event);
 
             // First handle ImGui stuff
             bool key_down = event.type == SDL_KEYDOWN;
@@ -1096,65 +1026,17 @@ UI::InputResult UI::handleInput(CameraProxy& cam)
     return mInternal->handleEvents(cam);
 }
 
-inline static void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_, bool start_)
-{
-    switch (markdownFormatInfo_.type) {
-    default:
-        ImGui::defaultMarkdownFormatCallback(markdownFormatInfo_, start_);
-        break;
-    case ImGui::MarkdownFormatType::EMPHASIS:
-        if (start_)
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.16f, 0.57f, 0.94f, 1));
-        else
-            ImGui::PopStyleColor();
-        break;
-    }
-}
-
 static void handleHelp()
 {
     static const std::string Markdown =
-        R"(- *1..9* number keys to switch between views.
-- *1..9* and *Strg/Ctrl* to save the current view on that slot.
-- *F1* to toggle this help window.
-- *F2* to toggle the control window.
-- *F3* to toggle the interaction lock. 
-- *F4* to toggle the properties window.
-  If enabled, no view changing interaction is possible.
-- *F11* to save a snapshot of the current rendering. HDR information will be preserved.
-  Use with *Strg/Ctrl* to make a LDR screenshot of the current render including UI and tonemapping.  
-  The image will be saved in the current working directory.
-- *I* to toggle the inspector tool.
-- *R* to reset to initial view.
-- *O* to snap the up direction to the closest unit axis.
-- *P* to pause current rendering. Also implies an interaction lock.
-- *T* to toggle automatic tonemapping.
-- *G* to reset tonemapping properties.
-  Only works if automatic tonemapping is disabled.
-- *F* to increase (or with *Shift* to decrease) tonemapping exposure.
-  Step size can be decreased with *Strg/Ctrl*.
-  Only works if automatic tonemapping is disabled.
-- *V* to increase (or with *Shift* to decrease) tonemapping offset.
-  Step size can be decreased with *Strg/Ctrl*.
-  Only works if automatic tonemapping is disabled.
-- *N/M* to switch to previous or next available AOV. 
-- *WASD* or arrow keys to travel through the scene.
-- *Q/E* to rotate the camera around the viewing direction. 
-- *PageUp/PageDown* to pan the camera up and down. 
-- *Notepad +/-* to change the travel speed.
-- *Numpad 1* to switch to front view.
-- *Numpad 3* to switch to side view.
-- *Numpad 7* to switch to top view.
-- *Numpad 9* look behind you.
-- *Numpad 2468* to rotate the camera.
-- Mouse to rotate the camera. 
-  Use with *Strg/Ctrl* to rotate the camera around the center of the scene.
-  Use with *Alt* to enable first person camera behaviour.
-  Use with *Strg/Ctrl* + *Alt* to rotate the camera around the center of the scene and subsequently snap the up direction.
+        R"(- *F1* to toggle this help window.
+- *F2* to toggle the quantity window.
+- *F3* to toggle the means window.
+- *F4* to toggle the chart window.
 )";
 
     ImGui::MarkdownConfig config;
-    config.formatCallback = markdownFormatCallback;
+    config.formatCallback = IGGui::markdownFormatCallback;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Once);

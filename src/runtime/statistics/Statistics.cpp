@@ -105,6 +105,31 @@ void Statistics::add(const Statistics& other)
         mStreams[(mCurrentStream - 1) % mStreams.size()] = other.lastStream();
 }
 
+Statistics::MeanEntry Statistics::entry(ShaderType type, uint32 sub_id) const
+{
+    if (const auto it = mShaders.find(SmallShaderKey(type, sub_id)); it != mShaders.end()) {
+        return MeanEntry{
+            it->second.elapsedMS,
+            it->second.count,
+            it->second.workload,
+            it->second.minWorkload,
+            it->second.maxWorkload
+        };
+    } else {
+        return MeanEntry();
+    }
+}
+
+Statistics::MeanEntry Statistics::entry(SectionType type) const
+{
+    const auto& s = mSections.at((size_t)type);
+    return MeanEntry{
+        s.elapsedMS,
+        s.count,
+        0, 0, 0
+    };
+}
+
 const static std::unordered_map<ShaderType, const char*> ShaderTypeName = {
     { ShaderType::Device, "Device" },
     { ShaderType::PrimaryTraversal, "PrimaryTraversal" },
@@ -377,12 +402,13 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose, const st
     return table.print(false, true);
 }
 
-std::string Statistics::dumpAsJSON() const
+std::string Statistics::dumpAsJSON(float totalMS) const
 {
     std::stringstream json;
     json << "{" << std::endl;
 
-    json << "\"version\":[" << IG_VERSION_MAJOR << "," << IG_VERSION_MINOR << "," << IG_VERSION_PATCH << "]," << std::endl;
+    json << "\"version\":[" << IG_VERSION_MAJOR << "," << IG_VERSION_MINOR << "," << IG_VERSION_PATCH << "]," << std::endl
+         << "\"total_ms\":" << totalMS << "," << std::endl;
 
     // Dump timestamps
     json << "\"streams\": [" << std::endl;
@@ -466,7 +492,7 @@ std::string Statistics::dumpAsJSON() const
 }
 
 constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag | rapidjson::kParseEscapedApostropheFlag;
-bool Statistics::loadFromJSON(const std::string& jsonStr)
+bool Statistics::loadFromJSON(const std::string& jsonStr, float* pTotalMS)
 {
     rapidjson::Document doc;
     if (doc.Parse<JsonFlags>(jsonStr.c_str()).HasParseError()) {
@@ -501,6 +527,13 @@ bool Statistics::loadFromJSON(const std::string& jsonStr)
     } else {
         IG_LOG(L_ERROR) << "JSON: Expected version element to be available." << std::endl;
         return false;
+    }
+
+    // Acquire total MS (might be useful for some instances)
+    if (pTotalMS != nullptr) {
+        if (doc.HasMember("total_ms") && doc["total_ms"].IsNumber()) {
+            *pTotalMS = doc["total_ms"].GetFloat();
+        }
     }
 
     // Get timestamps

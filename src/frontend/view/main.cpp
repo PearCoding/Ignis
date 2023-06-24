@@ -272,7 +272,7 @@ int main(int argc, char** argv)
     if (!cmd.StatsFile.empty()) {
         IG_LOG(L_INFO) << "Writing profiling data to " << cmd.StatsFile << std::endl;
         std::ofstream out_json(cmd.StatsFile);
-        out_json << runtime->statisticsForDevice().dumpAsJSON();
+        out_json << runtime->statisticsForDevice().dumpAsJSON((float)timer_all.duration_ms);
     }
 
     runtime.reset();

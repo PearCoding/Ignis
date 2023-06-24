@@ -4,6 +4,11 @@ add_subdirectory(artic)
 add_subdirectory(internal/apicollector)
 
 add_subdirectory(runtime)
+
+if(IG_HAS_UI)
+add_subdirectory(ui)
+endif()
+
 add_subdirectory(frontend)
 
 if(IG_WITH_TOOLS)
