@@ -369,7 +369,8 @@ public:
         mTargetedDevice = anydsl::Device(platform, mCurrentDriverSettings.device);
         mHostDevice     = anydsl::Device(anydsl::Platform::Host);
 
-        mDeviceData.stats = std::make_unique<TieStatisticHandler>(mHostDevice, mTargetedDevice);
+        if (hasStatisticAquisition())
+            mDeviceData.stats = std::make_unique<TieStatisticHandler>(mHostDevice, mTargetedDevice);
     }
 
     inline void setupThreadData()
@@ -379,7 +380,9 @@ public:
         if (isGPU()) {
             tlThreadData            = mThreadData.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
             tlThreadData->ref_count = 1;
-            tlThreadData->stats = std::make_unique<StatisticHandler>(mHostDevice);
+
+            if (hasStatisticAquisition())
+                tlThreadData->stats = std::make_unique<StatisticHandler>(mHostDevice);
         } else {
             const size_t req_threads = mSetupSettings.target.threadCount() == 0 ? std::thread::hardware_concurrency() : mSetupSettings.target.threadCount();
             const size_t max_threads = req_threads + 1 /* Host */;
@@ -387,7 +390,9 @@ public:
             mAvailableThreadData.clear();
             for (size_t t = 0; t < max_threads; ++t) {
                 CPUData* ptr = mThreadData.emplace_back(std::make_unique<CPUData>()).get();
-                ptr->stats = std::make_unique<StatisticHandler>(mTargetedDevice);
+
+                if (hasStatisticAquisition())
+                    ptr->stats = std::make_unique<StatisticHandler>(mTargetedDevice);
                 mAvailableThreadData.push(ptr);
             }
         }
@@ -400,11 +405,13 @@ public:
         mCurrentRenderSettings = settings;
         mCurrentParameters     = parameterSet;
 
-        if (isGPU()) {
-            mDeviceData.stats->startIteration();
-        } else {
-            for (const auto& data : mThreadData)
-                data->stats->startIteration();
+        if (hasStatisticAquisition()) {
+            if (isGPU()) {
+                mDeviceData.stats->startIteration();
+            } else {
+                for (const auto& data : mThreadData)
+                    data->stats->startIteration();
+            }
         }
     }
 
@@ -1512,11 +1519,13 @@ public:
             p.second.IterDiff       = 0;
         }
 
-        if (isGPU()) {
-            mDeviceData.stats->finalize();
-        } else {
-            for (const auto& data : mThreadData)
-                data->stats->finalize();
+        if (hasStatisticAquisition()) {
+            if (isGPU()) {
+                mDeviceData.stats->finalize();
+            } else {
+                for (const auto& data : mThreadData)
+                    data->stats->finalize();
+            }
         }
     }
 
@@ -1601,6 +1610,9 @@ public:
 
     inline Statistics getStatisticsForHost()
     {
+        if (!hasStatisticAquisition())
+            return Statistics();
+
         if (isGPU()) {
             return mDeviceData.stats->first().statistics();
         } else {
@@ -1614,6 +1626,9 @@ public:
 
     inline Statistics getStatisticsForDevice()
     {
+        if (!hasStatisticAquisition())
+            return Statistics();
+
         if (isGPU())
             return mDeviceData.stats->second().statistics();
         else
