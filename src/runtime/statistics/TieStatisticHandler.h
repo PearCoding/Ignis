@@ -5,16 +5,10 @@
 namespace IG {
 class IG_LIB TieStatisticHandler {
 public:
-    TieStatisticHandler()
-        : mFirstHandler()
-        , mSecondHandler()
+    TieStatisticHandler(const anydsl::Device& firstDevice, const anydsl::Device& secondDevice)
+        : mFirstHandler(firstDevice)
+        , mSecondHandler(secondDevice)
     {
-    }
-
-    inline void setDevices(const anydsl::Device& firstDevice, const anydsl::Device& secondDevice)
-    {
-        mFirstHandler.setDevice(firstDevice);
-        mSecondHandler.setDevice(secondDevice);
     }
 
     inline void reset()

@@ -118,7 +118,7 @@ struct CPUData {
     DeviceStream cpu_primary;
     DeviceStream cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
-    StatisticHandler stats;
+    std::unique_ptr<StatisticHandler> stats;
     const ParameterSet* current_local_registry = nullptr;
     ShaderKey current_shader_key               = ShaderKey(0, ShaderType::Device, 0);
     std::unordered_map<ShaderKey, ShaderStats, ShaderKeyHash> shader_stats;
@@ -157,7 +157,7 @@ private:
         std::unordered_map<std::string, DeviceBuffer> buffers;
         std::unordered_map<std::string, DynTableProxy> dyntables;
         std::unordered_map<std::string, DeviceBuffer> fixtables;
-        TieStatisticHandler stats;
+        std::unique_ptr<TieStatisticHandler> stats;
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
@@ -369,7 +369,7 @@ public:
         mTargetedDevice = anydsl::Device(platform, mCurrentDriverSettings.device);
         mHostDevice     = anydsl::Device(anydsl::Platform::Host);
 
-        mDeviceData.stats.setDevices(mHostDevice, mTargetedDevice);
+        mDeviceData.stats = std::make_unique<TieStatisticHandler>(mHostDevice, mTargetedDevice);
     }
 
     inline void setupThreadData()
@@ -379,7 +379,7 @@ public:
         if (isGPU()) {
             tlThreadData            = mThreadData.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
             tlThreadData->ref_count = 1;
-            tlThreadData->stats.setDevice(mHostDevice);
+            tlThreadData->stats = std::make_unique<StatisticHandler>(mHostDevice);
         } else {
             const size_t req_threads = mSetupSettings.target.threadCount() == 0 ? std::thread::hardware_concurrency() : mSetupSettings.target.threadCount();
             const size_t max_threads = req_threads + 1 /* Host */;
@@ -387,7 +387,7 @@ public:
             mAvailableThreadData.clear();
             for (size_t t = 0; t < max_threads; ++t) {
                 CPUData* ptr = mThreadData.emplace_back(std::make_unique<CPUData>()).get();
-                ptr->stats.setDevice(mTargetedDevice);
+                ptr->stats = std::make_unique<StatisticHandler>(mTargetedDevice);
                 mAvailableThreadData.push(ptr);
             }
         }
@@ -401,10 +401,10 @@ public:
         mCurrentParameters     = parameterSet;
 
         if (isGPU()) {
-            mDeviceData.stats.startIteration();
+            mDeviceData.stats->startIteration();
         } else {
             for (const auto& data : mThreadData)
-                data->stats.startIteration();
+                data->stats->startIteration();
         }
     }
 
@@ -1513,10 +1513,10 @@ public:
         }
 
         if (isGPU()) {
-            mDeviceData.stats.finalize();
+            mDeviceData.stats->finalize();
         } else {
             for (const auto& data : mThreadData)
-                data->stats.finalize();
+                data->stats->finalize();
         }
     }
 
@@ -1526,9 +1526,9 @@ public:
             return;
 
         if (isGPU())
-            mDeviceData.stats.beginShaderLaunch(type, workload, id);
+            mDeviceData.stats->beginShaderLaunch(type, workload, id);
         else
-            getThreadData()->stats.beginShaderLaunch(type, workload, id);
+            getThreadData()->stats->beginShaderLaunch(type, workload, id);
     }
 
     inline void endShaderLaunch(ShaderType type, size_t id)
@@ -1537,9 +1537,9 @@ public:
             return;
 
         if (isGPU())
-            mDeviceData.stats.endShaderLaunch(type, id);
+            mDeviceData.stats->endShaderLaunch(type, id);
         else
-            getThreadData()->stats.endShaderLaunch(type, id);
+            getThreadData()->stats->endShaderLaunch(type, id);
     }
 
     inline void beginSection(SectionType type)
@@ -1548,9 +1548,9 @@ public:
             return;
 
         if (isGPU())
-            mDeviceData.stats.beginSection(type);
+            mDeviceData.stats->beginSection(type);
         else
-            getThreadData()->stats.beginSection(type);
+            getThreadData()->stats->beginSection(type);
     }
 
     inline void endSection(SectionType type)
@@ -1559,9 +1559,9 @@ public:
             return;
 
         if (isGPU())
-            mDeviceData.stats.endSection(type);
+            mDeviceData.stats->endSection(type);
         else
-            getThreadData()->stats.endSection(type);
+            getThreadData()->stats->endSection(type);
     }
 
     inline void increaseQuantity(Quantity quant, size_t value)
@@ -1570,9 +1570,9 @@ public:
             return;
 
         if (isGPU())
-            mDeviceData.stats.increase(quant, value);
+            mDeviceData.stats->increase(quant, value);
         else
-            getThreadData()->stats.increase(quant, value);
+            getThreadData()->stats->increase(quant, value);
     }
 
     class SectionClosure {
@@ -1602,11 +1602,11 @@ public:
     inline Statistics getStatisticsForHost()
     {
         if (isGPU()) {
-            return mDeviceData.stats.first().statistics();
+            return mDeviceData.stats->first().statistics();
         } else {
             Statistics accum;
             for (const auto& data : mThreadData)
-                accum.add(data->stats.statistics());
+                accum.add(data->stats->statistics());
 
             return accum;
         }
@@ -1615,7 +1615,7 @@ public:
     inline Statistics getStatisticsForDevice()
     {
         if (isGPU())
-            return mDeviceData.stats.second().statistics();
+            return mDeviceData.stats->second().statistics();
         else
             return getStatisticsForHost(); // Same as device
     }

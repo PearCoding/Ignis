@@ -6,14 +6,7 @@
 namespace IG {
 class IG_LIB StatisticHandler {
 public:
-    explicit StatisticHandler(const anydsl::Device& device = anydsl::Device());
-
-    inline void setDevice(const anydsl::Device& device)
-    {
-        mDevice              = device; // Be careful with this.
-        mStartIterationEvent = anydsl::Event(device);
-        reset();
-    }
+    explicit StatisticHandler(const anydsl::Device& device);
 
     void startIteration();
 
