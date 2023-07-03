@@ -3,6 +3,7 @@ fn @make_null_bsdf(_surf: SurfaceElement) = Bsdf {
     eval        = @ |_, _| color_builtins::black,
     pdf         = @ |_, _| 0,
     sample      = @ |_, _, _| reject_bsdf_sample(),
+    albedo      = @ |_| color_builtins::black,
     is_specular = false
 };
 
@@ -14,6 +15,7 @@ fn @make_error_bsdf(surf: SurfaceElement) = Bsdf {
     eval        = @ |in_dir, _| color_mulf(color_builtins::pink, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
     pdf         = @ |_, _| 0,
     sample      = @ |_, _, _| reject_bsdf_sample(),
+    albedo      = @ |_| color_builtins::pink,
     is_specular = false
 };
 
@@ -37,7 +39,8 @@ fn @make_doublesided_bsdf(surf: SurfaceElement, bsdf_factory: fn (SurfaceElement
                 } else {
                     reject_bsdf_sample()
                 }
-            }
+            },
+            albedo = @ |out_dir| bsdf.albedo(vec3_neg(out_dir)),
         }
     }
 }

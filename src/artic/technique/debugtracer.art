@@ -151,16 +151,8 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     }
                 },
                 25 => { // DEBUG_ALBEDO
-                    if mat.bsdf.is_specular {
-                        make_option(color_builtins::black)
-                    } else {
-                        // This is the reflection albedo
-                        let out_dir = vec3_neg(ctx.ray.dir);
-                        let in_dir  = vec3_reflect(out_dir, ctx.surf.local.col(2));
-                        let cos = absolute_cos(in_dir, ctx.surf.local.col(2));
-                        let evl = color_mulf(mat.bsdf.eval(in_dir, out_dir), 1/cos); // We want the result without cosine term
-                        make_option(evl)
-                    }
+                    let out_dir = vec3_neg(ctx.ray.dir);
+                    make_option(mat.bsdf.albedo(out_dir))
                 },
                 26 => { // DEBUG_MEDIUM_INNER
                     make_option(if mat.interface.inner < 0 { color_builtins::black } else { color_map(mat.interface.inner) })
