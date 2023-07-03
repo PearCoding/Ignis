@@ -6,6 +6,7 @@ fn @make_perfect_refraction_bsdf(_surf: SurfaceElement, kt: Color) = Bsdf {
     sample = @ |_, out_dir, _| {
         make_bsdf_sample(vec3_neg(out_dir), 1, kt, 1)
     },
+    albedo = @ |_| kt,
     is_specular = true
 };
 
@@ -31,6 +32,7 @@ fn @make_pure_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color,
             make_bsdf_sample(vec3_reflect(out_dir, n), 1, ks, 1)
         }
     },
+    albedo = @ |_| color_lerp(ks, kt, 0.5),
     is_specular = true
 };
 
@@ -55,6 +57,7 @@ fn @make_thin_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color,
             make_bsdf_sample(vec3_normalize(vec3_reflect(out_dir, N)), 1, ks, 1)
         }
     },
+    albedo = @ |_| ks,
     is_specular = true
 };
 
@@ -183,6 +186,7 @@ fn @make_rough_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color
                 if !is_transmission { 1 } else { eta }
             )
         },
+        albedo = @ |_| color_lerp(ks, kt, 0.5),
         is_specular = micro.is_delta,
     }
 }

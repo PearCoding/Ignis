@@ -35,10 +35,6 @@ static std::shared_ptr<Technique> debug_loader(const std::shared_ptr<SceneObject
 {
     return std::make_shared<DebugTechnique>(*obj);
 }
-static std::shared_ptr<Technique> ib_loader(const std::shared_ptr<SceneObject>& obj)
-{
-    return std::make_shared<InfoBufferTechnique>(*obj);
-}
 static std::shared_ptr<Technique> lt_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<LightTracerTechnique>(*obj);
@@ -81,7 +77,6 @@ static const struct TechniqueEntry {
     { "lt", lt_loader },
     { "lighttracer", lt_loader },
     { "wireframe", wf_loader },
-    { "infobuffer", ib_loader },
     { "lightvisibility", lv_loader },
     { "camera_check", cc_loader },
     { "", nullptr }
@@ -118,8 +113,8 @@ void LoaderTechnique::setup(const LoaderContext& ctx)
     IG_LOG(L_DEBUG) << "Using technique: '" << mTechnique->type() << "'" << std::endl;
 
     mInfo = mTechnique->getInfo(ctx);
-    if (/*ctx.Options.Glare.Enabled ||*/ (ctx.Options.Denoiser.Enabled && mTechnique->hasDenoiserSupport()))
-        InfoBufferTechnique::enable(mInfo, !ctx.Options.Denoiser.OnlyFirstIteration);
+    if (ctx.Options.Denoiser.Enabled)
+        InfoBufferTechnique::enable(mInfo);
 }
 
 std::string LoaderTechnique::generate(LoaderContext& ctx)
@@ -129,18 +124,14 @@ std::string LoaderTechnique::generate(LoaderContext& ctx)
 
     std::stringstream stream;
 
-    // Handle denoiser if necessary
-    if (mTechnique->hasDenoiserSupport() && ctx.Options.Denoiser.Enabled && InfoBufferTechnique::insertBody(Technique::SerializationInput{ stream, ctx }, 8 /* TODO */, false))
-        return stream.str();
-
     mTechnique->generateBody(Technique::SerializationInput{ stream, ctx });
-    return stream.str();
-}
 
-bool LoaderTechnique::hasDenoiserEnabled() const
-{
-    const auto& normal_it = std::find(mInfo.EnabledAOVs.begin(), mInfo.EnabledAOVs.end(), "Normals");
-    return normal_it != mInfo.EnabledAOVs.end();
+    if (ctx.Options.Denoiser.Enabled)
+        InfoBufferTechnique::insertBody(Technique::SerializationInput{ stream, ctx });
+    else
+        stream << "  let full_technique = technique;" << std::endl;
+
+    return stream.str();
 }
 
 std::vector<std::string> LoaderTechnique::getAvailableTypes()

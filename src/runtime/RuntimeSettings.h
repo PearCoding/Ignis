@@ -4,9 +4,7 @@
 
 namespace IG {
 struct DenoiserSettings {
-    bool Enabled            = false; // Enables the denoiser
-    bool FollowSpecular     = false; // Follow specular paths instead of only using the first bounce for AOV information
-    bool OnlyFirstIteration = true;  // Acquire AOV information only at the first iteration, or refine every iteration
+    bool Enabled = false; // Enables the denoiser
 };
 
 struct GlareOptions {
@@ -47,7 +45,7 @@ struct RuntimeOptions {
     };
     SpecializationMode Specialization = SpecializationMode::Default;
 
-    bool WarnUnused = true;           // Warn about unused properties. They might indicate a typo or similar.
+    bool WarnUnused = true; // Warn about unused properties. They might indicate a typo or similar.
 
     DenoiserSettings Denoiser;
     GlareOptions Glare;

@@ -10,12 +10,12 @@ public:
     ~LoaderTechnique();
 
     void setup(const LoaderContext& ctx);
+
+    /// Will generate 'full_technique' identifier
     [[nodiscard]] std::string generate(LoaderContext& ctx);
 
     [[nodiscard]] inline const TechniqueInfo& info() const { return mInfo; }
     [[nodiscard]] inline bool hasTechnique() const { return mTechnique != nullptr; }
-
-    [[nodiscard]] bool hasDenoiserEnabled() const;
 
     [[nodiscard]] static std::vector<std::string> getAvailableTypes();
 

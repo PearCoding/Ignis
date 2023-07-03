@@ -90,6 +90,7 @@ fn @fastpow(x: f32, p: f32) -> f32 {
 }
 
 // Fp32  ---------------------------------------------------------------------------
+fn @fp_signmask(a: f32) = bitcast[f32](bitcast[u32](a) & 0x80000000);
 
 /// Split into magnitude and exponent
 fn @frexp(x: f32) -> (f32, i32) {

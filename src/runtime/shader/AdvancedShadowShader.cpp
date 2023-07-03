@@ -54,7 +54,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl
            << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_advanced_shadow_shader(shader, technique, payload_info, first, last, use_framebuffer, is_hit)" << std::endl
+           << "  device.handle_advanced_shadow_shader(shader, full_technique, payload_info, first, last, use_framebuffer, is_hit)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

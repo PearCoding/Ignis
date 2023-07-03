@@ -381,7 +381,7 @@ fn @cpu_traverse_primary(scene: SceneTracer, size: i32, min_max: MinMax, vector_
     for k in unroll(0, scene.type_count) {
         let geom = scene.get(k);
         let init_hit = if k == 0 { 
-            @|_:i32, _:i32, r: Ray| empty_hit(r.tmax)
+            @|_:i32, _:i32, r: Ray| invalid_hit(r.tmax)
         } else {
             @|i:i32, j:i32, _: Ray| hits(i, j)
         };
@@ -411,7 +411,7 @@ fn @cpu_traverse_secondary(scene: SceneTracer, size: i32, min_max: MinMax, vecto
         let geom = scene.get(k);
         
         let init_hit = if k == 0 { 
-            @|_:i32, _:i32, r: Ray| empty_hit(r.tmax)
+            @|_:i32, _:i32, r: Ray| invalid_hit(r.tmax)
         } else {
             @|i:i32, j:i32, _: Ray| hits(i, j)
         };

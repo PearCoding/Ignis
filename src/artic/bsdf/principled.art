@@ -477,6 +477,7 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 reject_bsdf_sample()
             }
         },
+        albedo = @|_| base_color, // TODO: Better approach? 
         is_specular = false // We prevent a roughness = 0, so no chance to be specular
     }
 }

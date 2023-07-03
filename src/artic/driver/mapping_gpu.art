@@ -54,7 +54,7 @@ fn @gpu_traverse_primary(primary: PrimaryStream
         if gid >= size { return() }
 
         let ray     = rays(gid, 0);
-        let mut hit = empty_hit(ray.tmax);
+        let mut hit = invalid_hit(ray.tmax);
 
         for k in unroll(0, scene.type_count) {
             hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), false /* any_hit */, 1 /*root*/);
@@ -86,7 +86,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
         let pixel   = make_pixelcoord_from_linear(pixel_l, framebuffer.width, framebuffer.height, 0, 0);
 
         let ray = make_ray_stream_reader(secondary.rays, 1)(gid, 0);
-        let mut hit = empty_hit(ray.tmax);
+        let mut hit = invalid_hit(ray.tmax);
 
         for k in unroll(0, scene.type_count) {
             hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), true /* any_hit */, 1 /*root*/);

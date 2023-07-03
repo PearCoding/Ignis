@@ -74,9 +74,7 @@ public:
 
     RuntimeOptions::SpecializationMode Specialization = RuntimeOptions::SpecializationMode::Default;
 
-    bool Denoise                    = false;
-    bool DenoiserFollowSpecular     = false;
-    bool DenoiserOnlyFirstIteration = false;
+    bool Denoise = false;
 
     bool Glare = false;
 

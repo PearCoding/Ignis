@@ -26,9 +26,9 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
     // AnyDSL has no support for multi-threaded compile process :/
     std::lock_guard<std::mutex> _guard(mCompileMutex);
 
-    static bool once = false;
-    if (!once) {
-        const auto module_path        = RuntimeInfo::modulePath().generic_string();
+    static std::once_flag once;
+    std::call_once(once, []() {
+        const auto module_path = RuntimeInfo::modulePath().generic_string();
         // const auto module_path_anydsl = RuntimeInfo::modulePathAnyDSL().generic_string();
 
         std::vector<AnyDSLJITLinkInfo> infos;
@@ -50,8 +50,7 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
         if (!infos.empty()) {
             IG_CHECK_ANYDSL(anydslLinkJITLibrary(AnyDSL_NULL_HANDLE, infos.size(), infos.data()));
         }
-        once = true;
-    }
+    });
 
     AnyDSLJITCompileOptions options = {
         AnyDSL_STRUCTURE_TYPE_JIT_COMPILE_OPTIONS,

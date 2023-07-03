@@ -51,6 +51,12 @@ fn @make_join_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32, eval_f: fn(Co
                 }
             }
         },
+        albedo = @ |out_dir| {
+            let k = @mix_f(out_dir);
+            color_lerp(mat1.albedo(out_dir),
+                       mat2.albedo(out_dir),
+                       k)
+        },
         is_specular = mat1.is_specular & mat2.is_specular
     }
 }

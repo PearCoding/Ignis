@@ -5,6 +5,7 @@ fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
     sample = @ |_, out_dir, _| {
         make_bsdf_sample(vec3_reflect(out_dir, surf.local.col(2)), 1, ks, 1)
     },
+    albedo = @ |_| ks,
     is_specular = true
 };
 
@@ -26,6 +27,18 @@ fn @make_pure_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Col
         let color = color_mul(ks, f);
         make_bsdf_sample(vec3_reflect(out_dir, n), 1, color, 1)
     },
+    albedo = @ |out_dir| {
+        let n = surf.local.col(2);
+        let cos_i = vec3_dot(out_dir, n);
+        
+        let f = make_color(
+            conductor_factor(ior.r, k.r, cos_i),
+            conductor_factor(ior.g, k.g, cos_i),
+            conductor_factor(ior.b, k.b, cos_i),
+            1);
+
+        color_mul(ks, f)
+    },
     is_specular = true
 };
 
@@ -34,18 +47,23 @@ fn @make_pure_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Col
 fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, fresnelTerm: fn (f32) -> Color, micro: microfacet::MicrofacetDistribution) -> Bsdf {
     let N = surf.local.col(2);
 
+    fn @compute_albedo(out_dir: Vec3) -> Color {
+        let cos_o = absolute_cos(out_dir, N);
+        let F     = fresnelTerm(cos_o);
+        let IF    = color_sub(color_builtins::white, F);
+
+        color_add(color_mul(kd, IF), color_mul(ks, F))
+    }
+
     if micro.is_delta {
         Bsdf {
             eval   = @ |_, _| color_builtins::black,
             pdf    = @ |_, _| 0,
             sample = @ |_, out_dir, _| {
-                let cos_o = absolute_cos(out_dir, N);
-                let F     = fresnelTerm(cos_o);
-                let IF    = color_sub(color_builtins::white, F);
-        
-                let color = color_add(color_mul(kd, IF), color_mul(ks, F));
+                let color = compute_albedo(out_dir);
                 make_bsdf_sample(vec3_reflect(out_dir, N), 1, color, 1)
             },
+            albedo = compute_albedo,
             is_specular = true
         }
     } else {
@@ -93,6 +111,7 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
                 let color = color_mulf(eval(in_dir, out_dir), safe_div(1, pdf));
                 make_bsdf_sample(in_dir, pdf, color, 1)
             },
+            albedo = compute_albedo, // Ignores roughness
             is_specular = false
         }
     }

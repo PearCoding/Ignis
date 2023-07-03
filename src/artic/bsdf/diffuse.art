@@ -7,6 +7,7 @@ fn @make_lambertian_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
         let gdir   = mat3x3_mul(surf.local, sample.dir);
         make_bsdf_sample(gdir, sample.pdf, kd, 1)
     },
+    albedo = @ |_| kd,
     is_specular = false
 };
 
@@ -18,6 +19,7 @@ fn @make_lambertian_transmission_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
         let gdir   = mat3x3_mul(surf.local, sample.dir);
         make_bsdf_sample(vec3_neg(gdir), sample.pdf, kd, 1)
     },
+    albedo = @ |_| kd,
     is_specular = false
 };
 
@@ -45,6 +47,7 @@ fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
             let gdir   = mat3x3_mul(surf.local, sample.dir);
             make_bsdf_sample(gdir, sample.pdf, color_mulf(eval(gdir, out_dir), 1 / sample.pdf), 1)
         },
+        albedo = @ |_| kd,
         is_specular = false
     }
 }

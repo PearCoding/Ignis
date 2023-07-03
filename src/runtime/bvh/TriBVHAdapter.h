@@ -42,10 +42,105 @@ struct BvhNTriM<2, 1> {
     using Tri  = Tri1;
 };
 
-struct TriangleProxy : public bvh::Triangle<float> {
-    using bvh::Triangle<float>::Triangle;
+template <typename Scalar>
+inline bvh::Vector3<Scalar> compute_stable_triangle_normal(const bvh::Vector3<Scalar>& a, const bvh::Vector3<Scalar>& b, const bvh::Vector3<Scalar>& c)
+{
+    const Scalar ab_x = a[2] * b[1], ab_y = a[0] * b[2], ab_z = a[1] * b[0];
+    const Scalar bc_x = b[2] * c[1], bc_y = b[0] * c[2], bc_z = b[1] * c[0];
+    const bvh::Vector3<Scalar> cross_ab(a[1] * b[2] - ab_x, a[2] * b[0] - ab_y, a[0] * b[1] - ab_z);
+    const bvh::Vector3<Scalar> cross_bc(b[1] * c[2] - bc_x, b[2] * c[0] - bc_y, b[0] * c[1] - bc_z);
+    return bvh::Vector3<Scalar>(abs(ab_x) < abs(bc_x) ? cross_ab[0] : cross_bc[0],
+                                abs(ab_y) < abs(bc_y) ? cross_ab[1] : cross_bc[1],
+                                abs(ab_z) < abs(bc_z) ? cross_ab[2] : cross_bc[2]);
+}
+
+template <typename Scalar>
+struct TriangleProxyBase {
+    using ScalarType = Scalar;
+
+    bvh::Vector3<Scalar> p0, e1, e2, n;
     int32 prim_id;
+
+    TriangleProxyBase() = default;
+    TriangleProxyBase(const bvh::Vector3<Scalar>& p0, const bvh::Vector3<Scalar>& p1, const bvh::Vector3<Scalar>& p2)
+        : p0(p0)
+        , e1(p2 - p0)
+        , e2(p0 - p1)
+    {
+        n = compute_stable_triangle_normal(e1, e2, p1 - p2);
+    }
+
+    bvh::Vector3<Scalar> p1() const { return p0 - e2; }
+    bvh::Vector3<Scalar> p2() const { return p0 + e1; }
+
+    bvh::BoundingBox<Scalar> bounding_box() const
+    {
+        bvh::BoundingBox<Scalar> bbox(p0);
+        bbox.extend(p1());
+        bbox.extend(p2());
+        return bbox;
+    }
+
+    bvh::Vector3<Scalar> center() const
+    {
+        return (p0 + p1() + p2()) * (Scalar(1.0) / Scalar(3.0));
+    }
+
+    std::pair<bvh::Vector3<Scalar>, bvh::Vector3<Scalar>> edge(size_t i) const
+    {
+        assert(i < 3);
+        bvh::Vector3<Scalar> p[] = { p0, p1(), p2() };
+        return std::make_pair(p[i], p[(i + 1) % 3]);
+    }
+
+    Scalar area() const
+    {
+        return length(n) * Scalar(0.5);
+    }
+
+    std::pair<bvh::BoundingBox<Scalar>, bvh::BoundingBox<Scalar>> split(size_t axis, Scalar position) const
+    {
+        bvh::Vector3<Scalar> p[] = { p0, p1(), p2() };
+        auto left                = bvh::BoundingBox<Scalar>::empty();
+        auto right               = bvh::BoundingBox<Scalar>::empty();
+        auto split_edge          = [=](const bvh::Vector3<Scalar>& a, const bvh::Vector3<Scalar>& b) {
+            auto t = (position - a[axis]) / (b[axis] - a[axis]);
+            return a + t * (b - a);
+        };
+        auto q0 = p[0][axis] <= position;
+        auto q1 = p[1][axis] <= position;
+        auto q2 = p[2][axis] <= position;
+        if (q0)
+            left.extend(p[0]);
+        else
+            right.extend(p[0]);
+        if (q1)
+            left.extend(p[1]);
+        else
+            right.extend(p[1]);
+        if (q2)
+            left.extend(p[2]);
+        else
+            right.extend(p[2]);
+        if (q0 ^ q1) {
+            auto m = split_edge(p[0], p[1]);
+            left.extend(m);
+            right.extend(m);
+        }
+        if (q1 ^ q2) {
+            auto m = split_edge(p[1], p[2]);
+            left.extend(m);
+            right.extend(m);
+        }
+        if (q2 ^ q0) {
+            auto m = split_edge(p[2], p[0]);
+            left.extend(m);
+            right.extend(m);
+        }
+        return std::make_pair(left, right);
+    }
 };
+using TriangleProxy = TriangleProxyBase<float>;
 
 template <size_t N, size_t M, template <typename> typename Allocator>
 class BvhNTriMAdapter : public BvhNAdapter<N, typename BvhNTriM<N, M>::Node, TriangleProxy, Allocator> {
