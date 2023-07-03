@@ -4,12 +4,12 @@
 fn @wrap_infobuffer_renderer(device: Device, iter: i32, spi: i32, other: Technique) -> Technique {
     let aov_normal = device.load_aov_image("Normals", spi);
     let aov_albedo = device.load_aov_image("Albedo",  spi);
-    let aov_depth  = device.load_aov_image("Depth",   spi);
+    // let aov_depth  = device.load_aov_image("Depth",   spi); // Not used for now
 
     if iter == 0 {
         aov_normal.mark_as_used();
         aov_albedo.mark_as_used();
-        aov_depth.mark_as_used();
+        // aov_depth.mark_as_used();
     }
 
     fn @on_hit( ctx: ShadingContext
@@ -24,7 +24,7 @@ fn @wrap_infobuffer_renderer(device: Device, iter: i32, spi: i32, other: Techniq
             // Splat all
             aov_normal.splat(ctx.pixel, vec3_to_color(ctx.surf.local.col(2)));
             aov_albedo.splat(ctx.pixel, color_saturate(albedo, 1));
-            aov_depth.splat(ctx.pixel, make_gray_color(ctx.hit.distance));
+            // aov_depth.splat(ctx.pixel, make_gray_color(ctx.hit.distance));
         }
 
         other.on_hit(ctx, payload, mat)

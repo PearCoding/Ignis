@@ -7,7 +7,7 @@ void InfoBufferTechnique::enable(TechniqueInfo& info)
 {
     info.EnabledAOVs.emplace_back("Normals");
     info.EnabledAOVs.emplace_back("Albedo");
-    info.EnabledAOVs.emplace_back("Depth");
+    // info.EnabledAOVs.emplace_back("Depth");
 }
 
 bool InfoBufferTechnique::insertBody(const Technique::SerializationInput& input)
