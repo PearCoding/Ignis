@@ -27,8 +27,8 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
     // AnyDSL has no support for multi-threaded compile process :/
     std::lock_guard<std::mutex> _guard(mCompileMutex);
 
-    static bool once = false;
-    if (!once) {
+    static std::once_flag once;
+    std::call_once(once, [&]() {
         const auto module_path = RuntimeInfo::modulePath();
         if (!module_path.empty()) {
             IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
@@ -37,8 +37,7 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
 
         const auto cache_dir = RuntimeInfo::cacheDirectory();
         anydsl_set_cache_directory(cache_dir.generic_string().c_str());
-        once = true;
-    }
+    });
 
 #ifdef IG_DEBUG
     anydsl_set_log_level(mVerbose ? 1 /* info */ : 4 /* error */);
