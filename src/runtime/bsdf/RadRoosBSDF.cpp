@@ -13,12 +13,12 @@ RadRoosBSDF::RadRoosBSDF(const std::string& name, const std::shared_ptr<SceneObj
 void RadRoosBSDF::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
-    input.Tree.addNumber("rf_r0", *mBSDF, 0.0f);
-    input.Tree.addNumber("rf_p", *mBSDF, 0.0f);
-    input.Tree.addNumber("rf_q", *mBSDF, 0.0f);
-    input.Tree.addNumber("tau_t0", *mBSDF, 0.0f);
-    input.Tree.addNumber("tau_p", *mBSDF, 0.0f);
-    input.Tree.addNumber("tau_q", *mBSDF, 0.0f);
+    input.Tree.addNumber("refl_w", *mBSDF, 0.0f);
+    input.Tree.addNumber("refl_p", *mBSDF, 0.0f);
+    input.Tree.addNumber("refl_q", *mBSDF, 0.0f);
+    input.Tree.addNumber("trns_w", *mBSDF, 0.0f);
+    input.Tree.addNumber("trns_p", *mBSDF, 0.0f);
+    input.Tree.addNumber("trns_q", *mBSDF, 0.0f);
     input.Tree.addColor("reflection_front_diffuse", *mBSDF, Vector3f::Zero());
     input.Tree.addColor("reflection_back_diffuse", *mBSDF, Vector3f::Zero());
     input.Tree.addColor("transmission_diffuse", *mBSDF, Vector3f::Zero());
@@ -27,12 +27,12 @@ void RadRoosBSDF::serialize(const SerializationInput& input) const
     input.Stream << input.Tree.pullHeader()
                  << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| "
                  << "make_rad_roos_bsdf(ctx.surf, -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2)),"
-                 << input.Tree.getInline("rf_r0") << ", "
-                 << input.Tree.getInline("rf_p") << ", "
-                 << input.Tree.getInline("rf_q") << ", "
-                 << input.Tree.getInline("tau_t0") << ", "
-                 << input.Tree.getInline("tau_p") << ", "
-                 << input.Tree.getInline("tau_q") << ", "
+                 << input.Tree.getInline("refl_w") << ", "
+                 << input.Tree.getInline("refl_p") << ", "
+                 << input.Tree.getInline("refl_q") << ", "
+                 << input.Tree.getInline("trns_w") << ", "
+                 << input.Tree.getInline("trns_p") << ", "
+                 << input.Tree.getInline("trns_q") << ", "
                  << input.Tree.getInline("reflection_front_diffuse") << ", "
                  << input.Tree.getInline("reflection_back_diffuse") << ", "
                  << input.Tree.getInline("transmission_diffuse") << ");" << std::endl;

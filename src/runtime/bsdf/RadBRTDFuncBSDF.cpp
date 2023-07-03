@@ -15,7 +15,7 @@ void RadBRTDFuncBSDF::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
     input.Tree.addColor("reflection_specular", *mBSDF, Vector3f::Ones());
     input.Tree.addColor("transmission_specular", *mBSDF, Vector3f::Zero());
-    input.Tree.addColor("directional_diffuse", *mBSDF, Vector3f::Zero());
+    input.Tree.addColor("direct_diffuse", *mBSDF, Vector3f::Zero());
     input.Tree.addColor("reflection_front_diffuse", *mBSDF, Vector3f::Zero());
     input.Tree.addColor("reflection_back_diffuse", *mBSDF, Vector3f::Zero());
     input.Tree.addColor("transmission_diffuse", *mBSDF, Vector3f::Zero());
@@ -26,7 +26,7 @@ void RadBRTDFuncBSDF::serialize(const SerializationInput& input) const
                  << "make_rad_brtdfunc_bsdf(ctx.surf, "
                  << input.Tree.getInline("reflection_specular") << ", "
                  << input.Tree.getInline("transmission_specular") << ", "
-                 << input.Tree.getInline("directional_diffuse") << ", "
+                 << input.Tree.getInline("direct_diffuse") << ", "
                  << input.Tree.getInline("reflection_front_diffuse") << ", "
                  << input.Tree.getInline("reflection_back_diffuse") << ", "
                  << input.Tree.getInline("transmission_diffuse") << ");" << std::endl;

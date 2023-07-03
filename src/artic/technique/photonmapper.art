@@ -1,13 +1,12 @@
 struct Photon {
-    in_dir:   Vec3,  // The direction this photon came from
+    in_dir:   Vec3,  // The direction this photon came from (stored as octahedron projection)
     light:    i32,   // The associated light
     pos:      Vec3,  // The position in world space
     eta:      f32,   // The eta at this point
-    radiance: Color, // The carried power
+    radiance: Color, // The carried power (stored as RGBE)
     depth:    i32,   // The depth, with 0 = on the light
-    // norm:     Vec3,  // The position in world space
 }
-static photon_size = 12:i32;//16:i32;
+static photon_size = 8:i32; // 32 bytes per photon
 
 struct LightCache {
     max_count: i32,
@@ -19,28 +18,23 @@ struct LightCache {
 
 fn @load_ppm_photon(off: i32, buffer: DeviceBuffer) -> Photon {
     let idx = 4 /* Header */ + off * photon_size;
-    let a1  = buffer.load_vec4(idx + 0);
+    let a1  = buffer.load_int4(idx + 0);
     let a2  = buffer.load_vec4(idx + 4);
-    let a3  = buffer.load_vec4(idx + 8);
-    // let a4  = buffer.load_vec4(idx + 12);
 
     Photon {
-        in_dir   = make_vec3(a1.x, a1.y, a1.z),
-        light    = bitcast[i32](a1.w),
+        in_dir   = decode_normal_32(a1.0),
+        light    = a1.1,
         pos      = make_vec3(a2.x, a2.y, a2.z),
         eta      = a2.w,
-        radiance = make_color(a3.x, a3.y, a3.z, 1),
-        depth    = bitcast[i32](a3.w),
-        // norm     = make_vec3(a4.x, a4.y, a4.z)
+        radiance = decode_rgbe(a1.2),
+        depth    = a1.3
     }
 }
 
 fn @store_ppm_photon(photon: Photon, off: i32, buffer: DeviceBuffer) -> () {
     let idx = 4 /* Header */ + off * photon_size;
-    buffer.store_vec4(idx + 0, make_vec4(photon.in_dir.x, photon.in_dir.y, photon.in_dir.z, bitcast[f32](photon.light)));
+    buffer.store_int4(idx + 0, encode_normal_32(photon.in_dir), photon.light, encode_rgbe(photon.radiance), photon.depth);
     buffer.store_vec4(idx + 4, make_vec4(photon.pos.x, photon.pos.y, photon.pos.z, photon.eta));
-    buffer.store_vec4(idx + 8, make_vec4(photon.radiance.r, photon.radiance.g, photon.radiance.b, bitcast[f32](photon.depth)));
-    // buffer.store_vec4(idx + 12, make_vec4(photon.norm.x, photon.norm.y, photon.norm.z, 0));
 }
 
 // Epanechnikov kernel

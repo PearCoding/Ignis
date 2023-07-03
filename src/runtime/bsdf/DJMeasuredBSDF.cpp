@@ -35,11 +35,11 @@ void DJMeasuredBSDF::serialize(const SerializationInput& input) const
 
     const std::string bsdf_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
-                 << "  let " << buffer_name << "_ndf : DeviceBuffer = device.load_buffer(\"" << out_path << "_ndf\");\n"
-                 << "  let " << buffer_name << "_vndf : DeviceBuffer = device.load_buffer(\"" << out_path << "_vndf\");\n"
-                 << "  let " << buffer_name << "_sigma : DeviceBuffer = device.load_buffer(\"" << out_path << "_sigma\");\n"
-                 << "  let " << buffer_name << "_luminance : DeviceBuffer = device.load_buffer(\"" << out_path << "_luminance\");\n"
-                 << "  let " << buffer_name << "_rgb : DeviceBuffer = device.load_buffer(\"" << out_path << "_rgb\");\n"
+                 << "  let " << buffer_name << "_ndf : DeviceBuffer = device.load_buffer(\"" << out_path.generic_u8string() << "_ndf\");\n"
+                 << "  let " << buffer_name << "_vndf : DeviceBuffer = device.load_buffer(\"" << out_path.generic_u8string() << "_vndf\");\n"
+                 << "  let " << buffer_name << "_sigma : DeviceBuffer = device.load_buffer(\"" << out_path.generic_u8string() << "_sigma\");\n"
+                 << "  let " << buffer_name << "_luminance : DeviceBuffer = device.load_buffer(\"" << out_path.generic_u8string() << "_luminance\");\n"
+                 << "  let " << buffer_name << "_rgb : DeviceBuffer = device.load_buffer(\"" << out_path.generic_u8string() << "_rgb\");\n"
                  << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_djmeasured_bsdf(ctx.surf, "
                  << (data->isotropic ? "true" : "false") << ", "
                  << (data->jacobian ? "true" : "false") << ", "
