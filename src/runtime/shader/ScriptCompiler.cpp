@@ -28,7 +28,7 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
     std::lock_guard<std::mutex> _guard(mCompileMutex);
 
     static std::once_flag once;
-    std::call_once(once, [&]() {
+    std::call_once(once, []() {
         const auto module_path = RuntimeInfo::modulePath();
         if (!module_path.empty()) {
             IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
