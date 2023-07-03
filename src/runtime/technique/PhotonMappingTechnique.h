@@ -7,8 +7,6 @@ class PhotonMappingTechnique : public Technique {
 public:
     PhotonMappingTechnique(SceneObject& obj);
     ~PhotonMappingTechnique() = default;
-
-    bool hasDenoiserSupport() const override { return true; }
     
     TechniqueInfo getInfo(const LoaderContext& ctx) const override;
     void generateBody(const SerializationInput& input) const override;

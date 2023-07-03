@@ -7,8 +7,6 @@ class LightTracerTechnique : public Technique {
 public:
     LightTracerTechnique(SceneObject& obj);
     ~LightTracerTechnique() = default;
-
-    bool hasDenoiserSupport() const override { return true; }
     
     TechniqueInfo getInfo(const LoaderContext& ctx) const override;
     void generateBody(const SerializationInput& input) const override;

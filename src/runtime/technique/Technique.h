@@ -17,7 +17,6 @@ public:
 
     [[nodiscard]] inline const std::string& type() const { return mType; }
 
-    [[nodiscard]] inline virtual bool hasDenoiserSupport() const { return false; }
     [[nodiscard]] virtual TechniqueInfo getInfo(const LoaderContext& ctx) const = 0;
 
     struct SerializationInput {

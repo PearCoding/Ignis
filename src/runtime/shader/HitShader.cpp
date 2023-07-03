@@ -46,7 +46,7 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_hit_shader(shader, scene, technique, payload_info, first, last, use_framebuffer);" << std::endl
+           << "  device.handle_hit_shader(shader, scene, full_technique, payload_info, first, last, use_framebuffer);" << std::endl
            << "}" << std::endl;
 
     return stream.str();
