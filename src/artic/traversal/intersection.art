@@ -78,8 +78,8 @@ fn @intersect_ray_tri_mt_gen(backface_culling: bool, ray: Ray, tri: Tri, check_i
     let abs_det = math_builtins::fabs(det);
     let sgn_det = fp_signmask(det);
 
-    let u = bitcast[f32](bitcast[u32](vec3_dot(r, tri.e2)) ^ bitcast[u32](sgn_det));
-    let v = bitcast[f32](bitcast[u32](vec3_dot(r, tri.e1)) ^ bitcast[u32](sgn_det));
+    let u = bitcast[f32](bitcast[u32](vec3_dot(r, tri.e1)) ^ bitcast[u32](sgn_det));
+    let v = bitcast[f32](bitcast[u32](vec3_dot(r, tri.e2)) ^ bitcast[u32](sgn_det));
 
     let mut mask = u >= 0;
     mask &= v >= 0;
@@ -118,16 +118,16 @@ fn @intersect_ray_tri_pl_gen(backface_culling: bool, ray: Ray, tri: Tri, check_i
     let v1 = vec3_sub(tri.v1, ray.org);
     let v2 = vec3_sub(tri.v2, ray.org);
 
-    let u = vec3_dot(vec3_cross(tri.e1, vec3_add(v2, v0)), ray.dir);
-    let v = vec3_dot(vec3_cross(tri.e2, vec3_add(v0, v1)), ray.dir);
-    let w = vec3_dot(vec3_cross(tri.e3, vec3_add(v1, v2)), ray.dir);
+    let u = vec3_dot(vec3_cross(vec3_sub(v2, v0), vec3_add(v2, v0)), ray.dir);
+    let v = vec3_dot(vec3_cross(vec3_sub(v0, v1), vec3_add(v0, v1)), ray.dir);
+    let w = vec3_dot(vec3_cross(vec3_sub(v1, v2), vec3_add(v1, v2)), ray.dir);
 
     let eps = math_builtins::fabs(u + v + w) * flt_eps;
 
     let mut mask = if backface_culling {
-        math_builtins::fmax(u,math_builtins::fmax(v,w)) <= eps
+        math_builtins::fmax(u,math_builtins::fmax(v, w)) <= eps
     } else {
-        math_builtins::fmax(u,math_builtins::fmax(v,w)) <= eps || math_builtins::fmin(u,math_builtins::fmin(v,w)) >= -eps
+        math_builtins::fmax(u,math_builtins::fmax(v, w)) <= eps || math_builtins::fmin(u,math_builtins::fmin(v, w)) >= -eps
     };
 
     if check_if_none(mask) { return(Option[(f32, f32, f32)]::None) }
@@ -140,7 +140,7 @@ fn @intersect_ray_tri_pl_gen(backface_culling: bool, ray: Ray, tri: Tri, check_i
     mask &= den != 0;
     
     if mask {
-        let rcp = 1 / (u + v + w);
+        let rcp = safe_div(1, u + v + w);
         make_option(t, math_builtins::fmin[f32](u * rcp, 1), math_builtins::fmin[f32](v * rcp, 1))
     } else {
         Option[(f32, f32, f32)]::None
@@ -197,7 +197,7 @@ fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check_
 
     if mask {
         let inv_det = 1 / det;
-        make_option(t * inv_det, e0 * inv_det, e1 * inv_det)
+        make_option(t * inv_det, e1 * inv_det, e2 * inv_det)
     } else {
         Option[(f32, f32, f32)]::None
     }
