@@ -1,11 +1,13 @@
 fn test_tri_intersect() {
     let mut err = 0;
 
-    let tri = make_tri(make_vec3(0,0,0), make_vec3(-1,0,0), make_vec3(0,1,0), make_vec3(0,0,-1));
+    let tri = make_tri(make_vec3(0,0,0), make_vec3(0,1,0), make_vec3(-1,0,0), make_vec3(0,0,1));
     let ray = make_ray(make_vec3(0.2,0.4,1), make_vec3(0,0,-1), 0, 10, 0);
     
-    //ignis_dbg_echo_vec3(tri.v1);
-    //ignis_dbg_echo_vec3(tri.v2);
+    // ignis_dbg_echo_vec3(tri.v1);
+    // ignis_dbg_echo_vec3(tri.v2);
+    // ignis_dbg_echo_vec3(tri.e3);
+
     if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri_gpu(false, ray, tri) {
         if !eq_f32(t, 1) || !eq_f32(u, 0.2) || !eq_f32(v, 0.4){
             ++err;
@@ -21,7 +23,7 @@ fn test_tri_intersect() {
 fn test_tri_no_intersect() {
     let mut err = 0;
 
-    let tri = make_tri(make_vec3(0,0,0), make_vec3(-1,0,0), make_vec3(0,1,0), make_vec3(0,0,-1));
+    let tri = make_tri(make_vec3(0,0,0), make_vec3(0,1,0), make_vec3(-1,0,0), make_vec3(0,0,1));
     let ray = make_ray(make_vec3(0.2,4.4,1), make_vec3(0,0,-1), 0, 10, 0);
     
     if let Option[(f32, f32, f32)]::Some(_) = intersect_ray_tri_gpu(false, ray, tri) {
@@ -36,7 +38,7 @@ fn test_tri_no_intersect() {
 fn test_tri_no_cull_intersect() {
     let mut err = 0;
 
-    let tri = make_tri(make_vec3(0,0,0), make_vec3(-1,0,0), make_vec3(0,1,0), make_vec3(0,0,-1));
+    let tri = make_tri(make_vec3(0,0,0), make_vec3(0,1,0), make_vec3(-1,0,0), make_vec3(0,0,1));
     let ray = make_ray(make_vec3(0.2,0.4,-1), make_vec3(0,0,1), 0, 10, 0);
     
     if let Option[(f32, f32, f32)]::Some((t, u, v)) = intersect_ray_tri_gpu(false, ray, tri) {
@@ -45,7 +47,22 @@ fn test_tri_no_cull_intersect() {
         }
     } else {
         ++err;
-        ignis_test_fail("Triangle was not intersected!");
+        ignis_test_fail("Triangle was not intersected! (No backface culling)");
+    }
+
+    err  
+}
+
+// If backface culling is enabled, this one should NOT intersect!
+fn test_tri_cull_intersect() {
+    let mut err = 0;
+
+    let tri = make_tri(make_vec3(0,0,0), make_vec3(0,1,0), make_vec3(-1,0,0), make_vec3(0,0,1));
+    let ray = make_ray(make_vec3(0.2,0.4,-1), make_vec3(0,0,1), 0, 10, 0);
+    
+    if let Option[(f32, f32, f32)]::Some(_) = intersect_ray_tri_gpu(true, ray, tri) {
+        ++err;
+        ignis_test_fail("Triangle was intersected! (With backface culling)");
     }
 
     err  
@@ -131,4 +148,4 @@ fn test_intersection() -> i32 {
     // err += test_bbox_empty_intersect();
 
     err
- }
+}
