@@ -16,7 +16,13 @@ CacheManager::CacheManager(const Path& cache_dir)
     , mHashMap()
     , mCacheDir(cache_dir)
 {
-    std::filesystem::create_directories(mCacheDir); // Make sure this directory exists
+    try {
+        std::filesystem::create_directories(mCacheDir); // Make sure this directory exists
+    } catch (const std::filesystem::filesystem_error&) {
+        mCacheDir = std::filesystem::temp_directory_path() / mCacheDir.filename();
+        IG_LOG(L_WARNING) << "Could not use " << cache_dir << " as scene cache. Trying to use " << mCacheDir << " instead." << std::endl;
+        std::filesystem::create_directories(mCacheDir);
+    }
 }
 
 CacheManager::~CacheManager()
