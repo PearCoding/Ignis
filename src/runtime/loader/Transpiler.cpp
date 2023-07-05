@@ -681,6 +681,10 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("voronoi", createFunction("voronoi2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
     cF("fbm", createFunction("fbm2_def"), PExprType::Number, PExprType::Vec2),
     cF("fbm", createFunction("fbm2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("fbm", createFunction("fbm2_arg"), PExprType::Number, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),
+    cF("gabor", createFunction("gabor2_def"), PExprType::Number, PExprType::Vec2),
+    cF("gabor", createFunction("gabor2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF("gabor", createFunction("gabor2_gen"), PExprType::Number, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number, PExprType::Number),
 
     cF("cnoise", createColorFunctionOut("cnoise1_def"), PExprType::Vec4, PExprType::Number),
     cF("cnoise", createColorFunctionOut("cnoise1"), PExprType::Vec4, PExprType::Number, PExprType::Number),
@@ -706,6 +710,7 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("cvoronoi", createColorFunctionOut("cvoronoi2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
     cF("cfbm", createColorFunctionOut("cfbm2_def"), PExprType::Vec4, PExprType::Vec2),
     cF("cfbm", createColorFunctionOut("cfbm2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+    cF("cfbm", createColorFunctionOut("cfbm2_arg"), PExprType::Vec4, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),
 
     _MF3A("clamp", "clampf"),
     cF("clamp", createFunction("clamp"), PExprType::Integer, PExprType::Integer, PExprType::Integer, PExprType::Integer),
