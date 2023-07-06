@@ -247,6 +247,83 @@ inline static std::string handleCurveLookup(size_t& uuidCounter, const ParamArr&
         newArgs);
 }
 
+inline static std::string handleVoronoiGen(size_t& uuidCounter, bool colored, size_t dim, const ParamArr& initArgs)
+{
+    const size_t FeatureArg = 3;
+    const size_t DistArg    = 4;
+
+    IG_ASSERT(dim >= 1 && dim <= 3, "Only supporting voronoi for 1d, 2d and 3d");
+
+    const auto feature_v = extractConstantString(to_lowercase(initArgs.at(FeatureArg)));
+    if (!feature_v.has_value()) {
+        IG_LOG(L_ERROR) << "voronoi expects a constant string for its feature argument but got " << initArgs.at(FeatureArg) << std::endl;
+        return "0";
+    }
+    std::string feature = feature_v.value();
+
+    if (feature == "f1") {
+        feature = "VoronoiFeature::F1";
+    } else if (feature == "f2") {
+        feature = "VoronoiFeature::F2";
+    } else {
+        IG_LOG(L_WARNING) << "Unknown voronoi feature '" << feature << "'. Using 'f1' instead." << std::endl;
+        feature = "VoronoiFeature::F1";
+    }
+
+    std::string dist;
+    if (dim > 1) {
+        const auto dist_v = extractConstantString(to_lowercase(initArgs.at(DistArg)));
+
+        if (!dist_v.has_value()) {
+            IG_LOG(L_ERROR) << "voronoi expects a constant string for its distance argument but got " << initArgs.at(DistArg) << std::endl;
+            return "0";
+        }
+
+        dist = dist_v.value();
+
+        if (dist == "manhatten") {
+            dist = "VoronoiDistance::Manhatten";
+        } else if (dist == "chebyshev") {
+            dist = "VoronoiDistance::Chebyshev";
+        } else if (dist == "minkowski") {
+            std::string exponent = "4";
+            if (initArgs.size() > 5)
+                exponent = initArgs.at(DistArg + 1);
+            dist = "VoronoiDistance::Minkowski(" + exponent + ")";
+        } else if (dist == "euclidean") {
+            dist = "VoronoiDistance::Euclidean";
+        } else {
+            IG_LOG(L_WARNING) << "Unknown voronoi distance function '" << dist << "'. Using 'euclidean' instead." << std::endl;
+            dist = "VoronoiDistance::Euclidean";
+        }
+    }
+
+    // Remove additional arguments
+    ParamArr newArgs = initArgs;
+    newArgs.resize(3);
+
+    return collapseFunction(
+        uuidCounter,
+        [=](const std::vector<std::string>& args) {
+            if (!colored) {
+                if (dim == 1)
+                    return "voronoi1_gen(" + args.at(0) + ", " + args.at(1) + ", " + args.at(2) + ", " + feature + ").0";
+                else if (dim == 2)
+                    return "voronoi2_gen(" + args.at(0) + ", " + args.at(1) + ", " + args.at(2) + ", " + feature + ", " + dist + ").0";
+                else
+                    return "voronoi3_gen(" + args.at(0) + ", " + args.at(1) + ", " + args.at(2) + ", " + feature + ", " + dist + ").0";
+            } else {
+                if (dim == 1)
+                    return "color_to_vec4(voronoi1_gen(" + args.at(0) + ", " + args.at(1) + ", " + args.at(2) + ", " + feature + ").1)";
+                else if (dim == 2)
+                    return "color_to_vec4(voronoi2_gen(" + args.at(0) + ", " + args.at(1) + ", " + args.at(2) + ", " + feature + ", " + dist + ").1)";
+                else
+                    return "color_to_vec4(voronoi3_gen(" + args.at(0) + ", " + args.at(1) + ", " + args.at(2) + ", " + feature + ", " + dist + ").1)";
+            }
+        },
+        newArgs);
+}
+
 static inline std::string_view dumpType(PExprType type)
 {
     return PExpr::toString(type);
@@ -677,8 +754,34 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("perlin", createFunction("perlin2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
     cF("sperlin", createFunction("sperlin2_def"), PExprType::Number, PExprType::Vec2),
     cF("sperlin", createFunction("sperlin2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+
+    cF("voronoi", createFunction("voronoi1_def"), PExprType::Number, PExprType::Number),
+    cF("voronoi", createFunction("voronoi1"), PExprType::Number, PExprType::Number, PExprType::Number),
+    cF(
+        "voronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, false, 1, args); },
+        PExprType::Number, PExprType::Number, PExprType::Number, PExprType::Number, PExprType::String),
     cF("voronoi", createFunction("voronoi2_def"), PExprType::Number, PExprType::Vec2),
     cF("voronoi", createFunction("voronoi2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
+    cF(
+        "voronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, false, 2, args); },
+        PExprType::Number, PExprType::Vec2, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String),
+    cF(
+        "voronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, false, 2, args); },
+        PExprType::Number, PExprType::Vec2, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String, PExprType::Number),
+    cF("voronoi", createFunction("voronoi3_def"), PExprType::Number, PExprType::Vec3),
+    cF("voronoi", createFunction("voronoi3"), PExprType::Number, PExprType::Vec3, PExprType::Number),
+    cF(
+        "voronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, false, 3, args); },
+        PExprType::Number, PExprType::Vec3, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String),
+    cF(
+        "voronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, false, 3, args); },
+        PExprType::Number, PExprType::Vec3, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String, PExprType::Number),
+
     cF("fbm", createFunction("fbm2_def"), PExprType::Number, PExprType::Vec2),
     cF("fbm", createFunction("fbm2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
     cF("fbm", createFunction("fbm2_arg"), PExprType::Number, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),
@@ -706,8 +809,34 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("ccellnoise", createColorFunctionOut("ccellnoise3"), PExprType::Vec4, PExprType::Vec3, PExprType::Number),
     cF("cperlin", createColorFunctionOut("cperlin2_def"), PExprType::Vec4, PExprType::Vec2),
     cF("cperlin", createColorFunctionOut("cperlin2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+
+    cF("cvoronoi", createColorFunctionOut("cvoronoi1_def"), PExprType::Vec4, PExprType::Number),
+    cF("cvoronoi", createColorFunctionOut("cvoronoi1"), PExprType::Vec4, PExprType::Number, PExprType::Number),
+    cF(
+        "cvoronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, true, 1, args); },
+        PExprType::Vec4, PExprType::Number, PExprType::Number, PExprType::Number, PExprType::String),
     cF("cvoronoi", createColorFunctionOut("cvoronoi2_def"), PExprType::Vec4, PExprType::Vec2),
     cF("cvoronoi", createColorFunctionOut("cvoronoi2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
+    cF(
+        "cvoronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, true, 2, args); },
+        PExprType::Vec4, PExprType::Vec2, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String),
+    cF(
+        "cvoronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, true, 2, args); },
+        PExprType::Vec4, PExprType::Vec2, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String, PExprType::Number),
+    cF("cvoronoi", createColorFunctionOut("cvoronoi3_def"), PExprType::Vec4, PExprType::Vec3),
+    cF("cvoronoi", createColorFunctionOut("cvoronoi3"), PExprType::Vec4, PExprType::Vec3, PExprType::Number),
+    cF(
+        "cvoronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, true, 3, args); },
+        PExprType::Vec4, PExprType::Vec3, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String),
+    cF(
+        "cvoronoi",
+        [](size_t& uuid, const ParamArr& args) { return handleVoronoiGen(uuid, true, 3, args); },
+        PExprType::Vec4, PExprType::Vec3, PExprType::Number, PExprType::Number, PExprType::String, PExprType::String, PExprType::Number),
+
     cF("cfbm", createColorFunctionOut("cfbm2_def"), PExprType::Vec4, PExprType::Vec2),
     cF("cfbm", createColorFunctionOut("cfbm2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
     cF("cfbm", createColorFunctionOut("cfbm2_arg"), PExprType::Vec4, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),

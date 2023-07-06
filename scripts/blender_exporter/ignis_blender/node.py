@@ -1120,10 +1120,15 @@ def _export_voronoi(ctx, node, output_name):
     else:
         uv = ctx.texcoord
 
-    ops = f"{uv}.xy"
-    if node.voronoi_dimensions != '2D':
-        print(f"Voronoi currently only supports 2d vectors")
-        return f"{uv}"
+    if node.voronoi_dimensions == '1D':
+        ops = f"vec2({uv})"
+    elif node.voronoi_dimensions == '2D':
+        ops = f"{uv}.xy"
+    elif node.voronoi_dimensions == '3D':
+        ops = uv
+    else:
+        print(f"Voronoi currently only supports 1d, 2d and 3d vectors")
+        ops = uv
 
     scale = export_node(ctx, node.inputs["Scale"])
 
@@ -1143,12 +1148,15 @@ def _export_musgrave(ctx, node, output_name):
     else:
         uv = ctx.texcoord
 
-    ops = f"{uv}.xy"
-    if node.musgrave_dimensions != '2D':
-        print(f"Musgrave currently only supports 2d vectors")
-
     if node.musgrave_dimensions == '1D':
-        ops = f"vec3({uv})"
+        ops = f"vec2({uv})"
+    elif node.musgrave_dimensions == '2D':
+        ops = f"{uv}.xy"
+    elif node.musgrave_dimensions == '3D':
+        ops = uv
+    else:
+        print(f"Musgrave currently only supports 1d, 2d and 3d vectors")
+        ops = uv
 
     scale = export_node(ctx, node.inputs["Scale"])
 

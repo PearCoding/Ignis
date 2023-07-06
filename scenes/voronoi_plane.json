@@ -1,0 +1,51 @@
+{
+	"technique": {
+		"type": "path",
+		"max_depth": 4
+	},
+	"camera": {
+		"type": "perspective",
+		"fov": 40,
+		"near_clip": 0.1,
+		"far_clip": 100,
+		"transform": [ -1,0,0,0, 0,1,0,0, 0,0,-1,4.5, 0,0,0,1 ]
+	},
+	"film": {
+		"size": [1000, 1000]
+	},
+	"textures": [
+		{
+			"type": "bitmap",
+			"name": "env",
+			"filename": "textures/environment/phalzer_forest_01_4k.exr"
+		}
+	],
+	"bsdfs": [
+		{"type":"diffuse", "name": "Mat001", "reflectance":"cvoronoi(15*uv, 42, 1, 'f1', 'euclidean')" },
+		{"type":"diffuse", "name": "Mat002", "reflectance":"cvoronoi(15*uv, 42, 1, 'f1', 'manhatten')" },
+		{"type":"diffuse", "name": "Mat003", "reflectance":"cvoronoi(15*uv, 42, 1, 'f1', 'chebyshev')" },
+		{"type":"diffuse", "name": "Mat004", "reflectance":"cvoronoi(15*uv, 42, 1, 'f1', 'minkowski', 42)" },
+		{"type":"diffuse", "name": "Mat005", "reflectance":"cvoronoi(15*uv, 42, 1, 'f2', 'euclidean')" },
+		{"type":"diffuse", "name": "Mat006", "reflectance":"cvoronoi(15*uv, 42, 1, 'f2', 'manhatten')" },
+		{"type":"diffuse", "name": "Mat007", "reflectance":"cvoronoi(15*uv, 42, 1, 'f2', 'chebyshev')" },
+		{"type":"diffuse", "name": "Mat008", "reflectance":"cvoronoi(15*uv, 42, 1, 'f2', 'minkowski', 42)" },
+		{"type":"diffuse", "name": "Mat009", "reflectance":"cvoronoi(15*uv, 42, 0, 'f1', 'euclidean')" }
+	],
+	"shapes": [
+		{"type":"rectangle", "name":"Plane", "width": 1, "height": 1}
+	],
+	"entities": [
+		{"name":"Plane001","shape":"Plane", "bsdf":"Mat001", "transform": [{"translate": [-1,-1,0]}]},
+		{"name":"Plane002","shape":"Plane", "bsdf":"Mat002", "transform": [{"translate": [0,-1,0]}]},
+		{"name":"Plane003","shape":"Plane", "bsdf":"Mat003", "transform": [{"translate": [1,-1,0]}]},
+		{"name":"Plane004","shape":"Plane", "bsdf":"Mat004", "transform": [{"translate": [-1,0,0]}]},
+		{"name":"Plane005","shape":"Plane", "bsdf":"Mat005", "transform": [{"translate": [0,0,0]}]},
+		{"name":"Plane006","shape":"Plane", "bsdf":"Mat006", "transform": [{"translate": [1,0,0]}]},
+		{"name":"Plane007","shape":"Plane", "bsdf":"Mat007", "transform": [{"translate": [-1,1,0]}]},
+		{"name":"Plane008","shape":"Plane", "bsdf":"Mat008", "transform": [{"translate": [0,1,0]}]},
+		{"name":"Plane009","shape":"Plane", "bsdf":"Mat009", "transform": [{"translate": [1,1,0]}]}
+	],
+	"lights": [
+		{"type":"env", "name":"Sky", "radiance": "env", "transform": [1,0,0, 0,0,1, 0,1,0]}
+	]
+}
