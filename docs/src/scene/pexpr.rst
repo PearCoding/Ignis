@@ -139,279 +139,310 @@ The command line options ``--Pi``, ``--Pn``, ``--Pv`` and ``--Pc`` allow setting
 Functions
 ---------
 
--   ``abs(num) -> num``
--   ``abs(vec2) -> vec2``
--   ``abs(vec3) -> vec3``
--   ``abs(vec4) -> vec4``
--   ``abs(int) -> int``
--   ``acos(num) -> num``
--   ``acos(vec2) -> vec2``
--   ``acos(vec3) -> vec3``
--   ``acos(vec4) -> vec4``
--   ``angle(vec2, vec2) -> num``
--   ``angle(vec3, vec3) -> num``
--   ``angle(vec4, vec4) -> num``
--   ``asin(num) -> num``
--   ``asin(vec2) -> vec2``
--   ``asin(vec3) -> vec3``
--   ``asin(vec4) -> vec4``
--   ``atan(num) -> num``
--   ``atan(vec2) -> vec2``
--   ``atan(vec3) -> vec3``
--   ``atan(vec4) -> vec4``
--   ``atan2(num, num) -> num``
--   ``atan2(vec2, vec2) -> vec2``
--   ``atan2(vec3, vec3) -> vec3``
--   ``atan2(vec4, vec4) -> vec4``
--   ``avg(vec2) -> num``
--   ``avg(vec3) -> num``
--   ``avg(vec4) -> num``
--   ``bump(vec3, vec3, vec3, num, num, num) -> vec3``
--   ``blackbody(num) -> vec4``
--   ``cbrt(num) -> num``
--   ``cbrt(vec2) -> vec2``
--   ``cbrt(vec3) -> vec3``
--   ``cbrt(vec4) -> vec4``
--   ``ccellnoise(num) -> vec4``
--   ``ccellnoise(num, num) -> vec4``
--   ``ccellnoise(vec2) -> vec4``
--   ``ccellnoise(vec2, num) -> vec4``
--   ``ccellnoise(vec3) -> vec4``
--   ``ccellnoise(vec3, num) -> vec4``
--   ``ceil(num) -> num``
--   ``ceil(vec2) -> vec2``
--   ``ceil(vec3) -> vec3``
--   ``ceil(vec4) -> vec4``
--   ``cellnoise(num) -> num``
--   ``cellnoise(num, num) -> num``
--   ``cellnoise(vec2) -> num``
--   ``cellnoise(vec2, num) -> num``
--   ``cellnoise(vec3) -> num``
--   ``cellnoise(vec3, num) -> num``
--   ``cfbm(vec2) -> vec4``
--   ``cfbm(vec2, num) -> vec4``
--   ``check_ray_flag(str) -> bool``
--   ``checkerboard(vec2) -> num``
--   ``checkerboard(vec3) -> num``
--   ``clamp(num, num, num) -> num``
--   ``clamp(vec2, vec2, vec2) -> vec2``
--   ``clamp(vec3, vec3, vec3) -> vec3``
--   ``clamp(vec4, vec4, vec4) -> vec4``
--   ``clamp(int, int, int) -> int``
--   ``cnoise(num) -> vec4``
--   ``cnoise(num, num) -> vec4``
--   ``cnoise(vec2) -> vec4``
--   ``cnoise(vec2, num) -> vec4``
--   ``cnoise(vec3) -> vec4``
--   ``cnoise(vec3, num) -> vec4``
--   ``color(num, num, num, num) -> vec4``
--   ``color(num, num, num) -> vec4``
--   ``color(num) -> vec4``
--   ``cos(num) -> num``
--   ``cos(vec2) -> vec2``
--   ``cos(vec3) -> vec3``
--   ``cos(vec4) -> vec4``
--   ``cperlin(vec2) -> vec4``
--   ``cperlin(vec2, num) -> vec4``
--   ``cpnoise(num) -> vec4``
--   ``cpnoise(num, num) -> vec4``
--   ``cpnoise(vec2) -> vec4``
--   ``cpnoise(vec2, num) -> vec4``
--   ``cpnoise(vec3) -> vec4``
--   ``cpnoise(vec3, num) -> vec4``
--   ``cross(vec3, vec3) -> vec3``
--   ``cvoronoi(vec2) -> vec4``
--   ``cvoronoi(vec2, num) -> vec4``
--   ``deg(num) -> num``
--   ``deg(vec2) -> vec2``
--   ``deg(vec3) -> vec3``
--   ``deg(vec4) -> vec4``
--   ``dist(vec2, vec2) -> num``
--   ``dist(vec3, vec3) -> num``
--   ``dist(vec4, vec4) -> num``
--   ``dot(vec2, vec2) -> num``
--   ``dot(vec3, vec3) -> num``
--   ``dot(vec4, vec4) -> num``
--   ``ensure_valid_reflection(vec3, vec3, vec3) -> vec3``
--   ``exp(num) -> num``
--   ``exp(vec2) -> vec2``
--   ``exp(vec3) -> vec3``
--   ``exp(vec4) -> vec4``
--   ``exp2(num) -> num``
--   ``exp2(vec2) -> vec2``
--   ``exp2(vec3) -> vec3``
--   ``exp2(vec4) -> vec4``
--   ``fbm(vec2) -> num``
--   ``fbm(vec2, num) -> num``
--   ``floor(num) -> num``
--   ``floor(vec2) -> vec2``
--   ``floor(vec3) -> vec3``
--   ``floor(vec4) -> vec4``
--   ``fmod(num, num) -> num``
--   ``fmod(vec2, vec2) -> vec2``
--   ``fmod(vec3, vec3) -> vec3``
--   ``fmod(vec4, vec4) -> vec4``
--   ``fract(num) -> num``
--   ``fract(vec2) -> vec2``
--   ``fract(vec3) -> vec3``
--   ``fract(vec4) -> vec4``
--   ``fresnel_conductor(num, num, num) -> num``
--   ``fresnel_dielectric(num, num) -> num``
--   ``hash(num) -> num``
--   ``hsltorgb(vec4) -> vec4``
--   ``hsvtorgb(vec4) -> vec4``
--   ``length(vec2) -> num``
--   ``length(vec3) -> num``
--   ``length(vec4) -> num``
--   ``log(num) -> num``
--   ``log(vec2) -> vec2``
--   ``log(vec3) -> vec3``
--   ``log(vec4) -> vec4``
--   ``log10(num) -> num``
--   ``log10(vec2) -> vec2``
--   ``log10(vec3) -> vec3``
--   ``log10(vec4) -> vec4``
--   ``log2(num) -> num``
--   ``log2(vec2) -> vec2``
--   ``log2(vec3) -> vec3``
--   ``log2(vec4) -> vec4``
--   ``lookup(str, bool, num, vec2, ...) -> num``
--   ``luminance(vec4) -> num``
--   ``max(num, num) -> num``
--   ``max(vec2, vec2) -> vec2``
--   ``max(vec3, vec3) -> vec3``
--   ``max(vec4, vec4) -> vec4``
--   ``max(int, int) -> int``
--   ``min(num, num) -> num``
--   ``min(vec2, vec2) -> vec2``
--   ``min(vec3, vec3) -> vec3``
--   ``min(vec4, vec4) -> vec4``
--   ``min(int, int) -> int``
--   ``mix(num, num, num) -> num``
--   ``mix(vec2, vec2, num) -> vec2``
--   ``mix(vec3, vec3, num) -> vec3``
--   ``mix(vec4, vec4, num) -> vec4``
--   ``mix_burn(vec4, vec4, num) -> vec4``
--   ``mix_color(vec4, vec4, num) -> vec4``
--   ``mix_dodge(vec4, vec4, num) -> vec4``
--   ``mix_hue(vec4, vec4, num) -> vec4``
--   ``mix_linear(vec4, vec4, num) -> vec4``
--   ``mix_overlay(vec4, vec4, num) -> vec4``
--   ``mix_saturation(vec4, vec4, num) -> vec4``
--   ``mix_screen(vec4, vec4, num) -> vec4``
--   ``mix_soft(vec4, vec4, num) -> vec4``
--   ``mix_value(vec4, vec4, num) -> vec4``
--   ``noise(num) -> num``
--   ``noise(num, num) -> num``
--   ``noise(vec2) -> num``
--   ``noise(vec2, num) -> num``
--   ``noise(vec3) -> num``
--   ``noise(vec3, num) -> num``
--   ``norm(vec2) -> vec2``
--   ``norm(vec3) -> vec3``
--   ``norm(vec4) -> vec4``
--   ``perlin(vec2) -> num``
--   ``perlin(vec2, num) -> num``
--   ``pingpong(num, num) -> num``
--   ``pingpong(vec2, vec2) -> vec2``
--   ``pingpong(vec3, vec3) -> vec3``
--   ``pingpong(vec4, vec4) -> vec4``
--   ``pnoise(num) -> num``
--   ``pnoise(num, num) -> num``
--   ``pnoise(vec2) -> num``
--   ``pnoise(vec2, num) -> num``
--   ``pnoise(vec3) -> num``
--   ``pnoise(vec3, num) -> num``
--   ``pow(num, num) -> num``
--   ``pow(vec2, vec2) -> vec2``
--   ``pow(vec3, vec3) -> vec3``
--   ``pow(vec4, vec4) -> vec4``
--   ``rad(num) -> num``
--   ``rad(vec2) -> vec2``
--   ``rad(vec3) -> vec3``
--   ``rad(vec4) -> vec4``
--   ``reflect(vec3, vec3) -> vec3``
--   ``rgbtohsl(vec4) -> vec4``
--   ``rgbtohsv(vec4) -> vec4``
--   ``rgbtoxyz(vec4) -> vec4``
--   ``rotate_axis(vec3, num, vec3) -> vec3``
--   ``rotate_euler(vec3, vec3) -> vec3``
--   ``rotate_euler_inverse(vec3, vec3) -> vec3``
--   ``round(num) -> num``
--   ``round(vec2) -> vec2``
--   ``round(vec3) -> vec3``
--   ``round(vec4) -> vec4``
--   ``select(bool, bool, bool) -> bool``
--   ``select(bool, int, int) -> int``
--   ``select(bool, num, num) -> num``
--   ``select(bool, vec2, vec2) -> vec2``
--   ``select(bool, vec3, vec3) -> vec3``
--   ``select(bool, vec4, vec4) -> vec4``
--   ``select(bool, str, str) -> str``
--   ``sign(num) -> num``
--   ``sign(vec2) -> vec2``
--   ``sign(vec3) -> vec3``
--   ``sign(vec4) -> vec4``
--   ``sign(int) -> int``
--   ``signbit(int) -> bool``
--   ``signbit(num) -> bool``
--   ``sin(num) -> num``
--   ``sin(vec2) -> vec2``
--   ``sin(vec3) -> vec3``
--   ``sin(vec4) -> vec4``
--   ``smax(num, num, num) -> num``
--   ``smax(vec2, vec2, vec2) -> vec2``
--   ``smax(vec3, vec3, vec3) -> vec3``
--   ``smax(vec4, vec4, vec4) -> vec4``
--   ``smin(num, num, num) -> num``
--   ``smin(vec2, vec2, vec2) -> vec2``
--   ``smin(vec3, vec3, vec3) -> vec3``
--   ``smin(vec4, vec4, vec4) -> vec4``
--   ``smootherstep(num) -> num``
--   ``smoothstep(num) -> num``
--   ``snap(num, num) -> num``
--   ``snap(vec2, vec2) -> vec2``
--   ``snap(vec3, vec3) -> vec3``
--   ``snap(vec4, vec4) -> vec4``
--   ``snoise(num) -> num``
--   ``snoise(num, num) -> num``
--   ``snoise(vec2) -> num``
--   ``snoise(vec2, num) -> num``
--   ``snoise(vec3) -> num``
--   ``snoise(vec3, num) -> num``
--   ``sperlin(vec2) -> num``
--   ``sperlin(vec2, num) -> num``
--   ``sqrt(num) -> num``
--   ``sqrt(vec2) -> vec2``
--   ``sqrt(vec3) -> vec3``
--   ``sqrt(vec4) -> vec4``
--   ``sum(vec2) -> num``
--   ``sum(vec3) -> num``
--   ``sum(vec4) -> num``
--   ``tan(num) -> num``
--   ``tan(vec2) -> vec2``
--   ``tan(vec3) -> vec3``
--   ``tan(vec4) -> vec4``
--   ``transform_direction(vec3, str, str) -> vec3``
--   ``transform_normal(vec3, str, str) -> vec3``
--   ``transform_point(vec3, str, str) -> vec3``
--   ``trunc(num) -> num``
--   ``trunc(vec2) -> vec2``
--   ``trunc(vec3) -> vec3``
--   ``trunc(vec4) -> vec4``
--   ``vec2(num, num) -> vec2``
--   ``vec2(num) -> vec2``
--   ``vec3(num, num, num) -> vec3``
--   ``vec3(num) -> vec3``
--   ``vec4(num, num, num, num) -> vec4``
--   ``vec4(num) -> vec4``
--   ``voronoi(vec2) -> num``
--   ``voronoi(vec2, num) -> num``
--   ``wrap(num, num, num) -> num``
--   ``wrap(vec2, vec2, vec2) -> vec2``
--   ``wrap(vec3, vec3, vec3) -> vec3``
--   ``wrap(vec4, vec4, vec4) -> vec4``
--   ``xyztorgb(vec4) -> vec4``
+- ``abs(num) -> num``
+- ``abs(vec2) -> vec2``
+- ``abs(vec3) -> vec3``
+- ``abs(vec4) -> vec4``
+- ``abs(int) -> int``
+- ``acos(num) -> num``
+- ``acos(vec2) -> vec2``
+- ``acos(vec3) -> vec3``
+- ``acos(vec4) -> vec4``
+- ``angle(vec2, vec2) -> num``
+- ``angle(vec3, vec3) -> num``
+- ``angle(vec4, vec4) -> num``
+- ``asin(num) -> num``
+- ``asin(vec2) -> vec2``
+- ``asin(vec3) -> vec3``
+- ``asin(vec4) -> vec4``
+- ``atan(num) -> num``
+- ``atan(vec2) -> vec2``
+- ``atan(vec3) -> vec3``
+- ``atan(vec4) -> vec4``
+- ``atan2(num, num) -> num``
+- ``atan2(vec2, vec2) -> vec2``
+- ``atan2(vec3, vec3) -> vec3``
+- ``atan2(vec4, vec4) -> vec4``
+- ``avg(vec2) -> num``
+- ``avg(vec3) -> num``
+- ``avg(vec4) -> num``
+- ``blackbody(num) -> vec4``
+- ``bump(vec3, vec3, vec3, num, num, num) -> vec3``
+- ``cbrt(num) -> num``
+- ``cbrt(vec2) -> vec2``
+- ``cbrt(vec3) -> vec3``
+- ``cbrt(vec4) -> vec4``
+- ``ccellnoise(num) -> vec4``
+- ``ccellnoise(num, num) -> vec4``
+- ``ccellnoise(vec2) -> vec4``
+- ``ccellnoise(vec2, num) -> vec4``
+- ``ccellnoise(vec3) -> vec4``
+- ``ccellnoise(vec3, num) -> vec4``
+- ``ceil(num) -> num``
+- ``ceil(vec2) -> vec2``
+- ``ceil(vec3) -> vec3``
+- ``ceil(vec4) -> vec4``
+- ``cellnoise(num) -> num``
+- ``cellnoise(num, num) -> num``
+- ``cellnoise(vec2) -> num``
+- ``cellnoise(vec2, num) -> num``
+- ``cellnoise(vec3) -> num``
+- ``cellnoise(vec3, num) -> num``
+- ``cfbm(vec2) -> vec4``
+- ``cfbm(vec2, num) -> vec4``
+- ``cfbm(vec2, num, int, num, num) -> vec4``
+- ``cfbm(vec3) -> vec4``
+- ``cfbm(vec3, num) -> vec4``
+- ``cfbm(vec3, num, int, num, num) -> vec4``
+- ``check_ray_flag(str) -> bool``
+- ``checkerboard(vec2) -> int``
+- ``checkerboard(vec3) -> int``
+- ``clamp(num, num, num) -> num``
+- ``clamp(vec2, vec2, vec2) -> vec2``
+- ``clamp(vec3, vec3, vec3) -> vec3``
+- ``clamp(vec4, vec4, vec4) -> vec4``
+- ``clamp(int, int, int) -> int``
+- ``cnoise(num) -> vec4``
+- ``cnoise(num, num) -> vec4``
+- ``cnoise(vec2) -> vec4``
+- ``cnoise(vec2, num) -> vec4``
+- ``cnoise(vec3) -> vec4``
+- ``cnoise(vec3, num) -> vec4``
+- ``color(num, num, num, num) -> vec4``
+- ``color(num, num, num) -> vec4``
+- ``color(num) -> vec4``
+- ``cos(num) -> num``
+- ``cos(vec2) -> vec2``
+- ``cos(vec3) -> vec3``
+- ``cos(vec4) -> vec4``
+- ``cperlin(vec2) -> vec4``
+- ``cperlin(vec2, num) -> vec4``
+- ``cpnoise(num) -> vec4``
+- ``cpnoise(num, num) -> vec4``
+- ``cpnoise(vec2) -> vec4``
+- ``cpnoise(vec2, num) -> vec4``
+- ``cpnoise(vec3) -> vec4``
+- ``cpnoise(vec3, num) -> vec4``
+- ``cross(vec3, vec3) -> vec3``
+- ``cvoronoi(num) -> vec4``
+- ``cvoronoi(num, num) -> vec4``
+- ``cvoronoi(num, num, num, str) -> vec4``
+- ``cvoronoi(vec2) -> vec4``
+- ``cvoronoi(vec2, num) -> vec4``
+- ``cvoronoi(vec2, num, num, str, str) -> vec4``
+- ``cvoronoi(vec2, num, num, str, str, num) -> vec4``
+- ``cvoronoi(vec3) -> vec4``
+- ``cvoronoi(vec3, num) -> vec4``
+- ``cvoronoi(vec3, num, num, str, str) -> vec4``
+- ``cvoronoi(vec3, num, num, str, str, num) -> vec4``
+- ``deg(num) -> num``
+- ``deg(vec2) -> vec2``
+- ``deg(vec3) -> vec3``
+- ``deg(vec4) -> vec4``
+- ``dist(vec2, vec2) -> num``
+- ``dist(vec3, vec3) -> num``
+- ``dist(vec4, vec4) -> num``
+- ``dot(vec2, vec2) -> num``
+- ``dot(vec3, vec3) -> num``
+- ``dot(vec4, vec4) -> num``
+- ``ensure_valid_reflection(vec3, vec3, vec3) -> vec3``
+- ``exp(num) -> num``
+- ``exp(vec2) -> vec2``
+- ``exp(vec3) -> vec3``
+- ``exp(vec4) -> vec4``
+- ``exp2(num) -> num``
+- ``exp2(vec2) -> vec2``
+- ``exp2(vec3) -> vec3``
+- ``exp2(vec4) -> vec4``
+- ``fbm(vec2) -> num``
+- ``fbm(vec2, num) -> num``
+- ``fbm(vec2, num, int, num, num) -> num``
+- ``fbm(vec3) -> num``
+- ``fbm(vec3, num) -> num``
+- ``fbm(vec3, num, int, num, num) -> num``
+- ``floor(num) -> num``
+- ``floor(vec2) -> vec2``
+- ``floor(vec3) -> vec3``
+- ``floor(vec4) -> vec4``
+- ``fmod(num, num) -> num``
+- ``fmod(vec2, vec2) -> vec2``
+- ``fmod(vec3, vec3) -> vec3``
+- ``fmod(vec4, vec4) -> vec4``
+- ``fract(num) -> num``
+- ``fract(vec2) -> vec2``
+- ``fract(vec3) -> vec3``
+- ``fract(vec4) -> vec4``
+- ``fresnel_conductor(num, num, num) -> num``
+- ``fresnel_dielectric(num, num) -> num``
+- ``gabor(vec2) -> num``
+- ``gabor(vec2, num) -> num``
+- ``gabor(vec2, num, int, num, num, num) -> num``
+- ``hash(num) -> num``
+- ``hsltorgb(vec4) -> vec4``
+- ``hsvtorgb(vec4) -> vec4``
+- ``int(num) -> int``
+- ``length(vec2) -> num``
+- ``length(vec3) -> num``
+- ``length(vec4) -> num``
+- ``log(num) -> num``
+- ``log(vec2) -> vec2``
+- ``log(vec3) -> vec3``
+- ``log(vec4) -> vec4``
+- ``log10(num) -> num``
+- ``log10(vec2) -> vec2``
+- ``log10(vec3) -> vec3``
+- ``log10(vec4) -> vec4``
+- ``log2(num) -> num``
+- ``log2(vec2) -> vec2``
+- ``log2(vec3) -> vec3``
+- ``log2(vec4) -> vec4``
+- ``lookup(str, bool, num, vec2, ...) -> num``
+- ``luminance(vec4) -> num``
+- ``max(num, num) -> num``
+- ``max(vec2, vec2) -> vec2``
+- ``max(vec3, vec3) -> vec3``
+- ``max(vec4, vec4) -> vec4``
+- ``max(int, int) -> int``
+- ``min(num, num) -> num``
+- ``min(vec2, vec2) -> vec2``
+- ``min(vec3, vec3) -> vec3``
+- ``min(vec4, vec4) -> vec4``
+- ``min(int, int) -> int``
+- ``mix(num, num, num) -> num``
+- ``mix(vec2, vec2, num) -> vec2``
+- ``mix(vec3, vec3, num) -> vec3``
+- ``mix(vec4, vec4, num) -> vec4``
+- ``mix_burn(vec4, vec4, num) -> vec4``
+- ``mix_color(vec4, vec4, num) -> vec4``
+- ``mix_dodge(vec4, vec4, num) -> vec4``
+- ``mix_hue(vec4, vec4, num) -> vec4``
+- ``mix_linear(vec4, vec4, num) -> vec4``
+- ``mix_overlay(vec4, vec4, num) -> vec4``
+- ``mix_saturation(vec4, vec4, num) -> vec4``
+- ``mix_screen(vec4, vec4, num) -> vec4``
+- ``mix_soft(vec4, vec4, num) -> vec4``
+- ``mix_value(vec4, vec4, num) -> vec4``
+- ``noise(num) -> num``
+- ``noise(num, num) -> num``
+- ``noise(vec2) -> num``
+- ``noise(vec2, num) -> num``
+- ``noise(vec3) -> num``
+- ``noise(vec3, num) -> num``
+- ``norm(vec2) -> vec2``
+- ``norm(vec3) -> vec3``
+- ``norm(vec4) -> vec4``
+- ``num(int) -> num``
+- ``perlin(vec2) -> num``
+- ``perlin(vec2, num) -> num``
+- ``pingpong(num, num) -> num``
+- ``pingpong(vec2, vec2) -> vec2``
+- ``pingpong(vec3, vec3) -> vec3``
+- ``pingpong(vec4, vec4) -> vec4``
+- ``pnoise(num) -> num``
+- ``pnoise(num, num) -> num``
+- ``pnoise(vec2) -> num``
+- ``pnoise(vec2, num) -> num``
+- ``pnoise(vec3) -> num``
+- ``pnoise(vec3, num) -> num``
+- ``pow(num, num) -> num``
+- ``pow(vec2, vec2) -> vec2``
+- ``pow(vec3, vec3) -> vec3``
+- ``pow(vec4, vec4) -> vec4``
+- ``rad(num) -> num``
+- ``rad(vec2) -> vec2``
+- ``rad(vec3) -> vec3``
+- ``rad(vec4) -> vec4``
+- ``reflect(vec3, vec3) -> vec3``
+- ``rgbtohsl(vec4) -> vec4``
+- ``rgbtohsv(vec4) -> vec4``
+- ``rgbtoxyz(vec4) -> vec4``
+- ``rotate_axis(vec3, num, vec3) -> vec3``
+- ``rotate_euler(vec3, vec3) -> vec3``
+- ``rotate_euler_inverse(vec3, vec3) -> vec3``
+- ``round(num) -> num``
+- ``round(vec2) -> vec2``
+- ``round(vec3) -> vec3``
+- ``round(vec4) -> vec4``
+- ``select(bool, bool, bool) -> bool``
+- ``select(bool, int, int) -> int``
+- ``select(bool, num, num) -> num``
+- ``select(bool, vec2, vec2) -> vec2``
+- ``select(bool, vec3, vec3) -> vec3``
+- ``select(bool, vec4, vec4) -> vec4``
+- ``select(bool, str, str) -> str``
+- ``sign(num) -> num``
+- ``sign(vec2) -> vec2``
+- ``sign(vec3) -> vec3``
+- ``sign(vec4) -> vec4``
+- ``sign(int) -> int``
+- ``signbit(int) -> bool``
+- ``signbit(num) -> bool``
+- ``sin(num) -> num``
+- ``sin(vec2) -> vec2``
+- ``sin(vec3) -> vec3``
+- ``sin(vec4) -> vec4``
+- ``smax(num, num, num) -> num``
+- ``smax(vec2, vec2, vec2) -> vec2``
+- ``smax(vec3, vec3, vec3) -> vec3``
+- ``smax(vec4, vec4, vec4) -> vec4``
+- ``smin(num, num, num) -> num``
+- ``smin(vec2, vec2, vec2) -> vec2``
+- ``smin(vec3, vec3, vec3) -> vec3``
+- ``smin(vec4, vec4, vec4) -> vec4``
+- ``smootherstep(num) -> num``
+- ``smoothstep(num) -> num``
+- ``snap(num, num) -> num``
+- ``snap(vec2, vec2) -> vec2``
+- ``snap(vec3, vec3) -> vec3``
+- ``snap(vec4, vec4) -> vec4``
+- ``snoise(num) -> num``
+- ``snoise(num, num) -> num``
+- ``snoise(vec2) -> num``
+- ``snoise(vec2, num) -> num``
+- ``snoise(vec3) -> num``
+- ``snoise(vec3, num) -> num``
+- ``sperlin(vec2) -> num``
+- ``sperlin(vec2, num) -> num``
+- ``sqrt(num) -> num``
+- ``sqrt(vec2) -> vec2``
+- ``sqrt(vec3) -> vec3``
+- ``sqrt(vec4) -> vec4``
+- ``sum(vec2) -> num``
+- ``sum(vec3) -> num``
+- ``sum(vec4) -> num``
+- ``tan(num) -> num``
+- ``tan(vec2) -> vec2``
+- ``tan(vec3) -> vec3``
+- ``tan(vec4) -> vec4``
+- ``transform_direction(vec3, str, str) -> vec3``
+- ``transform_normal(vec3, str, str) -> vec3``
+- ``transform_point(vec3, str, str) -> vec3``
+- ``trunc(num) -> num``
+- ``trunc(vec2) -> vec2``
+- ``trunc(vec3) -> vec3``
+- ``trunc(vec4) -> vec4``
+- ``vec2(num, num) -> vec2``
+- ``vec2(num) -> vec2``
+- ``vec3(num, num, num) -> vec3``
+- ``vec3(num) -> vec3``
+- ``vec4(num, num, num, num) -> vec4``
+- ``vec4(num) -> vec4``
+- ``voronoi(num) -> num``
+- ``voronoi(num, num) -> num``
+- ``voronoi(num, num, num, str) -> num``
+- ``voronoi(vec2) -> num``
+- ``voronoi(vec2, num) -> num``
+- ``voronoi(vec2, num, num, str, str) -> num``
+- ``voronoi(vec2, num, num, str, str, num) -> num``
+- ``voronoi(vec3) -> num``
+- ``voronoi(vec3, num) -> num``
+- ``voronoi(vec3, num, num, str, str) -> num``
+- ``voronoi(vec3, num, num, str, str, num) -> num``
+- ``wrap(num, num, num) -> num``
+- ``wrap(vec2, vec2, vec2) -> vec2``
+- ``wrap(vec3, vec3, vec3) -> vec3``
+- ``wrap(vec4, vec4, vec4) -> vec4``
+- ``xyztorgb(vec4) -> vec4``
 
 All textures defined in the scene representation are also available as functions with signature ``TEXTURE(vec2) -> vec4``, with ``TEXTURE`` being the texture name.
 The above defined function names have precedence over texture names, if the signature matches.

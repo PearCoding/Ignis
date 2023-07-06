@@ -3,6 +3,7 @@ import os
 
 from .utils import *
 from .addon_preferences import get_prefs
+from .defaults import NODE_NOISE_SEED
 
 
 class NodeContext:
@@ -1114,7 +1115,7 @@ def _export_noise(ctx, node, output_name):
 
 
 def _export_voronoi(ctx, node, output_name):
-    # TODO: Missing a lot of parameters
+    # TODO: Missing smoothness, SMOOTH_F1, DISTANCE_TO_EDGE, N_SPHERE_RADIUS
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
@@ -1132,13 +1133,37 @@ def _export_voronoi(ctx, node, output_name):
 
     scale = export_node(ctx, node.inputs["Scale"])
 
+    feature = "f1"
+    if node.feature == 'F1':
+        feature = 'f1'
+    elif node.feature == 'F2':
+        feature = 'f2'
+    else:
+        print(f"Voronoi currently only supports F1 and F2 features")
+
+    distance_f = "euclidean"
+    exponent = 0  # Does not matter if not Minkowski
+    if node.distance == 'EUCLIDEAN':
+        pass
+    elif node.distance == 'MANHATTAN':
+        distance_f = "manhatten"
+    elif node.distance == 'CHEBYCHEV':
+        distance_f = "chebyshev"  # With a 's' not 'c' according to Wikipedia
+    elif node.distance == 'MINKOWSKI':
+        distance_f = "minkowski"
+        exponent = export_node(ctx, node.inputs["Exponent"])
+    else:
+        print(f"Voronoi currently only supports euclidean, manhatten, chebyshev and minkowski as distance metrics")
+
+    randomness = export_node(ctx, node.inputs["Randomness"])
+
     if output_name == "Color":
-        return f"cvoronoi(abs({ops}*{scale}))"
+        return f"cvoronoi(abs({ops}*{scale}), {NODE_NOISE_SEED}, {randomness}, '{feature}', '{distance_f}', {exponent})"
     elif output_name == "Position":
         # TODO
-        return f"vec3(voronoi(abs({ops}*{scale})))"
+        return f"vec3(voronoi(abs({ops}*{scale}), {NODE_NOISE_SEED}, {randomness}, '{feature}', '{distance_f}', {exponent}))"
     else:
-        return f"voronoi(abs({ops}*{scale}))"
+        return f"voronoi(abs({ops}*{scale}), {NODE_NOISE_SEED}, {randomness}, '{feature}', '{distance_f}', {exponent})"
 
 
 def _export_musgrave(ctx, node, output_name):
@@ -1159,8 +1184,12 @@ def _export_musgrave(ctx, node, output_name):
         ops = uv
 
     scale = export_node(ctx, node.inputs["Scale"])
+    # TODO: Support fractional part
+    details = export_node(ctx, node.inputs["Detail"])
+    lacunarity = export_node(ctx, node.inputs["Lacunarity"])
+    gain = export_node(ctx, node.inputs["Gain"])
 
-    return f"fbm(abs({ops}*{scale}))"
+    return f"fbm(abs({ops}*{scale}), {NODE_NOISE_SEED}, int({details}), {lacunarity}, {gain})"
 
 
 def _export_wave(ctx, node, output_name):

@@ -35,15 +35,15 @@
 		{"type":"rectangle", "name":"Plane", "width": 1, "height": 1}
 	],
 	"entities": [
-		{"name":"Plane001","shape":"Plane", "bsdf":"Mat001", "transform": [{"translate": [-1,-1,0]}]},
-		{"name":"Plane002","shape":"Plane", "bsdf":"Mat002", "transform": [{"translate": [0,-1,0]}]},
-		{"name":"Plane003","shape":"Plane", "bsdf":"Mat003", "transform": [{"translate": [1,-1,0]}]},
-		{"name":"Plane004","shape":"Plane", "bsdf":"Mat004", "transform": [{"translate": [-1,0,0]}]},
-		{"name":"Plane005","shape":"Plane", "bsdf":"Mat005", "transform": [{"translate": [0,0,0]}]},
-		{"name":"Plane006","shape":"Plane", "bsdf":"Mat006", "transform": [{"translate": [1,0,0]}]},
-		{"name":"Plane007","shape":"Plane", "bsdf":"Mat007", "transform": [{"translate": [-1,1,0]}]},
-		{"name":"Plane008","shape":"Plane", "bsdf":"Mat008", "transform": [{"translate": [0,1,0]}]},
-		{"name":"Plane009","shape":"Plane", "bsdf":"Mat009", "transform": [{"translate": [1,1,0]}]}
+		{"name":"Plane001","shape":"Plane", "bsdf":"Mat001", "transform": [{"translate": [-1.05,-1.05,0]}]},
+		{"name":"Plane002","shape":"Plane", "bsdf":"Mat002", "transform": [{"translate": [ 0.00,-1.05,0]}]},
+		{"name":"Plane003","shape":"Plane", "bsdf":"Mat003", "transform": [{"translate": [ 1.05,-1.05,0]}]},
+		{"name":"Plane004","shape":"Plane", "bsdf":"Mat004", "transform": [{"translate": [-1.05, 0.00,0]}]},
+		{"name":"Plane005","shape":"Plane", "bsdf":"Mat005", "transform": [{"translate": [ 0.00, 0.00,0]}]},
+		{"name":"Plane006","shape":"Plane", "bsdf":"Mat006", "transform": [{"translate": [ 1.05, 0.00,0]}]},
+		{"name":"Plane007","shape":"Plane", "bsdf":"Mat007", "transform": [{"translate": [-1.05, 1.05,0]}]},
+		{"name":"Plane008","shape":"Plane", "bsdf":"Mat008", "transform": [{"translate": [ 0.00, 1.05,0]}]},
+		{"name":"Plane009","shape":"Plane", "bsdf":"Mat009", "transform": [{"translate": [ 1.05, 1.05,0]}]}
 	],
 	"lights": [
 		{"type":"env", "name":"Sky", "radiance": "env", "transform": [1,0,0, 0,0,1, 0,1,0]}

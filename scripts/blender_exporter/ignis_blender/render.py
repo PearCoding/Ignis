@@ -61,7 +61,7 @@ class IgnisRender(bpy.types.RenderEngine):
         exported_scene = exporter.export_scene(
             sceneFile, depsgraph,
             settings=namedtuple("Settings",
-                                ["export_materials", "use_selection", "export_lights", "enable_background", "enable_camera", "enable_technique", "triangulate_shapes", "copy_images"])(False, True, True, True, True, True, True, False)
+                                ["export_materials", "use_selection", "export_lights", "enable_background", "enable_camera", "enable_technique", "triangulate_shapes", "copy_images"])(True, False, True, True, True, True, True, False)
         )
 
         if exported_scene is None:
@@ -118,7 +118,8 @@ class IgnisRender(bpy.types.RenderEngine):
 
             update_image()
             self.end_result(result)
-
+        
+        print("<<< IGNIS FINISHED >>>")
         self.update_stats("", "")
 
 

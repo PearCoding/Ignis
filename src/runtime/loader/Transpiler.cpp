@@ -667,6 +667,11 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("signbit", createFunction("math_builtins::signbit"), PExprType::Boolean, PExprType::Integer),
     cF("signbit", createFunction("math_builtins::signbit"), PExprType::Boolean, PExprType::Number),
 
+    cF(
+        "int", [](size_t&, const ParamArr& args) { return "(" + args.at(0) + " as i32)"; }, PExprType::Integer, PExprType::Number),
+    cF(
+        "num", [](size_t&, const ParamArr& args) { return "(" + args.at(0) + " as f32)"; }, PExprType::Number, PExprType::Integer),
+
     _MF1A("rad", "rad"),
     _MF1A("deg", "deg"),
 
@@ -785,6 +790,9 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("fbm", createFunction("fbm2_def"), PExprType::Number, PExprType::Vec2),
     cF("fbm", createFunction("fbm2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
     cF("fbm", createFunction("fbm2_arg"), PExprType::Number, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),
+    cF("fbm", createFunction("fbm3_def"), PExprType::Number, PExprType::Vec3),
+    cF("fbm", createFunction("fbm3"), PExprType::Number, PExprType::Vec3, PExprType::Number),
+    cF("fbm", createFunction("fbm3_arg"), PExprType::Number, PExprType::Vec3, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),
     cF("gabor", createFunction("gabor2_def"), PExprType::Number, PExprType::Vec2),
     cF("gabor", createFunction("gabor2"), PExprType::Number, PExprType::Vec2, PExprType::Number),
     cF("gabor", createFunction("gabor2_gen"), PExprType::Number, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number, PExprType::Number),
@@ -840,6 +848,9 @@ static const std::multimap<std::string, FunctionDef> sInternalFunctions = {
     cF("cfbm", createColorFunctionOut("cfbm2_def"), PExprType::Vec4, PExprType::Vec2),
     cF("cfbm", createColorFunctionOut("cfbm2"), PExprType::Vec4, PExprType::Vec2, PExprType::Number),
     cF("cfbm", createColorFunctionOut("cfbm2_arg"), PExprType::Vec4, PExprType::Vec2, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),
+    cF("cfbm", createColorFunctionOut("cfbm3_def"), PExprType::Vec4, PExprType::Vec3),
+    cF("cfbm", createColorFunctionOut("cfbm3"), PExprType::Vec4, PExprType::Vec3, PExprType::Number),
+    cF("cfbm", createColorFunctionOut("cfbm3_arg"), PExprType::Vec4, PExprType::Vec3, PExprType::Number, PExprType::Integer, PExprType::Number, PExprType::Number),
 
     _MF3A("clamp", "clampf"),
     cF("clamp", createFunction("clamp"), PExprType::Integer, PExprType::Integer, PExprType::Integer, PExprType::Integer),
