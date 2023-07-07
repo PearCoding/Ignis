@@ -127,54 +127,26 @@ fn @sperlin2(uv: Vec2, seed: f32) -> f32 {
 }
 fn @perlin2(uv: Vec2, seed: f32) = (sperlin2(uv, seed) + 1) / 2;
 
-// As in https://www.shadertoy.com/view/lsjGWD
-fn @voronoi2_gen(uv: Vec2, seed: f32, dist_f: fn(Vec2, Vec2)->f32) -> (f32, Color) {
-    let ip = vec2_floor(uv);
-    let fp = vec2_map(uv, |x| math::fract(x));
+// Gabor noise
+fn @gabor2_gen(uv: Vec2, seed: f32, octaves: i32, phase: f32, frequency: f32, bandwidth: f32) -> f32 {
+    let mut a = 0.0 : f32;
 
-	let mut factor = 8.0 : f32;
-    let mut color  = color_builtins::black;
-	
-    for j in unroll(-1, 2) {
-        for i in unroll(-1, 2) {
-            let g = make_vec2(i as f32, j as f32);
-            let k = vec2_add(ip, g);
-            let o = make_vec2(noise2_v(k, seed), noise2_v(k, seed + DEFAULT_CNOISE_SEED_SHIFT0));
-            let d = dist_f(vec2_add(g, o), fp);
-            let c = cnoise2(k, seed);
-
-            color  = select(d < factor, c, color);
-            factor = select(d < factor, d, factor);
-        }
+    fn @gabor_noise(shift: Vec2, omega: Vec2) -> f32 {
+        let k = math_builtins::exp(-vec2_len(shift) * bandwidth * flt_pi);
+        k * math_builtins::cos(2 * flt_pi * frequency * vec2_dot(vec2_sub(uv, shift), omega))
     }
-    
-	(factor, color)
+
+    for i in safe_unroll(0, octaves) {
+        let pos = make_vec2(noise2(i, 0, seed), noise2(i, 1, seed));
+        let omega_d = math_builtins::atan2(noise2(i, 2, seed), noise2(i, 3, seed)) * phase;
+        let omega = make_vec2(math_builtins::cos(omega_d), math_builtins::sin(omega_d));
+        a += gabor_noise(pos, omega);
+    }
+
+    a / math_builtins::sqrt(octaves as f32)
 }
 
-// Generic Fractional Brownian Motion
-fn @fbm2_gen(uv: Vec2, seed: f32, octaves: i32, lacunarity: f32, gain: f32, dist_f: fn(Vec2, Vec2)->f32) -> (f32, Color) {
-    let mut s = 0.0 : f32;
-	let mut m = 0.0 : f32;
-	let mut a = gain;
-    let mut p = uv;
-    let mut b = color_builtins::black;
-	
-	for _ in unroll(0, octaves) {
-        let(f, c) = voronoi2_gen(p, seed, dist_f);
-		s += a * f;
-		m += a;
-		a *= gain;
-		p = vec2_mulf(p, lacunarity);
-        b = color_add(b, color_mulf(c, a));
-	}
-
-	(s / m, color_divf(b, m))
-}
-
-fn @voronoi2(uv: Vec2, seed: f32)  = voronoi2_gen(uv, seed, @|a, b| vec2_len2(vec2_sub(b, a))).0;
-fn @cvoronoi2(uv: Vec2, seed: f32) = voronoi2_gen(uv, seed, @|a, b| vec2_len2(vec2_sub(b, a))).1;
-fn @fbm2(uv: Vec2, seed: f32)      = fbm2_gen(uv, seed, 6, 2, 0.5, @|a, b| vec2_len2(vec2_sub(b, a))).0;
-fn @cfbm2(uv: Vec2, seed: f32)     = fbm2_gen(uv, seed, 6, 2, 0.5, @|a, b| vec2_len2(vec2_sub(b, a))).1;
+fn @gabor2(uv: Vec2, seed: f32) = gabor2_gen(uv, seed, 100, 20, 5, 0.01);
 
 // ---------------------- 3D
 fn @noise3[T](u: T, v: T, w: T, seed: f32) -> f32 {
@@ -260,8 +232,7 @@ fn @sperlin2_def(uv: Vec2)     = sperlin2(uv,    DEFAULT_NOISE_SEED);
 // fn @sperlin3_def(uvw: Vec3)    = sperlin3(uvw,   DEFAULT_NOISE_SEED);
 fn @perlin2_def(uv: Vec2)      = perlin2(uv,     DEFAULT_NOISE_SEED);
 // fn @perlin3_def(uvw: Vec3)     = perlin3(uvw,    DEFAULT_NOISE_SEED);
-fn @voronoi2_def(uv: Vec2)     = voronoi2(uv,    DEFAULT_NOISE_SEED);
-fn @fbm2_def(uv: Vec2)         = fbm2(uv,        DEFAULT_NOISE_SEED);
+fn @gabor2_def(uv: Vec2)       = gabor2(uv,      DEFAULT_NOISE_SEED);
 
 fn @cnoise1_def(u: f32)        = cnoise1(u,       DEFAULT_NOISE_SEED);
 fn @cnoise2_def(uv: Vec2)      = cnoise2(uv,      DEFAULT_NOISE_SEED);
@@ -274,8 +245,6 @@ fn @cpnoise2_def(uv: Vec2)     = cpnoise2(uv,     DEFAULT_NOISE_SEED);
 fn @cpnoise3_def(uvw: Vec3)    = cpnoise3(uvw,    DEFAULT_NOISE_SEED);
 fn @cperlin2_def(uv: Vec2)     = cperlin2(uv,     DEFAULT_NOISE_SEED);
 // fn @cperlin3_def(uvw: Vec3)    = cperlin3(uvw,    DEFAULT_NOISE_SEED);
-fn @cvoronoi2_def(uv: Vec2)    = cvoronoi2(uv,    DEFAULT_NOISE_SEED);
-fn @cfbm2_def(uv: Vec2)        = cfbm2(uv,        DEFAULT_NOISE_SEED);
 
 // ---------------------- Textures
 fn @make_gen_noise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3, func: fn (Vec2, f32) -> f32) -> Texture {
@@ -290,8 +259,6 @@ fn @make_noise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3) 
 fn @make_cellnoise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3) = make_gen_noise_texture(scale, color, seed, transform, cellnoise2);
 fn @make_pnoise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)    = make_gen_noise_texture(scale, color, seed, transform, pnoise2);
 fn @make_perlin_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)    = make_gen_noise_texture(scale, color, seed, transform, perlin2);
-fn @make_voronoi_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)   = make_gen_noise_texture(scale, color, seed, transform, voronoi2);
-fn @make_fbm_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)       = make_gen_noise_texture(scale, color, seed, transform, fbm2);
 
 // ---------------------- Textures (Colored)
 fn @make_gen_colored_noise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3, func: fn (Vec2, f32) -> Color) -> Texture {
@@ -306,5 +273,3 @@ fn @make_cnoise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)
 fn @make_ccellnoise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3) = make_gen_colored_noise_texture(scale, color, seed, transform, ccellnoise2);
 fn @make_cpnoise_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)    = make_gen_colored_noise_texture(scale, color, seed, transform, cpnoise2);
 fn @make_cperlin_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)    = make_gen_colored_noise_texture(scale, color, seed, transform, cperlin2);
-fn @make_cvoronoi_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)   = make_gen_colored_noise_texture(scale, color, seed, transform, cvoronoi2);
-fn @make_cfbm_texture(scale: Vec2, color: Color, seed: f32, transform: Mat3x3)       = make_gen_colored_noise_texture(scale, color, seed, transform, cfbm2);

@@ -3,8 +3,8 @@ from . import exporter_ui, render_ui, render_properties, render, addon_preferenc
 bl_info = {
     "name": "Ignis Scene",
     "author": "Ömercan Yazici, Maher Rayes, Pascal Grittmann",
-    "description": "Export scene to Ignis and render it within Blender",
-    "version": (0, 5, 0),
+    "description": "Export scene to Ignis or render within Blender",
+    "version": (0, 5, 1),
     "blender": (2, 92, 0),
     "location": "File > Import-Export",
     "category": "Import-Export",
