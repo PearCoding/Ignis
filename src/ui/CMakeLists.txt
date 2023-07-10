@@ -8,7 +8,7 @@ CPMAddPackage(
 CPMAddPackage(
     NAME implot
     GITHUB_REPOSITORY epezent/implot
-    GIT_TAG v0.14
+    GIT_TAG master
     DOWNLOAD_ONLY YES
 )
 
