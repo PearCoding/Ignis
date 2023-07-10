@@ -74,7 +74,8 @@ public:
 
     RuntimeOptions::SpecializationMode Specialization = RuntimeOptions::SpecializationMode::Default;
 
-    bool Denoise = false;
+    bool NoStdAOVs = false;
+    bool Denoise   = false;
 
     bool NoCache = false;
     Path CacheDir;

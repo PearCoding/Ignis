@@ -229,18 +229,19 @@ bool Runtime::loadFromScene(const Scene* scene)
 LoaderOptions Runtime::loaderOptions() const
 {
     LoaderOptions lopts;
-    lopts.FilePath          = Path{};
-    lopts.EnableCache       = mOptions.EnableCache;
-    lopts.CachePath         = mOptions.CacheDir;
-    lopts.Target            = mOptions.Target;
-    lopts.IsTracer          = mOptions.IsTracer;
-    lopts.Scene             = nullptr;
-    lopts.Specialization    = mOptions.Specialization;
-    lopts.EnableTonemapping = mOptions.EnableTonemapping;
-    lopts.Denoiser          = mOptions.Denoiser;
-    lopts.Denoiser.Enabled  = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
-    lopts.Compiler          = mCompiler.get();
-    lopts.Device            = mDevice.get();
+    lopts.FilePath            = Path{};
+    lopts.EnableCache         = mOptions.EnableCache;
+    lopts.CachePath           = mOptions.CacheDir;
+    lopts.Target              = mOptions.Target;
+    lopts.IsTracer            = mOptions.IsTracer;
+    lopts.Scene               = nullptr;
+    lopts.Specialization      = mOptions.Specialization;
+    lopts.DisableStandardAOVs = mOptions.DisableStandardAOVs;
+    lopts.EnableTonemapping   = mOptions.EnableTonemapping;
+    lopts.Denoiser            = mOptions.Denoiser;
+    lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
+    lopts.Compiler            = mCompiler.get();
+    lopts.Device              = mDevice.get();
     return lopts;
 }
 
@@ -364,7 +365,7 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
 
     IRenderDevice::RenderSettings settings;
     settings.rays      = nullptr; // No artificial ray streams
-    settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser;
+    settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser && !mOptions.DisableStandardAOVs;
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = info.GetWidth(mFilmWidth);
     settings.height    = info.GetHeight(mFilmHeight);

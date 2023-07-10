@@ -13,7 +13,6 @@ void InfoBufferTechnique::enable(TechniqueInfo& info)
 bool InfoBufferTechnique::insertBody(const Technique::SerializationInput& input)
 {
     input.Stream << "  let full_technique = wrap_infobuffer_renderer(device, settings.iter, spi, technique);" << std::endl;
-
     return true;
 }
 

@@ -125,7 +125,7 @@ void LoaderTechnique::setup(const LoaderContext& ctx)
     IG_LOG(L_DEBUG) << "Using technique: '" << mTechnique->type() << "'" << std::endl;
 
     mInfo = mTechnique->getInfo(ctx);
-    if (ctx.Options.Denoiser.Enabled)
+    if (!ctx.Options.DisableStandardAOVs)
         InfoBufferTechnique::enable(mInfo);
 }
 
@@ -138,7 +138,7 @@ std::string LoaderTechnique::generate(LoaderContext& ctx)
 
     mTechnique->generateBody(Technique::SerializationInput{ stream, ctx });
 
-    if (ctx.Options.Denoiser.Enabled)
+    if (!ctx.Options.DisableStandardAOVs)
         InfoBufferTechnique::insertBody(Technique::SerializationInput{ stream, ctx });
     else
         stream << "  let full_technique = technique;" << std::endl;
