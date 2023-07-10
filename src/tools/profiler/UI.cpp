@@ -211,6 +211,26 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////
+static float get_scale(SDL_Window* window, SDL_Renderer* renderer)
+{
+    int window_width{ 0 };
+    int window_height{ 0 };
+    SDL_GetWindowSize(
+        window,
+        &window_width, &window_height);
+
+    int render_output_width{ 0 };
+    int render_output_height{ 0 };
+    SDL_GetRendererOutputSize(
+        renderer,
+        &render_output_width, &render_output_height);
+
+    const auto scale_x{
+        static_cast<float>(render_output_width) / static_cast<float>(window_width)
+    };
+
+    return scale_x;
+}
 
 UI::UI(const Statistics& stats, float total_ms)
     : mInternal(std::make_unique<UIInternal>())
@@ -230,7 +250,7 @@ UI::UI(const Statistics& stats, float total_ms)
         SDL_WINDOWPOS_UNDEFINED,
         800,
         600,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_MAXIMIZED);
 
     if (!mInternal->Window) {
         IG_LOG(L_FATAL) << "Cannot create SDL window: " << SDL_GetError() << std::endl;
@@ -250,14 +270,19 @@ UI::UI(const Statistics& stats, float total_ms)
     ImPlot::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
-    (void)io;
-#ifndef USE_OLD_SDL
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    const float font_scaling_factor = get_scale(mInternal->Window, mInternal->Renderer);
+    io.FontGlobalScale              = 1.0F / font_scaling_factor;
 
+#ifndef USE_OLD_SDL
     ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
     ImGui_ImplSDLRenderer2_Init(mInternal->Renderer);
 #else
-    ImGuiSDL::Initialize(mInternal->Renderer, (int)mInternal->Width, (int)mInternal->Height);
+    int width, height;
+    SDL_GetWindowSize(mInternal->Window, &width, &height);
+    ImGuiSDL::Initialize(mInternal->Renderer, width, height);
 #endif
 }
 
@@ -294,6 +319,8 @@ void UI::update()
     ImGui_ImplSDL2_NewFrame();
 #endif
     ImGui::NewFrame();
+
+    ImGui::DockSpaceOverViewport();
 
     mInternal->handleImgui();
 
