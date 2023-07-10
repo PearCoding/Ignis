@@ -47,6 +47,7 @@ struct RuntimeOptions {
 
     bool WarnUnused = true; // Warn about unused properties. They might indicate a typo or similar.
 
+    bool DisableStandardAOVs = false; // Disable standard AOVs (e.g., Normal, Albedo)
     DenoiserSettings Denoiser;
     GlareOptions Glare;
 

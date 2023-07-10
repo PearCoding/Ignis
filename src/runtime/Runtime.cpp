@@ -2,9 +2,9 @@
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "StringUtils.h"
+#include "device/AnyDSLRuntime.h"
 #include "loader/LoaderCamera.h"
 #include "loader/Parser.h"
-#include "device/AnyDSLRuntime.h"
 
 #include <chrono>
 #include <fstream>
@@ -205,19 +205,20 @@ bool Runtime::loadFromScene(const Scene* scene)
 bool Runtime::load(const Path& path, const Scene* scene)
 {
     LoaderOptions lopts;
-    lopts.FilePath          = path;
-    lopts.EnableCache       = mOptions.EnableCache;
-    lopts.CachePath         = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_u8string())) : mOptions.CacheDir;
-    lopts.Target            = mOptions.Target;
-    lopts.IsTracer          = mOptions.IsTracer;
-    lopts.Scene             = scene;
-    lopts.Specialization    = mOptions.Specialization;
-    lopts.EnableTonemapping = mOptions.EnableTonemapping;
-    lopts.Denoiser          = mOptions.Denoiser;
-    lopts.Denoiser.Enabled  = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
-    lopts.Glare             = mOptions.Glare;
-    lopts.Compiler          = &mCompiler;
-    lopts.Device            = mDevice.get();
+    lopts.FilePath            = path;
+    lopts.EnableCache         = mOptions.EnableCache;
+    lopts.CachePath           = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_u8string())) : mOptions.CacheDir;
+    lopts.Target              = mOptions.Target;
+    lopts.IsTracer            = mOptions.IsTracer;
+    lopts.Scene               = scene;
+    lopts.Specialization      = mOptions.Specialization;
+    lopts.EnableTonemapping   = mOptions.EnableTonemapping;
+    lopts.DisableStandardAOVs = mOptions.DisableStandardAOVs;
+    lopts.Denoiser            = mOptions.Denoiser;
+    lopts.Denoiser.Enabled    = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
+    lopts.Glare               = mOptions.Glare;
+    lopts.Compiler            = &mCompiler;
+    lopts.Device              = mDevice.get();
 
     mHasSceneParameters = !scene->parameters().empty();
 
@@ -334,7 +335,7 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
 
     Device::RenderSettings settings;
     settings.rays      = nullptr; // No artificial ray streams
-    settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser;
+    settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser && !mOptions.DisableStandardAOVs;
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = info.GetWidth(mFilmWidth);
     settings.height    = info.GetHeight(mFilmHeight);

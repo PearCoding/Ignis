@@ -199,6 +199,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         "Disables specialization for parameters in shading tree. This might decrease compile time drastically for worse runtime optimization");
 
     if (type != ApplicationType::Trace) {
+        app.add_flag("--no-std-aovs", NoStdAOVs, "Disable standard AOVs. This will prevent the usage of the denoiser");
         app.add_flag("--denoise", Denoise, "Apply denoiser if available");
         app.add_flag("--glare", Glare, "Enable glare overlay");
     }
@@ -402,9 +403,9 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.AddExtraEnvLight = AddExtraEnvLight;
     options.Specialization   = Specialization;
 
-    options.Denoiser.Enabled = Denoise;
-
-    options.Glare.Enabled = Glare;
+    options.DisableStandardAOVs = NoStdAOVs;
+    options.Denoiser.Enabled    = Denoise;
+    options.Glare.Enabled       = Glare;
 
     options.EnableCache = !NoCache;
     options.CacheDir    = CacheDir;

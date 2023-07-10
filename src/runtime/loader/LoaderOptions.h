@@ -23,6 +23,7 @@ struct LoaderOptions {
     RuntimeOptions::SpecializationMode Specialization;
     bool EnableTonemapping;
     bool EnableCache;
+    bool DisableStandardAOVs; // Disable Normal & Albedo output
     DenoiserSettings Denoiser;
     GlareOptions Glare;
 
