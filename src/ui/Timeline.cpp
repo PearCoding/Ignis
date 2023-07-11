@@ -159,13 +159,17 @@ void TimelineEventEx(float t_start, float t_end, const char* textBegin, const ch
     const float pos_start = ImLerp(frame_bb.Min.x, frame_bb.Max.x, norm_start);
     const float pos_end   = ImLerp(frame_bb.Min.x, frame_bb.Max.x, norm_end);
 
-    const auto rect = ImRect(pos_start, frame_bb.Min.y, pos_end, frame_bb.Max.y);
+    auto rect = ImRect(pos_start, frame_bb.Min.y, pos_end, frame_bb.Max.y);
+    if (rect.GetWidth() < 1) // At least 1 pixel wide
+        rect.Max.x = rect.Min.x + 1;
 
     window->DrawList->AddRectFilled(rect.Min, rect.Max, GetCurrentEventColor(), style.GrabRounding);
 
+
+    static const ImVec2 dot_size = CalcTextSize("...", NULL, true);
     if (textBegin != textEnd) {
-        if (rect.Max.x - rect.Min.x < label_size.x + 2) {
-            if (rect.Max.x - rect.Min.x > 8)
+        if (rect.GetWidth() < label_size.x + 2) {
+            if (rect.GetWidth() > dot_size.x)
                 RenderTextClipped(rect.Min, rect.Max, "...", NULL, NULL, ImVec2(0.5f, 0.5f));
         } else {
             if (g.LogEnabled)
@@ -173,6 +177,10 @@ void TimelineEventEx(float t_start, float t_end, const char* textBegin, const ch
             RenderTextClipped(rect.Min, rect.Max, textBegin, textEnd, NULL, ImVec2(0.5f, 0.5f));
         }
     }
+
+    const ImRect tooltip_bb(rect.Min - ImVec2(2, 2), rect.Max + ImVec2(2, 2));
+    if (IsMouseHoveringRect(tooltip_bb.Min, tooltip_bb.Max))
+        SetTooltip("%s", textBegin);
 }
 
 void TimelineEventV(float t_start, float t_end, const char* fmt, va_list args)
