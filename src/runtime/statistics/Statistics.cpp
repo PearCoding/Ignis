@@ -170,6 +170,22 @@ const static std::unordered_map<SectionType, const char*> SectionTypeName = {
     { SectionType::AOVHostUpdate, "AOVHostUpdate" },
 };
 
+const char* Statistics::getShaderTypeName(ShaderType type)
+{
+    if (const auto it = ShaderTypeName.find(type); it != ShaderTypeName.end())
+        return it->second;
+    else
+        return "Unknown";
+}
+
+const char* Statistics::getSectionTypeName(SectionType type)
+{
+    if (const auto it = SectionTypeName.find(type); it != SectionTypeName.end())
+        return it->second;
+    else
+        return "Unknown";
+}
+
 class DumpTable {
 public:
     DumpTable()

@@ -22,6 +22,10 @@ CPMAddPackage(
 #################################
 SET(SRC_FILES 
     imgui_impl.cpp
+    RangeSlider.cpp
+    RangeSlider.h
+    Timeline.cpp
+    Timeline.h
     UIGlue.cpp
     UIGlue.h)
 

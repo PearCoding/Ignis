@@ -1,5 +1,6 @@
 #include "UI.h"
 
+#include "Timeline.h"
 #include "UIGlue.h"
 
 #include "Color.h"
@@ -10,10 +11,48 @@
 
 namespace IG {
 
+constexpr float BarHeight = 16;
+
+struct Entry {
+    Statistics::TimestampType Type;
+    std::vector<Entry> Children = {};
+};
+
+static const Entry sEntryRoot = {
+    SmallShaderKey(ShaderType::Device),
+    { { SectionType::GPUSortPrimary,
+        { { SectionType::GPUSortPrimaryReset }, { SectionType::GPUSortPrimaryCount }, { SectionType::GPUSortPrimaryScan }, { SectionType::GPUSortPrimarySort }, { SectionType::GPUSortPrimaryCollapse } } },
+      { SectionType::GPUSortSecondary },
+      { SectionType::GPUCompactPrimary },
+      { SmallShaderKey(ShaderType::PrimaryTraversal) },
+      { SmallShaderKey(ShaderType::SecondaryTraversal) },
+      { SmallShaderKey(ShaderType::RayGeneration) },
+      { SmallShaderKey(ShaderType::Hit, 1 /* Indicates that it can have dynamic ids*/) },
+      { SmallShaderKey(ShaderType::Miss) },
+      { SmallShaderKey(ShaderType::AdvancedShadowHit, 1) },
+      { SmallShaderKey(ShaderType::AdvancedShadowMiss) },
+      { SmallShaderKey(ShaderType::Callback, 1) },
+      { SmallShaderKey(ShaderType::ImageInfo), { { SectionType::ImageInfoPercentile }, { SectionType::ImageInfoError }, { SectionType::ImageInfoHistogram } } },
+      { SmallShaderKey(ShaderType::Tonemap) },
+      { SmallShaderKey(ShaderType::Glare) },
+      { SmallShaderKey(ShaderType::Bake) },
+      { SectionType::ImageLoading },
+      { SectionType::PackedImageLoading },
+      { SectionType::BufferLoading },
+      { SectionType::BufferRequests },
+      { SectionType::BufferReleases },
+      { SectionType::FramebufferUpdate },
+      { SectionType::AOVUpdate },
+      { SectionType::TonemapUpdate },
+      { SectionType::FramebufferHostUpdate },
+      { SectionType::AOVHostUpdate } }
+};
+
 class UIInternal {
 public:
     Statistics Stats;
-    float TotalMS = 0;
+    float TotalMS       = 0;
+    float StreamTotalMS = 0;
 
     UI* Parent             = nullptr;
     SDL_Window* Window     = nullptr;
@@ -89,8 +128,6 @@ public:
     {
         const size_t totalIter = Stats.entry(ShaderType::Device).count;
 
-        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
         if (ImGui::Begin("Quantities")) {
             if (ImGui::BeginTable("table_quantity", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp)) {
                 ImGui::TableSetupColumn("Name");
@@ -122,7 +159,7 @@ public:
                     ImGui::TableNextColumn();
                     ImGui::Text("%.2f", static_cast<float>(total) / totalIter);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", 1000 * static_cast<float>(total) / TotalMS);
+                    ImGui::Text("%.2f", static_cast<float>(total) / TotalMS / 1000);
                 }
 
                 ImGui::EndTable();
@@ -131,12 +168,245 @@ public:
         ImGui::End();
     }
 
+    void handleMeansTreeNode(const Entry& e, bool dynamic, const size_t totalIter)
+    {
+        bool dynamicChildren = false;
+        if (!dynamic && std::holds_alternative<SmallShaderKey>(e.Type))
+            dynamicChildren = std::get<SmallShaderKey>(e.Type).subID() > 0;
+
+        const bool isLeaf   = e.Children.empty() && !dynamicChildren;
+        const int treeFlags = isLeaf ? (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth) : (ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen);
+
+        Statistics::MeanEntry meanEntry;
+        if (std::holds_alternative<SmallShaderKey>(e.Type)) {
+            const auto stype = std::get<SmallShaderKey>(e.Type);
+            if (!dynamicChildren) {
+                meanEntry = Stats.entry(stype.type(), stype.subID());
+            } else {
+                // Accumulate
+                for (auto it = Stats.shadersBegin(); it != Stats.shadersEnd(); ++it) {
+                    if (it->type() != stype.type())
+                        continue;
+
+                    const auto& shader = Stats.entry(it->type(), it->subID());
+                    meanEntry.count += shader.count;
+                    meanEntry.totalElapsedMS += shader.totalElapsedMS;
+                    meanEntry.totalWorkload += shader.totalWorkload;
+                    meanEntry.minWorkload = std::min(meanEntry.minWorkload, shader.minWorkload);
+                    meanEntry.maxWorkload = std::max(meanEntry.maxWorkload, shader.maxWorkload);
+                }
+            }
+        } else {
+            const auto stype = std::get<SectionType>(e.Type);
+            meanEntry        = Stats.entry(stype);
+        }
+
+        // Only show nodes with data
+        if (meanEntry.count == 0)
+            return;
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        bool open;
+        if (std::holds_alternative<SmallShaderKey>(e.Type)) {
+            const auto stype = std::get<SmallShaderKey>(e.Type);
+
+            if (dynamic) {
+                std::string name = "[" + std::to_string(stype.subID()) + "]";
+                open             = ImGui::TreeNodeEx(name.c_str(), treeFlags);
+            } else {
+                open = ImGui::TreeNodeEx(Statistics::getShaderTypeName(stype.type()), treeFlags);
+            }
+            ImGui::TableNextColumn();
+        } else {
+            const auto stype = std::get<SectionType>(e.Type);
+            open             = ImGui::TreeNodeEx(Statistics::getSectionTypeName(stype), treeFlags);
+            ImGui::TableNextColumn();
+        }
+
+        ImGui::Text("%.2f ms", meanEntry.totalElapsedMS);
+        ImGui::TableNextColumn();
+        ImGui::Text("%" PRIu64, meanEntry.count);
+        ImGui::TableNextColumn();
+        ImGui::Text("%.2f ms", meanEntry.totalElapsedMS / totalIter);
+        ImGui::TableNextColumn();
+        ImGui::Text("%.2f", static_cast<float>(meanEntry.count) / totalIter);
+        ImGui::TableNextColumn();
+        ImGui::Text("%.2f ms", meanEntry.totalElapsedMS / meanEntry.count);
+        ImGui::TableNextColumn();
+
+        // Handle workloads
+        if (std::holds_alternative<SmallShaderKey>(e.Type)) {
+            ImGui::Text("%" PRIu64, meanEntry.minWorkload);
+            ImGui::TableNextColumn();
+            ImGui::Text("%" PRIu64, meanEntry.totalWorkload / meanEntry.count);
+            ImGui::TableNextColumn();
+            ImGui::Text("%" PRIu64, meanEntry.maxWorkload);
+        } else {
+            // Skip workloads
+            ImGui::TextDisabled("--");
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("--");
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("--");
+        }
+
+        if (open && !isLeaf) {
+            if (dynamicChildren) {
+                const auto stype = std::get<SmallShaderKey>(e.Type);
+                for (auto it = Stats.shadersBegin(); it != Stats.shadersEnd(); ++it) {
+                    if (it->type() != stype.type())
+                        continue;
+
+                    handleMeansTreeNode(Entry{ *it }, true, totalIter);
+                }
+
+            } else {
+                for (const auto& c : e.Children)
+                    handleMeansTreeNode(c, false, totalIter);
+            }
+            ImGui::TreePop();
+        }
+    }
+
     void handleMeansWindow()
     {
+        const size_t totalIter = Stats.entry(ShaderType::Device).count;
+
+        if (ImGui::Begin("Means")) {
+            if (ImGui::BeginTable("table_means", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp)) {
+                ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
+                ImGui::TableSetupColumn("Total Time");
+                ImGui::TableSetupColumn("Total Count");
+                ImGui::TableSetupColumn("Avg. Time per Iteration");
+                ImGui::TableSetupColumn("Avg. Count per Iteration");
+                ImGui::TableSetupColumn("Avg. Time per Call");
+                ImGui::TableSetupColumn("Min Workload per Call");
+                ImGui::TableSetupColumn("Avg. Workload per Call");
+                ImGui::TableSetupColumn("Max Workload per Call");
+                ImGui::TableHeadersRow();
+
+                handleMeansTreeNode(sEntryRoot, false, totalIter);
+
+                ImGui::EndTable();
+            }
+        }
+        ImGui::End();
+    }
+
+    void handleChartsTreeNode(const Entry& e, bool dynamic, const size_t totalIter)
+    {
+        bool dynamicChildren = false;
+        if (!dynamic && std::holds_alternative<SmallShaderKey>(e.Type))
+            dynamicChildren = std::get<SmallShaderKey>(e.Type).subID() > 0;
+
+        const bool isLeaf   = e.Children.empty() && !dynamicChildren;
+        const int treeFlags = isLeaf ? (ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen) : (ImGuiTreeNodeFlags_DefaultOpen);
+
+        // Check if there is even data available
+        if (!dynamicChildren) {
+            bool hasData = false;
+            for (const auto& timestamp : Stats.lastStream()) {
+                if (timestamp.type == e.Type) {
+                    hasData = true;
+                    break;
+                }
+            }
+            if (!hasData)
+                return;
+        } else {
+            const auto stype = std::get<SmallShaderKey>(e.Type);
+            bool hasData     = false;
+            for (const auto& timestamp : Stats.lastStream()) {
+                if (std::holds_alternative<SmallShaderKey>(timestamp.type) && std::get<SmallShaderKey>(timestamp.type).type() == stype.type()) {
+                    hasData = true;
+                    break;
+                }
+            }
+            if (!hasData)
+                return;
+        }
+
+        IGGui::BeginTimelineRow();
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        bool open;
+        if (std::holds_alternative<SmallShaderKey>(e.Type)) {
+            const auto stype = std::get<SmallShaderKey>(e.Type);
+
+            if (dynamic) {
+                std::string name = "[" + std::to_string(stype.subID()) + "]";
+                open             = ImGui::TreeNodeEx(name.c_str(), treeFlags);
+            } else {
+                open = ImGui::TreeNodeEx(Statistics::getShaderTypeName(stype.type()), treeFlags);
+            }
+            ImGui::TableNextColumn();
+        } else {
+            const auto stype = std::get<SectionType>(e.Type);
+            open             = ImGui::TreeNodeEx(Statistics::getSectionTypeName(stype), treeFlags);
+            ImGui::TableNextColumn();
+        }
+
+        if (!dynamicChildren) {
+            for (const auto& timestamp : Stats.lastStream()) {
+                if (timestamp.type == e.Type)
+                    IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f", timestamp.offsetEndMS - timestamp.offsetStartMS);
+            }
+        }
+
+        if (open && !isLeaf) {
+            if (dynamicChildren) {
+                const auto stype = std::get<SmallShaderKey>(e.Type);
+                for (auto it = Stats.shadersBegin(); it != Stats.shadersEnd(); ++it) {
+                    if (it->type() != stype.type())
+                        continue;
+
+                    handleChartsTreeNode(Entry{ *it }, true, totalIter);
+                }
+
+            } else {
+                for (const auto& c : e.Children)
+                    handleChartsTreeNode(c, false, totalIter);
+            }
+            ImGui::TreePop();
+        }
+
+        IGGui::EndTimelineRow();
     }
 
     void handleChartWindow()
     {
+        const size_t totalIter = Stats.entry(ShaderType::Device).count;
+
+        if (ImGui::Begin("Timeline")) {
+            if (ImGui::BeginTable("table_timeline", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp)) {
+                if (IGGui::BeginTimeline("#timeline")) {
+                    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
+                    ImGui::TableSetupColumn("TIMELINE SLIDER", ImGuiTableColumnFlags_WidthStretch);
+
+                    ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+                    for (int column = 0; column < 2; column++) {
+                        ImGui::TableSetColumnIndex(column);
+                        const char* column_name = ImGui::TableGetColumnName(column); // Retrieve name passed to TableSetupColumn()
+                        ImGui::PushID(column);
+                        if (column == 0) {
+                            ImGui::TableHeader(column_name);
+                        } else {
+                            IGGui::TimelineHeader(0, StreamTotalMS, true);
+                        }
+                        ImGui::PopID();
+                    }
+
+                    handleChartsTreeNode(sEntryRoot, false, totalIter);
+                    IGGui::EndTimeline();
+                }
+
+                ImGui::EndTable();
+            }
+        }
+        ImGui::End();
     }
 
     static void handleHelpWindow()
@@ -194,7 +464,7 @@ public:
 
     void handleImgui()
     {
-        ImGui::ShowDemoWindow();
+        // ImGui::ShowDemoWindow();
 
         if (ShowQuantities)
             handleQuantityWindow();
@@ -243,6 +513,10 @@ UI::UI(const Statistics& stats, float total_ms)
     mInternal->Stats   = stats;
     mInternal->TotalMS = total_ms;
     mInternal->Parent  = this;
+
+    mInternal->StreamTotalMS = 0;
+    for (const auto& ts : stats.lastStream())
+        mInternal->StreamTotalMS = std::max(mInternal->StreamTotalMS, ts.offsetEndMS - ts.offsetStartMS);
 
     mInternal->Window = SDL_CreateWindow(
         "Ignis Profiler",
