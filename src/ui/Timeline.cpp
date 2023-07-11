@@ -47,14 +47,6 @@ bool BeginTimeline(const char* label)
 
 void EndTimeline()
 {
-    ImGuiWindow* win = GetCurrentWindow();
-
-    ImVec2 start(GetWindowContentRegionMin().x + win->Pos.x,
-                 GetWindowContentRegionMax().y - GetTextLineHeightWithSpacing() + win->Pos.y);
-    ImVec2 end = GetWindowContentRegionMax() + win->Pos;
-
-    win->DrawList->AddRectFilled(start, end, ImColor(0, 0, 10), SliderRadius);
-
     PopID();
 
     sTimeline.Current = nullptr; // TODO
@@ -151,8 +143,6 @@ void TimelineEventEx(float t_start, float t_end, const char* textBegin, const ch
     if (range <= 0)
         return;
 
-    // float norm_range = range / avail_range;
-
     float norm_start = (std::max(ts->curMin, t_start) - ts->curMin) / avail_range;
     float norm_end   = (std::min(ts->curMax, t_end) - ts->curMin) / avail_range;
 
@@ -164,7 +154,6 @@ void TimelineEventEx(float t_start, float t_end, const char* textBegin, const ch
         rect.Max.x = rect.Min.x + 1;
 
     window->DrawList->AddRectFilled(rect.Min, rect.Max, GetCurrentEventColor(), style.GrabRounding);
-
 
     static const ImVec2 dot_size = CalcTextSize("...", NULL, true);
     if (textBegin != textEnd) {
