@@ -78,4 +78,42 @@ void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_
         break;
     }
 }
-} // namespace IG
+
+float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
+{
+    (void)(renderer);
+
+#if !defined(__WIN32__) || !defined(__APPLE__)
+    // In contrary to the warning, this is more reliable on Linux
+    float dpi;
+    SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), NULL, &dpi, NULL);
+    return dpi / 96;
+#else
+    int window_width{ 0 };
+    int window_height{ 0 };
+    SDL_GetWindowSize(
+        window,
+        &window_width, &window_height);
+
+    int render_output_width{ 0 };
+    int render_output_height{ 0 };
+
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+    SDL_GetWindowSizeInPixels(window, &render_output_width, &render_output_height);
+#else
+    SDL_GetRendererOutputSize(
+        renderer,
+        &render_output_width, &render_output_height);
+#endif
+
+    if (window_width <= 0)
+        return 1;
+
+    const auto scale_x{
+        static_cast<float>(render_output_width) / static_cast<float>(window_width)
+    };
+
+    return scale_x;
+#endif
+}
+} // namespace IGGui

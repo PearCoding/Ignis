@@ -30,9 +30,9 @@ SET(SRC_FILES
     UIGlue.h)
 
 add_library(ig_lib_ui STATIC ${SRC_FILES})
-target_include_directories(ig_lib_ui SYSTEM PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
+target_include_directories(ig_lib_ui SYSTEM PUBLIC ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
 target_include_directories(ig_lib_ui PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
-target_link_libraries(ig_lib_ui PRIVATE ${SDL2_LIBRARY})
+target_link_libraries(ig_lib_ui PUBLIC SDL2::SDL2)
 add_lto(ig_lib_ui)
 add_checks(ig_lib_ui)
 add_linker_options(ig_lib_ui)

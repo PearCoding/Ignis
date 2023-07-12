@@ -18,3 +18,9 @@
 // Include implementation of implot
 #include "implot.cpp"
 #include "implot_items.cpp"
+
+// Force instantiation of some templates
+namespace ImGui {
+template float ScaleRatioFromValueT<float, float, float>(ImGuiDataType data_type, float v, float v_min, float v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size);
+template float RoundScalarWithFormatT<float>(const char* format, ImGuiDataType data_type, float v);
+} // namespace ImGui

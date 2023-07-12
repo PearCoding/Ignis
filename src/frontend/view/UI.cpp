@@ -819,7 +819,7 @@ public:
                 if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
                     ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
                     ImGui::Text("Avg. Luminance: %1.4f Lux", 179 * LastLum.Avg);
-                    if(Glare.NumPixels > 0) {
+                    if (Glare.NumPixels > 0) {
                         ImGui::Text("Avg. GS Luminance: %1.4f Lux", Glare.AvgLum);
                         ImGui::Text("Avg. GS Omega: %1.4f", Glare.AvgOmega);
                         ImGui::Text("GS Pixel No: %i", Glare.NumPixels);
@@ -956,6 +956,10 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
 
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
+
+    const float font_scaling_factor = IGGui::getFontScale(mInternal->Window, mInternal->Renderer);
+    io.FontGlobalScale              = font_scaling_factor;
+
 #ifndef USE_OLD_SDL
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 

@@ -4,14 +4,17 @@
 
 #include "imgui_internal.h"
 
-using namespace ImGui;
-
 // Based on: https://github.com/ocornut/imgui/issues/76
+namespace ImGui {
+extern template float ScaleRatioFromValueT<float, float, float>(ImGuiDataType data_type, float v, float v_min, float v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size);
+extern template float RoundScalarWithFormatT<float>(const char* format, ImGuiDataType data_type, float v);
+} // namespace ImGui
 
+using namespace ImGui;
 namespace IGGui {
 
 static int sSlider2Selection = 0;
-bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, float* v2, float v_min, float v_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb1, ImRect* out_grab_bb2)
+static bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, float* v2, float v_min, float v_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb1, ImRect* out_grab_bb2)
 {
     // Those are the things we can do easily outside the SliderBehaviorT<> template, saves code generation.
     ImGuiContext& g = *GImGui;

@@ -351,8 +351,12 @@ public:
 
         if (!dynamicChildren) {
             for (const auto& timestamp : Stats.lastStream()) {
-                if (timestamp.type == e.Type)
-                    IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f", timestamp.offsetEndMS - timestamp.offsetStartMS);
+                if (timestamp.type == e.Type) {
+                    if (std::holds_alternative<SmallShaderKey>(e.Type))
+                        IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f | %" PRIu64, timestamp.offsetEndMS - timestamp.offsetStartMS, timestamp.workload);
+                    else
+                        IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f", timestamp.offsetEndMS - timestamp.offsetStartMS);
+                }
             }
         }
 
@@ -481,27 +485,6 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////
-static float get_scale(SDL_Window* window, SDL_Renderer* renderer)
-{
-    int window_width{ 0 };
-    int window_height{ 0 };
-    SDL_GetWindowSize(
-        window,
-        &window_width, &window_height);
-
-    int render_output_width{ 0 };
-    int render_output_height{ 0 };
-    SDL_GetRendererOutputSize(
-        renderer,
-        &render_output_width, &render_output_height);
-
-    const auto scale_x{
-        static_cast<float>(render_output_width) / static_cast<float>(window_width)
-    };
-
-    return scale_x;
-}
-
 UI::UI(const Statistics& stats, float total_ms)
     : mInternal(std::make_unique<UIInternal>())
 {
@@ -547,8 +530,9 @@ UI::UI(const Statistics& stats, float total_ms)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    const float font_scaling_factor = get_scale(mInternal->Window, mInternal->Renderer);
-    io.FontGlobalScale              = 1.0F / font_scaling_factor;
+
+    const float font_scaling_factor = IGGui::getFontScale(mInternal->Window, mInternal->Renderer);
+    io.FontGlobalScale              = font_scaling_factor;
 
 #ifndef USE_OLD_SDL
     ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
