@@ -122,6 +122,9 @@ static bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, f
         }
     }
 
+    if (*vals[0] > *vals[1])
+        ImSwap(*vals[0], *vals[1]);
+
     if (slider_sz < 1.0f) {
         *out_grab_bb1 = ImRect(frame_bb.Min, frame_bb.Min);
         *out_grab_bb2 = ImRect(frame_bb.Min, frame_bb.Min);
@@ -192,6 +195,9 @@ bool RangeSliderFloat(const char* label, float* v1, float* v2, float v_min, floa
     const bool value_changed = RangeSliderBehavior(frame_bb, id, v1, v2, v_min, v_max, single_display_format, flags, &grab_bb1, &grab_bb2);
     if (value_changed)
         MarkItemEdited(id);
+
+    if (grab_bb1.Max.x < grab_bb2.Min.x)
+        window->DrawList->AddRectFilled(ImVec2(grab_bb1.Max.x, frame_bb.Min.y), ImVec2(grab_bb2.Min.x, frame_bb.Max.y), GetColorU32(ImGuiCol_FrameBgActive));
 
     if (grab_bb1.Max.x > grab_bb1.Min.x)
         window->DrawList->AddRectFilled(grab_bb1.Min, grab_bb1.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);

@@ -63,10 +63,8 @@ bool TimelineHeader(float min, float max, bool editable)
         curTimeline()->initHeader = true;
     }
 
-    ImGui::Dummy(ImVec2(1, EventHeight));
-
     ImGui::PushID(-1);
-    ImGui::PushItemWidth(ImGui::CalcItemWidth());
+    ImGui::PushItemWidth(-1);
     bool res = RangeSliderFloat("", &curTimeline()->curMin, &curTimeline()->curMax, curTimeline()->totalMin, curTimeline()->totalMax, nullptr, editable ? 0 : ImGuiSliderFlags_ReadOnly);
     ImGui::PopItemWidth();
     ImGui::PopID();
@@ -77,6 +75,12 @@ bool TimelineHeader(float min, float max, bool editable)
 bool BeginTimelineRow()
 {
     ++curTimeline()->curRow;
+
+    ImGuiWindow* window     = GetCurrentWindow();
+    ImGuiContext& g         = *GImGui;
+    const ImGuiStyle& style = g.Style;
+    const ImVec2 font_size  = CalcTextSize("", NULL, true);
+    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos + ImVec2(0, font_size.y + style.FramePadding.y * 2.0f)); // Ensure space is acquired
     return true;
 }
 

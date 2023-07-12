@@ -324,9 +324,10 @@ public:
                 return;
         }
 
-        IGGui::BeginTimelineRow();
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
+
+        IGGui::BeginTimelineRow();
 
         bool open;
         if (std::holds_alternative<SmallShaderKey>(e.Type)) {
@@ -346,6 +347,7 @@ public:
         }
 
         if (!dynamicChildren) {
+            ImGui::PushItemWidth(-1);
             for (const auto& timestamp : Stats.lastStream()) {
                 if (timestamp.type == e.Type) {
                     if (std::holds_alternative<SmallShaderKey>(e.Type))
@@ -354,6 +356,7 @@ public:
                         IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f", timestamp.offsetEndMS - timestamp.offsetStartMS);
                 }
             }
+            ImGui::PopItemWidth();
         }
 
         if (open && !isLeaf) {
@@ -389,9 +392,9 @@ public:
                     ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
                     for (int column = 0; column < 2; column++) {
                         ImGui::TableSetColumnIndex(column);
-                        const char* column_name = ImGui::TableGetColumnName(column); // Retrieve name passed to TableSetupColumn()
                         ImGui::PushID(column);
                         if (column == 0) {
+                            const char* column_name = ImGui::TableGetColumnName(column); // Retrieve name passed to TableSetupColumn()
                             ImGui::TableHeader(column_name);
                         } else {
                             IGGui::TimelineHeader(0, StreamTotalMS, true);
