@@ -688,12 +688,12 @@ public:
     static constexpr int WindowFlags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNavFocus;
     void handleControlWindow()
     {
-        constexpr size_t UI_W   = 300;
-        constexpr size_t UI_H   = 500;
-        constexpr size_t HIST_W = 250;
+        constexpr size_t UI_W   = 350;
+        constexpr size_t UI_H   = 600;
+        constexpr size_t HIST_W = 300;
 
-        ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(UI_W, UI_H), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Control", &ShowControl, WindowFlags)) {
             if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
                 int mouse_x, mouse_y;
@@ -873,8 +873,8 @@ public:
         constexpr size_t PROP_W = 350;
         constexpr size_t PROP_H = 400;
         UI::UpdateResult result = UI::UpdateResult::Continue;
-        ImGui::SetNextWindowPos(ImVec2((float)(Width - 5 - PROP_W), 5.0f), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2((float)PROP_W, (float)PROP_H), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2((float)(Width - 5 - PROP_W), 5.0f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2((float)PROP_W, (float)PROP_H), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Properties", &ShowProperties, WindowFlags)) {
             const bool changed = ui_property_view(Runtime);
             if (changed)
@@ -961,6 +961,8 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
 
 #ifndef USE_OLD_SDL
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    // io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts; // We do it manually
 
     ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
     ImGui_ImplSDLRenderer2_Init(mInternal->Renderer);
@@ -1041,8 +1043,8 @@ static void handleHelp()
     ImGui::MarkdownConfig config;
     config.formatCallback = IGGui::markdownFormatCallback;
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Once);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_FirstUseEver);
     ImGui::Begin("Help");
     ImGui::Markdown(Markdown.c_str(), Markdown.length(), config);
     ImGui::End();
