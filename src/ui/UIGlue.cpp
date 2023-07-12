@@ -1,5 +1,7 @@
 #include "UIGlue.h"
 
+#include <filesystem>
+
 namespace IGGui {
 #ifdef USE_OLD_SDL
 static void handleOldSDL(const SDL_Event& event)
@@ -115,5 +117,29 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
 
     return scale_x;
 #endif
+}
+
+void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
+{
+    auto& io = ImGui::GetIO();
+
+#if defined(__WIN32__)
+    const char* font_file = "C:\\Windows\\Fonts\\TODO.otf";
+#elif defined(__APPLE__)
+    const char* font_file = "/System/Library/Fonts/TODO.otf";
+#else
+    const char* font_file = "/usr/share/fonts/truetype/liberation2/LiberationMono-Regular.ttf";
+#endif
+
+    const float font_scaling_factor = IGGui::getFontScale(window, renderer);
+    if (!std::filesystem::exists(font_file)) {
+        io.FontGlobalScale = font_scaling_factor;
+    } else {
+        ImFontConfig config;
+        config.SizePixels    = 13 * font_scaling_factor;
+        config.GlyphOffset.y = 1.0f * std::floor(config.SizePixels / 13.0f); // Add +1 offset per 13 units
+
+        io.Fonts->AddFontFromFileTTF(font_file, config.SizePixels, &config);
+    }
 }
 } // namespace IGGui

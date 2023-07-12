@@ -474,8 +474,7 @@ UI::UI(const Statistics& stats, float total_ms)
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    const float font_scaling_factor = IGGui::getFontScale(mInternal->Window, mInternal->Renderer);
-    io.FontGlobalScale              = font_scaling_factor;
+    IGGui::setupStandardFont(mInternal->Window, mInternal->Renderer);
 
 #ifndef USE_OLD_SDL
     ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);

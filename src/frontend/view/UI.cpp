@@ -957,8 +957,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
 
-    const float font_scaling_factor = IGGui::getFontScale(mInternal->Window, mInternal->Renderer);
-    io.FontGlobalScale              = font_scaling_factor;
+    IGGui::setupStandardFont(mInternal->Window, mInternal->Renderer);
 
 #ifndef USE_OLD_SDL
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;

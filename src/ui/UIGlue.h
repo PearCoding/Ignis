@@ -19,4 +19,5 @@ namespace IGGui {
 void processSDLEventForImGUI(const SDL_Event& event);
 void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_, bool start_);
 float getFontScale(SDL_Window* window, SDL_Renderer* renderer);
+void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer);
 }
