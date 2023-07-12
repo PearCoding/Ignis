@@ -124,16 +124,10 @@ void TimelineEventEx(float t_start, float t_end, const char* textBegin, const ch
     const ImGuiStyle& style = g.Style;
     const float w           = CalcItemWidth();
 
-    const ImVec2 label_size = CalcTextSize(textBegin, textEnd, true);
+    const char* textDisplayEnd = FindRenderedTextEnd(textBegin, textEnd);
+
+    const ImVec2 label_size = CalcTextSize(textBegin, textDisplayEnd, true);
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y * 2.0f));
-
-    // Accept null ranges
-    if (textBegin == textEnd)
-        textBegin = textEnd = "";
-
-    // Calculate length
-    if (textEnd == nullptr)
-        textEnd = textBegin + strlen(textBegin); // FIXME-OPT
 
     float avail_range = ts->curMax - ts->curMin;
     if (avail_range <= 0)
@@ -155,21 +149,17 @@ void TimelineEventEx(float t_start, float t_end, const char* textBegin, const ch
 
     window->DrawList->AddRectFilled(rect.Min, rect.Max, GetCurrentEventColor(), style.GrabRounding);
 
-    static const ImVec2 dot_size = CalcTextSize("...", NULL, true);
-    if (textBegin != textEnd) {
-        if (rect.GetWidth() < label_size.x + 2) {
-            if (rect.GetWidth() > dot_size.x)
-                RenderTextClipped(rect.Min, rect.Max, "...", NULL, NULL, ImVec2(0.5f, 0.5f));
-        } else {
-            if (g.LogEnabled)
-                LogSetNextTextDecoration("{", "}");
-            RenderTextClipped(rect.Min, rect.Max, textBegin, textEnd, NULL, ImVec2(0.5f, 0.5f));
-        }
-    }
+    if (textBegin != textDisplayEnd) {
+        if (rect.GetWidth() >= label_size.x)
+            RenderTextClipped(rect.Min, rect.Max, textBegin, textDisplayEnd, NULL, ImVec2(0.5f, 0.5f));
 
-    const ImRect tooltip_bb(rect.Min - ImVec2(2, 2), rect.Max + ImVec2(2, 2));
-    if (IsMouseHoveringRect(tooltip_bb.Min, tooltip_bb.Max))
-        SetTooltip("%s", textBegin);
+        const ImRect tooltip_bb(rect.Min - ImVec2(2, 2), rect.Max + ImVec2(2, 2));
+        const bool hovered = IsMouseHoveringRect(tooltip_bb.Min, tooltip_bb.Max);
+
+        if (hovered && g.ActiveId == 0)
+            SetTooltip("%s", textBegin);
+        // SetTooltip("%.*s", (int)(textDisplayEnd - textBegin), textBegin);
+    }
 }
 
 void TimelineEventV(float t_start, float t_end, const char* fmt, va_list args)
