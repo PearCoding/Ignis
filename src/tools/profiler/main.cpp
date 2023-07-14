@@ -76,6 +76,11 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    if (!std::filesystem::exists(in_file)) {
+        IG_LOG(L_ERROR) << "Givin input file " << in_file << " does not exists" << std::endl;
+        return EXIT_FAILURE;
+    }
+
     std::string json_file;
     {
         std::ifstream stream(in_file);

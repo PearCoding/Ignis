@@ -453,6 +453,13 @@ UI::UI(const Statistics& stats, float total_ms)
         throw std::runtime_error("Could not setup UI");
     }
 
+#ifdef IG_OS_LINUX
+    // No idea why SDL_WINDOW_MAXIMIZED & SDL_MaximizeWindow is not working as intendent..
+    SDL_Rect rect;
+    SDL_GetDisplayUsableBounds(SDL_GetWindowDisplayIndex(mInternal->Window), &rect);
+    SDL_SetWindowSize(mInternal->Window, rect.w, rect.h);
+#endif
+
     IGGui::setup(mInternal->Window, mInternal->Renderer, true);
 }
 
