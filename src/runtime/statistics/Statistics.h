@@ -36,8 +36,8 @@ public:
     using TimestampType = std::variant<SmallShaderKey, SectionType>;
     struct Timestamp {
         TimestampType type;
-        float offsetStartMS = 0; // Total start offset from iteration start in milliseconds
-        float offsetEndMS   = 0; // Total end offset from iteration start in milliseconds
+        float offsetStartMS = 0;    // Total start offset from iteration start in milliseconds
+        float offsetEndMS   = 0;    // Total end offset from iteration start in milliseconds
         size_t workload     = 0;
         bool dirty          = true; // If false, it is already consumed
     };
@@ -66,7 +66,7 @@ public:
     void add(Quantity quantity, uint64 value);
     void add(const Statistics& other);
 
-    class ShaderIterator : public std::iterator<std::forward_iterator_tag, const SmallShaderKey> {
+    class ShaderIterator {
     private:
         friend class Statistics;
 
@@ -77,6 +77,12 @@ public:
         }
 
     public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type        = const SmallShaderKey;
+        using difference_type   = ptrdiff_t;
+        using pointer           = value_type*;
+        using reference         = value_type&;
+
         inline ShaderIterator& operator++()
         {
             mIt++;

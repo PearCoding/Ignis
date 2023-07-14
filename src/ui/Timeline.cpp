@@ -17,6 +17,12 @@ struct InstanceData {
     float curMin;
     float curMax;
     int curRow = -1;
+
+    ImGuiWindow* window = nullptr;
+    ImVec2 tableMinPos;
+    ImVec2 tableMaxPos;
+
+    InstanceData* previous;
 };
 
 struct GlobalData {
@@ -37,10 +43,16 @@ bool BeginTimeline(const char* label)
     ImGuiWindow* window = GetCurrentWindow();
     const ImGuiID id    = window->GetID(label);
 
-    sTimeline.Current = sTimeline.Data.GetOrAddByKey(id);
+    auto ts = sTimeline.Data.GetOrAddByKey(id);
     PushOverrideID(id);
 
-    curTimeline()->curRow = -1;
+    ts->curRow      = -1;
+    ts->window      = window;
+    ts->tableMinPos = ImVec2(10000, 10000);
+    ts->tableMaxPos = ImVec2(0, 0);
+
+    ts->previous      = sTimeline.Current;
+    sTimeline.Current = ts;
 
     return true;
 }
@@ -49,7 +61,35 @@ void EndTimeline()
 {
     PopID();
 
-    sTimeline.Current = nullptr; // TODO
+    ImGuiWindow* window   = GetCurrentWindow();
+    const ImGuiContext& g = *GetCurrentContext();
+    auto ts               = curTimeline();
+    const auto table_bb   = ImRect(ts->tableMinPos, ts->tableMaxPos);
+    if (ts->window == window && table_bb.GetArea() > 0) {
+        if (IsMouseHoveringRect(table_bb.Min, table_bb.Max)) {
+            // window->DrawList->AddRectFilled(table_bb.Min, table_bb.Max, ImColor(200, 200, 200));
+
+            const float mouse_abs_pos = g.IO.MousePos[0];
+
+            window->DrawList->AddLine(ImVec2(mouse_abs_pos, table_bb.Min.y), ImVec2(mouse_abs_pos, table_bb.Max.y), ImColor(240, 0, 0));
+
+            float pixel_norm_x = (mouse_abs_pos - table_bb.Min.x) / table_bb.GetWidth();
+            float t            = ImLerp(ts->curMin, ts->curMax, pixel_norm_x);
+
+            char value_buf[64];
+            const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), "%.2f ms", t);
+
+            ImVec2 start_pos = ImVec2(mouse_abs_pos + 4, table_bb.Min.y);
+
+            const ImVec2 label_size = CalcTextSize(value_buf, value_buf_end, true);
+            RenderFrame(start_pos, start_pos + label_size, GetColorU32(ImGuiCol_FrameBg), true, g.Style.FrameRounding);
+            PushStyleColor(ImGuiCol_Text, (ImU32)ImColor(200, 0, 0));
+            RenderTextClipped(start_pos, start_pos + label_size, value_buf, value_buf_end, &label_size);
+            PopStyleColor();
+        }
+    }
+
+    sTimeline.Current = sTimeline.Current->previous;
 }
 
 bool TimelineHeader(float min, float max, bool editable)
@@ -81,6 +121,7 @@ bool BeginTimelineRow()
     const ImGuiStyle& style = g.Style;
     const ImVec2 font_size  = CalcTextSize("", NULL, true);
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos + ImVec2(0, font_size.y + style.FramePadding.y * 2.0f)); // Ensure space is acquired
+
     return true;
 }
 
@@ -164,6 +205,11 @@ void TimelineEventEx(float t_start, float t_end, const char* textBegin, const ch
             SetTooltip("%s", textBegin);
         // SetTooltip("%.*s", (int)(textDisplayEnd - textBegin), textBegin);
     }
+
+    curTimeline()->tableMinPos = ImMin(curTimeline()->tableMinPos, rect.Min);
+    curTimeline()->tableMinPos = ImMin(curTimeline()->tableMinPos, rect.Max);
+    curTimeline()->tableMaxPos = ImMax(curTimeline()->tableMaxPos, rect.Min);
+    curTimeline()->tableMaxPos = ImMax(curTimeline()->tableMaxPos, rect.Max);
 }
 
 void TimelineEventV(float t_start, float t_end, const char* fmt, va_list args)

@@ -85,12 +85,6 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
 {
     (void)(renderer);
 
-#if !defined(__WIN32__) || !defined(__APPLE__)
-    // In contrary to the warning, this is more reliable on Linux
-    float dpi;
-    SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), NULL, &dpi, NULL);
-    return dpi / 96;
-#else
     int window_width{ 0 };
     int window_height{ 0 };
     SDL_GetWindowSize(
@@ -111,17 +105,25 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
     if (window_width <= 0)
         return 1;
 
+#if !defined(__WIN32__) || !defined(__APPLE__)
+    if (render_output_width == window_width) {
+        // In contrary to the warning, this is more reliable on Linux
+        float dpi;
+        SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), NULL, &dpi, NULL);
+        return dpi / 96;
+    }
+#endif
+
     const auto scale_x{
         static_cast<float>(render_output_width) / static_cast<float>(window_width)
     };
 
     return scale_x;
-#endif
 }
 
 void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 {
-    auto& io = ImGui::GetIO();
+    auto& io              = ImGui::GetIO();
 
 #if defined(__WIN32__)
     const char* font_file = "C:\\Windows\\Fonts\\TODO.otf";
