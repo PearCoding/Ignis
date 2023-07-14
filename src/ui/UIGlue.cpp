@@ -154,7 +154,7 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
     }
 }
 
-void setup(SDL_Window* window, SDL_Renderer* renderer)
+void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -164,7 +164,9 @@ void setup(SDL_Window* window, SDL_Renderer* renderer)
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    if (useDocking)
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     IGGui::setupStandardFont(window, renderer);
 
@@ -211,7 +213,8 @@ void newFrame()
 #endif
     ImGui::NewFrame();
 
-    ImGui::DockSpaceOverViewport();
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable)
+        ImGui::DockSpaceOverViewport();
 }
 
 void renderFrame()

@@ -942,7 +942,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     if (!mInternal->setupTextureBuffer(mInternal->Width, mInternal->Height))
         throw std::runtime_error("Could not setup UI");
 
-    IGGui::setup(mInternal->Window, mInternal->Renderer);
+    IGGui::setup(mInternal->Window, mInternal->Renderer, false);
 
     mInternal->PoseManager.load(POSE_FILE);
 

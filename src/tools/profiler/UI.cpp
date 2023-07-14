@@ -453,7 +453,7 @@ UI::UI(const Statistics& stats, float total_ms)
         throw std::runtime_error("Could not setup UI");
     }
 
-    IGGui::setup(mInternal->Window, mInternal->Renderer);
+    IGGui::setup(mInternal->Window, mInternal->Renderer, true);
 }
 
 UI::~UI()
