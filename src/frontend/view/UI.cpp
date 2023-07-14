@@ -137,10 +137,7 @@ public:
         Height = height;
         setupTextureBuffer((size_t)width, (size_t)height);
 
-#ifdef USE_OLD_SDL
-        ImGuiSDL::Deinitialize();
-        ImGuiSDL::Initialize(Renderer, width, height);
-#endif
+        IGGui::notifyResize(Window, Renderer);
     }
 
     [[nodiscard]] inline std::string currentAOVName() const
@@ -205,7 +202,7 @@ public:
         SDL_Event event;
         const bool hover = isAnyWindowShown() && (ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
         while (SDL_PollEvent(&event)) {
-            IGGui::processSDLEventForImGUI(event);
+            IGGui::processSDLEvent(event);
 
             // First handle ImGui stuff
             bool key_down = event.type == SDL_KEYDOWN;
@@ -483,10 +480,6 @@ public:
                 break;
             }
         }
-
-#ifdef USE_OLD_SDL
-        handleOldSDLMouse();
-#endif
 
         if (canInteract) {
             if (std::any_of(arrows.begin(), arrows.end(), [](bool b) { return b; }))
@@ -949,26 +942,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     if (!mInternal->setupTextureBuffer(mInternal->Width, mInternal->Height))
         throw std::runtime_error("Could not setup UI");
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-    ImPlot::CreateContext();
-
-    ImGuiIO& io = ImGui::GetIO();
-    (void)io;
-
-    IGGui::setupStandardFont(mInternal->Window, mInternal->Renderer);
-
-#ifndef USE_OLD_SDL
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    // io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts; // We do it manually
-
-    ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
-    ImGui_ImplSDLRenderer2_Init(mInternal->Renderer);
-#else
-    ImGuiSDL::Initialize(mInternal->Renderer, (int)mInternal->Width, (int)mInternal->Height);
-#endif
+    IGGui::setup(mInternal->Window, mInternal->Renderer);
 
     mInternal->PoseManager.load(POSE_FILE);
 
@@ -983,15 +957,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
 
 UI::~UI()
 {
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-#else
-    ImGuiSDL::Deinitialize();
-#endif
-
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
+    IGGui::shutdown();
 
     if (mInternal->Texture)
         SDL_DestroyTexture(mInternal->Texture);
@@ -1068,11 +1034,7 @@ UI::UpdateResult UI::update()
     SDL_RenderClear(mInternal->Renderer);
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-#endif
-    ImGui::NewFrame();
+    IGGui::newFrame();
 
     UpdateResult result = UpdateResult::Continue;
     if (mInternal->isAnyWindowShown()) {
@@ -1081,12 +1043,7 @@ UI::UpdateResult UI::update()
             handleHelp();
     }
 
-    ImGui::Render();
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
-#else
-    ImGuiSDL::Render(ImGui::GetDrawData());
-#endif
+    IGGui::renderFrame();
 
     SDL_RenderPresent(mInternal->Renderer);
     return result;

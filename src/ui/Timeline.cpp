@@ -22,6 +22,8 @@ struct InstanceData {
     ImVec2 tableMinPos;
     ImVec2 tableMaxPos;
 
+    ImDrawListSplitter backgroundSplitter;
+
     InstanceData* previous;
 };
 
@@ -51,6 +53,9 @@ bool BeginTimeline(const char* label)
     ts->tableMinPos = ImVec2(10000, 10000);
     ts->tableMaxPos = ImVec2(0, 0);
 
+    ts->backgroundSplitter.Split(window->DrawList, 2);
+    ts->backgroundSplitter.SetCurrentChannel(window->DrawList, 1);
+
     ts->previous      = sTimeline.Current;
     sTimeline.Current = ts;
 
@@ -67,8 +72,6 @@ void EndTimeline()
     const auto table_bb   = ImRect(ts->tableMinPos, ts->tableMaxPos);
     if (ts->window == window && table_bb.GetArea() > 0) {
         if (IsMouseHoveringRect(table_bb.Min, table_bb.Max)) {
-            // window->DrawList->AddRectFilled(table_bb.Min, table_bb.Max, ImColor(200, 200, 200));
-
             const float mouse_abs_pos = g.IO.MousePos[0];
 
             window->DrawList->AddLine(ImVec2(mouse_abs_pos, table_bb.Min.y), ImVec2(mouse_abs_pos, table_bb.Max.y), ImColor(240, 0, 0));
@@ -79,15 +82,52 @@ void EndTimeline()
             char value_buf[64];
             const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), "%.2f ms", t);
 
-            ImVec2 start_pos = ImVec2(mouse_abs_pos + 4, table_bb.Min.y);
-
+            ImVec2 start_pos        = ImVec2(mouse_abs_pos + 4, table_bb.Min.y + 4);
             const ImVec2 label_size = CalcTextSize(value_buf, value_buf_end, true);
-            RenderFrame(start_pos, start_pos + label_size, GetColorU32(ImGuiCol_FrameBg), true, g.Style.FrameRounding);
+            if (start_pos.x + label_size.x + 8 > table_bb.Max.x)
+                start_pos.x -= label_size.x + 8;
+
+            RenderFrame(start_pos - ImVec2(2, 2), start_pos + ImVec2(2, 2) + label_size, GetColorU32(ImGuiCol_FrameBg), true, g.Style.FrameRounding);
             PushStyleColor(ImGuiCol_Text, (ImU32)ImColor(200, 0, 0));
             RenderTextClipped(start_pos, start_pos + label_size, value_buf, value_buf_end, &label_size);
             PopStyleColor();
         }
     }
+
+    ts->backgroundSplitter.SetCurrentChannel(window->DrawList, 0);
+
+    // Draw vertical lines for our viewing pleasure
+    if (ts->window == window && table_bb.GetArea() > 0) {
+        window->DrawList->AddRectFilled(table_bb.Min, table_bb.Max, ImColor(255, 255, 255, 40));
+
+        const float trange = ts->curMax - ts->curMin;
+
+        float dt = 1;
+        if (trange <= 2)
+            dt = 0.1f;
+        else if (trange <= 20)
+            dt = 1;
+        else if (trange <= 200)
+            dt = 10;
+        else if (trange <= 2000)
+            dt = 100;
+        else
+            dt = 1000;
+
+        const auto frame_color = GetColorU32(ImGuiCol_TableBorderStrong);
+        const float tmin       = std::ceil(ts->curMin / dt) * dt;
+        const float tmax       = std::floor(ts->curMax / dt) * dt;
+        for (float t = tmin; t <= tmax; t += dt) {
+            if (t == ts->curMin) // Skip zero
+                continue;
+
+            float nt = (t - ts->curMin) / (trange);
+            float x  = ImLerp(table_bb.Min.x, table_bb.Max.x, nt);
+
+            window->DrawList->AddLine(ImVec2(x, table_bb.Min.y), ImVec2(x, table_bb.Max.y), frame_color);
+        }
+    }
+    ts->backgroundSplitter.Merge(window->DrawList);
 
     sTimeline.Current = sTimeline.Current->previous;
 }
@@ -120,8 +160,15 @@ bool BeginTimelineRow()
     ImGuiContext& g         = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImVec2 font_size  = CalcTextSize("", NULL, true);
-    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos + ImVec2(0, font_size.y + style.FramePadding.y * 2.0f)); // Ensure space is acquired
 
+    // Ensure space is acquired
+    window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos + ImVec2(0, font_size.y + style.FramePadding.y * 2.0f));
+
+    // Ignore x, as this might be used in the context of tables. Keep y information as the row might be empty
+    curTimeline()->tableMinPos.y = ImMin(curTimeline()->tableMinPos.y, window->DC.CursorPos.y);
+    curTimeline()->tableMinPos.y = ImMin(curTimeline()->tableMinPos.y, window->DC.CursorMaxPos.y);
+    curTimeline()->tableMaxPos.y = ImMax(curTimeline()->tableMaxPos.y, window->DC.CursorPos.y);
+    curTimeline()->tableMaxPos.y = ImMax(curTimeline()->tableMaxPos.y, window->DC.CursorMaxPos.y);
     return true;
 }
 

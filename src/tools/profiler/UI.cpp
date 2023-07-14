@@ -62,23 +62,12 @@ public:
     bool ShowQuantities = true;
     bool ShowChart      = true;
 
-    void handleFramebufferResize(int width, int height)
-    {
-        IG_UNUSED(width);
-        IG_UNUSED(height);
-
-#ifdef USE_OLD_SDL
-        ImGuiSDL::Deinitialize();
-        ImGuiSDL::Initialize(Renderer, width, height);
-#endif
-    }
-
     // Events
     UI::InputResult handleEvents()
     {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            IGGui::processSDLEventForImGUI(event);
+            IGGui::processSDLEvent(event);
 
             // First handle ImGui stuff
             switch (event.type) {
@@ -104,7 +93,7 @@ public:
             case SDL_WINDOWEVENT: {
                 switch (event.window.event) {
                 case SDL_WINDOWEVENT_RESIZED:
-                    handleFramebufferResize(event.window.data1, event.window.data2);
+                    IGGui::notifyResize(Window, Renderer);
                     break;
                 default:
                     break;
@@ -464,39 +453,12 @@ UI::UI(const Statistics& stats, float total_ms)
         throw std::runtime_error("Could not setup UI");
     }
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-    ImPlot::CreateContext();
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-    IGGui::setupStandardFont(mInternal->Window, mInternal->Renderer);
-
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
-    ImGui_ImplSDLRenderer2_Init(mInternal->Renderer);
-#else
-    int width, height;
-    SDL_GetWindowSize(mInternal->Window, &width, &height);
-    ImGuiSDL::Initialize(mInternal->Renderer, width, height);
-#endif
+    IGGui::setup(mInternal->Window, mInternal->Renderer);
 }
 
 UI::~UI()
 {
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-#else
-    ImGuiSDL::Deinitialize();
-#endif
-
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
+    IGGui::shutdown();
 
     if (mInternal->Renderer)
         SDL_DestroyRenderer(mInternal->Renderer);
@@ -514,23 +476,11 @@ void UI::update()
 {
     SDL_RenderClear(mInternal->Renderer);
 
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-#endif
-    ImGui::NewFrame();
-
-    ImGui::DockSpaceOverViewport();
+    IGGui::newFrame();
 
     mInternal->handleImgui();
 
-    ImGui::Render();
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
-#else
-    ImGuiSDL::Render(ImGui::GetDrawData());
-#endif
-
+    IGGui::renderFrame();
     SDL_RenderPresent(mInternal->Renderer);
 }
 } // namespace IG

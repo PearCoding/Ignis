@@ -2,6 +2,15 @@
 
 #include <filesystem>
 
+#if SDL_VERSION_ATLEAST(2, 0, 17)
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_sdlrenderer2.h"
+#else
+#define USE_OLD_SDL
+// The following implementation is deprecated and only available for old SDL versions
+#include "imgui_old_sdl.h"
+#endif
+
 namespace IGGui {
 #ifdef USE_OLD_SDL
 static void handleOldSDL(const SDL_Event& event)
@@ -56,7 +65,7 @@ static void handleOldSDLMouse()
 }
 #endif
 
-void processSDLEventForImGUI(const SDL_Event& event)
+void processSDLEvent(const SDL_Event& event)
 {
 #ifndef USE_OLD_SDL
     ImGui_ImplSDL2_ProcessEvent(&event);
@@ -121,12 +130,12 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
     return scale_x;
 }
 
-void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
+static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 {
-    auto& io              = ImGui::GetIO();
+    auto& io = ImGui::GetIO();
 
 #if defined(__WIN32__)
-    const char* font_file = "C:\\Windows\\Fonts\\TODO.otf";
+    const char* font_file = "C:\\Windows\\Fonts\\consola.ttf";
 #elif defined(__APPLE__)
     const char* font_file = "/System/Library/Fonts/TODO.otf";
 #else
@@ -143,5 +152,75 @@ void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 
         io.Fonts->AddFontFromFileTTF(font_file, config.SizePixels, &config);
     }
+}
+
+void setup(SDL_Window* window, SDL_Renderer* renderer)
+{
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+    ImPlot::CreateContext();
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    IGGui::setupStandardFont(window, renderer);
+
+#ifndef USE_OLD_SDL
+    ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
+    ImGui_ImplSDLRenderer2_Init(renderer);
+#else
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    ImGuiSDL::Initialize(renderer, width, height);
+#endif
+}
+
+void shutdown()
+{
+#ifndef USE_OLD_SDL
+    ImGui_ImplSDLRenderer2_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+#else
+    ImGuiSDL::Deinitialize();
+#endif
+
+    ImPlot::DestroyContext();
+    ImGui::DestroyContext();
+}
+
+void notifyResize(SDL_Window* window, SDL_Renderer* renderer)
+{
+    (void)window;
+    (void)renderer;
+
+#ifdef USE_OLD_SDL
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    ImGuiSDL::Initialize(renderer, width, height);
+#endif
+}
+
+void newFrame()
+{
+#ifndef USE_OLD_SDL
+    ImGui_ImplSDLRenderer2_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+#endif
+    ImGui::NewFrame();
+
+    ImGui::DockSpaceOverViewport();
+}
+
+void renderFrame()
+{
+    ImGui::Render();
+#ifndef USE_OLD_SDL
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+#else
+    ImGuiSDL::Render(ImGui::GetDrawData());
+#endif
 }
 } // namespace IGGui
