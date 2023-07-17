@@ -266,7 +266,7 @@ bool Runtime::load(const Path& path, const Scene* scene)
     mTechniqueVariants        = std::move(ctx->TechniqueVariants);
     mResourceMap              = ctx->generateResourceMap();
 
-    if (mOptions.Denoiser.Enabled)
+    if (lopts.Denoiser.Enabled)
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
 
     // Setup array of number of entities per material

@@ -948,7 +948,8 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
 
     mInternal->ShowProperties = runtime->hasSceneParameters();
 
-    if (mInternal->Width < 350 || mInternal->Height < 500) {
+    const float dpi_scale = IGGui::getFontScale(mInternal->Window, mInternal->Renderer);
+    if ((float)mInternal->Width < 450 * dpi_scale || (float)mInternal->Height < 600 * dpi_scale) {
         IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 or F4 to show it" << std::endl;
         mInternal->ShowControl    = false;
         mInternal->ShowProperties = false;

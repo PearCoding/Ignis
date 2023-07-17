@@ -114,11 +114,12 @@ public:
         const size_t totalIter = Stats.entry(ShaderType::Device).count;
 
         if (ImGui::Begin("Quantities")) {
-            if (ImGui::BeginTable("table_quantity", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp)) {
+            if (ImGui::BeginTable("table_quantity", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
                 ImGui::TableSetupColumn("Name");
                 ImGui::TableSetupColumn("Total");
                 ImGui::TableSetupColumn("Per Iteration");
                 ImGui::TableSetupColumn("Per Second");
+                ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
                 ImGui::TableHeadersRow();
 
                 uint64 camera = Stats.quantity(Quantity::CameraRayCount);
@@ -260,7 +261,7 @@ public:
         const size_t totalIter = Stats.entry(ShaderType::Device).count;
 
         if (ImGui::Begin("Means")) {
-            if (ImGui::BeginTable("table_means", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp)) {
+            if (ImGui::BeginTable("table_means", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
                 ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
                 ImGui::TableSetupColumn("Total Time");
                 ImGui::TableSetupColumn("Total Count");
@@ -270,6 +271,7 @@ public:
                 ImGui::TableSetupColumn("Min Workload per Call");
                 ImGui::TableSetupColumn("Avg. Workload per Call");
                 ImGui::TableSetupColumn("Max Workload per Call");
+                ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
                 ImGui::TableHeadersRow();
 
                 handleMeansTreeNode(sEntryRoot, false, totalIter);
@@ -373,10 +375,11 @@ public:
         const size_t totalIter = Stats.entry(ShaderType::Device).count;
 
         if (ImGui::Begin("Timeline")) {
-            if (ImGui::BeginTable("table_timeline", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp)) {
+            if (ImGui::BeginTable("table_timeline", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
                 if (IGGui::BeginTimeline("#timeline")) {
                     ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
                     ImGui::TableSetupColumn("TIMELINE SLIDER", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 
                     ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
                     for (int column = 0; column < 2; column++) {
