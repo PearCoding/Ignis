@@ -168,6 +168,7 @@ const static std::unordered_map<SectionType, const char*> SectionTypeName = {
     { SectionType::TonemapUpdate, "TonemapUpdate" },
     { SectionType::FramebufferHostUpdate, "FramebufferHostUpdate" },
     { SectionType::AOVHostUpdate, "AOVHostUpdate" },
+    { SectionType::Denoise, "Denoise" }
 };
 
 const char* Statistics::getShaderTypeName(ShaderType type)
@@ -397,6 +398,7 @@ std::string Statistics::dump(size_t totalMS, size_t iter, bool verbose, const st
     dumpStatsBasicVar("  |-Bake", ShaderType::Bake);
 
     table.addRow({ "  Sections:" });
+    dumpSectionStats("  |-Denoise", mSections[(size_t)SectionType::Denoise]);
     dumpSectionStats("  |-ImageLoading", mSections[(size_t)SectionType::ImageLoading]);
     dumpSectionStats("  |-PackedImageLoading", mSections[(size_t)SectionType::PackedImageLoading]);
     dumpSectionStats("  |-BufferLoading", mSections[(size_t)SectionType::BufferLoading]);

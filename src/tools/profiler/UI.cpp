@@ -36,6 +36,7 @@ static const Entry sEntryRoot = {
       { SmallShaderKey(ShaderType::Tonemap) },
       { SmallShaderKey(ShaderType::Glare) },
       { SmallShaderKey(ShaderType::Bake) },
+      { SectionType::Denoise },
       { SectionType::ImageLoading },
       { SectionType::PackedImageLoading },
       { SectionType::BufferLoading },

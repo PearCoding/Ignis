@@ -1497,6 +1497,7 @@ public:
         if (mAOVs.count("Denoised") == 0 && mHostFramebuffer.IterationCount > 0)
             return;
 
+        _SECTION(SectionType::Denoise);
         ignis_denoise(mIGDevice);
 
         // Make sure the iteration count resembles the input

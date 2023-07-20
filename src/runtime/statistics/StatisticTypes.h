@@ -48,6 +48,8 @@ enum class SectionType {
     FramebufferHostUpdate,
     AOVHostUpdate,
 
+    Denoise,
+
     _COUNT
 };
 
