@@ -11,4 +11,5 @@ void EndTimelineRow();
 
 void TimelineEventUnformatted(float t_start, float t_end, const char* text);
 void TimelineEvent(float t_start, float t_end, const char* fmt, ...);
+void TimelineBarrier(float time, unsigned int color);
 } // namespace IGGui

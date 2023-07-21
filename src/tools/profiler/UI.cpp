@@ -53,7 +53,8 @@ class UIInternal {
 public:
     Statistics Stats;
     float TotalMS       = 0;
-    float StreamTotalMS = 0;
+    float StreamStartMS = std::numeric_limits<float>::infinity();
+    float StreamEndMS   = 0;
 
     UI* Parent             = nullptr;
     SDL_Window* Window     = nullptr;
@@ -390,12 +391,22 @@ public:
                             const char* column_name = ImGui::TableGetColumnName(column); // Retrieve name passed to TableSetupColumn()
                             ImGui::TableHeader(column_name);
                         } else {
-                            IGGui::TimelineHeader(0, StreamTotalMS, true);
+                            IGGui::TimelineHeader(StreamStartMS, StreamEndMS, true);
                         }
                         ImGui::PopID();
                     }
 
                     handleChartsTreeNode(sEntryRoot, false, totalIter);
+
+                    for (const auto& timestamp : Stats.stream()) {
+                        if (std::holds_alternative<Statistics::Barrier>(timestamp.type)) {
+                            const auto barrier = std::get<Statistics::Barrier>(timestamp.type);
+                            if (barrier == Statistics::Barrier::Frame)
+                                IGGui::TimelineBarrier(timestamp.offsetStartMS, ImColor(128, 128, 255));
+                            else
+                                IGGui::TimelineBarrier(timestamp.offsetStartMS, ImColor(128, 255, 128));
+                        }
+                    }
                     IGGui::EndTimeline();
                 }
 
@@ -433,9 +444,12 @@ UI::UI(const Statistics& stats, float total_ms)
     mInternal->TotalMS = total_ms;
     mInternal->Parent  = this;
 
-    mInternal->StreamTotalMS = 0;
-    for (const auto& ts : stats.stream())
-        mInternal->StreamTotalMS = std::max(mInternal->StreamTotalMS, ts.offsetEndMS - ts.offsetStartMS);
+    mInternal->StreamStartMS = std::numeric_limits<float>::infinity();
+    mInternal->StreamEndMS   = 0;
+    for (const auto& ts : stats.stream()) {
+        mInternal->StreamStartMS = std::min(mInternal->StreamStartMS, ts.offsetStartMS);
+        mInternal->StreamEndMS   = std::max(mInternal->StreamEndMS, ts.offsetEndMS);
+    }
 
     mInternal->Window = SDL_CreateWindow(
         "Ignis Profiler",

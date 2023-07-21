@@ -143,12 +143,19 @@ bool TimelineHeader(float min, float max, bool editable)
         curTimeline()->initHeader = true;
     }
 
+    // Acquire some information about the x-axis
+    ImGuiWindow* window          = GetCurrentWindow();
+    curTimeline()->tableMinPos.x = ImMin(curTimeline()->tableMinPos.x, window->DC.CursorPos.x);
+    curTimeline()->tableMaxPos.x = ImMax(curTimeline()->tableMaxPos.x, window->DC.CursorPos.x);
+
     ImGui::PushID(-1);
     ImGui::PushItemWidth(-1);
     bool res = RangeSliderFloat("", &curTimeline()->curMin, &curTimeline()->curMax, curTimeline()->totalMin, curTimeline()->totalMax, nullptr, editable ? 0 : ImGuiSliderFlags_ReadOnly);
     ImGui::PopItemWidth();
     ImGui::PopID();
 
+    curTimeline()->tableMinPos.x = ImMin(curTimeline()->tableMinPos.x, window->DC.CursorMaxPos.x);
+    curTimeline()->tableMaxPos.x = ImMax(curTimeline()->tableMaxPos.x, window->DC.CursorMaxPos.x);
     return res;
 }
 
@@ -285,6 +292,24 @@ void TimelineEventUnformatted(float t_start, float t_end, const char* text)
         return;
 
     TimelineEventEx(t_start, t_end, text, nullptr);
+}
+
+void TimelineBarrier(float time, unsigned int color)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return;
+
+    const auto* ts = curTimeline();
+
+    if (time >= ts->curMin && time <= ts->curMax) {
+        const float trange  = ts->curMax - ts->curMin;
+        const auto table_bb = ImRect(ts->tableMinPos, ts->tableMaxPos);
+        const float nt      = (time - ts->curMin) / (trange);
+        const float x       = ImLerp(table_bb.Min.x, table_bb.Max.x, nt);
+
+        window->DrawList->AddLine(ImVec2(x, table_bb.Min.y), ImVec2(x, table_bb.Max.y), ImU32(color));
+    }
 }
 
 } // namespace IGGui

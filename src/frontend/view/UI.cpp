@@ -268,6 +268,9 @@ public:
                 case SDLK_F4:
                     ShowProperties = !ShowProperties;
                     break;
+                case SDLK_F8:
+                    Runtime->recordStatistics(!Runtime->isRecordingStatistics());
+                    break;
                 case SDLK_F11:
                     if (io.KeyCtrl)
                         ScreenshotRequest = ScreenshotRequestMode::Full;
@@ -990,6 +993,10 @@ void UI::setTitle(const char* str)
         sstream << " [Continuous]";
         break;
     }
+
+    if (mInternal->Runtime->isRecordingStatistics())
+        sstream << " [Recording]";
+
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
 }
 
@@ -1001,10 +1008,41 @@ UI::InputResult UI::handleInput(CameraProxy& cam)
 static void handleHelp()
 {
     static const std::string Markdown =
-        R"(- *F1* to toggle this help window.
-- *F2* to toggle the quantity window.
-- *F3* to toggle the means window.
-- *F4* to toggle the chart window.
+        R"(- *1..9* number keys to switch between views.
+- *1..9* and *Strg/Ctrl* to save the current view on that slot.
+- *F1* to toggle this help window.
+- *F2* to toggle the control window.
+- *F3* to toggle the interaction lock. 
+- *F4* to toggle to show the property window. 
+  If enabled, no view changing interaction is possible.
+- *F8* to toggle the recording of statistics. 
+  Only available if statistics are enabled.
+- *F11* to save a snapshot of the current rendering. HDR information will be preserved.
+  Use with *Strg/Ctrl* to make a LDR screenshot of the current render including UI and tonemapping.  
+  The image will be saved in the current working directory.
+- *R* to reset to initial view.
+- *P* to pause current rendering. Also implies an interaction lock.
+- *T* to toggle automatic tonemapping.
+- *G* to reset tonemapping properties.
+  Only works if automatic tonemapping is disabled.
+- *F* to increase (or with *Shift* to decrease) tonemapping exposure.
+  Step size can be decreased with *Strg/Ctrl*.
+  Only works if automatic tonemapping is disabled.
+- *V* to increase (or with *Shift* to decrease) tonemapping offset.
+  Step size can be decreased with *Strg/Ctrl*.
+  Only works if automatic tonemapping is disabled.
+- *WASD* or arrow keys to travel through the scene.
+- *Q/E* to rotate the camera around the viewing direction. 
+- *PageUp/PageDown* to pan the camera up and down. 
+- *Notepad +/-* to change the travel speed.
+- *Numpad 1* to switch to front view.
+- *Numpad 3* to switch to side view.
+- *Numpad 7* to switch to top view.
+- *Numpad 9* look behind you.
+- *Numpad 2468* to rotate the camera.
+- Mouse to rotate the camera. 
+  *Shift* will move slower, *Strg/Ctrl* will move faster.
+  Use with *Alt* to enable first person camera behaviour.
 )";
 
     ImGui::MarkdownConfig config;
