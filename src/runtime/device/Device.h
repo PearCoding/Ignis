@@ -66,8 +66,11 @@ public:
     void clearFramebuffer(const std::string& name);
     void clearAllFramebuffer();
 
-    [[nodiscard]] Statistics getStatisticsForHost();
-    [[nodiscard]] Statistics getStatisticsForDevice();
+    void recordFrame(bool enable);
+    [[nodiscard]] bool isRecordingFrame() const;
+
+    [[nodiscard]] Statistics getStatisticsForHost() const;
+    [[nodiscard]] Statistics getStatisticsForDevice() const;
 
     void tonemap(uint32_t*, const TonemapSettings&);
     [[nodiscard]] GlareOutput evaluateGlare(uint32_t*, const GlareSettings&);

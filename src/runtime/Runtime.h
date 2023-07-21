@@ -96,6 +96,14 @@ public:
     /// Return statistical data for the device side. Depending on the target, this might be the same as the host
     [[nodiscard]] Statistics statisticsForDevice() const;
 
+    /// @brief Enable recording of statistics into a profile stream. The stream has a maximum capacity after which the recording will stop.
+    /// Regardless if enabled or not average stats are always gathered.
+    /// @param enable true to enable it. false to disable it.
+    void recordStatistics(bool enable);
+
+    /// @brief Returns true if statistical data is recording into a profile stream.
+    [[nodiscard]] bool isRecordingStatistics() const;
+
     /// Returns the name of the loaded technique
     [[nodiscard]] inline const std::string& technique() const { return mTechniqueName; }
 

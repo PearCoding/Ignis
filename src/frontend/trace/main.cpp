@@ -120,6 +120,9 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
 
+        if (opts.AcquireStats)
+            runtime->recordStatistics(true); // Trace is always on
+
         runtime->mergeParametersFrom(cmd.UserEntries);
 
         const size_t SPI          = runtime->samplesPerIteration();

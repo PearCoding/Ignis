@@ -59,17 +59,17 @@ public:
         mState = State::Ended;
     }
 
-    inline const anydsl::Event& start() const
+    [[nodiscard]] inline const anydsl::Event& start() const
     {
         return mStart;
     }
 
-    inline const anydsl::Event& end() const
+    [[nodiscard]] inline const anydsl::Event& end() const
     {
         return mEnd;
     }
 
-    inline State state() const { return mState; }
+    [[nodiscard]] inline State state() const { return mState; }
 
     /// @brief Will try to acquire elapsed milliseconds between start and end
     inline void finalize()

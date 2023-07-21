@@ -23,6 +23,12 @@ public:
         mSecondHandler.startIteration();
     }
 
+    inline void startFrame()
+    {
+        mFirstHandler.startFrame();
+        mSecondHandler.startFrame();
+    }
+
     inline void beginShaderLaunch(ShaderType type, size_t workload, size_t id)
     {
         mFirstHandler.beginShaderLaunch(type, workload, id);
@@ -61,6 +67,13 @@ public:
 
     inline const StatisticHandler& first() const { return mFirstHandler; }
     inline const StatisticHandler& second() const { return mSecondHandler; }
+
+    inline void enableStreamRecording(bool b = true)
+    {
+        mFirstHandler.enableStreamRecording(b);
+        mSecondHandler.enableStreamRecording(b);
+    }
+    [[nodiscard]] inline bool isStreamRecordingEnabled() const { return mFirstHandler.isStreamRecordingEnabled() || mSecondHandler.isStreamRecordingEnabled(); }
 
 private:
     StatisticHandler mFirstHandler;

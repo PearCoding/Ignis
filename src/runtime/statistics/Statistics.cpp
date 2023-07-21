@@ -13,56 +13,44 @@
 
 namespace IG {
 constexpr size_t InitialStreamSize = 4096;
+constexpr size_t MaxStreamEntries  = InitialStreamSize * 1024;
+
 Statistics::Statistics()
     : mCurrentStream(0)
     , mQuantities()
 {
     std::fill(mQuantities.begin(), mQuantities.end(), 0);
-    for (size_t i = 0; i < mStreams.size(); ++i)
-        mStreams[i].reserve(InitialStreamSize);
+    mStream.reserve(InitialStreamSize);
 }
 
-void Statistics::nextStream()
+void Statistics::record(const Timestamp& timestamp, bool addToStream)
 {
-    consume();
-    mCurrentStream = (mCurrentStream + 1) % mStreams.size();
-    currentStream().clear();
-}
+    if (addToStream && mStream.size() < MaxStreamEntries)
+        mStream.push_back(timestamp);
 
-void Statistics::record(const Timestamp& stats)
-{
-    currentStream().push_back(stats);
-}
-
-void Statistics::consume()
-{
-    // Sort based on the start
-    std::sort(currentStream().begin(), currentStream().end(),
-              [](const Timestamp& a, const Timestamp& b) { return a.offsetStartMS < b.offsetStartMS; });
-
-    // Distribute data to respective places
-    for (auto& timestamp : currentStream()) {
-        if (!timestamp.dirty)
-            continue;
-
-        if (std::holds_alternative<SmallShaderKey>(timestamp.type)) {
-            const auto type = std::get<SmallShaderKey>(timestamp.type);
-
+    std::visit([&](auto&& type) {
+        using T = std::decay_t<decltype(type)>;
+        if constexpr (std::is_same_v<T, SmallShaderKey>) {
             auto& stats = mShaders.try_emplace(type).first->second;
             stats.count += 1;
             stats.elapsedMS += (timestamp.offsetEndMS - timestamp.offsetStartMS);
             stats.workload += timestamp.workload;
             stats.minWorkload = std::min(stats.minWorkload, timestamp.workload);
             stats.maxWorkload = std::max(stats.maxWorkload, timestamp.workload);
-        } else {
-            const auto type = std::get<SectionType>(timestamp.type);
-
+        } else if constexpr (std::is_same_v<T, SectionType>) {
             auto& stats = mSections[(size_t)type];
             stats.count += 1;
             stats.elapsedMS += (timestamp.offsetEndMS - timestamp.offsetStartMS);
         }
-        timestamp.dirty = false;
-    }
+    },
+               timestamp.type);
+}
+
+void Statistics::finalizeStream()
+{
+    // Sort based on the start
+    std::sort(mStream.begin(), mStream.end(),
+              [](const Timestamp& a, const Timestamp& b) { return a.offsetStartMS < b.offsetStartMS; });
 }
 
 void Statistics::add(Quantity quantity, uint64 value)
@@ -100,9 +88,7 @@ void Statistics::add(const Statistics& other)
     for (size_t i = 0; i < other.mSections.size(); ++i)
         mSections[i] += other.mSections[i];
 
-    // Take the largest stream
-    if (lastStream().size() < other.lastStream().size())
-        mStreams[(mCurrentStream - 1) % mStreams.size()] = other.lastStream();
+    mStream.insert(mStream.end(), other.mStream.begin(), other.mStream.end());
 }
 
 Statistics::MeanEntry Statistics::entry(ShaderType type, uint32 sub_id) const
@@ -429,36 +415,37 @@ std::string Statistics::dumpAsJSON(float totalMS) const
          << "\"total_ms\":" << totalMS << "," << std::endl;
 
     // Dump timestamps
-    json << "\"streams\": [" << std::endl;
-    for (size_t i = 0; i < mStreams.size(); ++i) {
-        const auto& stream = mStreams[i];
-        json << "[";
-        for (size_t k = 0; k < stream.size(); ++k) {
-            const auto& timestamp = stream.at(k);
+    json << "\"stream\": [" << std::endl;
+    for (size_t k = 0; k < mStream.size(); ++k) {
+        const auto& timestamp = mStream.at(k);
 
-            int type  = 0;
-            int subid = -1;
-            if (std::holds_alternative<SmallShaderKey>(timestamp.type)) {
-                const auto stype = std::get<SmallShaderKey>(timestamp.type);
-                type             = (int)stype.type();
-                subid            = (int)stype.subID();
-            } else {
-                type = (int)std::get<SectionType>(timestamp.type);
+        json << "{";
+
+        std::visit([&](auto&& type) {
+            using T = std::decay_t<decltype(type)>;
+            if constexpr (std::is_same_v<T, SmallShaderKey>) {
+                json << "\"type\":" << (size_t)type.type() << ","
+                     << "\"sub_id\":" << type.subID() << ",";
+            } else if constexpr (std::is_same_v<T, SectionType>) {
+                json << "\"type\":" << (size_t)type << ","
+                     << "\"sub_id\":-1,";
+            } else if constexpr (std::is_same_v<T, Statistics::Barrier>) {
+                if (type == Statistics::Barrier::Frame)
+                    json << "\"type\":-1,";
+                else
+                    json << "\"type\":-2,";
+
+                json << "\"sub_id\":-1,";
             }
+        },
+                   timestamp.type);
 
-            json << "{"
-                 << "\"type\":" << type << ","
-                 << "\"sub_id\":" << subid << ","
-                 << "\"start_ms\":" << timestamp.offsetStartMS << ","
-                 << "\"end_ms\":" << timestamp.offsetEndMS << ","
-                 << "\"workload\":" << timestamp.workload
-                 << "}";
+        json << "\"start_ms\":" << timestamp.offsetStartMS << ","
+             << "\"end_ms\":" << timestamp.offsetEndMS << ","
+             << "\"workload\":" << timestamp.workload
+             << "}";
 
-            if (k + 1 < stream.size())
-                json << "," << std::endl;
-        }
-        json << "]";
-        if (i + 1 < mStreams.size())
+        if (k + 1 < mStream.size())
             json << "," << std::endl;
     }
     json << "]," << std::endl;
@@ -509,6 +496,22 @@ std::string Statistics::dumpAsJSON(float totalMS) const
     return json.str();
 }
 
+static inline Statistics::TimestampType getTimestampKey(int type, int subId)
+{
+    if (type < 0) {
+        if (type == -1)
+            return Statistics::Barrier::Frame;
+        else
+            return Statistics::Barrier::Iteration;
+    } else {
+        if (subId < 0) {
+            return (SectionType)type;
+        } else {
+            return SmallShaderKey((ShaderType)type, (uint32)subId);
+        }
+    }
+}
+
 constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag | rapidjson::kParseEscapedApostropheFlag;
 bool Statistics::loadFromJSON(const std::string& jsonStr, float* pTotalMS)
 {
@@ -555,61 +558,50 @@ bool Statistics::loadFromJSON(const std::string& jsonStr, float* pTotalMS)
     }
 
     // Get timestamps
-    if (doc.HasMember("streams")) {
-        if (!doc["streams"].IsArray()) {
+    if (doc.HasMember("stream")) {
+        if (!doc["stream"].IsArray()) {
             IG_LOG(L_ERROR) << "JSON: Expected 'streams' element to be an array" << std::endl;
             return false;
         }
 
-        const auto arr = doc["streams"].GetArray();
-        for (size_t i = 0; i < arr.Size(); ++i) {
-            if (i >= mStreams.size()) {
-                IG_LOG(L_WARNING) << "JSON: Got too many streams. Ignoring" << std::endl;
-                break;
-            }
+        const auto stream = doc["stream"].GetArray();
+        mStream.reserve(stream.Size());
 
-            if (!arr[i].IsArray()) {
-                IG_LOG(L_ERROR) << "JSON: Expected 'streams' child elements to be an array" << std::endl;
+        for (size_t k = 0; k < stream.Size(); ++k) {
+            if (!stream[k].IsObject()) {
+                IG_LOG(L_ERROR) << "JSON: Expected timestamp entries to be an object" << std::endl;
                 return false;
             }
 
-            const auto stream = arr[i].GetArray();
-            for (size_t k = 0; k < stream.Size(); ++k) {
-                if (!stream[k].IsObject()) {
-                    IG_LOG(L_ERROR) << "JSON: Expected timestamp entries to be an object" << std::endl;
-                    return false;
-                }
+            const auto timestampObj = stream[k].GetObject();
 
-                const auto timestampObj = stream[k].GetObject();
-
-                int type   = 0;
-                int sub_id = -1;
-                if (const auto it = timestampObj.FindMember("type"); it != timestampObj.MemberEnd()) {
-                    if (it->value.IsInt())
-                        type = it->value.GetInt();
-                }
-                if (const auto it = timestampObj.FindMember("sub_id"); it != timestampObj.MemberEnd()) {
-                    if (it->value.IsInt())
-                        sub_id = it->value.GetInt();
-                }
-
-                Timestamp timestamp = sub_id >= 0 ? Timestamp{ SmallShaderKey((ShaderType)type, (uint32)sub_id) } : Timestamp{ (SectionType)type }; // Default
-
-                if (const auto it = timestampObj.FindMember("start_ms"); it != timestampObj.MemberEnd()) {
-                    if (it->value.IsNumber())
-                        timestamp.offsetStartMS = it->value.GetFloat();
-                }
-                if (const auto it = timestampObj.FindMember("end_ms"); it != timestampObj.MemberEnd()) {
-                    if (it->value.IsNumber())
-                        timestamp.offsetEndMS = it->value.GetFloat();
-                }
-                if (const auto it = timestampObj.FindMember("workload"); it != timestampObj.MemberEnd()) {
-                    if (it->value.IsUint64())
-                        timestamp.workload = it->value.GetUint64();
-                }
-
-                mStreams[i].push_back(std::move(timestamp));
+            int type   = 0;
+            int sub_id = -1;
+            if (const auto it = timestampObj.FindMember("type"); it != timestampObj.MemberEnd()) {
+                if (it->value.IsInt())
+                    type = it->value.GetInt();
             }
+            if (const auto it = timestampObj.FindMember("sub_id"); it != timestampObj.MemberEnd()) {
+                if (it->value.IsInt())
+                    sub_id = it->value.GetInt();
+            }
+
+            Timestamp timestamp = Timestamp{ getTimestampKey(type, sub_id) }; // Default
+
+            if (const auto it = timestampObj.FindMember("start_ms"); it != timestampObj.MemberEnd()) {
+                if (it->value.IsNumber())
+                    timestamp.offsetStartMS = it->value.GetFloat();
+            }
+            if (const auto it = timestampObj.FindMember("end_ms"); it != timestampObj.MemberEnd()) {
+                if (it->value.IsNumber())
+                    timestamp.offsetEndMS = it->value.GetFloat();
+            }
+            if (const auto it = timestampObj.FindMember("workload"); it != timestampObj.MemberEnd()) {
+                if (it->value.IsUint64())
+                    timestamp.workload = it->value.GetUint64();
+            }
+
+            mStream.push_back(std::move(timestamp));
         }
     }
 
@@ -727,6 +719,7 @@ bool Statistics::loadFromJSON(const std::string& jsonStr, float* pTotalMS)
         }
     }
 
+    finalizeStream();
     return true;
 }
 } // namespace IG

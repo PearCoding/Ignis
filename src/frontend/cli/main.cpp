@@ -99,6 +99,9 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    if (opts.AcquireStats)
+        runtime->recordStatistics(true); // CLI is always on
+
     runtime->mergeParametersFrom(cmd.UserEntries);
     timer_loading.stop();
 
@@ -174,6 +177,7 @@ int main(int argc, char** argv)
 
     if (!cmd.StatsFile.empty()) {
         IG_LOG(L_INFO) << "Writing profiling data to " << cmd.StatsFile << std::endl;
+        runtime->statisticsForDevice().finalizeStream();
         std::ofstream out_json(cmd.StatsFile);
         out_json << runtime->statisticsForDevice().dumpAsJSON((float)timer_all.duration_ms);
     }

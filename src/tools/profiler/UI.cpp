@@ -295,7 +295,7 @@ public:
         // Check if there is even data available
         if (!dynamicChildren) {
             bool hasData = false;
-            for (const auto& timestamp : Stats.lastStream()) {
+            for (const auto& timestamp : Stats.stream()) {
                 if (timestamp.type == e.Type) {
                     hasData = true;
                     break;
@@ -306,7 +306,7 @@ public:
         } else {
             const auto stype = std::get<SmallShaderKey>(e.Type);
             bool hasData     = false;
-            for (const auto& timestamp : Stats.lastStream()) {
+            for (const auto& timestamp : Stats.stream()) {
                 if (std::holds_alternative<SmallShaderKey>(timestamp.type) && std::get<SmallShaderKey>(timestamp.type).type() == stype.type()) {
                     hasData = true;
                     break;
@@ -340,7 +340,7 @@ public:
 
         if (!dynamicChildren) {
             ImGui::PushItemWidth(-1);
-            for (const auto& timestamp : Stats.lastStream()) {
+            for (const auto& timestamp : Stats.stream()) {
                 if (timestamp.type == e.Type) {
                     if (std::holds_alternative<SmallShaderKey>(e.Type))
                         IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f | %" PRIu64, timestamp.offsetEndMS - timestamp.offsetStartMS, timestamp.workload);
@@ -434,7 +434,7 @@ UI::UI(const Statistics& stats, float total_ms)
     mInternal->Parent  = this;
 
     mInternal->StreamTotalMS = 0;
-    for (const auto& ts : stats.lastStream())
+    for (const auto& ts : stats.stream())
         mInternal->StreamTotalMS = std::max(mInternal->StreamTotalMS, ts.offsetEndMS - ts.offsetStartMS);
 
     mInternal->Window = SDL_CreateWindow(

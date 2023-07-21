@@ -33,13 +33,15 @@ private:
     using ShaderMap = std::unordered_map<SmallShaderKey, ShaderStats, SmallShaderKeyHash>;
 
 public:
-    using TimestampType = std::variant<SmallShaderKey, SectionType>;
+    enum class Barrier { Iteration,
+                         Frame };
+
+    using TimestampType = std::variant<SmallShaderKey, SectionType, Barrier>;
     struct Timestamp {
         TimestampType type;
-        float offsetStartMS = 0;    // Total start offset from iteration start in milliseconds
-        float offsetEndMS   = 0;    // Total end offset from iteration start in milliseconds
+        float offsetStartMS = 0; // Total start offset from iteration start in milliseconds
+        float offsetEndMS   = 0; // Total end offset from iteration start in milliseconds
         size_t workload     = 0;
-        bool dirty          = true; // If false, it is already consumed
     };
 
     struct MeanEntry {
@@ -57,11 +59,11 @@ public:
         *this = Statistics();
     }
 
-    void nextStream();
+    void record(const Timestamp& timestamp, bool addToStream);
 
-    void record(const Timestamp& timestamp);
-
-    const std::vector<Timestamp>& lastStream() const { return mStreams[(mCurrentStream - 1) % mStreams.size()]; }
+    const std::vector<Timestamp>& stream() const { return mStream; }
+    /// Ensures the stream to be well sorted.
+    void finalizeStream();
 
     void add(Quantity quantity, uint64 value);
     void add(const Statistics& other);
@@ -113,15 +115,11 @@ public:
     [[nodiscard]] std::string dumpAsJSON(float totalMS) const;
     bool loadFromJSON(const std::string& jsonStr, float* pTotalMS);
 
-    /// @brief Consume current stream and fillup the average informations.
-    void consume();
-
     [[nodiscard]] static const char* getShaderTypeName(ShaderType type);
     [[nodiscard]] static const char* getSectionTypeName(SectionType type);
 
 private:
-    std::vector<Timestamp>& currentStream() { return mStreams[mCurrentStream]; }
-    std::array<std::vector<Timestamp>, 2> mStreams;
+    std::vector<Timestamp> mStream;
     size_t mCurrentStream;
 
     ShaderMap mShaders;

@@ -9,6 +9,7 @@ public:
     explicit StatisticHandler(const anydsl::Device& device);
 
     void startIteration();
+    void startFrame();
 
     inline void reset()
     {
@@ -27,19 +28,32 @@ public:
     }
 
     void finalize();
-    inline const Statistics& statistics() const { return mStatistics; }
+
+    [[nodiscard]] inline const Statistics& statistics() const { return mStatistics; }
+
+    inline void enableStreamRecording(bool b = true) { mRecordingStream = b; }
+    [[nodiscard]] inline bool isStreamRecordingEnabled() const { return mRecordingStream; }
 
 private:
     void pushToStream(const SmallShaderKey& key);
     void pushToStream(const SectionType& key);
 
     anydsl::Device mDevice;
-    anydsl::Event mStartIterationEvent;
+
+    bool mStarted;
+    anydsl::Event mStartEvent;
+
+    anydsl::Event mFrameEvent;
+    bool mFrameSubmitted;
+    anydsl::Event mIterationEvent;
+    bool mIterationSubmitted;
 
     std::unordered_map<SmallShaderKey, DeviceTimer, SmallShaderKeyHash> mShaders;
     std::unordered_map<SmallShaderKey, size_t, SmallShaderKeyHash> mShaderPayload;
     std::vector<DeviceTimer> mSections;
 
     Statistics mStatistics;
+
+    bool mRecordingStream;
 };
 } // namespace IG

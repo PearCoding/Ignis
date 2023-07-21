@@ -235,7 +235,7 @@ public:
 
     inline ~Interface() = default;
 
-    inline bool isGPU() { return !mTargetedDevice.isHost(); }
+    inline bool isGPU() const { return !mTargetedDevice.isHost(); }
     inline Target target() const { return mSetupSettings.target; }
     inline size_t framebufferWidth() const { return mFilmWidth; }
     inline size_t framebufferHeight() const { return mFilmHeight; }
@@ -402,17 +402,23 @@ public:
     {
         setupShaderSet(shaderSet);
         updateSettings(settings);
-        mCurrentRenderSettings = settings;
-        mCurrentParameters     = parameterSet;
 
         if (hasStatisticAquisition()) {
             if (isGPU()) {
+                if (mCurrentRenderSettings.frame != settings.frame)
+                    mDeviceData.stats->startFrame();
                 mDeviceData.stats->startIteration();
             } else {
+                if (mCurrentRenderSettings.frame != settings.frame) {
+                    for (const auto& data : mThreadData)
+                        data->stats->startFrame();
+                }
                 for (const auto& data : mThreadData)
                     data->stats->startIteration();
             }
         }
+        mCurrentRenderSettings = settings;
+        mCurrentParameters     = parameterSet;
     }
 
     inline void updateSettings(const Device::RenderSettings& settings)
@@ -492,7 +498,7 @@ public:
         }
     }
 
-    inline CPUData* getThreadData()
+    inline CPUData* getThreadData() const
     {
         IG_ASSERT(tlThreadData != nullptr, "Thread not registered");
         return tlThreadData;
@@ -1530,6 +1536,28 @@ public:
         }
     }
 
+    inline void enableRecordFrame(bool b)
+    {
+        if (!hasStatisticAquisition())
+            return;
+
+        if (isGPU())
+            mDeviceData.stats->enableStreamRecording(b);
+        else
+            getThreadData()->stats->enableStreamRecording(b);
+    }
+
+    inline bool isRecordingFrame() const
+    {
+        if (!hasStatisticAquisition())
+            return false;
+
+        if (isGPU())
+            return mDeviceData.stats->isStreamRecordingEnabled();
+        else
+            return getThreadData()->stats->isStreamRecordingEnabled();
+    }
+
     inline void beginShaderLaunch(ShaderType type, size_t workload, size_t id)
     {
         if (!hasStatisticAquisition())
@@ -1804,14 +1832,28 @@ void Device::clearFramebuffer(const std::string& name)
     sInterface->sync();
 }
 
-Statistics Device::getStatisticsForHost()
+void Device::recordFrame(bool enable)
 {
-    return sInterface->getStatisticsForHost();
+    sInterface->enableRecordFrame(enable);
 }
 
-Statistics Device::getStatisticsForDevice()
+bool Device::isRecordingFrame() const
 {
-    return sInterface->getStatisticsForDevice();
+    return sInterface->isRecordingFrame();
+}
+
+Statistics Device::getStatisticsForHost() const
+{
+    auto s = sInterface->getStatisticsForHost();
+    s.finalizeStream();
+    return s;
+}
+
+Statistics Device::getStatisticsForDevice() const
+{
+    auto s = sInterface->getStatisticsForDevice();
+    s.finalizeStream();
+    return s;
 }
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_settings)

@@ -456,6 +456,16 @@ Statistics Runtime::statisticsForDevice() const
     return mDevice->getStatisticsForDevice();
 }
 
+void Runtime::recordStatistics(bool enable)
+{
+    mDevice->recordFrame(enable);
+}
+
+bool Runtime::isRecordingStatistics() const
+{
+    return mDevice->isRecordingFrame();
+}
+
 static void dumpRegistries(std::ostream& stream, const std::string& name, const ShaderOutput<void*>& shader)
 {
     if (shader.Exec == nullptr || shader.LocalRegistry.empty())
