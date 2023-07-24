@@ -132,7 +132,7 @@ void EndTimeline()
     sTimeline.Current = sTimeline.Current->previous;
 }
 
-bool TimelineHeader(float min, float max, bool editable)
+bool TimelineHeader(float min, float max, const char* single_display_format, bool editable)
 {
     if (!curTimeline()->initHeader) {
         curTimeline()->totalMin = min;
@@ -150,7 +150,7 @@ bool TimelineHeader(float min, float max, bool editable)
 
     ImGui::PushID(-1);
     ImGui::PushItemWidth(-1);
-    bool res = RangeSliderFloat("", &curTimeline()->curMin, &curTimeline()->curMax, curTimeline()->totalMin, curTimeline()->totalMax, nullptr, editable ? 0 : ImGuiSliderFlags_ReadOnly);
+    bool res = RangeSliderFloat("", &curTimeline()->curMin, &curTimeline()->curMax, curTimeline()->totalMin, curTimeline()->totalMax, single_display_format, editable ? 0 : ImGuiSliderFlags_ReadOnly);
     ImGui::PopItemWidth();
     ImGui::PopID();
 

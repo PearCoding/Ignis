@@ -62,8 +62,8 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
             let median   = window(4);
 
             if soft_min >= 0 { global_data.min_atomic_i32(0, bitcast[i32](soft_min)); }
-            if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); }
-            if median   >= 0 { global_data.add_atomic_f32(2, median * median_factor); }
+            if soft_max >= 0 { global_data.max_atomic_i32(1, bitcast[i32](soft_max)); } 
+            global_data.add_atomic_f32(2, math_builtins::fmax(0:f32, median * median_factor));
         }
         stats::end_section(stats::Section::ImageInfoPercentile);
     } else {

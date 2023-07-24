@@ -4,7 +4,7 @@ namespace IGGui {
 bool BeginTimeline(const char* id);
 void EndTimeline();
 
-bool TimelineHeader(float min, float max, bool editable);
+bool TimelineHeader(float min, float max, const char* single_display_format, bool editable);
 
 bool BeginTimelineRow();
 void EndTimelineRow();

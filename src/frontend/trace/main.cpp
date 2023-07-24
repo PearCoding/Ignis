@@ -120,7 +120,7 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
 
-        if (opts.AcquireStats)
+        if (opts.AcquireStats && !cmd.StatsFile.empty())
             runtime->recordStatistics(true); // Trace is always on
 
         runtime->mergeParametersFrom(cmd.UserEntries);

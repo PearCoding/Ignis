@@ -344,9 +344,9 @@ public:
             for (const auto& timestamp : Stats.stream()) {
                 if (timestamp.type == e.Type) {
                     if (std::holds_alternative<SmallShaderKey>(e.Type))
-                        IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f | %" PRIu64, timestamp.offsetEndMS - timestamp.offsetStartMS, timestamp.workload);
+                        IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f ms | %" PRIu64, timestamp.offsetEndMS - timestamp.offsetStartMS, timestamp.workload);
                     else
-                        IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f", timestamp.offsetEndMS - timestamp.offsetStartMS);
+                        IGGui::TimelineEvent(timestamp.offsetStartMS, timestamp.offsetEndMS, "%.3f ms", timestamp.offsetEndMS - timestamp.offsetStartMS);
                 }
             }
             ImGui::PopItemWidth();
@@ -391,7 +391,7 @@ public:
                             const char* column_name = ImGui::TableGetColumnName(column); // Retrieve name passed to TableSetupColumn()
                             ImGui::TableHeader(column_name);
                         } else {
-                            IGGui::TimelineHeader(StreamStartMS, StreamEndMS, true);
+                            IGGui::TimelineHeader(StreamStartMS, StreamEndMS, "%.3f ms", true);
                         }
                         ImGui::PopID();
                     }
