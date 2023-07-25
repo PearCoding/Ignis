@@ -419,6 +419,9 @@ public:
         }
         mCurrentRenderSettings = settings;
         mCurrentParameters     = parameterSet;
+
+        // Ensure the host framebuffer is always dirty each iteration
+        mHostFramebuffer.Dirty = true;
     }
 
     inline void updateSettings(const Device::RenderSettings& settings)
