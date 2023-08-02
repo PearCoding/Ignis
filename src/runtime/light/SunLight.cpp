@@ -3,6 +3,8 @@
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
 
+#include "Logger.h"
+
 namespace IG {
 SunLight::SunLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
@@ -10,6 +12,8 @@ SunLight::SunLight(const std::string& name, const std::shared_ptr<SceneObject>& 
 {
     mDirection = LoaderUtils::getDirection(*light);
     mUseRadius = light->hasProperty("radius");
+
+    IG_LOG(L_DEBUG) << "Light '" << name << "' has direction " << FormatVector(mDirection) << std::endl;
 }
 
 float SunLight::computeFlux(ShadingTree& tree) const
