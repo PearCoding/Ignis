@@ -477,10 +477,8 @@ fn @ppm_handle_before_iteration_camera(device: Device, _iter: i32, photon_count:
     let offset_buffer2      = ppm_get_grid_cache_offset_buffer2(device);
 
     // Reset counter
-    for j in device.parallel_range(0, count_buffer.count/4) {
-        count_buffer.store_int4(j*4,  0, 0, 0, 0);
-        offset_buffer.store_int4(j*4, 0, 0, 0, 0);
-    }
+    count_buffer.fill_i32_host_async( 0, count_buffer.count,  0);
+    offset_buffer.fill_i32_host_async(0, offset_buffer.count, 0);
     device.sync();
 
     // Count with positions
@@ -493,7 +491,7 @@ fn @ppm_handle_before_iteration_camera(device: Device, _iter: i32, photon_count:
 
     // Prefix sum (Hillis & Steele)
     let nlog2 = ilog2(count_buffer.count);
-    for k in unroll(0, nlog2) {
+    for k in safe_unroll(0, nlog2) {
         let src_buffer = if (k % 2) == 0 { offset_buffer  } else { offset_buffer2 };
         let dst_buffer = if (k % 2) == 0 { offset_buffer2 } else { offset_buffer  };
 
