@@ -63,3 +63,10 @@ CPMAddPackage(
     GIT_TAG master
     EXCLUDE_FROM_ALL YES
 )
+
+CPMAddPackage(
+    NAME cli11
+    GITHUB_REPOSITORY CLIUtils/CLI11
+    GIT_TAG main
+    DOWNLOAD_ONLY YES
+)
