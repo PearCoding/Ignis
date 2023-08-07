@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 
     std::unique_ptr<UI> ui;
     try {
-        ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->technique() == "debug");
+        ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->technique() == "debug", cmd.DPI.value_or(-1));
     } catch (...) {
         return EXIT_FAILURE;
     }

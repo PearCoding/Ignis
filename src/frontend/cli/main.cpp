@@ -124,24 +124,53 @@ int main(int argc, char** argv)
 
     std::vector<double> samples_sec;
 
+    auto interval_start  = std::chrono::high_resolution_clock::now();
+    size_t interval_iter = 0;
+
     SectionTimer timer_render;
     while (true) {
         if (!cmd.NoProgress)
             observer.update(runtime->currentSampleCount());
 
-        auto ticks = std::chrono::high_resolution_clock::now();
+        const auto render_start = std::chrono::high_resolution_clock::now();
 
         timer_render.start();
         runtime->step(samples_sec.size() != desired_iter - 1);
         timer_render.stop();
 
-        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
+        const auto render_end = std::chrono::high_resolution_clock::now();
+        const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(render_end - render_start).count();
 
         samples_sec.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
         if (desired_iter > 0 && samples_sec.size() == desired_iter)
             break;
         else if (cmd.RenderTime.has_value() && timer_render.duration_ms / 1000 > cmd.RenderTime.value())
             break;
+
+        switch (cmd.IntermediateSave) {
+        case IntermediateSaveMode::None:
+            break;
+        case IntermediateSaveMode::ImageEveryIteration: {
+            const int elapsed_interval = runtime->currentIterationCount() - interval_iter;
+            if (elapsed_interval >= (int)cmd.IntermediateSaveInterval) {
+                std::stringstream stream;
+                stream << cmd.Output.stem().string() << "_i" << runtime->currentIterationCount() << cmd.Output.extension().string();
+                if (!saveImageOutput(stream.str(), *runtime, nullptr))
+                    IG_LOG(L_ERROR) << "Failed to save intermediate EXR file " << (Path)stream.str() << std::endl;
+                interval_iter = runtime->currentIterationCount();
+            }
+        } break;
+        case IntermediateSaveMode::ImageEverySecond: {
+            const auto elapsed_interval_s = std::chrono::duration_cast<std::chrono::milliseconds>(render_end - interval_start).count() / 1000.0f;
+            if (elapsed_interval_s >= cmd.IntermediateSaveInterval) {
+                std::stringstream stream;
+                stream << cmd.Output.stem().string() << "_" << timer_render.duration_ms << "ms" << cmd.Output.extension().string();
+                if (!saveImageOutput(stream.str(), *runtime, nullptr))
+                    IG_LOG(L_ERROR) << "Failed to save intermediate EXR file " << (Path)stream.str() << std::endl;
+                interval_start = render_end;
+            }
+        } break;
+        }
     }
 
     if (!cmd.NoProgress)

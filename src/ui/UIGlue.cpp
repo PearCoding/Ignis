@@ -90,9 +90,13 @@ void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_
     }
 }
 
+static float sDPI = -1;
 float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
 {
     (void)(renderer);
+
+    if (sDPI > 0)
+        return sDPI;
 
     int window_width{ 0 };
     int window_height{ 0 };
@@ -119,13 +123,16 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
         // In contrary to the warning, this is more reliable on Linux
         float dpi;
         SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), NULL, &dpi, NULL);
-        return dpi / 96;
+        sDPI = dpi / 96;
+        return sDPI;
     }
 #endif
 
     const auto scale_x{
         static_cast<float>(render_output_width) / static_cast<float>(window_width)
     };
+
+    sDPI = scale_x;
 
     return scale_x;
 }
@@ -154,8 +161,10 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
     }
 }
 
-void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking)
+void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dpi)
 {
+    sDPI = dpi;
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
