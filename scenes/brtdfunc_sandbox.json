@@ -1,0 +1,23 @@
+{
+	"externals": [
+        {"filename":"showcase/bsdf/base.json"}
+    ],
+	"parameters": [
+		{ "type": "number", "name": "reflection_scale", "value": 1 },
+		{ "type": "number", "name": "transmission_scale", "value": 1 },
+		{ "type": "color", "name": "specular", "value": 1 },
+		{ "type": "color", "name": "diffuse", "value": 0.5 }
+	],
+	"bsdfs": [
+		{
+			"type": "rad_brtdfunc",
+			"name": "mat-Sphere", 
+			"reflection_specular":      "specular * reflection_scale",
+			"transmission_specular":    "specular * transmission_scale",
+			"direct_diffuse":           0,
+			"reflection_front_diffuse": "diffuse",
+			"reflection_back_diffuse":  "diffuse",
+			"transmission_diffuse":     0
+		}
+	]
+}

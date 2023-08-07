@@ -18,7 +18,7 @@ enum class ToneMappingMethod {
 class Runtime;
 class UI {
 public:
-    UI(SPPMode sppmode, Runtime* runtime, bool showDebug);
+    UI(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi);
     ~UI();
 
     void setTitle(const char* str);

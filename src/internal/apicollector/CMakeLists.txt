@@ -1,9 +1,7 @@
-set(SRC 
-    main.cpp
-)
-  
-add_executable(ig_api_collector ${SRC})
+add_executable(ig_api_collector main.cpp)
 target_link_libraries(ig_api_collector PUBLIC std::filesystem)
 target_compile_definitions(ig_api_collector PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>")
 target_compile_features(ig_api_collector PUBLIC cxx_std_17)
+add_lto(ig_api_collector)
 add_checks(ig_api_collector)
+add_linker_options(ig_api_collector)

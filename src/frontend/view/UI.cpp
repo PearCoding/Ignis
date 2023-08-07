@@ -902,7 +902,7 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
+UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi)
     : mSPPMode(sppmode)
     , mDebugMode(DebugMode::Normal)
     , mInternal(std::make_unique<UIInternal>())
@@ -945,7 +945,7 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     if (!mInternal->setupTextureBuffer(mInternal->Width, mInternal->Height))
         throw std::runtime_error("Could not setup UI");
 
-    IGGui::setup(mInternal->Window, mInternal->Renderer, false);
+    IGGui::setup(mInternal->Window, mInternal->Renderer, false, dpi);
 
     mInternal->PoseManager.load(POSE_FILE);
 

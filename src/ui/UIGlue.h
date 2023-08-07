@@ -7,7 +7,7 @@
 #include "implot.h"
 
 namespace IGGui {
-void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking);
+void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dpi = -1);
 void shutdown();
 void notifyResize(SDL_Window* window, SDL_Renderer* renderer);
 void newFrame();

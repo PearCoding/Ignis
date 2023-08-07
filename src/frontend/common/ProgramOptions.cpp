@@ -9,6 +9,7 @@ namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
 static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuous", SPPMode::Continuous } };
 static const std::map<std::string, RuntimeOptions::SpecializationMode> SpecializationModeMap{ { "default", RuntimeOptions::SpecializationMode::Default }, { "force", RuntimeOptions::SpecializationMode::Force }, { "disable", RuntimeOptions::SpecializationMode::Disable } };
+static const std::map<std::string, IntermediateSaveMode> ProgressSaveModeMap{ { "none", IntermediateSaveMode::None }, { "iteration", IntermediateSaveMode::ImageEveryIteration }, { "seconds", IntermediateSaveMode::ImageEverySecond } };
 
 class MyTransformer : public CLI::Validator {
 public:
@@ -169,6 +170,11 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     if (type == ApplicationType::CLI)
         app.add_option("--time", RenderTime, "Instead of spp, specify the maximum time in seconds to render")->excludes("--spp");
 
+    if (type == ApplicationType::CLI) {
+        app.add_option("--intermediate-mode", IntermediateSave, "Specifiy the way intermediate images should be handled")->transform(MyTransformer(ProgressSaveModeMap, CLI::ignore_case));
+        app.add_option("--intermediate-interval", IntermediateSaveInterval, "Depending on the progress mode this will specify the interval in iterations or seconds");
+    }
+
     app.add_option("--seed", Seed, "Seed for the random generators. Depending on the technique this will enforce reproducibility");
 
     app.add_flag("--stats", AcquireStats, "Acquire useful stats alongside rendering. Will be dumped at the end of the rendering session");
@@ -209,6 +215,10 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_option("-o,--output", Output, "Write radiance for each ray into file instead of standard output");
     } else {
         app.add_option("-o,--output", Output, "Writes the output image to a file");
+    }
+
+    if (type == ApplicationType::View) {
+        app.add_option("--dpi", DPI, "Optional scaling factor for the UI. If not set, it will be acquired automatically");
     }
 
     // Add user entries

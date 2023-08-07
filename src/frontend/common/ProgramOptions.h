@@ -16,6 +16,12 @@ enum class ApplicationType {
     Trace
 };
 
+enum class IntermediateSaveMode {
+    None,
+    ImageEveryIteration,
+    ImageEverySecond
+};
+
 struct RuntimeOptions;
 class ProgramOptions {
 public:
@@ -89,7 +95,12 @@ public:
 
     Path ScriptDir;
 
+    IntermediateSaveMode IntermediateSave = IntermediateSaveMode::None; // Only viable for CLI
+    float IntermediateSaveInterval        = 1;                          // Depending on option, this represents seconds or iterations
+
     ParameterSet UserEntries;
+
+    std::optional<float> DPI; // Only used for UI
 
     void populate(RuntimeOptions& options) const;
 };
