@@ -82,6 +82,19 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
     }
 }
 
+void Image::applyExposureOffset(float exposure, float offset)
+{
+    tbb::parallel_for(
+        tbb::blocked_range<size_t>(0, width * height),
+        [&](tbb::blocked_range<size_t> r) {
+            for (size_t k = r.begin(); k < r.end(); ++k) {
+                auto* pix = &pixels[4 * k];
+                for (int i = 0; i < 3; ++i)
+                    pix[i] = exposure * pix[i] + offset;
+            }
+        });
+}
+
 void Image::flipY()
 {
     const size_t slice = channels * width;
