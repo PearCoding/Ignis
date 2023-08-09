@@ -154,7 +154,8 @@ int main(int argc, char** argv)
             const int elapsed_interval = runtime->currentIterationCount() - interval_iter;
             if (elapsed_interval >= (int)cmd.IntermediateSaveInterval) {
                 std::stringstream stream;
-                stream << cmd.Output.stem().string() << "_i" << runtime->currentIterationCount() << cmd.Output.extension().string();
+                auto output = cmd.Output;
+                stream << output.replace_extension().string() << "_" << runtime->currentSampleCount() << "spp" << cmd.Output.extension().string();
                 if (!saveImageOutput(stream.str(), *runtime, nullptr))
                     IG_LOG(L_ERROR) << "Failed to save intermediate EXR file " << (Path)stream.str() << std::endl;
                 interval_iter = runtime->currentIterationCount();
@@ -164,7 +165,8 @@ int main(int argc, char** argv)
             const auto elapsed_interval_s = std::chrono::duration_cast<std::chrono::milliseconds>(render_end - interval_start).count() / 1000.0f;
             if (elapsed_interval_s >= cmd.IntermediateSaveInterval) {
                 std::stringstream stream;
-                stream << cmd.Output.stem().string() << "_" << timer_render.duration_ms << "ms" << cmd.Output.extension().string();
+                auto output = cmd.Output;
+                stream << output.replace_extension().string() << "_" << timer_render.duration_ms << "ms" << cmd.Output.extension().string();
                 if (!saveImageOutput(stream.str(), *runtime, nullptr))
                     IG_LOG(L_ERROR) << "Failed to save intermediate EXR file " << (Path)stream.str() << std::endl;
                 interval_start = render_end;
