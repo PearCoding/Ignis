@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 
 
@@ -7,7 +6,7 @@
 
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <meta property="article:modified_time" content="2023-01-03T15:39:46+00:00" />
     <title>Getting Started &#8212; Ignis  documentation</title>
@@ -30,24 +29,24 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
-    <link rel="stylesheet" type="text/css" href="../../_static/css/lightbox.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=b7c27e88" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/lightbox.css?v=1a4ee0e0" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
 
-    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-    <script src="../../_static/doctools.js"></script>
-    <script src="../../_static/sphinx_highlight.js"></script>
-    <script src="../../_static/clipboard.min.js"></script>
-    <script src="../../_static/copybutton.js"></script>
-    <script src="../../_static/design-tabs.js"></script>
+    <script src="../../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/getting_started/index';</script>
-    <script src="../../_static/js/lightbox.js"></script>
+    <script src="../../_static/js/lightbox.js?v=ef67d018"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Building" href="building.html" />
@@ -377,16 +376,16 @@ document.write(`
                 <article class="bd-article" role="main">
                   
   <section id="getting-started">
-<h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this heading">#</a></h1>
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">#</a></h1>
 <p>This section gives an overview of the Ignis rendering framework. Select one of the left sections to learn more.</p>
 <div class="toctree-wrapper compound">
 </div>
 <section id="frontends">
-<h2>Frontends<a class="headerlink" href="#frontends" title="Permalink to this heading">#</a></h2>
+<h2>Frontends<a class="headerlink" href="#frontends" title="Link to this heading">#</a></h2>
 <p>The frontends of the raytracer communicate with the underlying runtime.
 Currently, four frontends are available:</p>
 <section id="igview">
-<h3><code class="docutils literal notranslate"><span class="pre">igview</span></code><a class="headerlink" href="#igview" title="Permalink to this heading">#</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">igview</span></code><a class="headerlink" href="#igview" title="Link to this heading">#</a></h3>
 <p>This is the standard UI interface which displays the scene getting progressively rendered.</p>
 <p>This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position.
 Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms.
@@ -395,19 +394,19 @@ Switching to the UI-less frontend <code class="docutils literal notranslate"><sp
 Disable this frontend by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_VIEWER</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
 </section>
 <section id="igcli">
-<h3><code class="docutils literal notranslate"><span class="pre">igcli</span></code><a class="headerlink" href="#igcli" title="Permalink to this heading">#</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">igcli</span></code><a class="headerlink" href="#igcli" title="Link to this heading">#</a></h3>
 <p>The commandline only frontend is the same as <code class="docutils literal notranslate"><span class="pre">igview</span></code> but without any UI specific features and no interactive controls.</p>
 <p>In contrary to <code class="docutils literal notranslate"><span class="pre">igview</span></code>, <code class="docutils literal notranslate"><span class="pre">igcli</span></code> requires a maximum iteration or time budget to be specified by the user.
 Progressive rendering is not that useful without a preview.
 (We might add progressive rendering back, but I need a convincing argument for that…)</p>
 </section>
 <section id="igtrace">
-<h3><code class="docutils literal notranslate"><span class="pre">igtrace</span></code><a class="headerlink" href="#igtrace" title="Permalink to this heading">#</a></h3>
+<h3><code class="docutils literal notranslate"><span class="pre">igtrace</span></code><a class="headerlink" href="#igtrace" title="Link to this heading">#</a></h3>
 <p>This commandline only frontend ignores camera specific information and expects a list of rays from the user.
 It returns the contribution back to the user for each ray initially specified.</p>
 </section>
 <section id="python-api">
-<h3>Python API<a class="headerlink" href="#python-api" title="Permalink to this heading">#</a></h3>
+<h3>Python API<a class="headerlink" href="#python-api" title="Link to this heading">#</a></h3>
 <p>This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more.</p>
 <p>The API is only available if Python3 was found in the system.
 You might disable the API by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_PYTHON_API</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
@@ -415,14 +414,14 @@ You might disable the API by setting the CMake option <code class="docutils lite
 </section>
 </section>
 <section id="running">
-<h2>Running<a class="headerlink" href="#running" title="Permalink to this heading">#</a></h2>
+<h2>Running<a class="headerlink" href="#running" title="Link to this heading">#</a></h2>
 <p>Run a frontend of your choice like this:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>igview<span class="w"> </span>scene/diamond_scene.json
 </pre></div>
 </div>
 </section>
 <section id="tiny-tools">
-<h2>Tiny tools<a class="headerlink" href="#tiny-tools" title="Permalink to this heading">#</a></h2>
+<h2>Tiny tools<a class="headerlink" href="#tiny-tools" title="Link to this heading">#</a></h2>
 <p>Two tiny tools <code class="docutils literal notranslate"><span class="pre">exr2hdr</span></code> and <code class="docutils literal notranslate"><span class="pre">hdr2exr</span></code> are available to convert between the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa.</p>
 <p>This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option <code class="docutils literal notranslate"><span class="pre">IG_WITH_TOOLS</span></code> to <code class="docutils literal notranslate"><span class="pre">Off</span></code>.</p>
 <p>Actually, the tool might convert from any format the <code class="docutils literal notranslate"><span class="pre">stb_image</span></code> framework supports to the second format.</p>
@@ -523,7 +522,7 @@ You might disable the API by setting the CMake option <code class="docutils lite
       
         <div class="footer-item">
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.2.1.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.5.
     <br/>
   </p>
 </div>
