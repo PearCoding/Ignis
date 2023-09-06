@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <iostream>
 
 #include "generated_test_interface.h"
