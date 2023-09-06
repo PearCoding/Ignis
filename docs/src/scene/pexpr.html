@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta property="article:modified_time" content="2023-01-03T15:39:46+00:00" />
+    <meta property="article:modified_time" content="2023-09-05T11:22:12+00:00" />
     <title>PExpr &#8212; Ignis  documentation</title>
   
   
@@ -523,8 +523,8 @@ Parameters can be defined as follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">avg(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">avg(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">avg(vec4)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">bump(vec3,</span> <span class="pre">vec3,</span> <span class="pre">vec3,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">blackbody(num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bump(vec3,</span> <span class="pre">vec3,</span> <span class="pre">vec3,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cbrt(num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cbrt(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec2</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cbrt(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
@@ -547,9 +547,13 @@ Parameters can be defined as follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">cellnoise(vec3,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cfbm(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cfbm(vec2,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cfbm(vec2,</span> <span class="pre">num,</span> <span class="pre">int,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cfbm(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cfbm(vec3,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cfbm(vec3,</span> <span class="pre">num,</span> <span class="pre">int,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">check_ray_flag(str)</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">checkerboard(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">checkerboard(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">checkerboard(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">checkerboard(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">clamp(num,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">clamp(vec2,</span> <span class="pre">vec2,</span> <span class="pre">vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec2</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">clamp(vec3,</span> <span class="pre">vec3,</span> <span class="pre">vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
@@ -577,8 +581,17 @@ Parameters can be defined as follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">cpnoise(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cpnoise(vec3,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cross(vec3,</span> <span class="pre">vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(num,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec2,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec2,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec2,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec3,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec3,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cvoronoi(vec3,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">deg(num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">deg(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec2</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">deg(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
@@ -600,6 +613,10 @@ Parameters can be defined as follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">exp2(vec4)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fbm(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fbm(vec2,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fbm(vec2,</span> <span class="pre">num,</span> <span class="pre">int,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fbm(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fbm(vec3,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fbm(vec3,</span> <span class="pre">num,</span> <span class="pre">int,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">floor(num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">floor(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec2</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">floor(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
@@ -614,9 +631,13 @@ Parameters can be defined as follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">fract(vec4)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fresnel_conductor(num,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fresnel_dielectric(num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gabor(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gabor(vec2,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gabor(vec2,</span> <span class="pre">num,</span> <span class="pre">int,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">hash(num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">hsltorgb(vec4)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">hsvtorgb(vec4)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">int(num)</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">length(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">length(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">length(vec4)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
@@ -667,6 +688,7 @@ Parameters can be defined as follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">norm(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec2</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">norm(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">norm(vec4)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num(int)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">perlin(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">perlin(vec2,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pingpong(num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
@@ -762,8 +784,17 @@ Parameters can be defined as follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">vec3(num)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vec4(num,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vec4(num)</span> <span class="pre">-&gt;</span> <span class="pre">vec4</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(num,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec2)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec2,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec2,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec2,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec3)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec3,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec3,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">voronoi(vec3,</span> <span class="pre">num,</span> <span class="pre">num,</span> <span class="pre">str,</span> <span class="pre">str,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">wrap(num,</span> <span class="pre">num,</span> <span class="pre">num)</span> <span class="pre">-&gt;</span> <span class="pre">num</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">wrap(vec2,</span> <span class="pre">vec2,</span> <span class="pre">vec2)</span> <span class="pre">-&gt;</span> <span class="pre">vec2</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">wrap(vec3,</span> <span class="pre">vec3,</span> <span class="pre">vec3)</span> <span class="pre">-&gt;</span> <span class="pre">vec3</span></code></p></li>
@@ -835,7 +866,7 @@ The above defined function names have precedence over texture names, if the sign
           </div>
           <footer class="bd-footer-content">
             <p class="last-updated">
-  Last updated on Jan 03, 2023.
+  Last updated on Sep 05, 2023.
   <br/>
 </p>
           </footer>
