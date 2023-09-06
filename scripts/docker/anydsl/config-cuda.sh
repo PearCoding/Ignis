@@ -21,8 +21,8 @@
 : ${LLVM_TARGETS:="NVPTX;X86"}
 : ${LLVM_GIT:=false}
 : ${LLVM_GIT_REPO:=llvm}
-: ${LLVM_GIT_BRANCH:=release/14.x}
-: ${LLVM_SRC_VERSION:=14.0.6}
+: ${LLVM_GIT_BRANCH:=release/16.x}
+: ${LLVM_SRC_VERSION:=16.0.6}
 
 # set this to false if you don't want to build LLVM with RV support
 : ${RV:=true}
@@ -40,7 +40,7 @@
 : ${BRANCH_ARTIC:=master}
 : ${BRANCH_IMPALA:=master}
 : ${BRANCH_THORIN:=master}
-: ${BRANCH_RV:=release/14.x}
+: ${BRANCH_RV:=release/16.x}
 : ${BRANCH_RUNTIME:=master}
 : ${BRANCH_STINCILLA:=main}
 : ${BRANCH_RODENT:=master}
