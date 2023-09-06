@@ -955,7 +955,7 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
     loadTextures(*scene, model, directory, cache_dir);
 
     tinygltf::Material defaultMaterial;
-    tinygltf::ParseMaterial(&defaultMaterial, nullptr, {}, false);
+    tinygltf::ParseMaterial(&defaultMaterial, nullptr, nullptr, {}, false, tinygltf::ParseStrictness::PERMISSIVE);
     model.materials.push_back(defaultMaterial);
 
     loadMaterials(*scene, model, directory);

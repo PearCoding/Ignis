@@ -684,22 +684,22 @@ Radiance BRTDfunc (:monosp:`rad_brtdfunc`)
     - :code:`0`
     - Yes
     - Tint of the specular transmission lobe.
-	* - direct_diffuse
+  * - direct_diffuse
     - |color|
     - :code:`0`
     - Yes
     - Tint of the direct diffuse lobe. In contrary to Radiance, Ignis has no special handling of direct light connections (NEE) inside materials. The lobe is simply added to the diffuse lobes below.
-	* - reflection_front_diffuse
+  * - reflection_front_diffuse
     - |color|
     - :code:`0`
     - Yes
     - Tint of the front-side diffuse lobe.
-	*	- reflection_back_diffuse
+  * - reflection_back_diffuse
     - |color|
     - :code:`0`
     - Yes
     - Tint of the back-side diffuse lobe.
-	* -	transmission_diffuse
+  * -	transmission_diffuse
     - |color|
     - :code:`0`
     - Yes
@@ -741,12 +741,12 @@ Angular-dependent optical properties of low-e and solar control windows—: Simu
     - :code:`0`
     - Yes
     - Tint of the front-side diffuse lobe.
-	* - reflection_back_diffuse
+  * - reflection_back_diffuse
     - |color|
     - :code:`0`
     - Yes
     - Tint of the back-side diffuse lobe.
-	* - transmission_diffuse
+  * - transmission_diffuse
     - |color|
     - :code:`0`
     - Yes

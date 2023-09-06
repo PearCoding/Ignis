@@ -1,8 +1,8 @@
-FROM gcc:12
+FROM gcc:13-bookworm
 
 LABEL maintainer="Ömercan Yazici" \
       description="Anydsl Meta package without GPU support" \
-      version="0.1.0"
+      version="0.1.1"
 
 ENV DEBIAN_FRONTEND noninteractive
 

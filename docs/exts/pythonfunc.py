@@ -41,7 +41,7 @@ def pythonfunc_role(role, rawtext, text, lineno, inliner, options={}, content=[]
         ref_node = node
         if value in matches:
             ref_node = nodes.reference(
-                f":ref:`{value}`", '', refuri=f"#{value}")
+                f":ref:`{value}`", '', refid=f"#{value}")
             node += ref_node
 
         if classes:
