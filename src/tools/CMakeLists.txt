@@ -8,3 +8,6 @@ add_subdirectory(exr2hdr)
 add_subdirectory(exr2jpg)
 add_subdirectory(exr2png)
 add_subdirectory(hdr2exr)
+
+add_subdirectory(ply2obj)
+add_subdirectory(obj2ply)

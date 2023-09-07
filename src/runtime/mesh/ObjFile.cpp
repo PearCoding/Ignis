@@ -207,4 +207,60 @@ TriMesh load(const Path& path, const std::optional<size_t>& shape_index)
 
     return tri_mesh;
 }
+
+bool save(const TriMesh& mesh, const Path& path)
+{
+    if (mesh.vertices.empty() || mesh.faceCount() == 0)
+        return false;
+
+    const bool hasNormals = mesh.normals.size() == mesh.vertices.size();
+    const bool hasTexture = mesh.texcoords.size() == mesh.vertices.size();
+
+    std::ofstream out(path.generic_u8string());
+
+    out << "# Exported with Ignis" << std::endl;
+
+    for (const auto& v : mesh.vertices)
+        out << "v " << v.x() << " " << v.y() << " " << v.z() << std::endl;
+
+    out << std::endl;
+
+    if (hasNormals) {
+        for (const auto& v : mesh.normals)
+            out << "vn " << v.x() << " " << v.y() << " " << v.z() << std::endl;
+
+        out << std::endl;
+    }
+
+    if (hasTexture) {
+        for (const auto& v : mesh.texcoords)
+            out << "vt " << v.x() << " " << v.y() << std::endl;
+
+        out << std::endl;
+    }
+
+    // Indices
+    for (size_t i = 0; i < mesh.faceCount(); ++i) {
+        const int i0 = mesh.indices.at(i * 4 + 0) + 1;
+        const int i1 = mesh.indices.at(i * 4 + 1) + 1;
+        const int i2 = mesh.indices.at(i * 4 + 2) + 1;
+
+        if (!hasNormals && !hasTexture)
+            out << "f " << i0 << " " << i1 << " " << i2 << std::endl;
+        else if (hasNormals && !hasTexture)
+            out << "f " << i0 << "//" << i0
+                << " " << i1 << "//" << i1
+                << " " << i2 << "//" << i2 << std::endl;
+        else if (!hasNormals && hasTexture)
+            out << "f " << i0 << "/" << i0
+                << " " << i1 << "/" << i1
+                << " " << i2 << "/" << i2 << std::endl;
+        else
+            out << "f " << i0 << "/" << i0 << "/" << i0
+                << " " << i1 << "/" << i1 << "/" << i1
+                << " " << i2 << "/" << i2 << "/" << i2 << std::endl;
+    }
+
+    return false;
+}
 } // namespace IG::obj
