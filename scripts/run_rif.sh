@@ -25,6 +25,7 @@ fi
 
 # Get number of available threads on the system
 thread_count=$(nproc --all 2>/dev/null || echo 8)
+# thread_count=$(( thread_count > 16 ? 16 : thread_count ))
 
 # Extract all the scenes required for oconv
 SCENES=""
@@ -98,17 +99,18 @@ AD=800
 LW=$(awk "BEGIN {print 1/$AD}")
 DEF=$(cat "$SCRIPT_DIR/rtrace_default.txt")
 
-#ARGS="$DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -x $WIDTH -y $HEIGHT $EXTRA_ARGS"
+RPARGS="$DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -x $WIDTH -y $HEIGHT $EXTRA_ARGS"
 VWARGS="-x $WIDTH -y $HEIGHT"
-TRARGS="-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ld -ov -ffc -h+ $EXTRA_ARGS"
+TRARGS="-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ov -ffc -h+ $EXTRA_ARGS"
 
+echo $thread_count
 start=`date +%s.%N`
 
 oconv $SCENES > $TMP_OCT || exit 1
 
 if [[ ${#VIEWS[@]} == 1 ]]; then
     echo "Rendering $OUTPUT.exr"
-    #rpict ${VIEWS[0]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
+    #rpict ${VIEWS[0]} $RPARGS $TMP_OCT > $TMP_HDR || exit 1
     vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT >$TMP_HDR || exit 1
     hdr2exr "$TMP_HDR" "$OUTPUT.exr"
     echo "Generated output $OUTPUT.exr"
@@ -116,7 +118,7 @@ else
     for i in ${!VIEWS[@]}; do
         view_output="${OUTPUT%%.*}_$i" # Expand given output filename
         echo "[$i] Rendering $view_output.exr"
-        #rpict ${VIEWS[$i]} $ARGS $TMP_OCT > $TMP_HDR || exit 1
+        #rpict ${VIEWS[$i]} $RPARGS $TMP_OCT > $TMP_HDR || exit 1
         vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT >$TMP_HDR || exit 1
         hdr2exr "$TMP_HDR" "$view_output.exr"
         echo "Generated output $view_output.exr"
