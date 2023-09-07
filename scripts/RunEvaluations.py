@@ -5,7 +5,6 @@ import numpy as np
 import argparse
 import simpleimageio as sio
 import figuregen
-import numpy as np
 import matplotlib.cm as cm
 
 

@@ -102,6 +102,8 @@ DEF=$(cat "$SCRIPT_DIR/rtrace_default.txt")
 VWARGS="-x $WIDTH -y $HEIGHT"
 TRARGS="-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ld -ov -ffc -h+ $EXTRA_ARGS"
 
+start=`date +%s.%N`
+
 oconv $SCENES > $TMP_OCT || exit 1
 
 if [[ ${#VIEWS[@]} == 1 ]]; then
@@ -120,3 +122,8 @@ else
         echo "Generated output $view_output.exr"
     done
 fi
+
+end=`date +%s.%N`
+dur=$( echo "$end - $start" | bc -l )
+
+echo "Took ${dur} seconds"

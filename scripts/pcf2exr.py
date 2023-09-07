@@ -55,4 +55,4 @@ if __name__ == "__main__":
         data = data.reshape((height, width, 3)) # HxWxC
         data = np.flip(data, axis=2) # BGR -> RGB
 
-        sio.write(output_path, data)
+        sio.write(str(output_path), data)
