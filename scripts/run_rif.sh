@@ -12,7 +12,6 @@ source $SCRIPT_DIR/../source.sh --
 
 # We do not cache temporary files
 TMP_OCT=$(mktemp).oct
-TMP_HDR=$(mktemp).hdr
 
 INPUT="$1"
 input_file=$(cat "$INPUT")
@@ -103,24 +102,23 @@ RPARGS="$DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -x $WIDTH -y $HEIGHT $EXTRA_A
 VWARGS="-x $WIDTH -y $HEIGHT"
 TRARGS="-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ov -ffc -h+ $EXTRA_ARGS"
 
-echo $thread_count
 start=`date +%s.%N`
 
 oconv $SCENES > $TMP_OCT || exit 1
 
 if [[ ${#VIEWS[@]} == 1 ]]; then
     echo "Rendering $OUTPUT.exr"
-    #rpict ${VIEWS[0]} $RPARGS $TMP_OCT > $TMP_HDR || exit 1
-    vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT >$TMP_HDR || exit 1
-    hdr2exr "$TMP_HDR" "$OUTPUT.exr"
+    #rpict ${VIEWS[0]} $RPARGS $TMP_OCT > $OUTPUT.hdr || exit 1
+    vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT >$OUTPUT.hdr || exit 1
+    hdr2exr "$OUTPUT.hdr" "$OUTPUT.exr"
     echo "Generated output $OUTPUT.exr"
 else
     for i in ${!VIEWS[@]}; do
         view_output="${OUTPUT%%.*}_$i" # Expand given output filename
         echo "[$i] Rendering $view_output.exr"
-        #rpict ${VIEWS[$i]} $RPARGS $TMP_OCT > $TMP_HDR || exit 1
-        vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT >$TMP_HDR || exit 1
-        hdr2exr "$TMP_HDR" "$view_output.exr"
+        #rpict ${VIEWS[$i]} $RPARGS $TMP_OCT > $OUTPUT.hdr || exit 1
+        vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT >$OUTPUT.hdr || exit 1
+        hdr2exr "$OUTPUT.hdr" "$view_output.exr"
         echo "Generated output $view_output.exr"
     done
 fi

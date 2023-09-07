@@ -137,8 +137,10 @@ bool ImageIO::save(const Path& path, size_t width, size_t height,
         attributes.emplace_back(makeIntAttribute("igIteration", (int)metaData.Iteration.value()));
     if (metaData.Frame.has_value())
         attributes.emplace_back(makeIntAttribute("igFrame", (int)metaData.Frame.value()));
+    if (metaData.RendertimeInMilliseconds.has_value())
+        attributes.emplace_back(makeIntAttribute("igRendertimeMS", (int)metaData.RendertimeInMilliseconds.value()));
     if (metaData.RendertimeInSeconds.has_value())
-        attributes.emplace_back(makeIntAttribute("igRendertime", (int)metaData.RendertimeInSeconds.value()));
+        attributes.emplace_back(makeIntAttribute("igRendertimeS", (int)metaData.RendertimeInSeconds.value()));
 
     if (!attributes.empty()) {
         header.custom_attributes     = attributes.data();
