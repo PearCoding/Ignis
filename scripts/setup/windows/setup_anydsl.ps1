@@ -1,9 +1,10 @@
 $CURRENT = Get-Location
 
 # Some predefined locations
-$ZLIB = "$DEPS_ROOT\zlib"
-$CUDA = $Env:CUDA_PATH
+$CUDA = $(Get-ChildItem env: | Where-Object {$_.Name -like "CUDA_PATH*"}).Value
 $CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/")
+
+$ZLIB = "$DEPS_ROOT\zlib"
 $ZLIB_LIBRARY = "$ZLIB\lib\zlib.lib".Replace("\", "/")
 $ZLIB_INCLUDE_DIR = "$ZLIB\include".Replace("\", "/")
 
@@ -13,7 +14,7 @@ If (!(Test-Path -Path "$ZLIB")) {
 }
 
 If ([string]::IsNullOrEmpty($CUDA) -or !(Test-Path -Path "$CUDA")) {
-    Write-Warning 'The CUDA directory is not valid. Proceeding will install without NVidia GPU support'
+    Write-Warning 'The CUDA directory is not valid. Proceeding will install without Nvidia GPU support'
     $HasCuda = $false
 }
 Else {
@@ -63,8 +64,16 @@ $AnyDSL_Args += $Config.AnyDSL_CMAKE_EXTRA_ARGS
 
 & $CMAKE_BIN $AnyDSL_Args ..
 
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to configure AnyDSL"
+}
+
 # Build it
 & $CMAKE_BIN --build . --config "$BUILD_TYPE" --target pull-thorin pull-artic pull-runtime runtime runtime_jit_artic artic
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to build AnyDSL"
+}
 
 If (Test-Path -Path "bin\$BUILD_TYPE\") {
     $ANYDSL_BIN_PATH = "bin\$BUILD_TYPE\"
@@ -75,14 +84,14 @@ Else {
     $LLVM_BIN_PATH = "_deps\llvm-build\bin\"
 }
 
-# Copy necessary stuff
+# Copy necessary stuff to get artic.exe running
 $ZLIB_DLL = "$ZLIB\bin\zlib.dll"
 If (!(Test-Path -Path "$ZLIB_DLL")) {
     Write-Warning 'The zlib dll could not be copied. You might have to copy it yourself'
 }
 Else {
-    cp $ZLIB_DLL "$ANYDSL_BIN_PATH" > $null
-    cp $ZLIB_DLL "$LLVM_BIN_PATH" > $null
+    cp "$ZLIB_DLL" "$ANYDSL_BIN_PATH" > $null
+    cp "$ZLIB_DLL" "$LLVM_BIN_PATH" > $null
 }
 
 If ($HasCuda) {
