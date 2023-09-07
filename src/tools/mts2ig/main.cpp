@@ -1098,7 +1098,8 @@ int main(int argc, char** argv)
                 return EXIT_SUCCESS;
             } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lookup")) {
                 check_arg(argc, argv, i, 1);
-                loader.addLookupDir(argv[i]);
+                loader.addLookupDir(argv[i + 1]);
+                i += 1;
             } else if (!strcmp(argv[i], "-D") || !strcmp(argv[i], "--define")) {
                 check_arg(argc, argv, i, 2);
                 loader.addArgument(argv[i + 1], argv[i + 2]);
