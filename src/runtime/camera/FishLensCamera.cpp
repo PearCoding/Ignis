@@ -15,6 +15,14 @@ FishLensCamera::FishLensCamera(SceneObject& camera)
 
     if (mFarClip < mNearClip)
         std::swap(mNearClip, mFarClip);
+
+    const std::string mode = camera.property("mode").getString("circular");
+    if (mode == "cropped")
+        mMode = Mode::Cropped;
+    else if (mode == "full")
+        mMode = Mode::Full;
+    else
+        mMode = Mode::Circular;
 }
 
 void FishLensCamera::serialize(const SerializationInput& input) const
@@ -27,7 +35,6 @@ void FishLensCamera::serialize(const SerializationInput& input) const
     case Mode::Circular:
         mode = "FisheyeAspectMode::Circular";
         break;
-
     case Mode::Cropped:
         mode = "FisheyeAspectMode::Cropped";
         break;

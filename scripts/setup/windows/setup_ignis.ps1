@@ -28,9 +28,10 @@ $ZLIB_INCLUDE="$DEPS_ROOT\zlib\include".Replace("\", "/")
 $SDL2_LIB="$DEPS_ROOT\SDL2\lib\x64\SDL2.lib".Replace("\", "/")
 $SDL2_INCLUDE="$DEPS_ROOT\SDL2\include".Replace("\", "/")
 
+$OIDN_DIR=Get-ChildItem -Path "$DEPS_ROOT/oidn/lib/cmake" -Directory | Sort-Object -Descending | Select-Object -First 1
+
 & $CMAKE_BIN $Config.CMAKE_EXTRA_ARGS -DCMAKE_BUILD_TYPE="$($Config.IGNIS_BUILD_TYPE)" `
     -DBUILD_TESTING=OFF `
-    -DFETCHCONTENT_UPDATES_DISCONNECTED=ON `
     -DClang_BIN="$CLANG_BIN" `
     -DAnyDSL_runtime_DIR="$RUNTIME_DIR" `
     -DArtic_BINARY_DIR="$ARTIC_BIN_DIR" `
@@ -40,9 +41,13 @@ $SDL2_INCLUDE="$DEPS_ROOT\SDL2\include".Replace("\", "/")
     -DZLIB_INCLUDE_DIR="$ZLIB_INCLUDE" `
     -DSDL2_LIBRARY="$SDL2_LIB" `
     -DSDL2_INCLUDE_DIR="$SDL2_INCLUDE" `
-    -DOpenImageDenoise_DIR="$DEPS_ROOT/oidn/lib/cmake/OpenImageDenoise-2.0.0" `
+    -DOpenImageDenoise_DIR="$($OIDN_DIR.FullName)" `
     -DIG_WITH_ASSERTS:BOOL=ON `
     "$IGNIS_ROOT"
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to configure Ignis"
+}
 
 # Make sure all the dlls are in the correct place (for Release at least)
 If(!$Config.CMAKE_EXTRA_ARGS.Contains("-GNinja")) { # TODO: What about other single configuration generators?
