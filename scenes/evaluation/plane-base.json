@@ -4,9 +4,7 @@
     "transform": [1, 0, 0, 278, 0, 1, 0, 273, 0, 0, 1, -800, 0, 0, 0, 1],
     "fov": 39.3077,
     "far_clip": 2800,
-    "focus_distance": 1000,
-    "near_clip": 10,
-    "fov_axis": "smaller"
+    "near_clip": 10
   },
   "film": {
     "size": [256, 256]
