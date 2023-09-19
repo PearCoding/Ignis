@@ -19,12 +19,12 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=e353d410970836974a52" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
 
   
-  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=e353d410970836974a52" rel="stylesheet" />
+  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
   <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
@@ -36,8 +36,9 @@
     <link rel="stylesheet" type="text/css" href="../../_static/css/lightbox.css?v=1a4ee0e0" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=927b94d3fcb96560df09" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=927b94d3fcb96560df09" />
+  <script src="../../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=927b94d3fcb96560df09"></script>
 
     <script src="../../_static/documentation_options.js?v=c73c0f3e"></script>
     <script src="../../_static/doctools.js?v=888ff710"></script>
@@ -53,6 +54,7 @@
     <link rel="prev" title="Scene Description" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Sep 06, 2023"/>
   </head>
   
   
@@ -61,6 +63,15 @@
   
   
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
   
   <input type="checkbox"
           class="sidebar-toggle"
@@ -101,7 +112,8 @@
     <span class="fa-solid fa-bars"></span>
   </label>
   
-  <div class="navbar-header-items__start">
+  
+  <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
   
@@ -117,7 +129,6 @@
 </a></div>
     
   </div>
-  
   
   <div class="col-lg-9 navbar-header-items">
     
@@ -162,23 +173,25 @@
       
         <div class="navbar-item navbar-persistent--container">
           
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__kbd-shortcut">Search</span>
+    <span><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
         </div>
       
       
         <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -194,8 +207,8 @@ document.write(`
           
           
           
-          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
-            <label class="sr-only">GitHub</label></a>
+          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
         </li>
 </ul></div>
       
@@ -205,18 +218,20 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
-<script>
-document.write(`
-  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-  </button>
-`);
-</script>
+    <span class="search-button__kbd-shortcut">Search</span>
+    <span><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
     </div>
   
 
   
-    <label class="sidebar-toggle secondary-toggle" for="__secondary">
+    <label class="sidebar-toggle secondary-toggle" for="__secondary" tabindex="0">
       <span class="fa-solid fa-outdent"></span>
     </label>
   
@@ -277,10 +292,10 @@ document.write(`
           <div class="navbar-item">
 <script>
 document.write(`
-  <button class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></span>
-    <span class="theme-switch" data-mode="dark"><i class="fa-solid fa-moon"></i></span>
-    <span class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></span>
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
   </button>
 `);
 </script></div>
@@ -296,8 +311,8 @@ document.write(`
           
           
           
-          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github"></i></span>
-            <label class="sr-only">GitHub</label></a>
+          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
         </li>
 </ul></div>
         
@@ -350,8 +365,8 @@ document.write(`
 
 
 
-<nav aria-label="Breadcrumbs">
-  <ul class="bd-breadcrumbs" role="navigation" aria-label="Breadcrumb">
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
     
     <li class="breadcrumb-item breadcrumb-home">
       <a href="../../index.html" class="nav-link" aria-label="Home">
@@ -423,13 +438,13 @@ The type has to be one of the bsdfs listed at this section below.</p>
 </table>
 <div class="figure subfigure compound align-center" id="fig-diffuse">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id1" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_diffuse.jpg" style="width: 95%" data-lightbox="-150014109895517339" data-title=""><img alt="../../_images/bsdf_diffuse.jpg" src="../../_images/bsdf_diffuse.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_diffuse.jpg" style="width: 95%" data-lightbox="6664233420226537360" data-title=""><img alt="../../_images/bsdf_diffuse.jpg" src="../../_images/bsdf_diffuse.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Diffuse</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id2" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughdiffuse.jpg" style="width: 95%" data-lightbox="-8674858823001536017" data-title=""><img alt="../../_images/bsdf_roughdiffuse.jpg" src="../../_images/bsdf_roughdiffuse.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughdiffuse.jpg" style="width: 95%" data-lightbox="154077086053907450" data-title=""><img alt="../../_images/bsdf_roughdiffuse.jpg" src="../../_images/bsdf_roughdiffuse.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Rough diffuse, also called Oren-Nayar</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
@@ -497,19 +512,19 @@ The type has to be one of the bsdfs listed at this section below.</p>
 </table>
 <div class="figure subfigure compound align-center" id="fig-dielectric">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id3" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_dielectric.jpg" style="width: 95%" data-lightbox="1620905963471305443" data-title=""><img alt="../../_images/bsdf_dielectric.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_dielectric.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_dielectric.jpg" style="width: 95%" data-lightbox="7804399717092486416" data-title=""><img alt="../../_images/bsdf_dielectric.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_dielectric.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Smooth dielectric</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id4" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_thindielectric.jpg" style="width: 95%" data-lightbox="1847959792437493107" data-title=""><img alt="../../_images/bsdf_thindielectric.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_thindielectric.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_thindielectric.jpg" style="width: 95%" data-lightbox="-6435011220631292419" data-title=""><img alt="../../_images/bsdf_thindielectric.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_thindielectric.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Smooth dielectric with thin approximation</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id4" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id5" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughdielectric.jpg" style="width: 95%" data-lightbox="-8893607996734729075" data-title=""><img alt="../../_images/bsdf_roughdielectric.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_roughdielectric.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughdielectric.jpg" style="width: 95%" data-lightbox="-6326557455953820866" data-title=""><img alt="../../_images/bsdf_roughdielectric.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_roughdielectric.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Rough dielectric</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id5" title="Link to this image">#</a></p>
 </figcaption>
@@ -565,19 +580,19 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-conductor">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id6" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_conductor.jpg" style="width: 95%" data-lightbox="1735168280710150927" data-title=""><img alt="../../_images/bsdf_conductor.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_conductor.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_conductor.jpg" style="width: 95%" data-lightbox="-6092593134259296449" data-title=""><img alt="../../_images/bsdf_conductor.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_conductor.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Smooth gold conductor</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id6" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id7" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughconductor.jpg" style="width: 95%" data-lightbox="3191395753863609720" data-title=""><img alt="../../_images/bsdf_roughconductor.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_roughconductor.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughconductor.jpg" style="width: 95%" data-lightbox="-2224211178943250325" data-title=""><img alt="../../_images/bsdf_roughconductor.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_roughconductor.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Rough gold conductor</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id7" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id8" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_mirror.jpg" style="width: 95%" data-lightbox="4930010911160772107" data-title=""><img alt="../../_images/bsdf_mirror.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_mirror.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_mirror.jpg" style="width: 95%" data-lightbox="5064163053269193628" data-title=""><img alt="../../_images/bsdf_mirror.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_mirror.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">A perfect conductor (also called a mirror), can be specified with <span class="align-center subsubfigure lightbox-image paramtype">eta</span> = 0 and <span class="align-center subsubfigure lightbox-image paramtype">k</span> = 1</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id8" title="Link to this image">#</a></p>
 </figcaption>
@@ -639,13 +654,13 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-plastic">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id9" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_plastic.jpg" style="width: 95%" data-lightbox="-1738279066029406133" data-title=""><img alt="../../_images/bsdf_plastic.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_plastic.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_plastic.jpg" style="width: 95%" data-lightbox="4631960308648131093" data-title=""><img alt="../../_images/bsdf_plastic.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_plastic.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Smooth plastic</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id9" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id10" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughplastic.jpg" style="width: 95%" data-lightbox="-3170119964134329758" data-title=""><img alt="../../_images/bsdf_roughplastic.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_roughplastic.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_roughplastic.jpg" style="width: 95%" data-lightbox="-3809907682387338296" data-title=""><img alt="../../_images/bsdf_roughplastic.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_roughplastic.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Rough plastic</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id10" title="Link to this image">#</a></p>
 </figcaption>
@@ -679,7 +694,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-phong">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id11" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_phong.jpg" style="width: 95%" data-lightbox="2375358905474617402" data-title=""><img alt="../../_images/bsdf_phong.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_phong.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_phong.jpg" style="width: 95%" data-lightbox="-7721991829989987451" data-title=""><img alt="../../_images/bsdf_phong.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_phong.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Phong</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id11" title="Link to this image">#</a></p>
 </figcaption>
@@ -813,7 +828,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-principled">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id12" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_principled.jpg" style="width: 95%" data-lightbox="-3641138599369925885" data-title=""><img alt="../../_images/bsdf_principled.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_principled.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_principled.jpg" style="width: 95%" data-lightbox="-2308867548227756048" data-title=""><img alt="../../_images/bsdf_principled.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_principled.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Disney <em>Principled</em></span><a class="align-center subsubfigure lightbox-image headerlink" href="#id12" title="Link to this image">#</a></p>
 </figcaption>
@@ -848,7 +863,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-blend">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id13" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_blend.jpg" style="width: 95%" data-lightbox="2736726875941497368" data-title=""><img alt="../../_images/bsdf_blend.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_blend.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_blend.jpg" style="width: 95%" data-lightbox="-6087067136264774557" data-title=""><img alt="../../_images/bsdf_blend.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_blend.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Blend of two bsdfs. One dielectric, one diffuse</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id13" title="Link to this image">#</a></p>
 </figcaption>
@@ -888,7 +903,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-mask">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id14" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_mask.jpg" style="width: 95%" data-lightbox="-1071676822779651497" data-title=""><img alt="../../_images/bsdf_mask.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_mask.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_mask.jpg" style="width: 95%" data-lightbox="-4673916566085527311" data-title=""><img alt="../../_images/bsdf_mask.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_mask.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Mask with a uniform weight</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id14" title="Link to this image">#</a></p>
 </figcaption>
@@ -934,7 +949,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-cutoff">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id15" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_cutoff.jpg" style="width: 95%" data-lightbox="-2878023572824003746" data-title=""><img alt="../../_images/bsdf_cutoff.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_cutoff.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_cutoff.jpg" style="width: 95%" data-lightbox="-1211030725438574048" data-title=""><img alt="../../_images/bsdf_cutoff.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_cutoff.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Cutoff with a uniform weight</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id15" title="Link to this image">#</a></p>
 </figcaption>
@@ -962,7 +977,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-transparent">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id16" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_transparent.jpg" style="width: 95%" data-lightbox="-8103945521829177112" data-title=""><img alt="../../_images/bsdf_transparent.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_transparent.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_transparent.jpg" style="width: 95%" data-lightbox="-710226691285535169" data-title=""><img alt="../../_images/bsdf_transparent.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_transparent.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Transparent</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id16" title="Link to this image">#</a></p>
 </figcaption>
@@ -976,7 +991,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 <span id="bsdf-passthrough"></span><h2>Passthrough (<span class="monosp">passthrough</span>)<a class="headerlink" href="#passthrough-passthrough" title="Link to this heading">#</a></h2>
 <div class="figure subfigure compound align-center" id="fig-passthrough">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id17" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_passthrough.jpg" style="width: 95%" data-lightbox="-4889029997405565074" data-title=""><img alt="../../_images/bsdf_passthrough.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_passthrough.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_passthrough.jpg" style="width: 95%" data-lightbox="-838168051875039268" data-title=""><img alt="../../_images/bsdf_passthrough.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_passthrough.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Passthrough</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id17" title="Link to this image">#</a></p>
 </figcaption>
@@ -1020,7 +1035,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-normalmap">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id18" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_normalmap.jpg" style="width: 95%" data-lightbox="-7028605046997650735" data-title=""><img alt="../../_images/bsdf_normalmap.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_normalmap.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_normalmap.jpg" style="width: 95%" data-lightbox="-788681868787313790" data-title=""><img alt="../../_images/bsdf_normalmap.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_normalmap.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Normal mapping</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id18" title="Link to this image">#</a></p>
 </figcaption>
@@ -1060,7 +1075,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-bumpmap">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id19" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_bumpmap.jpg" style="width: 95%" data-lightbox="-8447582313736757765" data-title=""><img alt="../../_images/bsdf_bumpmap.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_bumpmap.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_bumpmap.jpg" style="width: 95%" data-lightbox="2149339691151448735" data-title=""><img alt="../../_images/bsdf_bumpmap.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_bumpmap.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Bump mapping</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id19" title="Link to this image">#</a></p>
 </figcaption>
@@ -1100,7 +1115,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-transform">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id20" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_transform.jpg" style="width: 95%" data-lightbox="2646709848732159186" data-title=""><img alt="../../_images/bsdf_transform.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_transform.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_transform.jpg" style="width: 95%" data-lightbox="5059329272039599931" data-title=""><img alt="../../_images/bsdf_transform.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_transform.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Normal transformed by a PExpr to mimic a normal map</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id20" title="Link to this image">#</a></p>
 </figcaption>
@@ -1134,7 +1149,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-djmeasured">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id21" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_djmeasured.jpg" style="width: 95%" data-lightbox="-1312829920391360827" data-title=""><img alt="../../_images/bsdf_djmeasured.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_djmeasured.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_djmeasured.jpg" style="width: 95%" data-lightbox="-323901714244279417" data-title=""><img alt="../../_images/bsdf_djmeasured.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_djmeasured.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Dupuy &amp; Jakob based measured material. More information and measured data available at <a class="align-center subsubfigure lightbox-image reference external" href="https://rgl.epfl.ch/materials">https://rgl.epfl.ch/materials</a></span><a class="align-center subsubfigure lightbox-image headerlink" href="#id21" title="Link to this image">#</a></p>
 </figcaption>
@@ -1258,7 +1273,7 @@ Note that for physical realism, this parameter should never be touched.</p></td>
 </table>
 <div class="figure subfigure compound align-center" id="fig-rad-brtdfunc">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id22" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_rad_brtdfunc.jpg" style="width: 95%" data-lightbox="-1066165936879984358" data-title=""><img alt="../../_images/bsdf_rad_brtdfunc.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_rad_brtdfunc.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_rad_brtdfunc.jpg" style="width: 95%" data-lightbox="-8643354616907869012" data-title=""><img alt="../../_images/bsdf_rad_brtdfunc.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_rad_brtdfunc.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">An example BRTDfunc rendered inside Ignis</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id22" title="Link to this image">#</a></p>
 </figcaption>
@@ -1317,7 +1332,7 @@ Angular-dependent optical properties of low-e and solar control windows—: Simu
 </table>
 <div class="figure subfigure compound align-center" id="fig-rad-roos">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id23" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_rad_roos.jpg" style="width: 95%" data-lightbox="-8340486585083447008" data-title=""><img alt="../../_images/bsdf_rad_roos.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_rad_roos.jpg" style="width: 95%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/bsdf_rad_roos.jpg" style="width: 95%" data-lightbox="-5765561520323611981" data-title=""><img alt="../../_images/bsdf_rad_roos.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/bsdf_rad_roos.jpg" style="width: 95%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">An example BRTDfunc rendered inside Ignis</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id23" title="Link to this image">#</a></p>
 </figcaption>
@@ -1363,11 +1378,10 @@ Angular-dependent optical properties of low-e and solar control windows—: Simu
               
               
               
-                <footer class="bd-footer-article">
-                  
-<div class="footer-article-items footer-article__inner">
-  
-    <div class="footer-article-item"><!-- Previous / next buttons -->
+              
+              
+                <footer class="prev-next-footer">
+                  <!-- Previous / next buttons -->
 <div class="prev-next-area">
     <a class="left-prev"
        href="index.html"
@@ -1387,10 +1401,7 @@ Angular-dependent optical properties of low-e and solar control windows—: Simu
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
-</div></div>
-  
 </div>
-
                 </footer>
               
             </div>
@@ -1445,8 +1456,8 @@ Angular-dependent optical properties of low-e and solar control windows—: Simu
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=e353d410970836974a52"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=e353d410970836974a52"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=927b94d3fcb96560df09"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=927b94d3fcb96560df09"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1464,7 +1475,7 @@ Angular-dependent optical properties of low-e and solar control windows—: Simu
       
         <div class="footer-item">
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.5.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
     <br/>
   </p>
 </div>
@@ -1472,10 +1483,11 @@ Angular-dependent optical properties of low-e and solar control windows—: Simu
     </div>
   
   
+  
     <div class="footer-items__end">
       
         <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.13.3.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.0.
 </p></div>
       
     </div>
