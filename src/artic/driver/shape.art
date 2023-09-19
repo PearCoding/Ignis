@@ -3,7 +3,7 @@ struct Shape {
     // Computes the surface element after an intersection on this geometry
     surface_element:           fn (Ray, Hit, PointMapperSet)  -> SurfaceElement,
     surface_element_for_point: fn (i32, Vec2, PointMapperSet) -> SurfaceElement,
-    local_bbox:                BBox, // Local bounding box
+    local_bbox:                fn () -> BBox, // Query the local bounding box
     primitive_count:           i32 // Number of internal primitives
 }
 
@@ -25,7 +25,7 @@ fn @load_shape_table(device: Device, gen: fn (u32, DeviceBuffer) -> Shape) -> Sh
 fn @make_null_shape() = Shape {
     surface_element           = @|_,_,_| make_invalid_surface_element(),
     surface_element_for_point = @|_,_,_| make_invalid_surface_element(),
-    local_bbox                = make_empty_bbox(), 
+    local_bbox                = @|| make_empty_bbox(), 
     primitive_count           = 0
 };
 
