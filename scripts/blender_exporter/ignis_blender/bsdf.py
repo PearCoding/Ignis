@@ -239,12 +239,19 @@ def _export_bsdf(ctx, socket, name):
     return handle_node_implicit_mappings(socket, expr)
 
 
+def _get_active_output(material):
+    for node in material.node_tree.nodes:
+        if node.type == 'OUTPUT_MATERIAL' and node.is_active_output:
+            return node
+    return None
+
+
 def _get_bsdf_link(material):
     if material.node_tree is None:
         print(f"Material {material.name} has no valid node tree")
         return None
 
-    output = material.node_tree.nodes.get("Material Output")
+    output = _get_active_output(material)
     if output is None:
         print(f"Material {material.name} has no output node")
         return None

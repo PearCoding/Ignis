@@ -7,6 +7,13 @@ from .emission import get_emission
 from .defaults import *
 
 
+def _get_active_output(obj):
+    for node in obj.node_tree.nodes:
+        if node.type == 'OUTPUT_WORLD' and node.is_active_output:
+            return node
+    return None
+
+
 def export_background(result, out_dir, depsgraph, settings):
     scene = depsgraph.scene
 
@@ -21,7 +28,7 @@ def export_background(result, out_dir, depsgraph, settings):
                 {"type": "env", "name": "__scene_world", "radiance": map_rgb(scene.world.color), "scale": 0.5, "transform": ENVIRONMENT_MAP_TRANSFORM})
         return
 
-    output = scene.world.node_tree.nodes.get("World Output")
+    output = _get_active_output(scene.world)
     if output is None:
         print(f"World {scene.world.name} has no output node")
         return None
