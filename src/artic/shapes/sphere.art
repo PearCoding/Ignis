@@ -67,7 +67,7 @@ fn @make_sphere_shape(sphere: Sphere) -> Shape {
             let normal = sphere_unmap_uv(prim_coords);
             sphere_compute_surface_element_for_normal(normal, sphere, pmset)
         },
-        local_bbox = make_centered_bbox(sphere.origin, vec3_expand(2*sphere.radius)),
+        local_bbox = @ || make_centered_bbox(sphere.origin, vec3_expand(2*sphere.radius)),
         primitive_count = 1
     }
 }

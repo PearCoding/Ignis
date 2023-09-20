@@ -19,11 +19,6 @@
       "name": "Bottom",
       "type": "diffuse",
       "reflectance": [0.885809, 0.698859, 0.666422]
-    },
-    {
-      "name": "Black",
-      "type": "diffuse",
-      "reflectance": [0, 0, 0]
     }
   ],
   "shapes": [

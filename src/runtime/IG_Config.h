@@ -68,7 +68,13 @@
 #define IG_PRAGMA(x) _Pragma(#x)
 
 // clang-format off
-#define IG_UNUSED(expr) do { (void)(expr); } while (false)
+namespace IG {
+    template<typename T>
+    inline void ig_noop(const T&) { }
+    template<typename T, typename... Args>
+    inline void ig_noop(const T&, const Args&... args) { ig_noop(args...); }
+}
+#define IG_UNUSED(...) IG::ig_noop(__VA_ARGS__)
 #define IG_NOOP do {} while(false)
 // clang-format on
 

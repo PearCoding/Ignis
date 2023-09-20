@@ -4,20 +4,13 @@
     "transform": [1, 0, 0, 278, 0, 1, 0, 273, 0, 0, 1, -800, 0, 0, 0, 1],
     "fov": 39.3077,
     "far_clip": 2800,
-    "focus_distance": 1000,
-    "near_clip": 10,
-    "fov_axis": "smaller"
+    "near_clip": 10
   },
   "film": {
     "size": [256, 256]
   },
   "textures": [],
   "bsdfs": [
-    {
-      "name": "__black",
-      "type": "diffuse",
-      "reflectance": [0, 0, 0]
-    },
     {
       "name": "__bsdf_0",
       "type": "diffuse",
@@ -42,46 +35,6 @@
       "name": "__bsdf_4",
       "type": "diffuse",
       "reflectance": [0.936461, 0.740433, 0.705267]
-    },
-    {
-      "name": "__bsdf_5",
-      "type": "diffuse",
-      "reflectance": [0.936461, 0.740433, 0.705267]
-    },
-    {
-      "name": "__bsdf_6",
-      "type": "diffuse",
-      "reflectance": [0.885809, 0.698859, 0.666422]
-    },
-    {
-      "name": "__bsdf_7",
-      "type": "diffuse",
-      "reflectance": [0.885809, 0.698859, 0.666422]
-    },
-    {
-      "name": "__bsdf_8",
-      "type": "diffuse",
-      "reflectance": [0.885809, 0.698859, 0.666422]
-    },
-    {
-      "name": "__bsdf_9",
-      "type": "diffuse",
-      "reflectance": [0.105421, 0.37798, 0.076425]
-    },
-    {
-      "name": "__bsdf_10",
-      "type": "diffuse",
-      "reflectance": [0.570068, 0.0430135, 0.0443706]
-    },
-    {
-      "name": "__bsdf_11",
-      "type": "diffuse",
-      "reflectance": [0.45, 0.3, 0.9]
-    },
-    {
-      "name": "__bsdf_12",
-      "type": "diffuse",
-      "reflectance": [0.45, 0.3, 0.9]
     }
   ],
   "shapes": [

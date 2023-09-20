@@ -238,8 +238,7 @@ struct print_duration_impl_<> {
     template <typename Duration>
     static int print(std::ostream& os, Duration& dur)
     {
-        IG_UNUSED(os);
-        IG_UNUSED(dur);
+        IG_UNUSED(os, dur);
         return 0;
     }
 };
