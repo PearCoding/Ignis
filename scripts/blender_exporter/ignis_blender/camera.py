@@ -1,9 +1,10 @@
 import math
 from .utils import *
+from .context import ExportContext
 
 
-def export_camera(result, scene):
-    camera = scene.camera
+def export_camera(result, ctx: ExportContext):
+    camera = ctx.scene.camera
     if camera is None:
         return
 
@@ -26,6 +27,6 @@ def export_camera(result, scene):
             "transform": flat_matrix(matrix)
         }
 
-    res_x = scene.render.resolution_x * scene.render.resolution_percentage * 0.01
-    res_y = scene.render.resolution_y * scene.render.resolution_percentage * 0.01
+    res_x = ctx.scene.render.resolution_x * ctx.scene.render.resolution_percentage * 0.01
+    res_y = ctx.scene.render.resolution_y * ctx.scene.render.resolution_percentage * 0.01
     result["film"] = {"size": [res_x, res_y]}

@@ -1,21 +1,23 @@
 import mathutils
 import math
+import bpy
+
 from .utils import *
-from .node import NodeContext
+from .context import ExportContext, NodeContext
 from .emission import get_emission
 
 from .defaults import *
 
 
-def _get_active_output(obj):
-    for node in obj.node_tree.nodes:
+def _get_active_output_world(world: bpy.types.World):
+    for node in world.node_tree.nodes:
         if node.type == 'OUTPUT_WORLD' and node.is_active_output:
             return node
     return None
 
 
-def export_background(result, out_dir, depsgraph, settings):
-    scene = depsgraph.scene
+def export_background(result, export_ctx: ExportContext):
+    scene = export_ctx.scene
 
     # It might be that no world is given at all
     if not scene.world:
@@ -28,18 +30,19 @@ def export_background(result, out_dir, depsgraph, settings):
                 {"type": "env", "name": "__scene_world", "radiance": map_rgb(scene.world.color), "scale": 0.5, "transform": ENVIRONMENT_MAP_TRANSFORM})
         return
 
-    output = _get_active_output(scene.world)
+    output = _get_active_output_world(scene.world)
     if output is None:
-        print(f"World {scene.world.name} has no output node")
+        export_ctx.report_warning(
+            f"World {scene.world.name} has no output node")
         return None
 
     surface = output.inputs.get("Surface")
     if surface is None or not surface.is_linked:
-        print(f"World {scene.world.name} has no surface node")
+        export_ctx.report_warning(
+            f"World {scene.world.name} has no surface node")
         return None
 
-    radiance = get_emission(NodeContext(
-        result, out_dir, depsgraph, settings), surface)
+    radiance = get_emission(NodeContext(result, export_ctx), surface)
 
     if not radiance:
         return
@@ -48,7 +51,7 @@ def export_background(result, out_dir, depsgraph, settings):
                             "radiance": radiance, "transform": ENVIRONMENT_MAP_TRANSFORM})
 
 
-def export_light(result, inst):
+def export_light(result, inst: bpy.types.DepsgraphObjectInstance):
     light = inst.object
     l = light.data
     power = [l.color[0] * l.energy, l.color[1]

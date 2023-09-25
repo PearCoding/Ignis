@@ -24,7 +24,7 @@ class IgnisRender(bpy.types.RenderEngine):
         self.update_stats("", "Ignis: Rendering [%s]..." % (line))
         self.update_progress(min(1, renderer.SampleCount / max_spp))
 
-    def render(self, depsgraph):
+    def render(self, depsgraph: bpy.types.Depsgraph):
         prefs = addon_preferences.get_prefs()
         ig = api.load_api()
         ig.setVerbose(prefs.verbose)
@@ -36,8 +36,6 @@ class IgnisRender(bpy.types.RenderEngine):
 
         x = int(render.resolution_x * render.resolution_percentage * 0.01)
         y = int(render.resolution_y * render.resolution_percentage * 0.01)
-
-        print("<<< START IGNIS >>>")
 
         sceneFile = ""
         renderPath = bpy.path.resolve_ncase(
@@ -59,7 +57,7 @@ class IgnisRender(bpy.types.RenderEngine):
 
         self.update_stats("", "Ignis: Exporting data")
         exported_scene = exporter.export_scene(
-            sceneFile, depsgraph,
+            sceneFile, self, depsgraph,
             settings=namedtuple("Settings",
                                 ["export_materials", "use_selection", "export_lights", "enable_background", "enable_camera", "enable_technique", "triangulate_shapes", "copy_images"])(True, False, True, True, True, True, True, False)
         )
@@ -87,7 +85,6 @@ class IgnisRender(bpy.types.RenderEngine):
             if not runtime:
                 self.report(
                     {'ERROR'}, "Ignis: could not load environment from file")
-                print("<<< IGNIS FAILED >>>")
                 return
 
             if self.test_break():
@@ -119,7 +116,6 @@ class IgnisRender(bpy.types.RenderEngine):
             update_image()
             self.end_result(result)
         
-        print("<<< IGNIS FINISHED >>>")
         self.update_stats("", "")
 
 

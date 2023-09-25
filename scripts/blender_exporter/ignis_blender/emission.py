@@ -1,11 +1,12 @@
 import bpy
 
+from .context import NodeContext
 from .node import export_node, handle_node_group_begin, handle_node_group_end, handle_node_reroute, handle_node_implicit_mappings
 from .utils import *
 from .bsdf import _get_bsdf_link
 
 
-def _get_emission_mix(ctx, bsdf):
+def _get_emission_mix(ctx: NodeContext, bsdf: bpy.types.Node):
     mat1 = get_emission(
         ctx, bsdf.inputs[1])
     mat2 = get_emission(
@@ -29,7 +30,7 @@ def _get_emission_mix(ctx, bsdf):
         return f"mix({mat1}, {mat2}, {factor})"
 
 
-def _get_emission_add(ctx, bsdf):
+def _get_emission_add(ctx: NodeContext, bsdf: bpy.types.Node):
     mat1 = get_emission(
         ctx, bsdf.inputs[0])
     mat2 = get_emission(
@@ -43,7 +44,7 @@ def _get_emission_add(ctx, bsdf):
     return f"({mat1} + {mat2})"
 
 
-def _get_emission_principled(ctx, bsdf):
+def _get_emission_principled(ctx: NodeContext, bsdf: bpy.types.Node):
     color_n = bsdf.inputs["Emission"]
     if check_socket_if_black(color_n):
         return None
@@ -61,7 +62,7 @@ def _get_emission_principled(ctx, bsdf):
         return f"({color} * {strength})"
 
 
-def _get_emission_pure(ctx, bsdf):
+def _get_emission_pure(ctx: NodeContext, bsdf: bpy.types.Node):
     color_n = bsdf.inputs["Color"]
     if check_socket_if_black(color_n):
         return None
@@ -79,7 +80,7 @@ def _get_emission_pure(ctx, bsdf):
         return f"({color} * {strength})"
 
 
-def get_emission(ctx, socket):
+def get_emission(ctx: NodeContext, socket: bpy.types.NodeSocket):
     if not socket.is_linked:
         return None
 
@@ -111,17 +112,17 @@ def get_emission(ctx, socket):
     else:
         return None
 
-    return handle_node_implicit_mappings(socket, expr)
+    return handle_node_implicit_mappings(ctx, socket, expr)
 
 
-def get_material_emission(ctx, material):
+def get_material_emission(ctx: NodeContext, material: bpy.types.Material):
     if not material:
         return None
 
     if not material.node_tree:
         return None
 
-    link = _get_bsdf_link(material)
+    link = _get_bsdf_link(ctx, material)
     if not link:
         return None
 

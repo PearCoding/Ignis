@@ -4,64 +4,13 @@ import os
 from .utils import *
 from .addon_preferences import get_prefs
 from .defaults import NODE_NOISE_SEED
+from .context import ExportContext, NodeContext
 
 
-class NodeContext:
-    def __init__(self, result, path, depsgraph, settings):
-        self.result = result
-        self.path = path
-        self.depsgraph = depsgraph
-        self.settings = settings
-        self._cache = {}
-        self.offset_texcoord = (0, 0, 0)
-
-        self._stack = []
-        self._cur = 0
-
-    def push(self, node):
-        self._stack.insert(self._cur, node)
-        self._cur += 1
-
-    def pop(self):
-        del self._stack[self._cur-1]
-        self._cur -= 1
-
-    @property
-    def current(self):
-        return self._stack[self._cur-1]
-
-    def goIn(self):
-        self._cur -= 1
-
-    def goOut(self):
-        self._cur += 1
-
-    @property
-    def scene(self):
-        return self.depsgraph.scene
-
-    def shift_texcoord(self, dx=0, dy=0, dz=0):
-        self.offset_texcoord = (
-            self.offset_texcoord[0]+dx, self.offset_texcoord[1]+dy, self.offset_texcoord[2]+dz)
-
-    @property
-    def texcoord(self):
-        if self.offset_texcoord[0] == 0 and self.offset_texcoord[1] == 0 and self.offset_texcoord[2] == 0:
-            return "uvw"
-        else:
-            return f"(vec3({self.offset_texcoord[0]}, {self.offset_texcoord[1]}, {self.offset_texcoord[2]}) + uvw)"
-
-    def get_from_cache(self, socket):
-        return self._cache.get((socket, self.offset_texcoord))
-
-    def put_in_cache(self, socket, expr):
-        self._cache[(socket, self.offset_texcoord)] = expr
-
-
-def _export_default(socket):
+def _export_default(ctx: NodeContext, socket: bpy.types.NodeSocket):
     default_value = getattr(socket, "default_value", None)
     if default_value is None:
-        print(f"Socket {socket.name} has no default value")
+        ctx.report_warning(f"Socket {socket.name} has no default value")
         if socket.type == 'VECTOR':
             return "vec3(0)"
         elif socket.type == 'RGBA':
@@ -77,11 +26,11 @@ def _export_default(socket):
             return default_value
 
 
-def _export_scalar_value(ctx, node):
+def _export_scalar_value(ctx: NodeContext, node: bpy.types.Node):
     return node.outputs[0].default_value
 
 
-def _export_scalar_clamp(ctx, node):
+def _export_scalar_clamp(ctx: NodeContext, node: bpy.types.Node):
     val = export_node(ctx, node.inputs[0])
     minv = export_node(ctx, node.inputs[1])
     maxv = export_node(ctx, node.inputs[2])
@@ -89,7 +38,7 @@ def _export_scalar_clamp(ctx, node):
     return f"clamp({val}, {minv}, {maxv})"
 
 
-def _export_maprange(ctx, node):
+def _export_maprange(ctx: NodeContext, node: bpy.types.Node):
     val = export_node(ctx, node.inputs[0])
     from_min = export_node(ctx, node.inputs[1])
     from_max = export_node(ctx, node.inputs[2])
@@ -107,7 +56,7 @@ def _export_maprange(ctx, node):
     elif node.interpolation_type == "SMOOTHERSTEP":
         interp = f"smootherstep({to_unit})"
     else:
-        print(
+        ctx.report_error(
             f"Not supported interpolation type {node.interpolation_type} for node {node.name}")
         return 0
 
@@ -118,7 +67,7 @@ def _export_maprange(ctx, node):
         return ops
 
 
-def _export_fresnel(ctx, node):
+def _export_fresnel(ctx: NodeContext, node: bpy.types.Node):
     ior = export_node(ctx, node.inputs["IOR"])
     if node.inputs["Normal"].is_linked:
         normal = export_node(ctx, node.inputs["Normal"])
@@ -128,7 +77,7 @@ def _export_fresnel(ctx, node):
     return f"fresnel_dielectric(select(frontside, 1/max(1e-5,{ior}), {ior}), dot({normal},V))"
 
 
-def _export_layer_weight(ctx, node, output_name):
+def _export_layer_weight(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     blend = export_node(ctx, node.inputs["Blend"])
     if node.inputs["Normal"].is_linked:
         normal = export_node(ctx, node.inputs["Normal"])
@@ -148,7 +97,7 @@ def _export_layer_weight(ctx, node, output_name):
             return f"(1-abs({cos_i})^{blend_p})"
 
 
-def _export_scalar_math(ctx, node):
+def _export_scalar_math(ctx: NodeContext, node: bpy.types.Node):
     ops = ""
     if node.operation == "ADD":
         ops = f"({export_node(ctx, node.inputs[0])} + {export_node(ctx, node.inputs[1])})"
@@ -231,7 +180,7 @@ def _export_scalar_math(ctx, node):
     elif node.operation == "DEGREES":
         ops = f"({export_node(ctx, node.inputs[0])} * 180 / Pi)"
     else:
-        print(
+        ctx.report_error(
             f"Not supported math operation type {node.operation} for node {node.name}")
         return 0
 
@@ -241,12 +190,12 @@ def _export_scalar_math(ctx, node):
         return ops
 
 
-def _export_rgb_value(ctx, node):
+def _export_rgb_value(ctx: NodeContext, node: bpy.types.Node):
     default_value = node.outputs[0].default_value
     return f"color({default_value[0]}, {default_value[1]}, {default_value[2]}, {default_value[3]})"
 
 
-def _export_mix(ctx, node):
+def _export_mix(ctx: NodeContext, node: bpy.types.Node):
     # New ShaderNodeMix node (Blender 3.4)
     if node.data_type == 'FLOAT':
         return _export_scalar_mix(ctx, node)
@@ -255,11 +204,12 @@ def _export_mix(ctx, node):
     elif node.data_type == 'RGBA':
         return _export_rgb_math(ctx, node)
     else:
-        print(f"Unknown data type {node.data_type} for ShaderNodeMix")
+        ctx.report_error(
+            f"Unknown data type {node.data_type} for ShaderNodeMix")
         return None
 
 
-def _export_rgb_math(ctx, node):
+def _export_rgb_math(ctx: NodeContext, node: bpy.types.Node):
     # See https://docs.gimp.org/en/gimp-concepts-layer-modes.html
 
     is_new_node = hasattr(node, "clamp_factor")
@@ -313,7 +263,7 @@ def _export_rgb_math(ctx, node):
     elif node.blend_type == "DIVIDE":
         ops = f"mix({col1}, {col1} / ({col2} + color(1)), {fac})"
     else:
-        print(
+        ctx.report_error(
             f"Not supported rgb math operation type {node.operation} for node {node.name}")
         return "color(0)"
 
@@ -325,7 +275,7 @@ def _export_rgb_math(ctx, node):
         return ops
 
 
-def _export_scalar_mix(ctx, node):
+def _export_scalar_mix(ctx: NodeContext, node: bpy.types.Node):
     fac = export_node(ctx, node.inputs[0])
     v1 = export_node(ctx, node.inputs[2])
     v2 = export_node(ctx, node.inputs[3])
@@ -338,7 +288,7 @@ def _export_scalar_mix(ctx, node):
     return f"mix({v1}, {v2}, {fac})"
 
 
-def _export_vector_mix(ctx, node):
+def _export_vector_mix(ctx: NodeContext, node: bpy.types.Node):
     is_uniform = getattr(node, "factor_mode", "UNIFORM") == 'UNIFORM'
 
     fac = export_node(ctx, node.inputs[0 if is_uniform else 1])
@@ -360,13 +310,13 @@ def _export_vector_mix(ctx, node):
         return f"(({v1}) *(vec3(1) - {fac}) + ({v2}) * ({fac}))"
 
 
-def _export_rgb_gamma(ctx, node):
+def _export_rgb_gamma(ctx: NodeContext, node: bpy.types.Node):
     color_node = export_node(ctx, node.inputs[0])
     gamma_node = export_node(ctx, node.inputs[1])
     return f"(({color_node})^({gamma_node}))"
 
 
-def _export_rgb_brightcontrast(ctx, node):
+def _export_rgb_brightcontrast(ctx: NodeContext, node: bpy.types.Node):
     color = export_node(ctx, node.inputs["Color"])
     bright = export_node(ctx, node.inputs["Bright"])
     contrast = export_node(ctx, node.inputs["Contrast"])
@@ -374,7 +324,7 @@ def _export_rgb_brightcontrast(ctx, node):
     return f"max(color(0), (1+{contrast})*{color} + color({bright}-{contrast}*0.5))"
 
 
-def _export_rgb_invert(ctx, node):
+def _export_rgb_invert(ctx: NodeContext, node: bpy.types.Node):
     # Only valid if values between 0 and 1
 
     fac = export_node(ctx, node.inputs[0])
@@ -388,7 +338,7 @@ def _export_rgb_invert(ctx, node):
         return ops
 
 
-def _export_combine_hsv(ctx, node):
+def _export_combine_hsv(ctx: NodeContext, node: bpy.types.Node):
     hue = export_node(ctx, node.inputs["H"])
     sat = export_node(ctx, node.inputs["S"])
     val = export_node(ctx, node.inputs["V"])
@@ -396,7 +346,7 @@ def _export_combine_hsv(ctx, node):
     return f"hsvtorgb(color({hue}, {sat}, {val}))"
 
 
-def _export_combine_rgb(ctx, node):
+def _export_combine_rgb(ctx: NodeContext, node: bpy.types.Node):
     r = export_node(ctx, node.inputs["R"])
     g = export_node(ctx, node.inputs["G"])
     b = export_node(ctx, node.inputs["B"])
@@ -404,7 +354,7 @@ def _export_combine_rgb(ctx, node):
     return f"color({r}, {g}, {b})"
 
 
-def _export_combine_xyz(ctx, node):
+def _export_combine_xyz(ctx: NodeContext, node: bpy.types.Node):
     x = export_node(ctx, node.inputs["X"])
     y = export_node(ctx, node.inputs["Y"])
     z = export_node(ctx, node.inputs["Z"])
@@ -412,7 +362,7 @@ def _export_combine_xyz(ctx, node):
     return f"vec3({x}, {y}, {z})"
 
 
-def _export_separate_hsv(ctx, node, output_name):
+def _export_separate_hsv(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     color = export_node(ctx, node.inputs[0])
     ops = f"rgbtohsv({color})"
     if output_name == "H":
@@ -423,7 +373,7 @@ def _export_separate_hsv(ctx, node, output_name):
         return f"{ops}.b"
 
 
-def _export_separate_rgb(ctx, node, output_name):
+def _export_separate_rgb(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     color = export_node(ctx, node.inputs[0])
     if output_name == "R":
         return f"{color}.r"
@@ -433,7 +383,7 @@ def _export_separate_rgb(ctx, node, output_name):
         return f"{color}.b"
 
 
-def _export_separate_xyz(ctx, node, output_name):
+def _export_separate_xyz(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     vec = export_node(ctx, node.inputs[0])
     if output_name == "X":
         return f"{vec}.x"
@@ -443,7 +393,7 @@ def _export_separate_xyz(ctx, node, output_name):
         return f"{vec}.z"
 
 
-def _export_separate_color(ctx, node, output_name):
+def _export_separate_color(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     vec = export_node(ctx, node.inputs[0])
     if node.mode == 'HSV':
         if output_name == "Hue":
@@ -474,7 +424,7 @@ def _export_separate_color(ctx, node, output_name):
             return f"{vec}.w"
 
 
-def _export_combine_color(ctx, node):
+def _export_combine_color(ctx: NodeContext, node: bpy.types.Node):
     x = export_node(ctx, node.inputs[0])
     y = export_node(ctx, node.inputs[1])
     z = export_node(ctx, node.inputs[2])
@@ -487,7 +437,7 @@ def _export_combine_color(ctx, node):
         return f"color({x}, {y}, {z})"
 
 
-def _export_hsv(ctx, node):
+def _export_hsv(ctx: NodeContext, node: bpy.types.Node):
     hue = export_node(ctx, node.inputs[0])
     sat = export_node(ctx, node.inputs[1])
     val = export_node(ctx, node.inputs[2])
@@ -507,12 +457,12 @@ def _export_hsv(ctx, node):
     return f"max(color(0), {ret})"
 
 
-def _export_blackbody(ctx, node):
+def _export_blackbody(ctx: NodeContext, node: bpy.types.Node):
     temp = export_node(ctx, node.inputs[0])
     return f"blackbody({temp})"
 
 
-def _export_val_to_rgb(ctx, node):
+def _export_val_to_rgb(ctx: NodeContext, node: bpy.types.Node):
     t = export_node(ctx, node.inputs[0])
     cr = node.color_ramp
 
@@ -552,12 +502,12 @@ def _export_val_to_rgb(ctx, node):
     return f"color({r_func}, {g_func}, {b_func}, {a_func})"
 
 
-def _export_rgb_to_bw(ctx, node):
+def _export_rgb_to_bw(ctx: NodeContext, node: bpy.types.Node):
     color = export_node(ctx, node.inputs["Color"])
     return f"luminance({color})"
 
 
-def _curve_lookup(curve, t, interpolate, extrapolate):
+def _curve_lookup(curve, t, interpolate: bool, extrapolate: bool):
     # No points given, return zero
     if len(curve.points) == 0:
         return 0
@@ -580,7 +530,7 @@ def _curve_lookup(curve, t, interpolate, extrapolate):
     return f"lookup({lookup_type}, {extrapolate}, {t}, {args})"
 
 
-def _export_float_curve(ctx, node):
+def _export_float_curve(ctx: NodeContext, node: bpy.types.Node):
     mapping = node.mapping
 
     fac = export_node(ctx, node.inputs[0])
@@ -599,7 +549,7 @@ def _export_float_curve(ctx, node):
         return f"mix({value}, {lV}, {fac})"
 
 
-def _export_rgb_curve(ctx, node):
+def _export_rgb_curve(ctx: NodeContext, node: bpy.types.Node):
     mapping = node.mapping
 
     fac = export_node(ctx, node.inputs[0])
@@ -628,7 +578,7 @@ def _export_rgb_curve(ctx, node):
         return f"mix({color}, {ops}, {fac})"
 
 
-def _export_vector_curve(ctx, node):
+def _export_vector_curve(ctx: NodeContext, node: bpy.types.Node):
     mapping = node.mapping
 
     fac = export_node(ctx, node.inputs[0])
@@ -653,7 +603,7 @@ def _export_vector_curve(ctx, node):
         return f"mix({vector}, {ops}, {fac})"
 
 
-def _export_vector_mapping(ctx, node):  # TRS
+def _export_vector_mapping(ctx: NodeContext, node: bpy.types.Node):  # TRS
     if node.inputs["Vector"].is_linked:
         vec = export_node(ctx, node.inputs["Vector"])
     else:
@@ -713,7 +663,7 @@ def _export_vector_mapping(ctx, node):  # TRS
             return out
 
 
-def _export_vector_math(ctx, node):
+def _export_vector_math(ctx: NodeContext, node: bpy.types.Node):
     if node.operation == "ADD":
         return f"({export_node(ctx, node.inputs[0])} + {export_node(ctx, node.inputs[1])})"
     elif node.operation == "SUBTRACT":
@@ -792,12 +742,12 @@ def _export_vector_math(ctx, node):
     elif node.operation == "DEGREES":
         return f"({export_node(ctx, node.inputs[0])} * 180 / Pi)"
     else:
-        print(
+        ctx.report_error(
             f"Not supported vector math operation type {node.operation} for node {node.name}")
         return "vec3(0)"
 
 
-def _export_vector_rotate(ctx, node):
+def _export_vector_rotate(ctx: NodeContext, node: bpy.types.Node):
     vec = export_node(ctx, node.inputs["Vector"])
     center = export_node(ctx, node.inputs["Center"])
 
@@ -822,13 +772,13 @@ def _export_vector_rotate(ctx, node):
         return f"(rotate_axis({vec}-{center}, {angle}, {axis})+{center})"
 
 
-def _export_vector_transform(ctx, node):
+def _export_vector_transform(ctx: NodeContext, node: bpy.types.Node):
     map_name = {"WORLD": "global", "OBJECT": "object", "CAMERA": "camera"}
 
     vec = export_node(ctx, node.inputs["Vector"])
     if node.convert_from == 'CAMERA' or node.convert_to == 'CAMERA':
         # TODO: Add support for this as it is easy to implement if the orientation is exposed to PExpr
-        print(
+        ctx.report_error(
             f"Transforming from {node.convert_from} to {node.convert_to} is not supported")
     elif node.convert_from != node.convert_to:
         if node.type == 'Vector':
@@ -842,8 +792,8 @@ def _export_vector_transform(ctx, node):
     return vec
 
 
-def _export_normal(ctx, node, output_name):
-    out_norm = _export_default(node.outputs[0])
+def _export_normal(ctx: NodeContext, node: bpy.types.Node, output_name: str):
+    out_norm = _export_default(ctx, node.outputs[0])
     if output_name == "Normal":
         return out_norm
 
@@ -851,7 +801,7 @@ def _export_normal(ctx, node, output_name):
     return f"dot({out_norm}, {normal})"
 
 
-def _export_normalmap(ctx, node):
+def _export_normalmap(ctx: NodeContext, node: bpy.types.Node):
     color = export_node(ctx, node.inputs["Color"])
     strength = export_node(ctx, node.inputs["Strength"])
 
@@ -875,7 +825,7 @@ def _export_normalmap(ctx, node):
         return f"norm(({dn} - N)*{strength} + N)"
 
 
-def _export_bumpmap(ctx, node):
+def _export_bumpmap(ctx: NodeContext, node: bpy.types.Node):
     strength = export_node(ctx, node.inputs["Strength"])
     distance = export_node(ctx, node.inputs["Distance"])
     normal = export_node(
@@ -909,7 +859,7 @@ def _export_bumpmap(ctx, node):
     return f"ensure_valid_reflection(Ng, V, {out})"
 
 
-def _export_checkerboard(ctx, node, output_name):
+def _export_checkerboard(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     scale = export_node(ctx, node.inputs["Scale"])
 
     if node.inputs["Vector"].is_linked:
@@ -926,7 +876,7 @@ def _export_checkerboard(ctx, node, output_name):
         return raw
 
 
-def _export_image(image, path, is_f32=False, keep_format=False):
+def _export_image(image: bpy.types.Image, path: str, is_f32=False, keep_format=False):
     # Make sure the image is loaded to memory, so we can write it out
     if not image.has_data:
         image.pixels[0]
@@ -951,7 +901,7 @@ def _export_image(image, path, is_f32=False, keep_format=False):
         image.save_render(path)
 
 
-def _handle_image(ctx, image: bpy.types.Image):
+def _handle_image(ctx: NodeContext, image: bpy.types.Image):
     tex_dir_name = get_prefs().tex_dir_name
 
     if image.source == 'GENERATED':
@@ -1005,22 +955,23 @@ def _handle_image(ctx, image: bpy.types.Image):
                 ctx.result["_images"].add(img_name)
         return img_path
     else:
-        print(f"Image type {image.source} not supported")
+        ctx.report_error(f"Image type {image.source} not supported")
         return None
 
 
-def _export_image_texture(ctx, node, output_name):
+def _export_image_texture(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     id = len(ctx.result["textures"])
     tex_name = f"_tex_{id}"
 
     if not node.image:
-        print(f"Image node {node.name} has no image")
+        ctx.report_error(f"Image node {node.name} has no image")
         return "color(0)"
 
     try:
         img_path = _handle_image(ctx, node.image)
     except Exception as excp:
-        print(f"Caught exception when handling image {tex_name}:", excp)
+        ctx.report_error(
+            f"Caught exception when handling image {tex_name}:", excp)
         img_path = None
 
     if node.extension == "EXTEND":
@@ -1041,7 +992,7 @@ def _export_image_texture(ctx, node, output_name):
     elif cs == "sRGB":
         linear = False
     else:
-        print(f"Not supported image color space {cs}")
+        ctx.report_warning(f"Not supported image color space {cs}")
         linear = False
 
     if img_path is not None:
@@ -1076,7 +1027,7 @@ def _export_image_texture(ctx, node, output_name):
         return f"{tex_access}.w"
 
 
-def _get_noise_vector(ctx, node):
+def _get_noise_vector(ctx: NodeContext, node: bpy.types.Node):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
@@ -1090,11 +1041,11 @@ def _get_noise_vector(ctx, node):
     elif node.noise_dimensions == '3D':
         return f"{uv}"
     else:
-        print(f"Four dimensional noise is not supported")
+        ctx.report_error(f"Four dimensional noise is not supported")
         return f"{uv}"
 
 
-def _export_white_noise(ctx, node, output_name):
+def _export_white_noise(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     ops = _get_noise_vector(ctx, node)
 
     if output_name == "Color":
@@ -1103,7 +1054,7 @@ def _export_white_noise(ctx, node, output_name):
         return f"noise({ops})"
 
 
-def _export_noise(ctx, node, output_name):
+def _export_noise(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     # TODO: Missing Detail, Roughness and Distortion
     ops = _get_noise_vector(ctx, node)
     scale = export_node(ctx, node.inputs["Scale"])
@@ -1114,7 +1065,7 @@ def _export_noise(ctx, node, output_name):
         return f"pnoise(abs({ops}*{scale}))"
 
 
-def _export_voronoi(ctx, node, output_name):
+def _export_voronoi(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     # TODO: Missing smoothness, SMOOTH_F1, DISTANCE_TO_EDGE, N_SPHERE_RADIUS
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
@@ -1128,7 +1079,8 @@ def _export_voronoi(ctx, node, output_name):
     elif node.voronoi_dimensions == '3D':
         ops = uv
     else:
-        print(f"Voronoi currently only supports 1d, 2d and 3d vectors")
+        ctx.report_warning(
+            f"Voronoi currently only supports 1d, 2d and 3d vectors")
         ops = uv
 
     scale = export_node(ctx, node.inputs["Scale"])
@@ -1139,7 +1091,8 @@ def _export_voronoi(ctx, node, output_name):
     elif node.feature == 'F2':
         feature = 'f2'
     else:
-        print(f"Voronoi currently only supports F1 and F2 features")
+        ctx.report_warning(
+            f"Voronoi currently only supports F1 and F2 features")
 
     distance_f = "euclidean"
     exponent = 0  # Does not matter if not Minkowski
@@ -1153,7 +1106,8 @@ def _export_voronoi(ctx, node, output_name):
         distance_f = "minkowski"
         exponent = export_node(ctx, node.inputs["Exponent"])
     else:
-        print(f"Voronoi currently only supports euclidean, manhatten, chebyshev and minkowski as distance metrics")
+        ctx.report_warning(
+            f"Voronoi currently only supports euclidean, manhatten, chebyshev and minkowski as distance metrics")
 
     randomness = export_node(ctx, node.inputs["Randomness"])
 
@@ -1166,7 +1120,7 @@ def _export_voronoi(ctx, node, output_name):
         return f"voronoi(abs({ops}*{scale}), {NODE_NOISE_SEED}, {randomness}, '{feature}', '{distance_f}', {exponent})"
 
 
-def _export_musgrave(ctx, node, output_name):
+def _export_musgrave(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     # TODO: Missing a lot of parameters and only supports fbm
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
@@ -1180,7 +1134,8 @@ def _export_musgrave(ctx, node, output_name):
     elif node.musgrave_dimensions == '3D':
         ops = uv
     else:
-        print(f"Musgrave currently only supports 1d, 2d and 3d vectors")
+        ctx.report_warning(
+            f"Musgrave currently only supports 1d, 2d and 3d vectors")
         ops = uv
 
     scale = export_node(ctx, node.inputs["Scale"])
@@ -1192,7 +1147,7 @@ def _export_musgrave(ctx, node, output_name):
     return f"fbm(abs({ops}*{scale}), {NODE_NOISE_SEED}, int({details}), {lacunarity}, {gain})"
 
 
-def _export_wave(ctx, node, output_name):
+def _export_wave(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     # TODO: Add distortion
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
@@ -1237,13 +1192,13 @@ def _export_wave(ctx, node, output_name):
         return ops
 
 
-def _export_environment(ctx, node):
+def _export_environment(ctx: NodeContext, node: bpy.types.Node):
     # TODO: Currently no support for projection mode
     id = len(ctx.result["textures"])
     tex_name = f"_tex_{id}"
 
     if not node.image:
-        print(f"Image node {node.name} has no image")
+        ctx.report_error(f"Image node {node.name} has no image")
         return "color(0)"
 
     img_path = _handle_image(ctx, node.image)
@@ -1274,7 +1229,7 @@ def _export_environment(ctx, node):
     return tex_access
 
 
-def _export_gradient(ctx, node, output_name):
+def _export_gradient(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     if node.inputs["Vector"].is_linked:
         uv = export_node(ctx, node.inputs["Vector"])
     else:
@@ -1303,7 +1258,7 @@ def _export_gradient(ctx, node, output_name):
         return fac
 
 
-def _export_surface_attributes(ctx, node, output_name):
+def _export_surface_attributes(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     if output_name == "Position":
         return "P"
     elif output_name == "Normal":
@@ -1319,11 +1274,12 @@ def _export_surface_attributes(ctx, node, output_name):
     elif output_name == "Backfacing":
         return "select(frontside, 0, 1)"
     else:
-        print(f"Given geometry attribute '{output_name}' not supported")
+        ctx.report_warning(
+            f"Given geometry attribute '{output_name}' not supported")
         return "N"
 
 
-def _export_tex_coordinate(ctx, node, output_name):
+def _export_tex_coordinate(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     if output_name == 'UV':
         return ctx.texcoord
     elif output_name == 'Generated':
@@ -1336,26 +1292,29 @@ def _export_tex_coordinate(ctx, node, output_name):
     elif output_name == 'Reflection':
         return 'reflect(V, N)'
     else:
-        print(
+        ctx.report_warning(
             f"Given texture coordinate output '{output_name}' is not supported")
         return ctx.texcoord
 
 
-def _export_uvmap(ctx, node):
+def _export_uvmap(ctx: NodeContext, node: bpy.types.Node):
     # TODO: Maybe support this with texture lookups?
     if node.uv_map != "":
-        print(f"Additional UV Maps are not supported, default to first one")
+        ctx.report_warning(
+            f"Additional UV Maps are not supported, default to first one")
     return ctx.texcoord
 
 
-def _export_object_info(ctx, node, output_name):
+def _export_object_info(ctx: NodeContext, node: bpy.types.Node, output_name: str):
     if output_name != 'Random':
-        print(f"Object info node only supports 'Random' attribute")
+        ctx.report_warning(
+            f"Object info node only supports 'Random' attribute")
     return "noise(entity_id)"
 
 
-def _export_light_path(ctx, node, output_name):
-    print(f"Light path output not fully supported, returning default values if necessary")
+def _export_light_path(ctx: NodeContext, node: bpy.types.Node, output_name: str):
+    ctx.report_warning(
+        f"Light path output not fully supported, returning default values if necessary")
     # No light paths supported, so just return some default values
     # This will work 90% of the time, but most likely will fail in some cases
     if output_name == "Is Camera Ray":
@@ -1385,19 +1344,19 @@ def _export_light_path(ctx, node, output_name):
     elif output_name == "Transmission Depth":
         return 0
     else:
-        print(f"Unknown light path output {output_name}")
+        ctx.report_error(f"Unknown light path output {output_name}")
         return 0
 
 
-def handle_node_group_begin(ctx, node, output_name, func):
+def handle_node_group_begin(ctx: NodeContext, node: bpy.types.Node, output_name: str, func):
     if node.node_tree is None:
-        print(
+        ctx.report_error(
             f"Invalid group node '{node.name}'")
         return None
 
     output = node.node_tree.nodes.get("Group Output")
     if output is None:
-        print(
+        ctx.report_error(
             f"Invalid group '{node.node_tree.name}'")
         return None
 
@@ -1408,7 +1367,7 @@ def handle_node_group_begin(ctx, node, output_name, func):
     return out
 
 
-def handle_node_group_end(ctx, node, output_name, func):
+def handle_node_group_end(ctx: NodeContext, node: bpy.types.Node, output_name: str, func):
     grp = ctx.current
     # print(f"End group {grp.node_tree.name} via {output_name}")
     ctx.goIn()
@@ -1417,11 +1376,11 @@ def handle_node_group_end(ctx, node, output_name, func):
     return out
 
 
-def handle_node_reroute(ctx, node, func):
+def handle_node_reroute(ctx: NodeContext, node: bpy.types.Node, func):
     return func(ctx, node.inputs[0])
 
 
-def handle_node_implicit_mappings(socket, expr):
+def handle_node_implicit_mappings(ctx: NodeContext, socket: bpy.types.NodeSocket, expr):
     to_type = socket.type
     from_type = socket.links[0].from_socket.type
     if to_type == from_type:
@@ -1439,12 +1398,12 @@ def handle_node_implicit_mappings(socket, expr):
     elif from_type == 'VECTOR' and (to_type == 'RGBA' or to_type == 'SHADER'):
         return f"max(color({expr}.x, {expr}.y, {expr}.z, 1), color(0))"
     else:
-        print(
+        ctx.report_error(
             f"Socket connection from {socket.links[0].from_socket.name} to {socket.name} requires cast from {from_type} to {to_type} which is not supported")
         return expr
 
 
-def export_node(ctx, socket):
+def export_node(ctx: NodeContext, socket: bpy.types.NodeSocket):
     # Missing:
     # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeCameraData,
     # ShaderNodeCustomGroup, ShaderNodeHairInfo, ShaderNodeLightFalloff,
@@ -1572,16 +1531,16 @@ def export_node(ctx, socket):
         elif check_instance("NodeReroute"):
             expr = handle_node_reroute(ctx, node, export_node)
         else:
-            print(
+            ctx.report_error(
                 f"Shader node {node.name} of type {type(node).__name__} is not supported")
             expr = None
 
         if expr is None:
-            return _export_default(socket)
+            return _export_default(ctx, socket)
 
-        full_expr = handle_node_implicit_mappings(socket, expr)
+        full_expr = handle_node_implicit_mappings(ctx, socket, expr)
 
         ctx.put_in_cache(socket, full_expr)
         return full_expr
     else:
-        return _export_default(socket)
+        return _export_default(ctx, socket)
