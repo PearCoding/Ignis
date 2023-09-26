@@ -248,7 +248,7 @@ def _export_bsdf(ctx: NodeContext, socket: bpy.types.NodeSocket, name: str):
             ctx, bsdf, lambda ctx2, socket2: _export_bsdf(ctx2, socket2, name))
     elif isinstance(bsdf, bpy.types.ShaderNode) and socket.links[0].from_socket.type in ['VALUE', 'INT', 'RGBA', 'VECTOR']:
         # Used if a non-shader node is connected directly to the surface output (Implicits already handled)
-        return export_node(ctx, socket)
+        return _export_emission_bsdf_black(name)
     else:
         ctx.report_error(
             f"Material {name} has a bsdf of type {type(bsdf).__name__}  which is not supported")
