@@ -39,7 +39,9 @@ def _export_bmesh_by_material(me: bpy.types.Mesh, name: str, export_ctx: ExportC
         # remove faces with other materials
         if mat_count > 1:
             for f in bm.faces:
-                if f.material_index != mat_id:
+                # Remove irrelevant faces
+                # Special case: Assign invalid material indices to the last material 
+                if f.material_index != mat_id and not ((f.material_index < 0 or f.material_index >= mat_count) and mat_id == mat_count-1):
                     bm.faces.remove(f)
 
         # Make sure all faces are convex
