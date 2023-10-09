@@ -802,6 +802,7 @@ def _export_normal(ctx: NodeContext, node: bpy.types.Node, output_name: str):
 
 
 def _export_normalmap(ctx: NodeContext, node: bpy.types.Node):
+    # TODO: The tangent used here is based on the UV generated tangent (not geometry)
     color = export_node(ctx, node.inputs["Color"])
     strength = export_node(ctx, node.inputs["Strength"])
 

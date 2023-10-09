@@ -17,6 +17,10 @@ struct Mat4x4 {
 fn @make_mat2x2(c0: Vec2, c1: Vec2) = Mat2x2 { col = [c0, c1] };
 fn @make_mat3x3(c0: Vec3, c1: Vec3, c2: Vec3) = Mat3x3 { col = [c0, c1, c2] };
 
+/* Tom Duff, James Burgess, Per Christensen, Christophe Hery, Andrew Kensler, Max Liani, and Ryusuke Villemin,
+ * Building an Orthonormal Basis, Revisited, Journal of Computer Graphics Techniques (JCGT), vol. 6, no. 1, 1-8, 2017
+ * http://jcgt.org/published/0006/01/01/
+ */
 fn @make_orthonormal_mat3x3(n: Vec3) -> Mat3x3 {
     let sign = math_builtins::copysign[f32](1, n.z);
     let a    = -1 / (sign + n.z);
