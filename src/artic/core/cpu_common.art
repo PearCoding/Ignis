@@ -64,10 +64,10 @@ fn @vectorized_range(body: fn (i32, i32) -> ()) = @|vector_width: i32, a: i32, b
 
 /// Will reduce based on the given operator
 fn @cpu_reduce[T](n: i32, elem: fn (i32) -> T, op: fn (T, T) -> T) -> T {
-    if n <= 0 { return(undef[T]()) }
-    if n <= 1 { return(elem(0)) }
+    if ?n && n <= 0 { return(undef[T]()) }
+    if ?n && n <= 1 { return(elem(0)) }
 
-    if n < 10000 {
+    if ?n && n < 10000 {
         let mut sum = @elem(0);
         for i in safe_unroll(1, n) {
             sum = @op(sum, @elem(i));
@@ -80,11 +80,15 @@ fn @cpu_reduce[T](n: i32, elem: fn (i32) -> T, op: fn (T, T) -> T) -> T {
         for i in parallel(8, 0, 8) {
             let s = i       * dn;
             let e = (i + 1) * dn;
+
+            if cpu_unlikely(s >= n) { continue() }
             
             // Maybe vectorize as well?
             let mut isum = @elem(s);
             for j in safe_unroll(s + 1, e) {
-                isum = @op(isum, @elem(j));
+                if cpu_likely(j < n) { 
+                    isum = @op(isum, @elem(j));
+                }
             }
             
             lane(i) = isum;
@@ -92,7 +96,9 @@ fn @cpu_reduce[T](n: i32, elem: fn (i32) -> T, op: fn (T, T) -> T) -> T {
 
         let mut sum = lane(0);
         for i in safe_unroll(1, 8) {
-            sum = @op(sum, lane(i));
+            if cpu_likely(i < n) { 
+                sum = @op(sum, lane(i));
+            }
         }
         sum
     }

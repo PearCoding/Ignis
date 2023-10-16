@@ -40,7 +40,7 @@ fn @conductor_factor(n: f32, k: f32, cos_i: f32) -> f32 {
  * will, on average, be reflected at a dielectric material boundary
  */
 fn @fresnel_diffuse_factor(eta: f32) -> f32 {
-    if(eta < 1) {
+    if eta < 1 {
         /* Fit by Egan and Hilgeman (1973). Works reasonably well for
          * "normal" IOR values (<2).
          * Max rel. error in 1.0 - 1.5 : 0.1%
