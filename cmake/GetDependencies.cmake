@@ -53,7 +53,7 @@ CPMAddPackage(
 CPMAddPackage(
     NAME libbvh
     GITHUB_REPOSITORY madmann91/bvh
-    GIT_TAG v1
+    GIT_TAG master
     DOWNLOAD_ONLY YES
 )
 

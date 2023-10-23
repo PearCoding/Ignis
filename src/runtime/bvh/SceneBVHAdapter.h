@@ -4,15 +4,10 @@
 #include "device/Target.h"
 #include "math/BoundingBox.h"
 
+#include <ranges>
+
 IG_BEGIN_IGNORE_WARNINGS
-#include <bvh/bvh.hpp>
-#include <bvh/leaf_collapser.hpp>
-#include <bvh/locally_ordered_clustering_builder.hpp>
-#include <bvh/node_layout_optimizer.hpp>
-#include <bvh/parallel_reinsertion_optimizer.hpp>
-#include <bvh/spatial_split_bvh_builder.hpp>
-#include <bvh/sweep_sah_builder.hpp>
-#include <bvh/triangle.hpp>
+#include <bvh/v2/default_builder.h>
 IG_END_IGNORE_WARNINGS
 
 // Contains implementation for NodeN
@@ -30,8 +25,8 @@ struct EntityObject {
     uint32 Flags;
 
     using ScalarType = float;
-    [[nodiscard]] inline bvh::BoundingBox<float> bounding_box() const { return bvh::BoundingBox<float>(BBox.min, BBox.max); }
-    [[nodiscard]] inline bvh::Vector3<float> center() const { return BBox.center(); }
+    [[nodiscard]] inline bvh::Bbox bounding_box() const { return bvh::from(BBox); }
+    [[nodiscard]] inline bvh::Vec3 center() const { return bvh::from(BBox.center()); }
 };
 
 template <size_t N>
@@ -53,25 +48,24 @@ struct BvhNEnt<2> {
     using Node = Node2;
 };
 
-template <size_t N, template <typename> typename Allocator>
-class BvhNEntAdapter : public BvhNAdapter<N, typename BvhNEnt<N>::Node, EntityObject, Allocator> {
-    using Parent = BvhNAdapter<N, typename BvhNEnt<N>::Node, EntityObject, Allocator>;
+template <size_t N, std::ranges::random_access_range PrimitiveRange>
+class BvhNEntAdapter : public BvhNAdapter<N, typename BvhNEnt<N>::Node, PrimitiveRange> {
+    using Parent = BvhNAdapter<N, typename BvhNEnt<N>::Node, PrimitiveRange>;
     using Bvh    = typename Parent::Bvh;
     using Node   = typename BvhNEnt<N>::Node;
     using Obj    = EntityLeaf1;
 
-    std::vector<Obj, Allocator<Obj>>& objects;
+    std::vector<Obj>& objects;
 
 public:
-    BvhNEntAdapter(std::vector<Node, Allocator<Node>>& nodes, std::vector<Obj, Allocator<Obj>>& objects)
-        : Parent(nodes)
+    BvhNEntAdapter(std::vector<Node>& nodes, const PrimitiveRange& primitives, std::vector<Obj>& objects)
+        : Parent(nodes, primitives)
         , objects(objects)
     {
     }
 
 protected:
-    virtual void write_leaf(const std::vector<EntityObject>& primitives,
-                            const Bvh& bvh,
+    virtual void write_leaf(const Bvh& bvh,
                             const typename Bvh::Node& node,
                             size_t parent,
                             size_t child)
@@ -82,8 +76,9 @@ protected:
         this->nodes[parent].child.e[child] = ~static_cast<int>(objects.size());
 
         for (size_t i = 0; i < this->primitive_count_of_node(node); ++i) {
-            const int id       = (int)bvh.primitive_indices[node.first_child_or_primitive + i];
-            const auto& in_obj = primitives.at(id);
+            const int id      = (int)bvh.primitive_indices.at(node.first_child_or_primitive + i);
+            const auto in_obj = std::ranges::cbegin(this->primitives)[id];
+            IG_ASSERT(in_obj.EntityID == id, "Expected entity order in BVH match entity id!");
 
             objects.emplace_back(EntityLeaf1{
                 { in_obj.BBox.min(0), in_obj.BBox.min(1), in_obj.BBox.min(2) },
@@ -105,32 +100,31 @@ protected:
     }
 };
 
-template <size_t N, template <typename> typename Allocator>
-inline void build_scene_bvh(std::vector<typename BvhNEnt<N>::Node, Allocator<typename BvhNEnt<N>::Node>>& nodes,
-                            std::vector<EntityLeaf1, Allocator<EntityLeaf1>>& objs,
-                            std::vector<EntityObject, Allocator<EntityObject>>& primitives)
+template <size_t N, std::ranges::random_access_range PrimitiveRange>
+static inline BvhNEntAdapter<N, PrimitiveRange> make_bvh_adapter(std::vector<typename BvhNEnt<N>::Node>& nodes, const PrimitiveRange& primitives, std::vector<EntityLeaf1>& objs)
 {
-    using Bvh = bvh::Bvh<float>;
-    // using BvhBuilder = bvh::SweepSahBuilder<Bvh>;
-    using BvhBuilder = bvh::LocallyOrderedClusteringBuilder<Bvh, uint32>;
+    return BvhNEntAdapter<N, PrimitiveRange>(nodes, primitives, objs);
+}
 
-    auto [bboxes, centers] = bvh::compute_bounding_boxes_and_centers(primitives.data(), primitives.size());
-    auto global_bbox       = bvh::compute_bounding_boxes_union(bboxes.get(), primitives.size());
+template <size_t N>
+inline void build_scene_bvh(std::vector<typename BvhNEnt<N>::Node>& nodes,
+                            std::vector<EntityLeaf1>& objs,
+                            std::vector<EntityObject> primitives)
+{
+    const auto bboxes_r  = (primitives | std::views::transform([](const EntityObject& o) -> const bvh::Bbox { return o.bounding_box(); }));
+    const auto centers_r = (primitives | std::views::transform([](const EntityObject& o) -> const bvh::Vec3 { return o.center(); }));
 
-    Bvh bvh;
-    BvhBuilder builder(bvh);
-    builder.build(global_bbox, bboxes.get(), centers.get(), primitives.size());
+    // FIXME: libbvh expects a span which is a continuous view, but range returns a random-access-view
+    // Might require changes in libbvh
+    const std::vector<bvh::Bbox> bboxes(bboxes_r.begin(), bboxes_r.end());
+    const std::vector<bvh::Vec3> centers(centers_r.begin(), centers_r.end());
 
-    bvh::ParallelReinsertionOptimizer parallel_optimizer(bvh);
-    parallel_optimizer.optimize();
+    using Builder = ::bvh::v2::DefaultBuilder<bvh::Node>;
+    typename Builder::Config config;
+    config.quality       = Builder::Quality::High;
+    config.max_leaf_size = 1;
+    auto bvh             = Builder::build(bboxes, centers);
 
-    bvh::LeafCollapser leaf_optimizer(bvh);
-    leaf_optimizer.collapse();
-
-    bvh::NodeLayoutOptimizer layout_optimizer(bvh);
-    layout_optimizer.optimize();
-
-    BvhNEntAdapter<N, Allocator> adapter(nodes, objs);
-    adapter.adapt(bvh, primitives);
+    make_bvh_adapter<N>(nodes, primitives, objs).adapt(bvh);
 }
 } // namespace IG
