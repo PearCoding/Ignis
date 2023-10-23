@@ -119,7 +119,7 @@ std::vector<float> linearize_warp(const Warp* warp)
 
 BRDFData* load_brdf_data(const Path& brdf_path)
 {
-    powitacq_rgb::BRDF* brdf = new powitacq_rgb::BRDF(brdf_path.generic_u8string());
+    powitacq_rgb::BRDF* brdf = new powitacq_rgb::BRDF(brdf_path.generic_string());
     BRDFData* data           = convert_brdf(brdf);
     return data;
 }

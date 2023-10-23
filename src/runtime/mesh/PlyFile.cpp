@@ -389,7 +389,7 @@ bool save(const TriMesh& mesh, const Path& path)
     const bool hasNormals = mesh.normals.size() == mesh.vertices.size();
     const bool hasTexture = mesh.texcoords.size() == mesh.vertices.size();
 
-    std::ofstream out(path.generic_u8string(), std::ios::binary);
+    std::ofstream out(path.generic_string(), std::ios::binary);
 
     out << "ply\n"
         << "format binary_little_endian 1.0\n"

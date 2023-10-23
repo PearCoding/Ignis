@@ -30,7 +30,7 @@ TriMesh load(const Path& path, const std::optional<size_t>& shape_index)
     std::string warn;
     std::string err;
 
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.generic_u8string().c_str());
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.generic_string().c_str());
 
     if (!warn.empty())
         IG_LOG(L_WARNING) << "ObjFile " << path << ": " << warn << std::endl;
@@ -216,7 +216,7 @@ bool save(const TriMesh& mesh, const Path& path)
     const bool hasNormals = mesh.normals.size() == mesh.vertices.size();
     const bool hasTexture = mesh.texcoords.size() == mesh.vertices.size();
 
-    std::ofstream out(path.generic_u8string());
+    std::ofstream out(path.generic_string());
 
     out << "# Exported with Ignis" << std::endl;
 

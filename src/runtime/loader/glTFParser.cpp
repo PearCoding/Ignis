@@ -88,7 +88,7 @@ static Path exportImage(const tinygltf::Image& img, const tinygltf::Model& model
         std::string extension = "." + tinygltf::MimeToExt(img.mimeType);
 
         Path path = cache_dir / ("_img_" + std::to_string(id) + extension);
-        std::ofstream out(path.generic_u8string(), std::ios::binary);
+        std::ofstream out(path.generic_string(), std::ios::binary);
         out.write(reinterpret_cast<const char*>(buffer.data.data() + view.byteOffset), view.byteLength);
 
         return path;
@@ -96,7 +96,7 @@ static Path exportImage(const tinygltf::Image& img, const tinygltf::Model& model
         std::string extension = "." + tinygltf::MimeToExt(img.mimeType);
 
         Path path = cache_dir / ("_img_" + std::to_string(id) + extension);
-        std::ofstream out(path.generic_u8string(), std::ios::binary);
+        std::ofstream out(path.generic_string(), std::ios::binary);
         out.write(reinterpret_cast<const char*>(img.image.data()), img.image.size());
 
         return path;
@@ -178,7 +178,7 @@ static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, 
         texData       = (texBuffer->data.data() + texBufferView->byteOffset + textures->byteOffset);
     }
 
-    std::ofstream out(path.generic_u8string(), std::ios::binary);
+    std::ofstream out(path.generic_string(), std::ios::binary);
 
     out << "ply\n"
         << "format binary_little_endian 1.0\n"
@@ -666,7 +666,7 @@ static void loadTextures(Scene& scene, const tinygltf::Model& model, const Path&
         }
 
         auto obj = std::make_shared<SceneObject>(SceneObject::OT_TEXTURE, "image", directory);
-        obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(img_path).generic_u8string()));
+        obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(img_path).generic_string()));
 
         if (tex.sampler >= 0) {
             const tinygltf::Sampler& sampler = model.samplers[tex.sampler];
@@ -916,7 +916,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
 std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
 {
     Path directory = path.parent_path();
-    Path cache_dir = directory / (std::string("ignis_cache_") + path.stem().generic_u8string());
+    Path cache_dir = directory / (std::string("ignis_cache_") + path.stem().generic_string());
 
     std::filesystem::create_directories(cache_dir);
     std::filesystem::create_directories(cache_dir / "images");
@@ -931,9 +931,9 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
 
     bool ok = false;
     if (path.extension() == ".glb")
-        ok = loader.LoadBinaryFromFile(&model, &err, &warn, path.generic_u8string());
+        ok = loader.LoadBinaryFromFile(&model, &err, &warn, path.generic_string());
     else
-        ok = loader.LoadASCIIFromFile(&model, &err, &warn, path.generic_u8string());
+        ok = loader.LoadASCIIFromFile(&model, &err, &warn, path.generic_string());
 
     if (!warn.empty())
         IG_LOG(L_WARNING) << "glTF '" << path << "': " << warn << std::endl;
@@ -969,7 +969,7 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
 
             exportMeshPrimitive(ply_path, model, prim);
             auto obj = std::make_shared<SceneObject>(SceneObject::OT_SHAPE, "ply", directory);
-            obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(ply_path).generic_u8string()));
+            obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(ply_path).generic_string()));
             scene->addShape(name, obj);
 
             ++primCount;

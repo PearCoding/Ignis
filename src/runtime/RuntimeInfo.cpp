@@ -146,7 +146,7 @@ std::string RuntimeInfo::combineEnvPaths(const std::vector<Path>& paths)
     std::stringstream stream;
 
     for (size_t i = 0; i < paths.size(); ++i) {
-        stream << paths[i].u8string();
+        stream << paths[i].generic_string();
         if (i < paths.size() - 1)
             stream << ENV_DELIMITER;
     }

@@ -157,7 +157,7 @@ Vector3f LoaderUtils::getDirection(SceneObject& obj)
 
 LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate)
 {
-    std::string name = filename.stem().generic_u8string();
+    std::string name = filename.stem().generic_string();
     Image image      = Image::load(filename);
     return setup_cdf2d(ctx, name, image, premultiplySin, compensate);
 }
@@ -183,7 +183,7 @@ LoaderUtils::CDF2DData LoaderUtils::setup_cdf2d(LoaderContext& ctx, const std::s
 
 LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate)
 {
-    std::string name = filename.stem().generic_u8string();
+    std::string name = filename.stem().generic_string();
     Image image      = Image::load(filename);
     return setup_cdf2d_sat(ctx, name, image, premultiplySin, compensate);
 }

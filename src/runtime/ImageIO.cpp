@@ -148,7 +148,7 @@ bool ImageIO::save(const Path& path, size_t width, size_t height,
     }
 
     const char* err = nullptr;
-    int ret         = SaveEXRImageToFile(&image, &header, path.generic_u8string().c_str(), &err);
+    int ret         = SaveEXRImageToFile(&image, &header, path.generic_string().c_str(), &err);
 
     for (auto& attr : attributes)
         delete[] attr.value;

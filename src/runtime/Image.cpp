@@ -348,7 +348,7 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
 
 bool Image::isPacked(const Path& path)
 {
-    std::string ext   = path.extension().generic_u8string();
+    std::string ext   = path.extension().generic_string();
     const bool useExr = string_ends_with(ext, ".exr");
     const bool useHdr = string_ends_with(ext, ".hdr");
 
@@ -358,7 +358,7 @@ bool Image::isPacked(const Path& path)
 size_t Image::extractChannelCount(const Path& path)
 {
     int width = 0, height = 0, channels = 0;
-    stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
+    stbi_info(path.generic_string().c_str(), &width, &height, &channels);
     return channels == 1 ? 1 : 4;
 }
 
@@ -388,14 +388,14 @@ static inline int getIntAttribute(const EXRAttribute& attr)
 
 Image Image::load(const Path& path, ImageMetaData* metaData)
 {
-    std::string ext   = path.extension().generic_u8string();
+    std::string ext   = path.extension().generic_string();
     const bool useExr = string_ends_with(ext, ".exr");
 
     Image img;
 
     if (useExr) {
         EXRVersion exr_version;
-        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_u8string().c_str());
+        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_string().c_str());
         if (ret != 0)
             throw ImageLoadException("Could not extract exr version information", path);
 
@@ -403,7 +403,7 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
         InitEXRHeader(&exr_header);
 
         const char* err = nullptr;
-        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_u8string().c_str(), &err);
+        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_string().c_str(), &err);
         if (ret != 0) {
             std::string _err = err;
             FreeEXRErrorMessage(err);
@@ -453,7 +453,7 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
 
         EXRImage exr_image;
         InitEXRImage(&exr_image);
-        ret = LoadEXRImageFromFile(&exr_image, &exr_header, path.generic_u8string().c_str(), &err);
+        ret = LoadEXRImageFromFile(&exr_image, &exr_header, path.generic_string().c_str(), &err);
         if (ret != TINYEXR_SUCCESS) {
             std::string _err = err;
             FreeEXRErrorMessage(err);
@@ -528,12 +528,12 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
         stbi_set_flip_vertically_on_load(0);
 
         int width = 0, height = 0, channels = 0;
-        float* data = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 0);
+        float* data = stbi_loadf(path.generic_string().c_str(), &width, &height, &channels, 0);
 
         // If we got a weird channel number, map to RGBA
         if (channels != 1 && channels != 3 && channels != 4) {
             stbi_image_free(data);
-            data     = stbi_loadf(path.generic_u8string().c_str(), &width, &height, &channels, 4);
+            data     = stbi_loadf(path.generic_string().c_str(), &width, &height, &channels, 4);
             channels = 4;
         }
 
@@ -582,7 +582,7 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
 
 void Image::loadAsPacked(const Path& path, std::vector<uint8>& dst, size_t& width, size_t& height, size_t& channels, bool linear)
 {
-    std::string ext   = path.extension().generic_u8string();
+    std::string ext   = path.extension().generic_string();
     const bool useExr = string_ends_with(ext, ".exr");
     const bool useHdr = string_ends_with(ext, ".hdr");
 
@@ -593,12 +593,12 @@ void Image::loadAsPacked(const Path& path, std::vector<uint8>& dst, size_t& widt
     stbi_set_flip_vertically_on_load(1);
 
     int width2 = 0, height2 = 0, channels2 = 0;
-    stbi_uc* data = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels2, 0);
+    stbi_uc* data = stbi_load(path.generic_string().c_str(), &width2, &height2, &channels2, 0);
 
     // If we got a weird channel number, map to RGBA
     if (channels2 != 1 && channels2 != 3 && channels2 != 4) {
         stbi_image_free(data);
-        data      = stbi_load(path.generic_u8string().c_str(), &width2, &height2, &channels2, 4);
+        data      = stbi_load(path.generic_string().c_str(), &width2, &height2, &channels2, 4);
         channels2 = 4;
     }
 
@@ -674,12 +674,12 @@ void Image::loadAsPacked(const Path& path, std::vector<uint8>& dst, size_t& widt
 
 Image::Resolution Image::loadResolution(const Path& path)
 {
-    std::string ext   = path.extension().generic_u8string();
+    std::string ext   = path.extension().generic_string();
     const bool useExr = string_ends_with(ext, ".exr");
 
     if (useExr) {
         EXRVersion exr_version;
-        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_u8string().c_str());
+        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_string().c_str());
         if (ret != 0)
             throw ImageLoadException("Could not extract exr version information", path);
 
@@ -687,7 +687,7 @@ Image::Resolution Image::loadResolution(const Path& path)
         InitEXRHeader(&exr_header);
 
         const char* err = nullptr;
-        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_u8string().c_str(), &err);
+        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_string().c_str(), &err);
         if (ret != 0) {
             std::string _err = err;
             FreeEXRErrorMessage(err);
@@ -703,7 +703,7 @@ Image::Resolution Image::loadResolution(const Path& path)
         return res;
     } else {
         int width = 0, height = 0, channels = 0;
-        int good = stbi_info(path.generic_u8string().c_str(), &width, &height, &channels);
+        int good = stbi_info(path.generic_string().c_str(), &width, &height, &channels);
 
         if ((bool)good)
             return Resolution{ (size_t)width, (size_t)height, (size_t)channels };
@@ -719,7 +719,7 @@ bool Image::save(const Path& path)
 
 bool Image::save(const Path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
 {
-    std::string ext = path.extension().generic_u8string();
+    std::string ext = path.extension().generic_string();
     bool useExr     = string_ends_with(ext, ".exr");
 
     // We only support .exr output

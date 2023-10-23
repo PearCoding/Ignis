@@ -7,6 +7,7 @@
 #include <fstream>
 #include <optional>
 #include <sstream>
+#include <string_view>
 
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -15,6 +16,8 @@
 #include "glTFParser.h"
 
 namespace IG {
+using namespace std::string_view_literals;
+
 // TODO: (Re)Add arguments!
 
 using Arguments = std::unordered_map<std::string, std::string>;
@@ -22,7 +25,7 @@ using Arguments = std::unordered_map<std::string, std::string>;
 // ------------- File IO
 static inline bool doesFileExist(const Path& fileName)
 {
-    return std::ifstream(fileName.generic_u8string()).good();
+    return std::ifstream(fileName.generic_string()).good();
 }
 
 static inline Path resolvePath(const Path& path, const Path& baseDir)
@@ -324,7 +327,7 @@ inline static void populateObject(std::shared_ptr<SceneObject>& ptr, const rapid
         const std::string name = getString(itr->name);
 
         // Skip name and type entries
-        if (name == "name" || name == "type")
+        if (name == "name"sv || name == "type"sv)
             continue;
 
         const auto prop = getProperty(itr->value);
@@ -400,36 +403,36 @@ static void handleExternalObject(SceneParser& loader, Scene& scene, const Path& 
     if (!obj.HasMember("filename"))
         throw std::runtime_error("Expected a path for externals");
 
-    std::string pluginType           = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "";
-    const std::string inc_path       = getString(obj["filename"]);
-    const Path path = std::filesystem::canonical(resolvePath(inc_path, baseDir));
+    std::string pluginType     = obj.HasMember("type") ? to_lowercase(getString(obj["type"])) : "";
+    const std::string inc_path = getString(obj["filename"]);
+    const Path path            = std::filesystem::canonical(resolvePath(inc_path, baseDir));
     if (path.empty())
         throw std::runtime_error("Could not find path '" + inc_path + "'");
 
     // If type is empty, determine type by file extension
     if (pluginType.empty()) {
-        if (to_lowercase(path.extension().u8string()) == ".json")
+        if (to_lowercase(path.extension().generic_string()) == ".json"sv)
             pluginType = "ignis";
-        else if (to_lowercase(path.extension().u8string()) == ".gltf" || to_lowercase(path.extension().u8string()) == ".glb")
+        else if (to_lowercase(path.extension().generic_string()) == ".gltf"sv || to_lowercase(path.extension().generic_string()) == ".glb"sv)
             pluginType = "gltf";
         else
-            throw std::runtime_error("Could not determine external type by filename '" + path.u8string() + "'");
+            throw std::runtime_error("Could not determine external type by filename '" + path.generic_string() + "'");
     }
 
-    if (pluginType == "ignis") {
+    if (pluginType == "ignis"sv) {
         // Include ignis file
         auto local_scene = loader.loadFromFile(path, flags);
 
         if (local_scene == nullptr)
-            throw std::runtime_error("Could not load '" + path.generic_u8string() + "'");
+            throw std::runtime_error("Could not load '" + path.generic_string() + "'");
 
         scene.addFrom(*local_scene);
-    } else if (pluginType == "gltf") {
+    } else if (pluginType == "gltf"sv) {
         // Include and map gltf stuff
         auto local_scene = glTFSceneParser::loadFromFile(path); // TODO: Maybe honor flags?
 
         if (local_scene == nullptr)
-            throw std::runtime_error("Could not load '" + path.generic_u8string() + "'");
+            throw std::runtime_error("Could not load '" + path.generic_string() + "'");
 
         scene.addFrom(*local_scene);
     } else {
@@ -547,7 +550,7 @@ constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseComm
 
 std::shared_ptr<Scene> SceneParser::loadFromFile(const Path& path, uint32 flags)
 {
-    if (path.extension() == ".gltf" || path.extension() == ".glb") {
+    if (path.extension() == ".gltf"sv || path.extension() == ".glb"sv) {
         // Load gltf directly
         std::shared_ptr<Scene> scene = glTFSceneParser::loadFromFile(path);
         if (scene) {
@@ -564,7 +567,7 @@ std::shared_ptr<Scene> SceneParser::loadFromFile(const Path& path, uint32 flags)
         return scene;
     }
 
-    std::ifstream ifs(path.generic_u8string());
+    std::ifstream ifs(path.generic_string());
     if (!ifs.good()) {
         IG_LOG(L_ERROR) << "Could not open file '" << path << "'" << std::endl;
         return nullptr;

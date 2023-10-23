@@ -87,12 +87,12 @@ public:
     inline size_t registerExternalResource(const Path& path)
     {
         // TODO: Ensure canonical paths?
-        auto it = RegisteredResources.find(path.generic_u8string());
+        auto it = RegisteredResources.find(path.generic_string());
         if (it != RegisteredResources.end())
             return it->second;
         const size_t id = RegisteredResources.size();
 
-        return RegisteredResources[path.generic_u8string()] = id;
+        return RegisteredResources[path.generic_string()] = id;
     }
 
     [[nodiscard]] inline std::vector<std::string> generateResourceMap() const

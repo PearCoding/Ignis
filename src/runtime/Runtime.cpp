@@ -204,7 +204,7 @@ bool Runtime::load(const Path& path, const Scene* scene)
     LoaderOptions lopts;
     lopts.FilePath          = path;
     lopts.EnableCache       = mOptions.EnableCache;
-    lopts.CachePath         = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_u8string())) : mOptions.CacheDir;
+    lopts.CachePath         = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_string())) : mOptions.CacheDir;
     lopts.Target            = mOptions.Target;
     lopts.IsTracer          = mOptions.IsTracer;
     lopts.Scene             = scene;

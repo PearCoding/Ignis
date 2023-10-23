@@ -12,8 +12,6 @@
 
 #include "Logger.h"
 
-#include <tbb/scalable_allocator.h>
-
 namespace IG {
 
 inline TriMesh setup_mesh_triangle(SceneObject& elem)
@@ -184,11 +182,11 @@ inline TriMesh setup_mesh_external(const std::string& name, SceneObject& elem, c
         return {};
     }
 
-    if (to_lowercase(filename.extension().u8string()) == ".obj")
+    if (to_lowercase(filename.extension().generic_string()) == ".obj")
         return setup_mesh_obj(name, elem, ctx);
-    else if (to_lowercase(filename.extension().u8string()) == ".ply")
+    else if (to_lowercase(filename.extension().generic_string()) == ".ply")
         return setup_mesh_ply(name, elem, ctx);
-    else if (to_lowercase(filename.extension().u8string()) == ".mts" || to_lowercase(filename.extension().u8string()) == ".serialized")
+    else if (to_lowercase(filename.extension().generic_string()) == ".mts" || to_lowercase(filename.extension().generic_string()) == ".serialized")
         return setup_mesh_mitsuba(name, elem, ctx);
     else
         IG_LOG(L_ERROR) << "Shape '" << name << "': Can not determine type of external mesh for given " << filename << std::endl;
@@ -300,8 +298,8 @@ inline TriMesh setup_mesh_inline(const std::string& name, SceneObject& elem, con
 
 template <size_t N, size_t T>
 struct BvhTemporary {
-    std::vector<typename BvhNTriM<N, T>::Node, tbb::scalable_allocator<typename BvhNTriM<N, T>::Node>> nodes;
-    std::vector<typename BvhNTriM<N, T>::Tri, tbb::scalable_allocator<typename BvhNTriM<N, T>::Tri>> tris;
+    std::vector<typename BvhNTriM<N, T>::Node> nodes;
+    std::vector<typename BvhNTriM<N, T>::Tri> tris;
 };
 
 template <size_t N, size_t T>

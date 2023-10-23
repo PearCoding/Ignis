@@ -17,7 +17,7 @@ static TTExportedData setup_tensortree(const std::string& name, const std::share
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
-    const std::string exported_id = "_tt_" + filename.u8string();
+    const std::string exported_id = "_tt_" + filename.generic_string();
 
     const auto data = ctx.Cache->ExportedData.find(exported_id);
     if (data != ctx.Cache->ExportedData.end())

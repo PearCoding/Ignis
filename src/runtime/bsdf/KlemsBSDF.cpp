@@ -18,7 +18,7 @@ static KlemsExportedData setup_klems(const std::string& name, const std::shared_
 {
     auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
 
-    const std::string exported_id = "_klems_" + filename.u8string();
+    const std::string exported_id = "_klems_" + filename.generic_string();
 
     const auto data = ctx.Cache->ExportedData.find(exported_id);
     if (data != ctx.Cache->ExportedData.end())

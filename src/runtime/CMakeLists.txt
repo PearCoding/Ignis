@@ -347,7 +347,7 @@ elseif(TARGET OpenImageDenoise)
   message(STATUS "Building with OIDN support")
 endif()
 
-target_compile_features(ig_lib_runtime PUBLIC cxx_std_17)
+target_compile_features(ig_lib_runtime PUBLIC cxx_std_20)
 add_checks(ig_lib_runtime)
 add_linker_options(ig_lib_runtime)
 set_target_properties(ig_lib_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
