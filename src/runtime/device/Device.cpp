@@ -1775,7 +1775,7 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
 template <typename T>
 inline void get_stream(T* dev_stream, DeviceStream& stream, size_t min_components)
 {
-    static_assert(std::is_pod<T>::value, "Expected stream to be plain old data");
+    static_assert(std::is_standard_layout<T>::value, "Expected stream to be plain old data");
     static_assert((sizeof(T) % sizeof(float*)) == 0, "Expected stream size to be multiple of pointer size");
 
     float* ptr      = stream.Data.data();

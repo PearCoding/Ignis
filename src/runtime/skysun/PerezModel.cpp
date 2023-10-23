@@ -76,7 +76,7 @@ float PerezModel::integrate(const float solar_zenith) const
     const float cos_solar = std::cos(solar_zenith);
     const float sin_solar = std::sin(solar_zenith);
 
-    const auto compute = [=](float cos_theta, float sin_theta, float cos_phi) {
+    const auto compute = [this, cos_solar, sin_solar](float cos_theta, float sin_theta, float cos_phi) {
         const float cos_sun = std::min(1.0f, cos_solar * cos_theta + sin_solar * sin_theta * cos_phi);
         return this->eval(cos_sun, cos_theta) * cos_theta;
     };
