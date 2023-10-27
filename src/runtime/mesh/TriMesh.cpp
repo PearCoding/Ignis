@@ -741,7 +741,7 @@ std::vector<TriMesh::HalfEdge> TriMesh::computeHalfEdges() const
     edges.reserve(triangles * 3);
 
     for (size_t t = 0; t < triangles; ++t) {
-        const uint32 id = t * 3;
+        const uint32 id = (uint32_t)t * 3;
         for (uint32 k = 0; k < 3 /*Triangle*/; ++k) {
             const uint32 v  = indices[t * 4 + k];
             const uint32 vn = indices[t * 4 + (k + 1) % 3];
