@@ -4,7 +4,7 @@ cd "tmp"
 
 # Get zip
 if (!(Test-Path "sdl2.zip")) {
-    Invoke-WebRequest -Uri "$($Config.SDL2_URL)" -OutFile "sdl2.zip"
+    Invoke-WebRequest -UserAgent "Wget" -Uri "$($Config.SDL2_URL)" -OutFile "sdl2.zip"
     Expand-Archive sdl2.zip -DestinationPath . > $null
 }
 

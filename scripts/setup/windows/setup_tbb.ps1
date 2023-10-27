@@ -4,7 +4,7 @@ cd "tmp"
 
 # Get zip
 if (!(Test-Path "tbb.zip")) {
-    Invoke-WebRequest -Uri "$($Config.TBB_URL)" -OutFile "tbb.zip"
+    Invoke-WebRequest -UserAgent "Wget" -Uri "$($Config.TBB_URL)" -OutFile "tbb.zip"
     Expand-Archive tbb.zip -DestinationPath . > $null
 }
 

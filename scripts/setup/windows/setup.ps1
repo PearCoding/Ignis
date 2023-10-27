@@ -69,6 +69,10 @@ If($Config.GET_ZLIB) {
     & $PSScriptRoot\setup_zlib.ps1
 }
 
+If($Config.GET_HALF) {
+    & $PSScriptRoot\setup_half.ps1
+}
+
 If($Config.GET_AnyDSL) {
     & $PSScriptRoot\setup_anydsl.ps1
 }

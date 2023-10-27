@@ -4,7 +4,7 @@ cd "tmp"
 
 # Get zip
 if (!(Test-Path "oidn.zip")) {
-    Invoke-WebRequest -Uri "$($Config.OIDN_URL)" -OutFile "oidn.zip"
+    Invoke-WebRequest -UserAgent "Wget" -Uri "$($Config.OIDN_URL)" -OutFile "oidn.zip"
     Expand-Archive oidn.zip -DestinationPath . > $null
 }
 

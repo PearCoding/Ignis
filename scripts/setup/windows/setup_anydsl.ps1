@@ -7,10 +7,15 @@ $CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/")
 $ZLIB = "$DEPS_ROOT\zlib"
 $ZLIB_LIBRARY = "$ZLIB\lib\zlib.lib".Replace("\", "/")
 $ZLIB_INCLUDE_DIR = "$ZLIB\include".Replace("\", "/")
+$HALF = "$DEPS_ROOT\half".Replace("\", "/")
 
 # Check for some possible mistakes beforehand
 If (!(Test-Path -Path "$ZLIB")) {
     throw 'The zlib directory is not valid'
+}
+
+If (!(Test-Path -Path "$HALF")) {
+    throw 'The half directory is not valid'
 }
 
 If ([string]::IsNullOrEmpty($CUDA) -or !(Test-Path -Path "$CUDA")) {
@@ -43,6 +48,8 @@ $AnyDSL_Args = @()
 $AnyDSL_Args += $Config.CMAKE_EXTRA_ARGS
 $AnyDSL_Args += '-DRUNTIME_JIT:BOOL=ON'
 $AnyDSL_Args += '-DCMAKE_BUILD_TYPE:STRING="' + $BUILD_TYPE + '"'
+$AnyDSL_Args += '-DAnyDSL_PKG_Half_AUTOBUILD:BOOL=OFF'
+$AnyDSL_Args += '-DHalf_DIR:STRING="' + $HALF + '"'
 $AnyDSL_Args += '-DAnyDSL_runtime_BUILD_SHARED:BOOL=ON'
 $AnyDSL_Args += '-DAnyDSL_PKG_LLVM_AUTOBUILD:BOOL=ON'
 $AnyDSL_Args += '-DAnyDSL_PKG_LLVM_VERSION:STRING="' + $($Config.AnyDSL_LLVM_VERSION) + '"'
