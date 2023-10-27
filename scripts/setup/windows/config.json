@@ -10,6 +10,8 @@
     "GET_ZLIB": true,
     "ZLIB_BUILD_TYPE": "Release",
     "ZLIB_URL": "https://zlib.net/zlib13.zip",
+    "GET_HALF": true,
+    "HALF_URL": "https://sourceforge.net/projects/half/files/latest/download",
     "GET_AnyDSL": true,
     "AnyDSL_BUILD_TYPE": "Release",
     "AnyDSL_LLVM_VERSION": "14.0.6",
