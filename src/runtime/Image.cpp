@@ -728,7 +728,10 @@ bool Image::save(const Path& path, const float* data, size_t width, size_t heigh
         return false;
     }
 
-    if (channels == 1 || channels == 3) {
+    if (channels == 1) {
+        return ImageIO::save(path, width, height, std::vector<const float*>{ data },
+                             std::vector<std::string>{ "A" });
+    } else if (channels == 3) {
         std::vector<std::vector<float>> images(channels);
         for (size_t i = 0; i < channels; ++i)
             images[i].resize(width * height);
@@ -748,7 +751,7 @@ bool Image::save(const Path& path, const float* data, size_t width, size_t heigh
             image_ptrs[i] = &(images[channels - i - 1].at(0));
 
         return ImageIO::save(path, width, height, image_ptrs,
-                             channels == 3 ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A" });
+                             std::vector<std::string>{ "B", "G", "R" });
     } else {
         IG_ASSERT(channels == 4, "Expected four, three or one channel images");
 
