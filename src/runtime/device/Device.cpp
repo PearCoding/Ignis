@@ -473,6 +473,9 @@ public:
 
     inline DeviceStream& getPrimaryStream(int32_t dev, size_t buffer, size_t size)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Get Primary Streams" << std::endl;
+
         const size_t elements = roundUp(MinPrimaryStreamSize + getPrimaryPayloadBlockSize(), 4);
         auto& stream          = is_gpu ? *devices[dev].current_primary.at(buffer) : getThreadData()->cpu_primary;
         resizeArray(dev, stream.Data, size, elements);
@@ -483,6 +486,9 @@ public:
 
     inline DeviceStream& getPrimaryStream(int32_t dev, size_t buffer)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Get Readonly Primary Streams" << std::endl;
+
         if (is_gpu) {
             IG_ASSERT(devices[dev].current_primary.at(buffer)->Data.size() > 0, "Expected gpu primary stream to be initialized");
             return *devices[dev].current_primary.at(buffer);
@@ -494,6 +500,9 @@ public:
 
     inline DeviceStream& getSecondaryStream(int32_t dev, size_t buffer, size_t size)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Get Secondary Streams" << std::endl;
+    
         const size_t elements = roundUp(MinSecondaryStreamSize + getSecondaryPayloadBlockSize(), 4);
         auto& stream          = is_gpu ? *devices[dev].current_secondary.at(buffer) : getThreadData()->cpu_secondary;
         resizeArray(dev, stream.Data, size, elements);
@@ -504,6 +513,9 @@ public:
 
     inline DeviceStream& getSecondaryStream(int32_t dev, size_t buffer)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Get Readonly Secondary Streams" << std::endl;
+
         if (is_gpu) {
             IG_ASSERT(devices[dev].current_secondary.at(buffer)->Data.size() > 0, "Expected gpu secondary stream to be initialized");
             return *devices[dev].current_secondary.at(buffer);
@@ -520,12 +532,18 @@ public:
 
     inline void swapGPUPrimaryStreams(int32_t dev)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Swap GPU Primary Streams" << std::endl;
+
         auto& device = devices[dev];
         std::swap(device.current_primary[0], device.current_primary[1]);
     }
 
     inline void swapGPUSecondaryStreams(int32_t dev)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Swap GPU Secondary Streams" << std::endl;
+
         auto& device = devices[dev];
         std::swap(device.current_secondary[0], device.current_secondary[1]);
     }
@@ -559,6 +577,9 @@ public:
     template <typename Bvh, typename Node>
     inline const Bvh& loadEntityBVH(int32_t dev, const char* prim_type)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Load Entity BVH" << std::endl;
+
         std::lock_guard<std::mutex> _guard(thread_mutex);
 
         auto& device    = devices[dev];
@@ -572,6 +593,9 @@ public:
 
     inline const anydsl::Array<StreamRay>& loadRayList(int32_t dev)
     {
+        if (setup.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Load Ray List" << std::endl;
+
         size_t count = current_settings.width;
         auto& device = devices[dev];
         if (device.ray_list.size() == (int64_t)count)
@@ -620,7 +644,7 @@ public:
         if (ptr == nullptr) {
             IG_LOG(L_FATAL) << "Out of memory" << std::endl;
             std::abort();
-            return anydsl::Array<T>();
+            // return anydsl::Array<T>();
         }
 
         anydsl::Array<T> array(dev, reinterpret_cast<T*>(ptr), n);
@@ -1248,7 +1272,7 @@ public:
         if (ptr == nullptr) {
             IG_LOG(L_FATAL) << "Out of memory" << std::endl;
             std::abort();
-            return anydsl::Array<float>();
+            // return anydsl::Array<float>();
         }
 
         auto film_data = reinterpret_cast<float*>(ptr);
