@@ -84,8 +84,12 @@ bool ImageIO::save(const Path& path, size_t width, size_t height,
     // Init
     EXRHeader header;
     InitEXRHeader(&header);
-    // header.compression_type = TINYEXR_COMPRESSIONTYPE_ZIP;
-    header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
+    if (width * height < 16) {
+        // Seems like there is an issue with PIZ for tiny exr's (FIXME: Report this issue)
+        header.compression_type = TINYEXR_COMPRESSIONTYPE_ZIP;
+    } else {
+        header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
+    }
 
     EXRImage image;
     InitEXRImage(&image);
