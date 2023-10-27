@@ -34,5 +34,9 @@ public:
     using CDF2DSATData = std::tuple<Path, size_t, size_t>;
     static CDF2DSATData setup_cdf2d_sat(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate = false);
     static CDF2DSATData setup_cdf2d_sat(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate = false);
+
+    using CDF2DHierachicalData = std::tuple<Path, size_t, size_t, size_t>;
+    static CDF2DHierachicalData setup_cdf2d_hierachical(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate = false);
+    static CDF2DHierachicalData setup_cdf2d_hierachical(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate = false);
 };
 } // namespace IG

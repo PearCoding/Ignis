@@ -6,13 +6,26 @@
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
 
+#include <string_view>
+
 namespace IG {
 EnvironmentLight::EnvironmentLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
     : Light(name, light->pluginType())
+    , mCDFMethod(CDFMethod::Conditional)
     , mLight(light)
 {
-    mUseCDF          = light->property("cdf").getBool(true);
-    mUseCDFSAT       = to_lowercase(light->property("cdf_method").getString("")) == "sat";
+    using namespace std::string_view_literals;
+
+    const std::string method = to_lowercase(light->property("cdf").getString(""));
+    if (method == "none"sv)
+        mCDFMethod = CDFMethod::None;
+    else if (method == "conditional"sv)
+        mCDFMethod = CDFMethod::Conditional;
+    else if (method == "sat"sv)
+        mCDFMethod = CDFMethod::SAT;
+    else if (method == "hierachical"sv)
+        mCDFMethod = CDFMethod::Hierachical;
+
     mUseCompensation = light->property("compensate").getBool(true);
 }
 
@@ -44,17 +57,29 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
     const std::string light_id = input.Tree.currentClosureID();
-    if (mUseCDF && baked.has_value() && baked.value()->width > 1 && baked.value()->height > 1) {
+    if (mCDFMethod != CDFMethod::None && baked.has_value() && baked.value()->width > 1 && baked.value()->height > 1) {
         input.Stream << input.Tree.pullHeader();
-        if (!mUseCDFSAT) {
+        switch (mCDFMethod) {
+        default:
+        case CDFMethod::Conditional: {
             const auto cdf          = LoaderUtils::setup_cdf2d(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
             const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
             input.Stream << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl;
-        } else {
+        } break;
+        case CDFMethod::SAT: {
             const auto cdf          = LoaderUtils::setup_cdf2d_sat(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
             const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
             input.Stream << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_sat_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl;
+        } break;
+        case CDFMethod::Hierachical:{
+            const auto cdf          = LoaderUtils::setup_cdf2d_hierachical(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
+            const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
+            input.Stream << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_hierachical(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<2>(cdf) << ", " << std::get<3>(cdf) << ");" << std::endl;
+        } break;
+        case CDFMethod::None:
+            break;
         }
+
         input.Stream << "  let light_" << light_id << " = make_environment_light_textured(" << input.ID
                      << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                      << ", " << input.Tree.getInline("scale")

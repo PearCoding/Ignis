@@ -207,4 +207,41 @@ LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const
     return cdf_data;
 }
 
+LoaderUtils::CDF2DHierachicalData LoaderUtils::setup_cdf2d_hierachical(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate)
+{
+    std::string name = filename.stem().generic_string();
+    Image image      = Image::load(filename);
+    return setup_cdf2d_hierachical(ctx, name, image, premultiplySin, compensate);
+}
+
+LoaderUtils::CDF2DHierachicalData LoaderUtils::setup_cdf2d_hierachical(LoaderContext& ctx, const std::string& name, const Image& image, bool premultiplySin, bool compensate)
+{
+    const std::string exported_id = "_cdf2dhierachical_" + name;
+    const auto data               = ctx.Cache->ExportedData.find(exported_id);
+    if (data != ctx.Cache->ExportedData.end())
+        return std::any_cast<CDF2DHierachicalData>(data->second);
+
+    IG_LOG(L_DEBUG) << "Generating environment cdf (Hierachical) for '" << name << "'" << std::endl;
+    const Path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
+
+    size_t size   = 0;
+    size_t slice  = 0;
+    size_t levels = 0;
+    CDF::computeForImageHierachical(image, path, size, slice, levels, premultiplySin, compensate);
+
+#if 0
+    size_t size_c = 0;
+    for (size_t l = 0; l < levels; ++l) {
+        size_c += image.width * image.height / (1 << (2 * l));
+
+        const size_t p = (size_t)std::ceil(image.width * image.height * (4 - 1.0f / (1 << 2*l)) / 3);
+        std::cout << size_c << "=" << p << std::endl;
+    }
+#endif
+
+    const CDF2DHierachicalData cdf_data  = { path, size, slice, levels };
+    ctx.Cache->ExportedData[exported_id] = cdf_data;
+    return cdf_data;
+}
+
 } // namespace IG

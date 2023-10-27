@@ -11,5 +11,7 @@ public:
                                 bool premultiplySin, bool compensate);
     static void computeForImageSAT(const Image& image, const Path& out,
                                    size_t& size, size_t& slice, bool premultiplySin, bool compensate);
+    static void computeForImageHierachical(const Image& image, const Path& out,
+                                           size_t& size, size_t& slice, size_t& levels, bool premultiplySin, bool compensate);
 };
 } // namespace IG

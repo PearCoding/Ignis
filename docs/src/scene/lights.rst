@@ -539,10 +539,10 @@ Environment Light (:monosp:`env`)
     - Yes
     - Scale factor multiplied to the radiance. Only really useful in combination with a texture.
   * - cdf
-    - |bool|
-    - |true|
+    - |string|
+    - :code:`"conditional"`
     - No
-    - Construct a 2d cdf for sampling purposes. Will only be considered if parameter `radiance` is resembling a texture
+    - Internal method used for efficient sampling of the environment map. Can be one of "none", "sat", "conditional" or "hierachical".
 
 .. subfigstart::
   
