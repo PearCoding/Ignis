@@ -1,10 +1,12 @@
 #include "CDF.h"
 #include "Image.h"
+#include "Logger.h"
 #include "serialization/FileSerializer.h"
 
 IG_BEGIN_IGNORE_WARNINGS
 #include <tbb/blocked_range2d.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
 IG_END_IGNORE_WARNINGS
 
 namespace IG {
@@ -40,6 +42,31 @@ void CDF::computeForArray(const std::vector<float>& values, const Path& out)
     serializer.write(cdf, true);
 }
 
+static inline float colorResponse(float r, float g, float b)
+{
+    return (std::max(r, 0.0f) + std::max(g, 0.0f) + std::max(b, 0.0f)) / 3;
+}
+
+static inline float computeMISDefect(const Image& image)
+{
+    const size_t c = image.channels;
+
+    float defect   = 0;
+    float minValue = std::numeric_limits<float>::infinity();
+    for (size_t i = 0; i < image.width * image.height; ++i) {
+        const float response = colorResponse(image.pixels[i * c + 0], image.pixels[i * c + 1], image.pixels[i * c + 2]);
+        minValue             = std::min(minValue, response);
+        defect += response / image.width;
+    }
+    defect /= (float)image.height; // We split width & height to prevent large divisions
+
+    // If image is constant color, do not apply MIS compensation
+    if (std::abs(minValue - defect) < 1e-4f)
+        return 0;
+    else
+        return defect;
+}
+
 void CDF::computeForImage(const Image& image, const Path& out,
                           size_t& slice_conditional, size_t& slice_marginal,
                           bool premultiplySin, bool compensate)
@@ -56,15 +83,9 @@ void CDF::computeForImage(const Image& image, const Path& out,
     IG_ASSERT(c == 3 || c == 4, "Expected cdf image to have four or three channels per pixel");
 
     // Apply MIS compensation if necessary
-    Vector3f defect = Vector3f::Zero();
-    if (compensate) {
-        for (size_t i = 0; i < image.width * image.height; ++i) {
-            defect.x() += std::max(image.pixels[i * c + 0], 0.0f) / image.width;
-            defect.y() += std::max(image.pixels[i * c + 1], 0.0f) / image.width;
-            defect.z() += std::max(image.pixels[i * c + 2], 0.0f) / image.width;
-        }
-        defect /= (float)image.height; // We split width & height to prevent large divisions
-    }
+    float defect = 0;
+    if (compensate)
+        defect = computeMISDefect(image);
 
     // Compute per pixel average over image
     tbb::parallel_for(
@@ -75,16 +96,9 @@ void CDF::computeForImage(const Image& image, const Path& out,
                 float* cond    = &conditional[y * image.width];
 
                 // Compute one dimensional cdf per row
-                cond[0] = (std::max(p[0] - defect.x(), 0.0f)
-                           + std::max(p[1] - defect.y(), 0.0f)
-                           + std::max(p[2] - defect.z(), 0.0f))
-                          / 3;
+                cond[0] = colorResponse(p[0] - defect, p[1] - defect, p[2] - defect);
                 for (size_t x = 1; x < image.width; ++x)
-                    cond[x] = cond[x - 1]
-                              + (std::max(p[x * c + 0] - defect.x(), 0.0f)
-                                 + std::max(p[x * c + 1] - defect.y(), 0.0f)
-                                 + std::max(p[x * c + 2] - defect.z(), 0.0f))
-                                    / 3;
+                    cond[x] = cond[x - 1] + colorResponse(p[x * c + 0] - defect, p[x * c + 1] - defect, p[x * c + 2] - defect);
                 const float sum = cond[image.width - 1];
 
                 // Set as marginal
@@ -146,15 +160,9 @@ void CDF::computeForImageSAT(const Image& image, const Path& out,
     IG_ASSERT(c == 3 || c == 4, "Expected cdf image to have four or three channels per pixel");
 
     // Apply MIS compensation if necessary
-    Vector3f defect = Vector3f::Zero();
-    if (compensate) {
-        for (size_t i = 0; i < image.width * image.height; ++i) {
-            defect.x() += std::max(image.pixels[i * c + 0], 0.0f) / image.width;
-            defect.y() += std::max(image.pixels[i * c + 1], 0.0f) / image.width;
-            defect.z() += std::max(image.pixels[i * c + 2], 0.0f) / image.width;
-        }
-        defect /= (float)image.height; // We split width & height to prevent large divisions
-    }
+    float defect = 0;
+    if (compensate)
+        defect = computeMISDefect(image);
 
     // Compute per pixel average over image
     for (size_t y = 0; y < image.height; ++y) {
@@ -162,7 +170,7 @@ void CDF::computeForImageSAT(const Image& image, const Path& out,
         for (size_t x = 0; x < image.width; ++x) {
             const size_t id = y * image.width + x;
             const float* p  = &image.pixels[id * c];
-            const float val = (factor / 3) * (std::max(p[0] - defect.x(), 0.0f) + std::max(p[1] - defect.y(), 0.0f) + std::max(p[2] - defect.z(), 0.0f));
+            const float val = factor * colorResponse(p[0] - defect, p[1] - defect, p[2] - defect);
 
             const float vxpy  = y > 0 ? data[id - image.width] : 0.0f;
             const float vpxy  = x > 0 ? data[id - 1] : 0.0f;
@@ -192,27 +200,28 @@ void CDF::computeForImageSAT(const Image& image, const Path& out,
     serializer.write(data, true);
 }
 
-static std::vector<float> computeMipMap(const std::vector<float>& in, size_t width, size_t height)
+// Traverse bottom to top to create mip map
+static std::vector<float> computeMipMap(const std::vector<float>& detailed, size_t sliceDetailed)
 {
-    std::cout << width << "x" << height << std::endl;
-    if (width <= 2 || height <= 2)
+    if (sliceDetailed <= 2)
         return {};
 
-    const size_t sliceIn  = width;
-    const size_t sliceOut = width / 2;
+    const size_t sliceCoarse = sliceDetailed / 2;
 
-    std::vector<float> out(width * height / 4);
+    std::cout << sliceDetailed << "x" << sliceDetailed << " -> " << sliceCoarse << "x" << sliceCoarse << std::endl;
+
+    std::vector<float> out(sliceDetailed * sliceDetailed / 4);
     tbb::parallel_for(
-        tbb::blocked_range2d<size_t>(0, height / 2, 0, width / 2),
+        tbb::blocked_range2d<size_t>(0, sliceDetailed / 2, 0, sliceDetailed / 2),
         [&](const tbb::blocked_range2d<size_t>& range) {
             for (size_t y = range.rows().begin(); y < range.rows().end(); ++y) {
                 for (size_t x = range.cols().begin(); x < range.cols().end(); ++x) {
-                    const float x00 = in[(2 * y + 0) * sliceIn + 2 * x + 0];
-                    const float x01 = 2 * x + 1 < width ? in[(2 * y + 0) * sliceIn + 2 * x + 1] : 0.0f;
-                    const float x10 = 2 * y + 1 < height ? in[(2 * y + 1) * sliceIn + 2 * x + 0] : 0.0f;
-                    const float x11 = 2 * x + 1 < width && 2 * y + 1 < height ? in[(2 * y + 1) * sliceIn + 2 * x + 1] : 0.0f;
+                    const float x00 = detailed[(2 * y + 0) * sliceDetailed + 2 * x + 0];
+                    const float x01 = 2 * x + 1 < sliceDetailed ? detailed[(2 * y + 0) * sliceDetailed + 2 * x + 1] : 0.0f;
+                    const float x10 = 2 * y + 1 < sliceDetailed ? detailed[(2 * y + 1) * sliceDetailed + 2 * x + 0] : 0.0f;
+                    const float x11 = 2 * x + 1 < sliceDetailed && 2 * y + 1 < sliceDetailed ? detailed[(2 * y + 1) * sliceDetailed + 2 * x + 1] : 0.0f;
 
-                    out[y * sliceOut + x] = (x00 + x01 + x10 + x11) / 4;
+                    out[y * sliceCoarse + x] = (x00 + x01 + x10 + x11) / 4;
                 }
             }
         });
@@ -303,15 +312,9 @@ void CDF::computeForImageHierachical(const Image& image, const Path& out,
     IG_ASSERT(c == 3 || c == 4, "Expected cdf image to have four or three channels per pixel");
 
     // Apply MIS compensation if necessary
-    Vector3f defect = Vector3f::Zero();
-    if (compensate) {
-        for (size_t i = 0; i < image.width * image.height; ++i) {
-            defect.x() += std::max(image.pixels[i * c + 0], 0.0f) / image.width;
-            defect.y() += std::max(image.pixels[i * c + 1], 0.0f) / image.width;
-            defect.z() += std::max(image.pixels[i * c + 2], 0.0f) / image.width;
-        }
-        defect /= (float)image.height; // We split width & height to prevent large divisions
-    }
+    float defect = 0;
+    if (compensate)
+        defect = computeMISDefect(image);
 
     // Compute per pixel average over image
     std::vector<float> initial(image.width * image.height);
@@ -320,9 +323,33 @@ void CDF::computeForImageHierachical(const Image& image, const Path& out,
         for (size_t x = 0; x < image.width; ++x) {
             const size_t id = y * image.width + x;
             const float* p  = &image.pixels[id * c];
-            const float val = (factor / 3) * (std::max(p[0] - defect.x(), 0.0f) + std::max(p[1] - defect.y(), 0.0f) + std::max(p[2] - defect.z(), 0.0f));
+            const float val = factor * colorResponse(p[0] - defect, p[1] - defect, p[2] - defect);
             initial[id]     = val;
         }
+    }
+
+    // Normalize
+    const float sum = tbb::parallel_reduce(
+        tbb::blocked_range<float*>(initial.data(), initial.data() + initial.size()),
+        0.f,
+        [](const tbb::blocked_range<float*>& r, float init) -> float {
+            for (float* a = r.begin(); a != r.end(); ++a)
+                init += *a;
+            return init;
+        },
+        [](float x, float y) -> float {
+            return x + y;
+        }) / initial.size(); // Compute average instead of the sum for better fp precision. The actual pdf is divided later by the size to compensate for it
+
+    if (!std::isfinite(sum)) {
+        IG_LOG(L_ERROR) << "Computing hierachical CDF for " << out << " failed due to containing non-finite numbers" << std::endl;
+    } else {
+        tbb::parallel_for(
+            tbb::blocked_range<float*>(initial.data(), initial.data() + initial.size()),
+            [sum](const tbb::blocked_range<float*>& r) {
+                for (float* a = r.begin(); a != r.end(); ++a)
+                    *a /= sum;
+            });
     }
 
     // Ensure the map is a square
@@ -333,12 +360,13 @@ void CDF::computeForImageHierachical(const Image& image, const Path& out,
         initial = downsampleX(initial, image.width, image.height, image.height);
 
     std::vector<std::vector<float>> data;
+    data.reserve(std::log2(slice));
     data.emplace_back(std::move(initial));
 
     // Compute mipmaps
     size_t slice2 = slice;
     while (true) {
-        auto vec = computeMipMap(data.back(), slice2, slice2);
+        auto vec = computeMipMap(data.back(), slice2);
         if (vec.empty())
             break;
 

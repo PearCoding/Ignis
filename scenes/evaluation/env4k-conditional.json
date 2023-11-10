@@ -3,6 +3,6 @@
     { "filename": "env4k-base.json" }
   ],
   "lights": [
-    { "name": "env", "type": "env", "radiance": "env", "compensate": false }
+    { "name": "env", "type": "env", "radiance": "env", "cdf": "conditional" }
   ]
 }

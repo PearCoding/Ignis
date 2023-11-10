@@ -269,6 +269,8 @@ set(SRC
   technique/DebugMode.h
   technique/DebugTechnique.cpp
   technique/DebugTechnique.h
+  technique/EnvCheckTechnique.cpp
+  technique/EnvCheckTechnique.h
   technique/InfoBufferTechnique.cpp
   technique/InfoBufferTechnique.h
   technique/LightTracerTechnique.cpp

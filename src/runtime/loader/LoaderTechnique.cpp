@@ -10,6 +10,7 @@
 #include "technique/AOTechnique.h"
 #include "technique/CameraCheckTechnique.h"
 #include "technique/DebugTechnique.h"
+#include "technique/EnvCheckTechnique.h"
 #include "technique/InfoBufferTechnique.h"
 #include "technique/LightTracerTechnique.h"
 #include "technique/LightVisibilityTechnique.h"
@@ -30,6 +31,10 @@ static std::shared_ptr<Technique> ao_loader(const std::shared_ptr<SceneObject>&)
 static std::shared_ptr<Technique> cc_loader(const std::shared_ptr<SceneObject>&)
 {
     return std::make_shared<CameraCheckTechnique>();
+}
+static std::shared_ptr<Technique> ec_loader(const std::shared_ptr<SceneObject>&)
+{
+    return std::make_shared<EnvCheckTechnique>();
 }
 static std::shared_ptr<Technique> debug_loader(const std::shared_ptr<SceneObject>& obj)
 {
@@ -79,6 +84,7 @@ static const struct TechniqueEntry {
     { "wireframe", wf_loader },
     { "lightvisibility", lv_loader },
     { "camera_check", cc_loader },
+    { "env_check", ec_loader },
     { "", nullptr }
 };
 

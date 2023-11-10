@@ -2,6 +2,7 @@ mod cdf {
 use super as all;
 use super::math_builtins;
 use super::interval;
+use super::math;
 
 type DeviceBuffer = all::DeviceBuffer;
 type Vec2 = all::Vec2;
@@ -207,21 +208,21 @@ fn @make_cdf_2d_sat_from_buffer(data: DeviceBuffer, size: i32, slice: i32) = mak
     make_cdf_1d_from_buffer(data, size, 0), slice
 );
 
-fn @make_cdf_2d_hierachical(data: DeviceBuffer, slice: i32, levels: i32) -> CDF2D {
+fn @make_cdf_2d_hierachical(data: DeviceBuffer, levels: i32) -> CDF2D {
     // Assumptions: The mip-map levels are in sequential order, with level 0 being the initial image. The image is also square!
-    let i_slice_f = 1 / (slice as f32 - 1);
+    let slice   = 1 << levels;
+    let slice_f = slice as f32;
 
-    fn @get_offset(l: i32) = math_builtins::ceil((slice * slice) as f32 * (4 - 1.0 / (1 << (2 * l)) as f32) / 3) as i32 - slice * slice;
+    fn @get_offset(l: i32) = ((1 << (2 * (levels + 1))) - (1 << (2 * (levels - l + 1)))) / 3;
 
     fn @lookup(x: i32, y: i32, l: i32) {
         let s = slice / (1 << l);
         data.load_f32(get_offset(l) + y * s + x)
     }
     
-    fn @sample_discrete(mut uv: Vec2) -> DiscreteSample2d {
+    fn @sample_discrete2(mut uv: Vec2) -> (DiscreteSample2d, Vec2) {
         let mut ix = 0:i32;
         let mut iy = 0:i32; 
-        let mut pdf = 0:f32;
         for li in all::safe_unroll(0, levels) {
             let l = levels - li - 1; // We go backwards
             
@@ -231,105 +232,66 @@ fn @make_cdf_2d_hierachical(data: DeviceBuffer, slice: i32, levels: i32) -> CDF2
             let x11 = lookup(ix + 1, iy + 1, l);
 
             let u = (x00 + x10) / (x00 + x01 + x10 + x11);
-            if u < uv.x {
+            let v = if uv.x < u {
                 // Select left
-                ix += 0;
-                uv.x *= 2;
-                pdf *= u;
+                ix   = 2 * ix   + 0; 
+                uv.x = 2 * uv.x - 0;
+                x00 / (x00 + x10)
             } else {
                 // Select right
-                ix += slice / (1 << (l+1)); // Step half of the slice
+                ix   = 2 * ix   + 1; 
                 uv.x = 2 * uv.x - 1;
-                pdf *= 1 - u;
-            }
+                x01 / (x01 + x11)
+            };
 
-            let v = if u < uv.x { x00 / (x00 + x10) } else { x01 / (x01 + x11) };
-            if v < uv.y {
+            if uv.y < v {
                 // Select top
-                iy += 0;
-                uv.y *= 2;
-                pdf *= v;
+                iy   = 2 * iy   + 0; 
+                uv.y = 2 * uv.y - 0;
             } else {
                 // Select bottom
-                iy += slice / (1 << (l+1)); // Step half of the slice
+                iy   = 2 * iy   + 1; 
                 uv.y = 2 * uv.y - 1;
-                pdf *= 1 - v;
             }
         }
 
-        DiscreteSample2d {
+        (DiscreteSample2d {
             off = (ix, iy),
-            pdf = pdf
-        }
+            pdf = lookup(ix, iy, 0) / (slice * slice) as f32
+        },
+        uv /*Remainder*/)
     }
 
-    fn @pdf_discrete(mut x: i32, mut y: i32) -> DiscretePdf2d {
-        let mut ix = 0:i32;
-        let mut iy = 0:i32; 
-        let mut pdf = 0:f32;
-        for li in all::safe_unroll(0, levels) {
-            let l = levels - li - 1; // We go backwards
-            let k = slice / (1 << l);
-            
-            let x00 = lookup(ix + 0, iy + 0, l);
-            let x01 = lookup(ix + 1, iy + 0, l);
-            let x10 = lookup(ix + 0, iy + 1, l);
-            let x11 = lookup(ix + 1, iy + 1, l);
+    fn @sample_discrete(uv: Vec2)    = sample_discrete2(uv).0;
+    fn @pdf_discrete(x: i32, y: i32) = DiscretePdf2d { pdf = lookup(x, y, 0) / (slice * slice) as f32 }; // TODO: Check if division is really necessary
 
-            let u = (x00 + x10) / (x00 + x01 + x10 + x11);
-            let v = if x < k { x00 / (x00 + x10) } else { x01 / (x01 + x11) };
+    fn @pdf_continuous(pos: Vec2) -> ContinuousPdf2d {
+        let x = pos.x * (slice - 1) as f32;
+        let y = pos.y * (slice - 1) as f32;
 
-            if x < k {
-                // Select left
-                ix += 0;
-                x += 0;
-                pdf *= u;
-            } else {
-                // Select right
-                ix += slice / (1 << (l + 1));
-                x -= k/2;
-                pdf *= 1 - u;
-            }
-
-            if y < k {
-                // Select top
-                iy += 0;
-                y += 0;
-                pdf *= v;
-            } else {
-                // Select bottom
-                iy += slice / (1 << (l + 1));
-                y -= k/2;
-                pdf *= 1 - v;
-            }
-        }
-
-        DiscretePdf2d { pdf = pdf }
-    }
-
-    fn @sample_continuous(uv: Vec2) -> ContinuousSample2d {
-        let sample = sample_discrete(uv); // TODO
-        ContinuousSample2d {
-            off = sample.off,
-            rem = all::make_vec2(0, 0),
-            pos = all::make_vec2((sample.off.0 as f32) * i_slice_f, (sample.off.1 as f32) * i_slice_f),
-            pdf = sample.pdf
-        }
-    };
-    let pdf_continuous = @|pos: Vec2| -> ContinuousPdf2d {
-        let ix  = all::clamp((pos.x * i_slice_f) as i32, 0, slice - 1);
-        let iy  = all::clamp((pos.y * i_slice_f) as i32, 0, slice - 1);
-        let pdf = pdf_discrete(ix, iy).pdf; // TODO
+        let ix = all::clamp(x as i32, 0, slice - 1);
+        let iy = all::clamp(y as i32, 0, slice - 1);
     
         ContinuousPdf2d {
             off = (ix, iy),
-            pdf = pdf
+            pdf = lookup(ix, iy, 0)
         }
-    };
+    }
+
+    fn @sample_continuous(uv: Vec2) -> ContinuousSample2d {
+        let (sample, rem) = sample_discrete2(uv);
+        let pos = all::make_vec2((sample.off.0 as f32 + rem.x) / slice_f, (sample.off.1 as f32 + rem.y) / slice_f);
+        ContinuousSample2d {
+            off = sample.off,
+            rem = rem,
+            pos = pos,
+            pdf = sample.pdf * slice_f * slice_f
+        }
+    }
 
     CDF2D {
-        sample_discrete  = sample_discrete,
-        pdf_discrete     = pdf_discrete,
+        sample_discrete   = sample_discrete,
+        pdf_discrete      = pdf_discrete,
         sample_continuous = sample_continuous,
         pdf_continuous    = pdf_continuous
     }

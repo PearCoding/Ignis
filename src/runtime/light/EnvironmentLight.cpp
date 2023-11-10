@@ -74,7 +74,7 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
         case CDFMethod::Hierachical:{
             const auto cdf          = LoaderUtils::setup_cdf2d_hierachical(input.Tree.context(), light_id, *baked.value(), true, mUseCompensation);
             const size_t res_cdf_id = input.Tree.context().registerExternalResource(std::get<0>(cdf));
-            input.Stream << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_hierachical(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<2>(cdf) << ", " << std::get<3>(cdf) << ");" << std::endl;
+            input.Stream << "  let cdf_" << light_id << "   = cdf::make_cdf_2d_hierachical(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<3>(cdf) << ");" << std::endl;
         } break;
         case CDFMethod::None:
             break;

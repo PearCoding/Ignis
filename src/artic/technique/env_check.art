@@ -1,0 +1,34 @@
+fn @make_env_check_renderer(light_selector: LightSelector) -> Technique {
+    fn @on_miss( ctx: ShadingContext
+        , _: RayPayload) -> Option[Color] {
+        let mut inflights = 0;
+        let mut color     = color_builtins::black;
+
+        for light_id in safe_unroll(0, light_selector.infinites.count) {
+            let light = light_selector.infinites.get(light_id);
+            // Do not include delta lights or finite lights
+            if light.infinite && !light.delta {
+                inflights += 1;
+
+                let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
+                let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
+                color     = color_add(color, make_gray_color(pdf_s));
+            }
+        }
+
+        if inflights > 0 {
+            make_option(color)
+        } else {
+            Option[Color]::None
+        }
+    }
+
+    Technique {
+        on_hit         = TechniqueNoHitFunction,
+        on_miss        = on_miss,
+        on_shadow      = TechniqueNoShadowFunction,
+        on_bounce      = TechniqueNoBounceFunction,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
+    }
+}
