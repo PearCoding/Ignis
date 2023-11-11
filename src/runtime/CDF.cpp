@@ -208,20 +208,23 @@ static std::vector<float> computeMipMap(const std::vector<float>& detailed, size
 
     const size_t sliceCoarse = sliceDetailed / 2;
 
-    std::cout << sliceDetailed << "x" << sliceDetailed << " -> " << sliceCoarse << "x" << sliceCoarse << std::endl;
+    std::vector<float> out(sliceCoarse * sliceCoarse);
 
-    std::vector<float> out(sliceDetailed * sliceDetailed / 4);
     tbb::parallel_for(
-        tbb::blocked_range2d<size_t>(0, sliceDetailed / 2, 0, sliceDetailed / 2),
+        tbb::blocked_range2d<size_t>(0, sliceCoarse, 0, sliceCoarse),
         [&](const tbb::blocked_range2d<size_t>& range) {
             for (size_t y = range.rows().begin(); y < range.rows().end(); ++y) {
                 for (size_t x = range.cols().begin(); x < range.cols().end(); ++x) {
-                    const float x00 = detailed[(2 * y + 0) * sliceDetailed + 2 * x + 0];
-                    const float x01 = 2 * x + 1 < sliceDetailed ? detailed[(2 * y + 0) * sliceDetailed + 2 * x + 1] : 0.0f;
-                    const float x10 = 2 * y + 1 < sliceDetailed ? detailed[(2 * y + 1) * sliceDetailed + 2 * x + 0] : 0.0f;
-                    const float x11 = 2 * x + 1 < sliceDetailed && 2 * y + 1 < sliceDetailed ? detailed[(2 * y + 1) * sliceDetailed + 2 * x + 1] : 0.0f;
+                    const bool hasRight  = 2 * x + 1 < sliceDetailed;
+                    const bool hasBottom = 2 * y + 1 < sliceDetailed;
 
-                    out[y * sliceCoarse + x] = (x00 + x01 + x10 + x11) / 4;
+                    const int elems = 2 + 2 * (int)hasBottom;
+                    const float x00 = detailed[(2 * y + 0) * sliceDetailed + 2 * x + 0];
+                    const float x01 = hasRight ? detailed[(2 * y + 0) * sliceDetailed + 2 * x + 1] : detailed[(2 * y + 0) * sliceDetailed + 0]; // Repeat on the x-axis
+                    const float x10 = hasBottom ? detailed[(2 * y + 1) * sliceDetailed + 2 * x + 0] : 0.0f;
+                    const float x11 = hasRight && hasBottom ? detailed[(2 * y + 1) * sliceDetailed + 2 * x + 1] : (hasBottom ? detailed[(2 * y + 1) * sliceDetailed + 0] : 0.0f);
+
+                    out[y * sliceCoarse + x] = (x00 + x01 + x10 + x11) / elems;
                 }
             }
         });
@@ -248,12 +251,12 @@ static std::vector<float> downsampleX(const std::vector<float>& in, size_t width
         [&](const tbb::blocked_range2d<size_t>& range) {
             for (size_t y = range.rows().begin(); y < range.rows().end(); ++y) {
                 for (size_t x = range.cols().begin(); x < range.cols().end(); ++x) {
-                    const size_t bx = std::min((size_t)std::ceil(x / (float)(new_width - 1) * width), width - 1);
+                    const size_t bx = std::min((size_t)std::ceil((x + 0) / (float)(new_width - 1) * width), width - 1);
                     const size_t ex = std::min((size_t)std::ceil((x + 1) / (float)(new_width - 1) * width), width - 1);
 
                     // TODO: Better filter
                     if (bx == ex) {
-                        out[y * sliceOut + x] = in[y * sliceIn + x]; // Same
+                        out[y * sliceOut + x] = in[y * sliceIn + bx]; // Same
                     } else {
                         float data = 0;
                         for (size_t ix = bx; ix < ex; ++ix)
@@ -284,13 +287,12 @@ static std::vector<float> downsampleY(const std::vector<float>& in, size_t width
         tbb::blocked_range2d<size_t>(0, new_height, 0, width),
         [&](const tbb::blocked_range2d<size_t>& range) {
             for (size_t y = range.rows().begin(); y < range.rows().end(); ++y) {
-                const size_t by = std::min((size_t)std::ceil(y / (float)(new_height - 1) * height), height - 1);
+                const size_t by = std::min((size_t)std::ceil((y + 0) / (float)(new_height - 1) * height), height - 1);
                 const size_t ey = std::min((size_t)std::ceil((y + 1) / (float)(new_height - 1) * height), height - 1);
                 for (size_t x = range.cols().begin(); x < range.cols().end(); ++x) {
-
                     // TODO: Better filter
                     if (by == ey) {
-                        out[y * sliceOut + x] = in[y * sliceIn + x]; // Same
+                        out[y * sliceOut + x] = in[by * sliceIn + x]; // Same
                     } else {
                         float data = 0;
                         for (size_t iy = by; iy < ey; ++iy)
@@ -330,16 +332,17 @@ void CDF::computeForImageHierachical(const Image& image, const Path& out,
 
     // Normalize
     const float sum = tbb::parallel_reduce(
-        tbb::blocked_range<float*>(initial.data(), initial.data() + initial.size()),
-        0.f,
-        [](const tbb::blocked_range<float*>& r, float init) -> float {
-            for (float* a = r.begin(); a != r.end(); ++a)
-                init += *a;
-            return init;
-        },
-        [](float x, float y) -> float {
-            return x + y;
-        }) / initial.size(); // Compute average instead of the sum for better fp precision. The actual pdf is divided later by the size to compensate for it
+                          tbb::blocked_range<float*>(initial.data(), initial.data() + initial.size()),
+                          0.f,
+                          [](const tbb::blocked_range<float*>& r, float init) -> float {
+                              for (float* a = r.begin(); a != r.end(); ++a)
+                                  init += *a;
+                              return init;
+                          },
+                          [](float x, float y) -> float {
+                              return x + y;
+                          })
+                      / initial.size(); // Compute average instead of the sum for better fp precision. The actual pdf is divided later by the size to compensate for it
 
     if (!std::isfinite(sum)) {
         IG_LOG(L_ERROR) << "Computing hierachical CDF for " << out << " failed due to containing non-finite numbers" << std::endl;
@@ -360,7 +363,7 @@ void CDF::computeForImageHierachical(const Image& image, const Path& out,
         initial = downsampleX(initial, image.width, image.height, image.height);
 
     std::vector<std::vector<float>> data;
-    data.reserve(std::log2(slice));
+    data.reserve((size_t)std::log2(slice));
     data.emplace_back(std::move(initial));
 
     // Compute mipmaps
@@ -381,10 +384,12 @@ void CDF::computeForImageHierachical(const Image& image, const Path& out,
     for (const auto& level : data)
         size += level.size();
 
+#if 0
     std::cout << levels << std::endl;
     for (size_t i = 0; i < data.size(); ++i) {
         Image::save("level_" + std::to_string(i) + ".exr", data.at(i).data(), slice / (1 << i), slice / (1 << i), 1);
     }
+#endif
 
     // Write data to file
     FileSerializer serializer(out, false);

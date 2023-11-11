@@ -1,8 +1,12 @@
-fn @make_env_check_renderer(light_selector: LightSelector) -> Technique {
+fn @make_env_check_renderer(device: Device, spi: i32, light_selector: LightSelector) -> Technique {
+    let aov_pdf = device.load_aov_image("Pdf", spi);
+    aov_pdf.mark_as_used();
+
     fn @on_miss( ctx: ShadingContext
         , _: RayPayload) -> Option[Color] {
         let mut inflights = 0;
         let mut color     = color_builtins::black;
+        let mut pdf       = 0:f32;
 
         for light_id in safe_unroll(0, light_selector.infinites.count) {
             let light = light_selector.infinites.get(light_id);
@@ -10,13 +14,17 @@ fn @make_env_check_renderer(light_selector: LightSelector) -> Technique {
             if light.infinite && !light.delta {
                 inflights += 1;
 
-                let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
-                let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
-                color     = color_add(color, make_gray_color(pdf_s));
+                let pdf_v = light.pdf_direct(ctx.ray, make_invalid_surface_element());
+                let pdf_s = pdf_v.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
+                pdf += pdf_s;
+
+                let emitted = light.emission(ctx);
+                color       = color_add(color, emitted);
             }
         }
 
         if inflights > 0 {
+            aov_pdf.splat(ctx.pixel, make_gray_color(pdf));
             make_option(color)
         } else {
             Option[Color]::None
