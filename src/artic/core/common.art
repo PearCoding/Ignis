@@ -234,13 +234,9 @@ fn @ilog2(i: i32) -> i32 {
     ilog2_helper(i, 0)
 }
 
-fn @lerp(a: f32, b: f32, k: f32) -> f32 {
-    (1 - k) * a + k * b
-}
-
-fn @lerp2(a: f32, b: f32, c: f32, k1: f32, k2: f32) -> f32 {
-    (1 - k1 - k2) * a + k1 * b + k2 * c
-}
+fn @lerp(a: f32, b: f32, k: f32)                                     = (1 - k) * a + k * b;
+fn @lerp2(a: f32, b: f32, c: f32, k1: f32, k2: f32)                  = (1 - k1 - k2) * a + k1 * b + k2 * c;
+fn @bilerp(a00: f32, a10: f32, a01: f32, a11: f32, kx: f32, ky: f32) = lerp(lerp(a00, a10, kx), lerp(a01, a11, kx), ky);
 
 fn @smoothstep(x: f32)   = x * x * (3 - 2 * x);
 fn @smootherstep(x: f32) = x * x * x * (x * (x * 6 - 15) + 10);

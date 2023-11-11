@@ -198,11 +198,12 @@ LoaderUtils::CDF2DSATData LoaderUtils::setup_cdf2d_sat(LoaderContext& ctx, const
     IG_LOG(L_DEBUG) << "Generating environment cdf (SAT) for '" << name << "'" << std::endl;
     const Path path = ctx.CacheManager->directory() / ("cdf_" + LoaderUtils::escapeIdentifier(name) + ".bin");
 
-    size_t size  = 0;
-    size_t slice = 0;
-    CDF::computeForImageSAT(image, path, size, slice, premultiplySin, compensate);
+    size_t size   = 0;
+    size_t width  = 0;
+    size_t height = 0;
+    CDF::computeForImageSAT(image, path, size, width, height, premultiplySin, compensate);
 
-    const CDF2DSATData cdf_data          = { path, size, slice };
+    const CDF2DSATData cdf_data          = { path, size, width, height };
     ctx.Cache->ExportedData[exported_id] = cdf_data;
     return cdf_data;
 }

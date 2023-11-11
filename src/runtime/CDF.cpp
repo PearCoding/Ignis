@@ -148,13 +148,13 @@ void CDF::computeForImage(const Image& image, const Path& out,
 }
 
 void CDF::computeForImageSAT(const Image& image, const Path& out,
-                             size_t& size, size_t& slice, bool premultiplySin, bool compensate)
+                             size_t& size, size_t& width, size_t& height, bool premultiplySin, bool compensate)
 {
     constexpr float MinEps = 1e-5f;
 
-    std::vector<float> data(image.width * image.height);
-    size  = data.size();
-    slice = image.width;
+    size   = image.width * image.height;
+    width  = image.width;
+    height = image.height;
 
     const size_t c = image.channels;
     IG_ASSERT(c == 3 || c == 4, "Expected cdf image to have four or three channels per pixel");
@@ -165,39 +165,52 @@ void CDF::computeForImageSAT(const Image& image, const Path& out,
         defect = computeMISDefect(image);
 
     // Compute per pixel average over image
+    std::vector<float> pdf(image.width * image.height);
     for (size_t y = 0; y < image.height; ++y) {
         const float factor = premultiplySin ? std::sin(Pi * (y + 0.5f) / float(image.height)) : 1.0f;
         for (size_t x = 0; x < image.width; ++x) {
             const size_t id = y * image.width + x;
             const float* p  = &image.pixels[id * c];
             const float val = factor * colorResponse(p[0] - defect, p[1] - defect, p[2] - defect);
+            pdf[id]         = val;
+        }
+    }
 
-            const float vxpy  = y > 0 ? data[id - image.width] : 0.0f;
-            const float vpxy  = x > 0 ? data[id - 1] : 0.0f;
-            const float vpxpy = x > 0 && y > 0 ? data[id - image.width - 1] : 0.0f;
+    // Compute sum table
+    std::vector<float> sat(image.width * image.height);
+    for (size_t y = 0; y < image.height; ++y) {
+        const float factor = premultiplySin ? std::sin(Pi * (y + 0.5f) / float(image.height)) : 1.0f;
+        for (size_t x = 0; x < image.width; ++x) {
+            const size_t id = y * image.width + x;
+            const float val = pdf[id];
 
-            data[y * image.width + x] = val + vxpy + vpxy - vpxpy;
+            const float vxpy  = y > 0 ? sat[id - image.width] : 0.0f;
+            const float vpxy  = x > 0 ? sat[id - 1] : 0.0f;
+            const float vpxpy = x > 0 && y > 0 ? sat[id - image.width - 1] : 0.0f;
+
+            sat[y * image.width + x] = val + vxpy + vpxy - vpxpy;
         }
     }
 
     // Normalize data
-    const float sum = data.back();
+    const float sum = sat.back();
     if (sum > MinEps) {
         const float n = 1.0f / sum;
-        for (float& f : data)
+        for (float& f : sat)
             f *= n;
     } else {
-        const float n = 1.0f / (data.size() - 1);
-        for (size_t i = 0; i < data.size(); ++i)
-            data[i] = i * n;
+        const float n = 1.0f / (sat.size() - 1);
+        for (size_t i = 0; i < sat.size(); ++i)
+            sat[i] = i * n;
     }
 
     // Force 1 to make it numerically stable
-    data.back() = 1;
+    sat.back() = 1;
 
     // Write data to file
     FileSerializer serializer(out, false);
-    serializer.write(data, true);
+    serializer.write(sat, true);
+    serializer.write(pdf, true); // Keep the pdf
 }
 
 // Traverse bottom to top to create mip map
