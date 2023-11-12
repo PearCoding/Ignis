@@ -8,6 +8,7 @@
 #include "StringUtils.h"
 #include "light/LightHierarchy.h"
 #include "technique/AOTechnique.h"
+#include "technique/AdaptiveEnvPathTechnique.h"
 #include "technique/CameraCheckTechnique.h"
 #include "technique/DebugTechnique.h"
 #include "technique/EnvCheckTechnique.h"
@@ -24,6 +25,10 @@
 
 namespace IG {
 
+static std::shared_ptr<Technique> aept_loader(const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<AdaptiveEnvPathTechnique>(*obj);
+}
 static std::shared_ptr<Technique> ao_loader(const std::shared_ptr<SceneObject>&)
 {
     return std::make_shared<AOTechnique>();
@@ -73,6 +78,7 @@ static const struct TechniqueEntry {
     TechniqueConstructor Constructor;
 } _generators[] = {
     { "ao", ao_loader },
+    { "aept", aept_loader }, // TODO: Better name?
     { "pt", pt_loader },
     { "path", pt_loader },
     { "volpath", vpt_loader },

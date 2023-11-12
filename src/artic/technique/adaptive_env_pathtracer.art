@@ -1,0 +1,613 @@
+/* Pathtracer implementing "Adaptive Environment Sampling on CPU and GPU"
+ * Asen Atanasov, Vladimir Koylazov, Blagovest Taskov, Alexander Soklev, Vassillen Chizov, and Jaroslav Křivánek:
+ * Adaptive Environment Sampling on CPU and GPU. ACM SIGGRAPH 2018 Talks, 2018
+ *
+ * The algorithm splits into two distinct passes.
+ * 1) A standard path tracer invoked once to learn the guiding structure.
+ * 2) A standard path tracer with minimal modifications to use the previously learned guiding structure together with BSDF & NEE sampling.
+ *    The guiding is applied on the BSDF path and will randomly select BSDF or our guiding approach.
+ *    This pass will repeat until the end of the rendering process.
+ */
+
+// TODO: Future user parameter
+static GridX =  50:i32;
+static GridY = 100:i32;
+static TileX =  32:i32;
+static TileY =  16:i32;
+
+// -------------------------------------------------
+// Basic utils
+struct AdaptiveEnvironmentUtils {
+    to_grid:   fn (Vec3) -> (i32, i32),
+    to_tile:   fn (Vec3) -> (i32, i32),
+    from_tile: fn (f32, f32) -> Vec3,
+}
+
+fn @make_adaptive_env_utils(grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, cam_pos: Vec3) -> AdaptiveEnvironmentUtils {
+    fn @to_grid(pos: Vec3) -> (i32, i32) {
+        let dir          = vec3_normalize(vec3_sub(pos, cam_pos));
+        let (theta, phi) = spherical_from_dir(dir);
+        
+        let nx = grid_x as f32 * phi / (2 * flt_pi);
+        let ny = grid_y as f32 * theta / flt_pi;
+
+        (clamp(nx as i32, 0, grid_x - 1), clamp(ny as i32, 0, grid_y - 1))
+    }
+    fn @to_tile(dir: Vec3) -> (i32, i32) {
+        let (theta, phi) = spherical_from_dir(dir);
+
+        let nx = tile_x as f32 * phi / (2 * flt_pi); 
+        let ny = tile_y as f32 * theta / flt_pi;
+
+        (clamp(nx as i32, 0, tile_x - 1), clamp(ny as i32, 0, tile_y - 1))
+    }
+    fn @from_tile(tx: f32, ty: f32) -> Vec3 {
+        let phi   = tx / tile_x as f32 * 2 * flt_pi;
+        let theta = ty / tile_y as f32 * flt_pi;
+
+        dir_from_spherical(theta, phi)
+    }
+
+    AdaptiveEnvironmentUtils {
+        to_grid   = to_grid, 
+        to_tile   = to_tile,
+        from_tile = from_tile
+    }
+}
+
+// -------------------------------------------------
+// 4D Guiding structure (Learning)
+
+struct AdaptiveEnvironmentLearningCache {
+    add: fn (/*pos*/ Vec3, /*dir*/ Vec3, /*contrib*/ f32) -> (),
+    get: fn (/*pos*/ Vec3, /*dir*/ Vec3) -> f32, // Debug only
+    sum: fn (/*pos*/ Vec3) -> f32, // Debug only
+}
+
+fn @compute_adaptive_env_learning_cache_size(grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32) = grid_x * grid_y * tile_x * tile_y;
+
+fn @make_adaptive_env_learning_cache(device: Device, grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, cam_pos: Vec3) -> AdaptiveEnvironmentLearningCache {
+    let buffer = device.request_buffer("__apt_env_learning_cache", compute_adaptive_env_learning_cache_size(grid_x, grid_y, tile_x, tile_y), 0);
+    let utils  = make_adaptive_env_utils(grid_x, grid_y, tile_x, tile_y, cam_pos);
+
+    fn @get_index(gx: i32, gy: i32, tx: i32, ty: i32) = gy * grid_x * tile_y * tile_x + gx * tile_y * tile_x + ty * tile_x + tx;
+
+    AdaptiveEnvironmentLearningCache {
+        add = @|pos: Vec3, dir: Vec3, contrib: f32| -> () {
+            let (gx, gy) = utils.to_grid(pos);
+            let (tx, ty) = utils.to_tile(dir);
+
+            let index = get_index(gy, gx, ty, tx);
+            buffer.add_atomic_f32(index, contrib);
+        },
+        get = @|pos: Vec3, dir: Vec3| -> f32 {
+            let (gx, gy) = utils.to_grid(pos);
+            let (tx, ty) = utils.to_tile(dir);
+
+            let index = get_index(gy, gx, ty, tx);
+            buffer.load_f32(index)
+        },
+        sum = @|pos: Vec3| -> f32 {
+            let (gx, gy) = utils.to_grid(pos);
+
+            let mut sum = 0:f32;
+            for ty in safe_unroll(0, tile_y) {
+                for tx in safe_unroll(0, tile_x) {
+                    let index = get_index(gy, gx, ty, tx);
+                    sum += buffer.load_f32(index);
+                }
+            }
+            sum / (tile_x * tile_y) as f32
+        }
+    }
+}
+
+// -------------------------------------------------
+// 4D Guiding structure (Sampling)
+
+struct AdaptiveEnvironmentSamplingMap {
+    eval:   fn (/*pos*/ Vec3, /*dir*/ Vec3) -> f32,
+    sample: fn (/*pos*/ Vec3, /*uv*/ Vec2) -> (f32, Vec3),
+}
+
+fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, cam_pos: Vec3) -> AdaptiveEnvironmentSamplingMap {
+    let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_learning_cache_size(grid_x, grid_y, tile_x, tile_y), 0);
+    let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_learning_cache_size(grid_x, grid_y,      1, tile_y), 0);
+
+    let get_cdf1d_marg = @|gx: i32, gy: i32|          cdf::make_cdf_1d_from_buffer(sampling_buffer_marg, tile_y, gy * grid_x * tile_y + gx * tile_y);
+    let get_cdf1d_cond = @|gx: i32, gy: i32, ty: i32| cdf::make_cdf_1d_from_buffer(sampling_buffer_cond, tile_x, gy * grid_x * tile_y * tile_x + gx * tile_y * tile_x + ty * tile_x);
+    
+    let get_cdf2d = @|gx: i32, gy: i32| cdf::make_cdf_2d(get_cdf1d_marg(gx, gy), @|ty: i32| get_cdf1d_cond(gx, gy, ty));
+
+    let utils = make_adaptive_env_utils(grid_x, grid_y, tile_x, tile_y, cam_pos);
+
+    AdaptiveEnvironmentSamplingMap {
+        eval = @|pos: Vec3, dir: Vec3| -> f32 {
+            let (gx, gy) = utils.to_grid(pos);
+            let (tx, ty) = utils.to_tile(dir);
+
+            // TODO: Continuous
+            let cdf = get_cdf2d(gx, gy);
+            cdf.pdf_discrete(tx, ty).pdf
+        },
+        sample = @|pos: Vec3, uv: Vec2| -> (f32, Vec3) {
+            let (gx, gy) = utils.to_grid(pos);
+
+            let cdf    = get_cdf2d(gx, gy);
+            let sample = cdf.sample_continuous(uv);
+
+            let dir = utils.from_tile(sample.pos.x, sample.pos.y);
+            (sample.pdf, dir)
+        }
+    }
+}
+
+// -------------------------------------------------
+// Ray payload for the learning pass
+
+struct AdaptiveEnvLearningRayPayload {
+    contrib:  Color, // Current contribution
+    depth:    i32,   // Current depth
+    eta:      f32,   // Current eta (n1 / n2)
+    prev_pos: Vec3,  // Previous position
+}
+
+fn @write_adaptive_env_learning_raypayload(payload: RayPayload, pt: AdaptiveEnvLearningRayPayload) -> () {
+    payload.set(0, pt.contrib.r);
+    payload.set(1, pt.contrib.g);
+    payload.set(2, pt.contrib.b);
+    payload.set(3, pt.depth as f32);
+    payload.set(4, pt.eta);
+    payload.set(5, pt.prev_pos.x);
+    payload.set(6, pt.prev_pos.y);
+    payload.set(7, pt.prev_pos.z);
+}
+
+fn @unwrap_adaptive_env_learning_raypayload(payload: RayPayload) = AdaptiveEnvLearningRayPayload {
+    contrib  = make_color(payload.get(0), payload.get(1), payload.get(2), 1),
+    depth    = payload.get(3) as i32,
+    eta      = payload.get(4),
+    prev_pos = make_vec3(payload.get(5), payload.get(6), payload.get(7)),
+};
+
+fn @init_adaptive_env_learning_raypayload(payload: RayPayload) = write_adaptive_env_learning_raypayload(payload, AdaptiveEnvLearningRayPayload {
+    contrib  = color_builtins::white,
+    depth    = 1,
+    eta      = 1,
+    prev_pos = make_vec3(0, 0, 0)
+});
+
+// -------------------------------------------------
+// Learning pass
+
+fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, min_path_len: i32, light_selector: LightSelector, clamp_value: f32, _enable_nee: bool) -> Technique {
+    let cam_pos  = registry::get_global_parameter_vec3("__camera_eye", make_vec3(0,0,0));
+    let learning = make_adaptive_env_learning_cache(device, GridX, GridY, TileX, TileY, cam_pos);
+
+    let offset : f32  = 0.001;
+    let handle_color = if clamp_value > 0 {
+        @|c: Color| color_saturate(c, clamp_value)
+    } else {
+        @|c: Color| c
+    };
+
+    // TODO: NEE
+
+    fn @on_miss( ctx: ShadingContext
+               , payload: RayPayload) -> Option[Color] {
+        let mut inflights = 0;
+        let mut color     = color_builtins::black;
+
+        let pt = unwrap_adaptive_env_learning_raypayload(payload);
+
+        for light_id in safe_unroll(0, light_selector.infinites.count) {
+            let light = light_selector.infinites.get(light_id);
+            // Do not include delta lights or finite lights
+            if light.infinite && !light.delta {
+
+                inflights += 1;
+
+                let emit  = light.emission(ctx);
+                //let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
+                //let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
+                let mis   = 1:f32;// if enable_nee { 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ctx.ray.org) * pdf_s) } else { 1:f32 };
+                color     = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
+            }
+        }
+
+        if inflights > 0 {
+            if pt.depth > 1 {
+                // Only indirect connections to the environment map count
+                learning.add(pt.prev_pos, ctx.ray.dir, color_average(color));
+            }
+
+            make_option(color)
+        } else {
+            Option[Color]::None
+        }
+    }
+
+    fn @on_bounce( ctx: ShadingContext
+                 , rnd: RandomGenerator
+                 , payload: RayPayload
+                 , mat: Material
+                 ) -> Option[Ray] {
+        let pt = unwrap_adaptive_env_learning_raypayload(payload);
+        
+        if pt.depth + 1 > max_path_len {
+            return(Option[Ray]::None)
+        }
+
+        // Bounce
+        let out_dir = vec3_neg(ctx.ray.dir);
+        if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+            let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+            let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+            if rnd.next_f32() >= rr_prob {
+                return(Option[Ray]::None)
+            }
+
+            // let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
+            let new_contrib = color_mulf(contrib, 1 / rr_prob);
+            
+            write_adaptive_env_learning_raypayload(payload, AdaptiveEnvLearningRayPayload {
+                contrib  = new_contrib,
+                depth    = pt.depth + 1,
+                eta      = pt.eta * mat_sample.eta,
+                prev_pos = ctx.surf.point
+            });
+            make_option(
+                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
+            )
+        } else {
+            Option[Ray]::None
+        }
+    }
+
+    Technique {
+        on_hit         = TechniqueNoHitFunction,
+        on_miss        = on_miss,
+        on_shadow      = TechniqueNoShadowFunction,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
+    }
+}
+
+// -------------------------------------------------
+// Construction pass to generate a CDF
+// TODO: Switch to a hierachical implementation!
+
+fn @aept_handle_after_iteration_learning(device: Device, _iter: i32) -> () {
+    let grid_x = GridX;
+    let grid_y = GridY;
+    let tile_x = TileX;
+    let tile_y = TileY;
+
+    let learning_buffer      = device.request_buffer("__apt_env_learning_cache"     , compute_adaptive_env_learning_cache_size(grid_x, grid_y, tile_x, tile_y), 0);
+    let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_learning_cache_size(grid_x, grid_y, tile_x, tile_y), 0);
+    let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_learning_cache_size(grid_x, grid_y,      1, tile_y), 0);
+
+    // TODO: This is a very naive implementation of the CDF construction on the GPU
+    for i, j in device.parallel_range_2d(0, grid_x, 0, grid_y) {
+        // Construct conditional
+        for y in range(0, tile_y) {
+            let c_id = j * grid_x * tile_y * tile_x + i * tile_y * tile_x + y * tile_x;
+
+            let mut cond = 0:f32;
+            for x in range(0, tile_x) {
+                cond += learning_buffer.load_f32(c_id + x);
+                sampling_buffer_cond.store_f32(c_id + x, cond);
+            }
+
+            // Store marginal
+            sampling_buffer_marg.store_f32(j * grid_x * tile_y + i * tile_y + y, cond);
+
+            // Normalize row
+            if (cond > flt_eps) {
+                for x in range(0, tile_x) {
+                    sampling_buffer_cond.store_f32(c_id + x, sampling_buffer_cond.load_f32(c_id + x) / cond);
+                }
+            } else {
+                for x in range(0, tile_x) {
+                    sampling_buffer_cond.store_f32(c_id + x, x as f32 / (tile_x - 1) as f32);
+                }
+            }
+
+            // Force 1 to make it numerically stable
+            sampling_buffer_cond.store_f32(c_id + tile_x - 1, 1:f32);
+        }
+        
+        // Construct marginal
+        let m_id = j * grid_x * tile_y + i * tile_y;
+
+        let mut marg = 0:f32;
+        for y in range(0, tile_y) {
+            marg += sampling_buffer_marg.load_f32(m_id + y);
+            sampling_buffer_marg.store_f32(m_id + y, marg);
+        }
+        
+        // Normalize col
+        if (marg > flt_eps) {
+            for y in range(0, tile_y) {
+                sampling_buffer_marg.store_f32(m_id + y, sampling_buffer_marg.load_f32(m_id + y) / marg);
+            }
+        } else {
+            // TODO: We should rather disable using the adaptive method
+            for y in range(0, tile_y) {
+                sampling_buffer_marg.store_f32(m_id + y, y as f32 / (tile_y - 1) as f32);
+            }
+        }
+        
+        // Force 1 to make it numerically stable
+        sampling_buffer_marg.store_f32(m_id + tile_y - 1, 1:f32);
+    }
+}
+
+// -------------------------------------------------
+// Ray payload for the learning pass
+
+struct AdaptiveEnvSamplingRayPayload {
+    inv_pdf: f32,    // Inverse BSDF pdf
+    contrib: Color,  // Current contribution
+    depth:   i32,    // Current depth
+    eta:     f32,    // Current eta (n1 / n2)
+    prev_pos: Vec3,  // Previous position
+}
+
+fn @write_adaptive_env_sampling_raypayload(payload: RayPayload, pt: AdaptiveEnvSamplingRayPayload) -> () {
+    payload.set(0, pt.inv_pdf);
+    payload.set(1, pt.contrib.r);
+    payload.set(2, pt.contrib.g);
+    payload.set(3, pt.contrib.b);
+    payload.set(4, pt.depth as f32);
+    payload.set(5, pt.eta);
+    payload.set(6, pt.prev_pos.x);
+    payload.set(7, pt.prev_pos.y);
+    payload.set(8, pt.prev_pos.z);
+}
+
+fn @unwrap_adaptive_env_sampling_raypayload(payload: RayPayload) = AdaptiveEnvSamplingRayPayload {
+    inv_pdf  = payload.get(0),
+    contrib  = make_color(payload.get(1), payload.get(2), payload.get(3), 1),
+    depth    = payload.get(4) as i32,
+    eta      = payload.get(5),
+    prev_pos = make_vec3(payload.get(6), payload.get(7), payload.get(8)),
+};
+
+fn @init_adaptive_env_sampling_raypayload(payload: RayPayload) = write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {
+    inv_pdf  = 0,
+    contrib  = color_builtins::white,
+    depth    = 1,
+    eta      = 1,
+    prev_pos = make_vec3(0,0,0)
+});
+
+// -------------------------------------------------
+// Sampling pass
+fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi: i32, light_selector: LightSelector, clamp_value: f32, enable_nee: bool) -> Technique {
+    let offset : f32  = 0.001;
+    let cam_pos  = registry::get_global_parameter_vec3("__camera_eye", make_vec3(0,0,0));
+
+    let learned = make_adaptive_env_learning_cache(device, GridX, GridY, TileX, TileY, cam_pos); // Debug only
+    let guiding = make_adaptive_env_sampling_cache(device, GridX, GridY, TileX, TileY, cam_pos);
+    
+    let aov_guiding     = device.load_aov_image("Guiding", spi);
+    let aov_guiding_pdf = device.load_aov_image("Guiding PDF", spi);
+    aov_guiding.mark_as_used();
+    aov_guiding_pdf.mark_as_used();
+   
+    // let query_dir  = vec3_normalize(registry::get_global_parameter_vec3("debug_query_dir", make_vec3(0,0,1)));
+
+    let handle_color = if clamp_value > 0 {
+        @|c: Color| color_saturate(c, clamp_value)
+    } else {
+        @|c: Color| c
+    };
+
+    fn @on_shadow( ctx: ShadingContext
+                 , rnd: RandomGenerator
+                 , payload: RayPayload
+                 , _: RayPayload
+                 , mat: Material
+                 ) -> ShadowRay {
+        if !enable_nee {
+            return(ShadowRay::None)
+        }
+
+        // No shadow rays for specular materials
+        if mat.bsdf.is_specular || light_selector.count == 0 {
+            return(ShadowRay::None)
+        }
+        
+        let pt = unwrap_adaptive_env_sampling_raypayload(payload);
+        if pt.depth + 1 > max_path_len {
+            return(ShadowRay::None)
+        }
+
+        let (light, light_select_pdf) = light_selector.sample(rnd, ctx.surf.point);
+
+        let sample_direct = light.sample_direct;
+        let light_sample  = @sample_direct(rnd, ctx.surf);
+
+        let pdf_l_s = light_sample.pdf.as_solid(light_sample.cos, light_sample.dist * light_sample.dist) * light_select_pdf; // Pdf to sample the light based on NEE
+        if pdf_l_s <= flt_eps {
+            return(ShadowRay::None)
+        }
+
+        let in_dir  = light_sample.dir; 
+        let out_dir = vec3_neg(ctx.ray.dir);
+
+        if light_sample.cos > flt_eps {
+            let mis = if light.delta { 
+                1:f32
+            } else {
+                let pdf_e_s = mat.bsdf.pdf(in_dir, out_dir); // Pdf to sample the light based on bsdf
+                1 / (1 + pdf_e_s / pdf_l_s)
+            };
+
+            // The intensity is already divided by the pdf, adapt to the (possible) change of domain
+            let factor = light_sample.pdf.value / pdf_l_s;
+
+            let contrib = handle_color(color_mulf(
+                color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));
+
+            // No contribution to add, so do not shoot the ray to begin with.
+            if color_average(contrib) < flt_eps {
+                return(ShadowRay::None)
+            }
+
+            if light.infinite {
+                return(make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_shadow),
+                    contrib
+                ))
+            } else {
+                return(make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, vec3_sub(light_sample.pos, ctx.surf.point), offset, 1 - offset, ray_flag_shadow),
+                    contrib
+                ))
+            }
+        }
+        ShadowRay::None
+    }
+
+    fn @on_hit( ctx: ShadingContext
+              , payload: RayPayload
+              , mat: Material
+              ) -> Option[Color] {
+        // Hits on a light source
+        if mat.is_emissive && ctx.surf.is_entering {
+            let pt  = unwrap_adaptive_env_sampling_raypayload(payload);
+            let dot = -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2));
+            if dot > flt_eps { // Only contribute proper aligned directions
+                let emit    = mat.emission(ctx);
+                let pdf_s   = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
+                let mis     = if enable_nee { 1 / (1 + pt.inv_pdf * light_selector.pdf(mat.light, ctx.ray.org) * pdf_s) } else { 1:f32 };
+                let contrib = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
+        
+                return(make_option(contrib))
+            }
+        }
+
+        Option[Color]::None
+    }
+
+    fn @on_miss( ctx: ShadingContext
+               , payload: RayPayload) -> Option[Color] {
+        let mut inflights = 0;
+        let mut color     = color_builtins::black;
+
+        for light_id in safe_unroll(0, light_selector.infinites.count) {
+            let light = light_selector.infinites.get(light_id);
+            // Do not include delta lights or finite lights
+            if light.infinite && !light.delta {
+                let pt = unwrap_adaptive_env_sampling_raypayload(payload);
+
+                inflights += 1;
+
+                let emit  = light.emission(ctx);
+                let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
+                let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
+                let mis   = if enable_nee { 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ctx.ray.org) * pdf_s) } else { 1:f32 };
+                color     = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
+            }
+        }
+
+        if inflights > 0 {
+            make_option(color)
+        } else {
+            Option[Color]::None
+        }
+    }
+
+    fn @on_bounce( ctx: ShadingContext
+                 , rnd: RandomGenerator
+                 , payload: RayPayload
+                 , mat: Material
+                 ) -> Option[Ray] {
+        let pt = unwrap_adaptive_env_sampling_raypayload(payload);
+        
+        if pt.depth + 1 > max_path_len {
+            return(Option[Ray]::None)
+        }
+
+        aov_guiding.splat(ctx.pixel, make_gray_color(learned.sum(ctx.surf.point)));
+    
+        // Bounce
+        let ae_prob = 0.5:f32; // TODO: Make this adaptive?
+        let out_dir = vec3_neg(ctx.ray.dir);
+
+        fn @sample_bsdf(prob: f32) -> Option[Ray] {
+            if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+                aov_guiding_pdf.splat(ctx.pixel, make_gray_color(guiding.eval(ctx.surf.point, mat_sample.in_dir)));
+    
+                let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+                let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta / prob), 0.95) } else { 1.0 };
+                if rnd.next_f32() >= rr_prob {
+                    return(Option[Ray]::None)
+                }
+    
+                let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
+                let new_contrib = color_mulf(contrib, 1 / rr_prob);
+                
+                write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {
+                    inv_pdf  = inv_pdf,
+                    contrib  = new_contrib,
+                    depth    = pt.depth + 1,
+                    eta      = pt.eta * mat_sample.eta,
+                    prev_pos = ctx.surf.point
+                });
+                make_option(
+                    make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
+                )
+            } else {
+                Option[Ray]::None
+            }
+        }
+
+        if rnd.next_f32() < ae_prob {
+            let (pdf_ae, in_dir) = guiding.sample(ctx.surf.point, make_vec2(rnd.next_f32(), rnd.next_f32()));
+            aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
+
+            let eval_bsdf = mat.bsdf.eval(in_dir, out_dir);
+            let pdf_bsdf  = mat.bsdf.pdf(in_dir, out_dir);
+
+            if pdf_bsdf <= flt_eps {
+                // Bad or singular bsdf. Fallback to sample bsdf only
+                sample_bsdf(ae_prob)
+            } else {
+                let contrib = color_mul(pt.contrib, color_mulf(eval_bsdf, 1 / (pdf_ae * ae_prob)));
+                let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+                if rnd.next_f32() >= rr_prob {
+                    return(Option[Ray]::None)
+                }
+
+                let inv_pdf     = 1 / pdf_ae;
+                let new_contrib = color_mulf(contrib, 1 / rr_prob);
+
+                write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {
+                    inv_pdf  = inv_pdf,
+                    contrib  = new_contrib,
+                    depth    = pt.depth + 1,
+                    eta      = pt.eta * 1, // TODO
+                    prev_pos = ctx.surf.point
+                });
+                make_option(
+                    make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_bounce)
+                )
+            }
+        } else {
+            sample_bsdf(1 - ae_prob)
+        }
+    }
+
+    Technique {
+        on_hit         = on_hit,
+        on_miss        = on_miss,
+        on_shadow      = on_shadow,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = TechniqueNoShadowMissFunction,
+    }
+}

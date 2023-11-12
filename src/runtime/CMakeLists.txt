@@ -261,6 +261,8 @@ set(SRC
   table/DynTable.h
   table/FixTable.h
   table/SceneDatabase.h
+  technique/AdaptiveEnvPathTechnique.cpp
+  technique/AdaptiveEnvPathTechnique.h
   technique/AOTechnique.cpp
   technique/AOTechnique.h
   technique/CameraCheckTechnique.cpp
