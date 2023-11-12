@@ -107,7 +107,17 @@ public:
     [[nodiscard]] inline const Target& target() const { return mOptions.Target; }
 
     /// Computes (approximative) number of samples per iteration. This might be off due to the internal computing of techniques
-    [[nodiscard]] inline size_t samplesPerIteration() const { return mTechniqueInfo.ComputeSPI(0 /* TODO: Not always the best choice */, mSamplesPerIteration); }
+    [[nodiscard]] inline size_t samplesPerIteration() const
+    {
+        // Try some iterations to get a SPI. The first non-zero one will be used
+        for (size_t iter = 0; iter < 42; ++iter) {
+            const size_t spi = mTechniqueInfo.ComputeSPI(iter, mSamplesPerIteration);
+            if (spi != 0)
+                return spi;
+        }
+
+        return 1; // Fallback
+    }
 
     /// The bounding box of the loaded scene
     [[nodiscard]] inline const BoundingBox& sceneBoundingBox() const { return mDatabase.SceneBBox; }
@@ -152,6 +162,7 @@ public:
 
     /// Get options used while creating the runtime
     [[nodiscard]] const RuntimeOptions& options() const { return mOptions; }
+
 private:
     void checkCacheDirectory();
     bool load(const Path& path, const Scene* scene);

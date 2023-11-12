@@ -179,7 +179,6 @@ void CDF::computeForImageSAT(const Image& image, const Path& out,
     // Compute sum table
     std::vector<float> sat(image.width * image.height);
     for (size_t y = 0; y < image.height; ++y) {
-        const float factor = premultiplySin ? std::sin(Pi * (y + 0.5f) / float(image.height)) : 1.0f;
         for (size_t x = 0; x < image.width; ++x) {
             const size_t id = y * image.width + x;
             const float val = pdf[id];

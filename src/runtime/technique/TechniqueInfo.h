@@ -64,17 +64,17 @@ struct TechniqueVariantInfo {
 
     [[nodiscard]] inline size_t GetWidth(size_t hint) const
     {
-        return OverrideWidth.value_or(hint);
+        return std::max<size_t>(1, OverrideWidth.value_or(hint));
     }
 
     [[nodiscard]] inline size_t GetHeight(size_t hint) const
     {
-        return OverrideHeight.value_or(hint);
+        return std::max<size_t>(1, OverrideHeight.value_or(hint));
     }
 
     [[nodiscard]] inline size_t GetSPI(size_t hint) const
     {
-        return OverrideSPI.value_or(hint);
+        return std::max<size_t>(1, OverrideSPI.value_or(hint));
     }
 
     [[nodiscard]] inline std::string GetEmitterPayloadInitializer() const

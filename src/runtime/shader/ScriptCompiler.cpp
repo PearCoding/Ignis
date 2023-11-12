@@ -40,7 +40,7 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
     });
 
 #ifdef IG_DEBUG
-    anydsl_set_log_level(mVerbose ? 1 /* info */ : 4 /* error */);
+    anydsl_set_log_level(mVerbose ? 2 /* info */ : 4 /* error */);
 #else
     anydsl_set_log_level(mVerbose ? 3 /* warn */ : 4 /* error */);
 #endif
