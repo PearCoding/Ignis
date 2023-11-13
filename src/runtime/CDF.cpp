@@ -29,9 +29,10 @@ void CDF::computeForArray(const std::vector<float>& values, const Path& out)
         for (float& v : cdf)
             v *= n;
     } else {
+        // Skip last entry as it is explicty set to 1
         const float n = 1.0f / values.size();
-        for (size_t x = 0; x < values.size(); ++x)
-            cdf[x] = x * n;
+        for (size_t x = 1; x < values.size(); ++x)
+            cdf[x - 1] = x * n;
     }
 
     // Force 1 to make it numerically stable
@@ -113,9 +114,10 @@ void CDF::computeForImage(const Image& image, const Path& out,
                     for (size_t x = 0; x < image.width; ++x)
                         cond[x] *= n;
                 } else {
-                    const float n = 1.0f / (image.width - 1);
-                    for (size_t x = 0; x < image.width; ++x)
-                        cond[x] = x * n;
+                    // Skip last entry as it is explicty set to 1
+                    const float n = 1.0f / image.width;
+                    for (size_t x = 1; x < image.width; ++x)
+                        cond[x - 1] = x * n;
                 }
 
                 // Force 1 to make it numerically stable
@@ -133,9 +135,10 @@ void CDF::computeForImage(const Image& image, const Path& out,
         for (float& e : marginal)
             e *= n;
     } else {
-        const float n = 1.0f / (image.height - 1);
-        for (size_t y = 0; y < image.height; ++y)
-            marginal[y] = y * n;
+        // Skip last entry as it is explicty set to 1
+        const float n = 1.0f / image.height;
+        for (size_t y = 1; y < image.height; ++y)
+            marginal[y - 1] = y * n;
     }
 
     // Force 1 to make it numerically stable

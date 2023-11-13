@@ -354,8 +354,9 @@ fn @aept_handle_after_iteration_learning(device: Device, _iter: i32) -> () {
                     sampling_buffer_cond.store_f32(c_id + x, sampling_buffer_cond.load_f32(c_id + x) / cond);
                 }
             } else {
-                for x in range(1, tile_x) {
-                    sampling_buffer_cond.store_f32(c_id + x, x as f32 / tile_x as f32);
+                // Skip last entry as it is explicty set to 1
+                for x in range(1, tile_x) { 
+                    sampling_buffer_cond.store_f32(c_id + x - 1, x as f32 / tile_x as f32);
                 }
             }
 
@@ -377,8 +378,9 @@ fn @aept_handle_after_iteration_learning(device: Device, _iter: i32) -> () {
             }
         } else {
             // TODO: We should rather disable using the adaptive method
-            for y in range(1, tile_y) {
-                sampling_buffer_marg.store_f32(m_id + y, y as f32 / tile_y as f32);
+            // Skip last entry as it is explicty set to 1
+            for y in range(1, tile_y+1) {
+                sampling_buffer_marg.store_f32(m_id + y - 1, y as f32 / tile_y as f32);
             }
         }
 
