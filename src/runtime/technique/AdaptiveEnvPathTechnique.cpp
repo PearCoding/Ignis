@@ -18,12 +18,23 @@ AdaptiveEnvPathTechnique::AdaptiveEnvPathTechnique(SceneObject& obj)
     mClamp         = obj.property("clamp").getNumber(0.0f);
 }
 
+static std::string aept_before_iteration_generator(LoaderContext& ctx)
+{
+    std::stringstream stream;
+
+    stream << ShaderUtils::beginCallback(ctx) << std::endl
+           << "  aept_handle_before_iteration_learning(device, settings.iter);" << std::endl
+           << ShaderUtils::endCallback() << std::endl;
+
+    return stream.str();
+}
+
 static std::string aept_after_iteration_generator(LoaderContext& ctx)
 {
     std::stringstream stream;
 
     stream << ShaderUtils::beginCallback(ctx) << std::endl
-           << "  aept_handle_after_iteration_learning(device, iter);" << std::endl
+           << "  aept_handle_after_iteration_learning(device, settings.iter);" << std::endl
            << ShaderUtils::endCallback() << std::endl;
 
     return stream.str();
@@ -38,14 +49,15 @@ TechniqueInfo AdaptiveEnvPathTechnique::getInfo(const LoaderContext&) const
     info.Variants[0].UsesLights = true;
     info.Variants[1].UsesLights = true;
 
-    info.Variants[0].PrimaryPayloadCount = 8;
-    info.Variants[1].PrimaryPayloadCount = 9;
+    info.Variants[0].PrimaryPayloadCount = 11;
+    info.Variants[1].PrimaryPayloadCount = 6;
 
     info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_adaptive_env_learning_raypayload)";
     info.Variants[1].EmitterPayloadInitializer = "make_simple_payload_initializer(init_adaptive_env_sampling_raypayload)";
 
     // The learning setup requires a CDF construction pass
-    info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration] = aept_after_iteration_generator; // Construct CDF
+    info.Variants[0].CallbackGenerators[(int)CallbackType::BeforeIteration] = aept_before_iteration_generator; // Reset learning
+    info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration]  = aept_after_iteration_generator;  // Construct CDF
 
     info.Variants[0].LockFramebuffer = true; // We do not change the framebuffer
 
@@ -54,7 +66,7 @@ TechniqueInfo AdaptiveEnvPathTechnique::getInfo(const LoaderContext&) const
 
     // TODO: We could increase the learning phase using a user parameter
     info.VariantSelector = [](size_t iteration) {
-        if (iteration == 0)
+        if (iteration < 1)
             return std::vector<size_t>{ 0 };
         else
             return std::vector<size_t>{ 1 };
@@ -71,8 +83,6 @@ void AdaptiveEnvPathTechnique::generateBody(const SerializationInput& input) con
     input.Context.GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxDepth;
     input.Context.GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMinDepth;
     input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
-
-    input.Context.GlobalRegistry.VectorParameters["debug_query_dir"] = Vector3f::UnitZ();
 
     // Load registry information
     if (mMaxDepth < 2) // 0 & 1 can be an optimization

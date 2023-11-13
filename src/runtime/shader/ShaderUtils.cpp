@@ -128,7 +128,7 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << "#[export] fn ig_callback_shader(settings: &Settings, iter: i32) -> () {" << std::endl
+    stream << "#[export] fn ig_callback_shader(settings: &Settings) -> () {" << std::endl
            << "  " << ShaderUtils::constructDevice(ctx) << std::endl
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
 
