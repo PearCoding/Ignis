@@ -18,6 +18,7 @@ AdaptiveEnvPathTechnique::AdaptiveEnvPathTechnique(SceneObject& obj)
     mClamp         = obj.property("clamp").getNumber(0.0f);
 }
 
+constexpr size_t LearnIterations = 1;
 static std::string aept_before_iteration_generator(LoaderContext& ctx)
 {
     std::stringstream stream;
@@ -34,7 +35,7 @@ static std::string aept_after_iteration_generator(LoaderContext& ctx)
     std::stringstream stream;
 
     stream << ShaderUtils::beginCallback(ctx) << std::endl
-           << "  aept_handle_after_iteration_learning(device, settings.iter);" << std::endl
+           << "  aept_handle_after_iteration_learning(device, settings.iter, " << LearnIterations - 1 << ");" << std::endl
            << ShaderUtils::endCallback() << std::endl;
 
     return stream.str();
@@ -59,6 +60,7 @@ TechniqueInfo AdaptiveEnvPathTechnique::getInfo(const LoaderContext&) const
     info.Variants[0].CallbackGenerators[(int)CallbackType::BeforeIteration] = aept_before_iteration_generator; // Reset learning
     info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration]  = aept_after_iteration_generator;  // Construct CDF
 
+    // info.Variants[0].OverrideSPI     = 1;
     info.Variants[0].LockFramebuffer = true; // We do not change the framebuffer
 
     info.EnabledAOVs.emplace_back("Guiding");
@@ -66,7 +68,7 @@ TechniqueInfo AdaptiveEnvPathTechnique::getInfo(const LoaderContext&) const
 
     // TODO: We could increase the learning phase using a user parameter
     info.VariantSelector = [](size_t iteration) {
-        if (iteration < 1)
+        if (iteration < LearnIterations)
             return std::vector<size_t>{ 0 };
         else
             return std::vector<size_t>{ 1 };
@@ -104,7 +106,7 @@ void AdaptiveEnvPathTechnique::generateBody(const SerializationInput& input) con
     input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree);
 
     if (is_learning_pass) {
-        input.Stream << "  let technique = make_adaptive_env_learning_path_renderer(device, tech_max_camera_depth, tech_min_camera_depth, light_selector, tech_clamp, " << (mEnableNEE ? "true" : "false") << ");" << std::endl;
+        input.Stream << "  let technique = make_adaptive_env_learning_path_renderer(device, tech_max_camera_depth, tech_min_camera_depth, spi, light_selector, tech_clamp, " << (mEnableNEE ? "true" : "false") << ");" << std::endl;
     } else {
         input.Stream << "  let technique = make_adaptive_env_sampling_path_renderer(device, tech_max_camera_depth, tech_min_camera_depth, spi, light_selector, tech_clamp, " << (mEnableNEE ? "true" : "false") << ");" << std::endl;
     }

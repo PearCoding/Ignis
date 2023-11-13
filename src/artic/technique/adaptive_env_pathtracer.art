@@ -85,14 +85,14 @@ fn @make_adaptive_env_learning_cache(device: Device, grid_x: i32, grid_y: i32, t
     let buffer = device.request_buffer("__apt_env_learning_cache", compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y) * 2, 0);
     let utils  = make_adaptive_env_utils(grid_x, grid_y, tile_x, tile_y, cam_pos);
 
-    fn @get_index(gx: i32, gy: i32, tx: i32, ty: i32) = gy * grid_x * tile_y * tile_x * 2 + gx * tile_y * tile_x * 2 + ty * tile_x * 2 + tx * 2;
+    fn @get_index(gx: i32, gy: i32, tx: i32, ty: i32) = (((gy * grid_x + gx) * tile_y + ty) * tile_x + tx) * 2;
 
     AdaptiveEnvironmentLearningCache {
         add = @|pos: Vec3, dir: Vec3, contrib: f32| -> () {
             let (gx, gy) = utils.to_grid(pos);
             let (tx, ty) = utils.to_tile(dir);
 
-            let index = get_index(gy, gx, ty, tx);
+            let index = get_index(gx, gy, tx, ty);
             buffer.add_atomic_f32(index + 0, contrib);
             buffer.add_atomic_i32(index + 1, 1);
         },
@@ -100,7 +100,7 @@ fn @make_adaptive_env_learning_cache(device: Device, grid_x: i32, grid_y: i32, t
             let (gx, gy) = utils.to_grid(pos);
             let (tx, ty) = utils.to_tile(dir);
 
-            let index = get_index(gy, gx, ty, tx);
+            let index = get_index(gx, gy, tx, ty);
             buffer.load_f32(index)
         },
         sum = @|pos: Vec3| -> f32 {
@@ -109,7 +109,7 @@ fn @make_adaptive_env_learning_cache(device: Device, grid_x: i32, grid_y: i32, t
             let mut sum = 0:f32;
             for ty in safe_unroll(0, tile_y) {
                 for tx in safe_unroll(0, tile_x) {
-                    let index = get_index(gy, gx, ty, tx);
+                    let index = get_index(gx, gy, tx, ty);
                     sum += buffer.load_f32(index);
                 }
             }
@@ -145,11 +145,8 @@ fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, t
             let cdf       = get_cdf2d(gx, gy);
             let cdf_pdf   = cdf.pdf_continuous(make_vec2(ntx, nty)).pdf;
             // let sin_theta = math_builtins::sin(nty * flt_pi);
-            // let pdf       = safe_div(cdf_pdf, sin_theta * flt_pi * flt_pi * 2);
-            // let pdf       = cdf_pdf / (flt_pi * flt_pi * 2);
-
-            cdf_pdf
-            // pdf
+            // safe_div(cdf_pdf, sin_theta * flt_pi * flt_pi * 2)
+            cdf_pdf / (flt_pi * flt_pi * 2)
         },
         sample = @|pos: Vec3, uv: Vec2| -> (f32, Vec3) {
             let (gx, gy) = utils.to_grid(pos);
@@ -159,10 +156,10 @@ fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, t
 
             // let sin_theta = math_builtins::sin(sample.pos.y * flt_pi);
             // let pdf       = safe_div(sample.pdf, sin_theta * flt_pi * flt_pi * 2);
-            // let pdf       = sample.pdf / (flt_pi * flt_pi * 2);
+            let pdf       = sample.pdf / (flt_pi * flt_pi * 2);
 
             let dir = utils.from_tile(sample.pos.x, sample.pos.y);
-            (sample.pdf, dir)
+            (pdf, dir)
             // (pdf, dir)
         }
     }
@@ -212,7 +209,7 @@ fn @init_adaptive_env_learning_raypayload(payload: RayPayload) = write_adaptive_
 // -------------------------------------------------
 // Learning pass
 
-fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, min_path_len: i32, light_selector: LightSelector, clamp_value: f32, _enable_nee: bool) -> Technique {
+fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi: i32, light_selector: LightSelector, clamp_value: f32, _enable_nee: bool) -> Technique {
     let cam_pos  = registry::get_global_parameter_vec3("__camera_eye", make_vec3(0,0,0));
     let learning = make_adaptive_env_learning_cache(device, GridX, GridY, TileX, TileY, cam_pos);
 
@@ -244,9 +241,12 @@ fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, 
         }
 
         if inflights > 0 {
-            if pt.depth > 1 {
+            if pt.depth > 1 && vec3_len2(pt.last_dir) > 0 /* We found atleast a single diffuse surface along the path! */ {
                 // Only indirect connections to the environment map count
-                learning.add(pt.last_pos, pt.last_dir, color_average(color));
+                let lum = color_average(color);
+                if math_builtins::isfinite(lum) {
+                    learning.add(pt.last_pos, pt.last_dir, lum / spi as f32);
+                }
             }
 
             make_option(color)
@@ -319,23 +319,26 @@ fn @aept_handle_before_iteration_learning(device: Device, iter: i32) -> () {
     device.sync();
 }
 
-fn @aept_handle_after_iteration_learning(device: Device, _iter: i32) -> () {
+fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learning_iteration: i32) -> () {
+    if iter != last_learning_iteration { return() }
+
     let grid_x = GridX;
     let grid_y = GridY;
     let tile_x = TileX;
     let tile_y = TileY;
 
     let learning_buffer      = device.request_buffer("__apt_env_learning_cache"     , compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y) * 2, 0);
-    let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y), 0);
-    let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y), 0);
+    let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y),     0);
+    let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y),     0);
 
     // TODO: This is a very naive implementation of the CDF construction on the GPU
     for i, j in device.parallel_range_2d(0, grid_x, 0, grid_y) {
         let m_id = j * grid_x * tile_y + i * tile_y;
 
         // Construct conditional
+        let mut marg = 0:f32;
         for y in range(0, tile_y) {
-            let c_id = j * grid_x * tile_y * tile_x + i * tile_y * tile_x + y * tile_x;
+            let c_id = m_id * tile_x + y * tile_x;
 
             let mut cond = 0:f32;
             for x in range(0, tile_x) {
@@ -346,17 +349,19 @@ fn @aept_handle_after_iteration_learning(device: Device, _iter: i32) -> () {
             }
 
             // Store marginal
-            sampling_buffer_marg.store_f32(m_id + y, cond);
+            marg += cond / tile_x as f32; // Division is to keep the number in a good range and hopefully not throw an overflow
+            sampling_buffer_marg.store_f32(m_id + y, marg);
 
             // Normalize row
-            if (cond > flt_eps) {
-                for x in range(0, tile_x) {
+            if cond > flt_eps {
+                for x in range(0, tile_x - 1) {
                     sampling_buffer_cond.store_f32(c_id + x, sampling_buffer_cond.load_f32(c_id + x) / cond);
                 }
             } else {
-                // Skip last entry as it is explicty set to 1
-                for x in range(1, tile_x) { 
-                    sampling_buffer_cond.store_f32(c_id + x - 1, x as f32 / tile_x as f32);
+                // Fallback to a uniform conditional
+                // Skip last entry as it is explicitly set to 1
+                for x in range(0, tile_x - 1) { 
+                    sampling_buffer_cond.store_f32(c_id + x, (x + 1) as f32 / tile_x as f32);
                 }
             }
 
@@ -364,23 +369,16 @@ fn @aept_handle_after_iteration_learning(device: Device, _iter: i32) -> () {
             sampling_buffer_cond.store_f32(c_id + tile_x - 1, 1:f32);
         }
 
-        // Construct marginal
-        let mut marg = 0:f32;
-        for y in range(0, tile_y) {
-            marg += sampling_buffer_marg.load_f32(m_id + y);
-            sampling_buffer_marg.store_f32(m_id + y, marg);
-        }
-
-        // Normalize col
-        if (marg > flt_eps) {
-            for y in range(0, tile_y) {
+        // Normalize marginal
+        if marg > flt_eps {
+            for y in range(0, tile_y - 1) {
                 sampling_buffer_marg.store_f32(m_id + y, sampling_buffer_marg.load_f32(m_id + y) / marg);
             }
         } else {
             // TODO: We should rather disable using the adaptive method
-            // Skip last entry as it is explicty set to 1
-            for y in range(1, tile_y+1) {
-                sampling_buffer_marg.store_f32(m_id + y - 1, y as f32 / tile_y as f32);
+            // Skip last entry as it is explicitly set to 1
+            for y in range(0, tile_y - 1) {
+                sampling_buffer_marg.store_f32(m_id + y, (y + 1) as f32 / tile_y as f32);
             }
         }
 
@@ -388,6 +386,12 @@ fn @aept_handle_after_iteration_learning(device: Device, _iter: i32) -> () {
         sampling_buffer_marg.store_f32(m_id + tile_y - 1, 1:f32);
     }
     device.sync();
+
+    if false {
+        device.dump_buffer("__apt_env_learning_cache", "learning.bin");
+        device.dump_buffer("__apt_env_sampling_cache_marg", "marg.bin");
+        device.dump_buffer("__apt_env_sampling_cache_cond", "cond.bin");
+    }
 }
 
 // -------------------------------------------------
@@ -437,7 +441,7 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
     aov_guiding.mark_as_used();
     aov_guiding_pdf.mark_as_used();
    
-    let ae_prob = 1:f32; // TODO: Make this adaptive?
+    let ae_prob = 0.5:f32; // TODO: Make this adaptive?
 
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
@@ -582,7 +586,10 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
         fn @sample_bsdf(prob: f32) -> Option[Ray] {
             if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
                 let pdf_ae = guiding.eval(ctx.surf.point, mat_sample.in_dir);
-                aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
+
+                if pt.depth == 1 {
+                    aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
+                }
     
                 let contrib = color_mul(pt.contrib, color_mulf(mat_sample.color, 1 / prob)/* Pdf and cosine are already applied!*/);
                 let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };

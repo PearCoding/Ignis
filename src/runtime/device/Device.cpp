@@ -876,6 +876,8 @@ public:
         auto& buffers = devices[dev].buffers;
         if (auto it = buffers.find(name); it != buffers.end()) {
             const size_t size = (size_t)it->second.Data.size();
+            
+            IG_LOG(L_DEBUG) << "Dumping buffer '" << name << "' to '" << filename << "' with " << FormatMemory(size) << std::endl;
 
             // Copy data to host
             std::vector<uint8_t> host_data(size);
