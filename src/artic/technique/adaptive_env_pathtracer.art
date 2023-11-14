@@ -129,9 +129,11 @@ struct AdaptiveEnvironmentSamplingMap {
 fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, cam_pos: Vec3) -> AdaptiveEnvironmentSamplingMap {
     let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y), 0);
     let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y), 0);
+    let sampling_buffer_nz   = device.request_buffer("__apt_env_sampling_cache_nz",   compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y), 0);
+    let sampling_buffer_nz2  = device.request_buffer("__apt_env_sampling_cache_nz2",   compute_adaptive_env_buffer_size(grid_x, grid_y,     1, 1), 0);
 
-    let get_cdf1d_marg = @|gx: i32, gy: i32|          cdf::make_cdf_1d_from_buffer(sampling_buffer_marg, tile_y, gy * grid_x * tile_y + gx * tile_y);
-    let get_cdf1d_cond = @|gx: i32, gy: i32, ty: i32| cdf::make_cdf_1d_from_buffer(sampling_buffer_cond, tile_x, gy * grid_x * tile_y * tile_x + gx * tile_y * tile_x + ty * tile_x);
+    let get_cdf1d_marg = @|gx: i32, gy: i32|          cdf::make_cdf_1d_from_buffer_fix(sampling_buffer_marg, tile_y, sampling_buffer_nz2.load_i32(gy * grid_x + gx), gy * grid_x * tile_y + gx * tile_y);
+    let get_cdf1d_cond = @|gx: i32, gy: i32, ty: i32| cdf::make_cdf_1d_from_buffer_fix(sampling_buffer_cond, tile_x, sampling_buffer_nz.load_i32(gy * grid_x * tile_y + gx * tile_y + ty), gy * grid_x * tile_y * tile_x + gx * tile_y * tile_x + ty * tile_x);
     
     let get_cdf2d = @|gx: i32, gy: i32| cdf::make_cdf_2d(get_cdf1d_marg(gx, gy), @|ty: i32| get_cdf1d_cond(gx, gy, ty));
 
@@ -327,6 +329,8 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
     let learning_buffer      = device.request_buffer("__apt_env_learning_cache"     , compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y) * 2, 0);
     let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y),     0);
     let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y),     0);
+    let sampling_buffer_nz   = device.request_buffer("__apt_env_sampling_cache_nz",   compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y),     0);
+    let sampling_buffer_nz2  = device.request_buffer("__apt_env_sampling_cache_nz2",  compute_adaptive_env_buffer_size(grid_x, grid_y,      1,      1),     0);
 
     // TODO: This is a very naive implementation of the CDF construction on the GPU
     for i, j in device.parallel_range_2d(0, grid_x, 0, grid_y) {
@@ -334,14 +338,17 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
 
         // Construct conditional
         let mut marg = 0:f32;
+        let mut m_non_zero = 0:i32;
         for y in range(0, tile_y) {
             let c_id = m_id * tile_x + y * tile_x;
 
-            let mut cond = 0:f32;
+            let mut cond     = 0:f32;
+            let mut non_zero = 0:i32;
             for x in range(0, tile_x) {
                 let contrib = learning_buffer.load_f32((c_id + x) * 2 + 0);
                 let count   = learning_buffer.load_i32((c_id + x) * 2 + 1);
-                cond += math_builtins::fmax[f32](1e-4:f32, select(count > 0, contrib / count as f32, 0:f32));
+                cond += select(count > 0, contrib / count as f32, 0:f32);
+                non_zero += select(count > 0, 1:i32, 0:i32);
                 sampling_buffer_cond.store_f32(c_id + x, cond);
             }
 
@@ -351,10 +358,13 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
 
             // Normalize row
             if cond > flt_eps {
+                m_non_zero += 1;
                 for x in range(0, tile_x - 1) {
                     sampling_buffer_cond.store_f32(c_id + x, sampling_buffer_cond.load_f32(c_id + x) / cond);
                 }
             } else {
+                non_zero = tile_x;
+
                 // Fallback to a uniform conditional
                 // Skip last entry as it is explicitly set to 1
                 for x in range(0, tile_x - 1) { 
@@ -364,6 +374,8 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
 
             // Force 1 to make it numerically stable
             sampling_buffer_cond.store_f32(c_id + tile_x - 1, 1:f32);
+
+            sampling_buffer_nz.store_i32(m_id + y, non_zero);
         }
 
         // Normalize marginal
@@ -372,6 +384,8 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
                 sampling_buffer_marg.store_f32(m_id + y, sampling_buffer_marg.load_f32(m_id + y) / marg);
             }
         } else {
+            m_non_zero = tile_y;
+
             // TODO: We should rather disable using the adaptive method
             // Skip last entry as it is explicitly set to 1
             for y in range(0, tile_y - 1) {
@@ -381,6 +395,8 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
 
         // Force 1 to make it numerically stable
         sampling_buffer_marg.store_f32(m_id + tile_y - 1, 1:f32);
+
+        sampling_buffer_nz2.store_i32(j * grid_x + i, m_non_zero);
     }
     device.sync();
 
