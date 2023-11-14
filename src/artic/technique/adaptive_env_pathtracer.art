@@ -219,7 +219,7 @@ fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, 
 
     // TODO: NEE
 
-    fn @is_smooth(mat: Material, pdf: f32) = !mat.bsdf.is_specular && pdf < 2 /* Stupid constant */;
+    fn @is_smooth(mat: Material, pdf: f32) = !mat.bsdf.is_specular && pdf < 2 /* Stupid constant. We assume that something smooth tends to be closer to 1/pi (lambertian pdf) */;
 
     fn @on_miss( ctx: ShadingContext
                , payload: RayPayload) -> Option[Color] {
@@ -385,6 +385,7 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
     }
     device.sync();
 
+    // Set the following to true to dump the internal buffers. Use the aept.ipynb notebook to investigate
     if false {
         device.dump_buffer("__apt_env_learning_cache", "learning.bin");
         device.dump_buffer("__apt_env_sampling_cache_marg", "marg.bin");
