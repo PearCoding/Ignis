@@ -17,5 +17,6 @@ private:
     std::string mLightSelector;
     bool mEnableNEE;
     float mClamp;
+    size_t mNumLearningIterations;
 };
 } // namespace IG
