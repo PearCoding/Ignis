@@ -144,9 +144,8 @@ fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, t
 
             let cdf       = get_cdf2d(gx, gy);
             let cdf_pdf   = cdf.pdf_continuous(make_vec2(ntx, nty)).pdf;
-            // let sin_theta = math_builtins::sin(nty * flt_pi);
-            // safe_div(cdf_pdf, sin_theta * flt_pi * flt_pi * 2)
-            cdf_pdf / (flt_pi * flt_pi * 2)
+            let sin_theta = math_builtins::sin(nty * flt_pi);
+            safe_div(cdf_pdf, sin_theta * flt_pi * flt_pi * 2)
         },
         sample = @|pos: Vec3, uv: Vec2| -> (f32, Vec3) {
             let (gx, gy) = utils.to_grid(pos);
@@ -154,13 +153,11 @@ fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, t
             let cdf    = get_cdf2d(gx, gy);
             let sample = cdf.sample_continuous(uv);
 
-            // let sin_theta = math_builtins::sin(sample.pos.y * flt_pi);
-            // let pdf       = safe_div(sample.pdf, sin_theta * flt_pi * flt_pi * 2);
-            let pdf       = sample.pdf / (flt_pi * flt_pi * 2);
+            let sin_theta = math_builtins::sin(sample.pos.y * flt_pi);
+            let pdf       = safe_div(sample.pdf, sin_theta * flt_pi * flt_pi * 2);
 
             let dir = utils.from_tile(sample.pos.x, sample.pos.y);
             (pdf, dir)
-            // (pdf, dir)
         }
     }
 }
@@ -344,7 +341,7 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
             for x in range(0, tile_x) {
                 let contrib = learning_buffer.load_f32((c_id + x) * 2 + 0);
                 let count   = learning_buffer.load_i32((c_id + x) * 2 + 1);
-                cond += select(count > 0, contrib / count as f32, 0:f32);
+                cond += math_builtins::fmax[f32](1e-4:f32, select(count > 0, contrib / count as f32, 0:f32));
                 sampling_buffer_cond.store_f32(c_id + x, cond);
             }
 
@@ -441,7 +438,7 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
     aov_guiding.mark_as_used();
     aov_guiding_pdf.mark_as_used();
    
-    let ae_prob = 0.5:f32; // TODO: Make this adaptive?
+    let ae_prob = 1:f32; // TODO: Make this adaptive?
 
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
@@ -577,80 +574,71 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
         if pt.depth + 1 > max_path_len {
             return(Option[Ray]::None)
         }
-
-        // aov_guiding.splat(ctx.pixel, make_gray_color(learned.sum(ctx.surf.point)));
     
         // Bounce
         let out_dir = vec3_neg(ctx.ray.dir);
 
-        fn @sample_bsdf(prob: f32) -> Option[Ray] {
-            if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
-                let pdf_ae = guiding.eval(ctx.surf.point, mat_sample.in_dir);
-
-                if pt.depth == 1 {
-                    aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
-                }
-    
-                let contrib = color_mul(pt.contrib, color_mulf(mat_sample.color, 1 / prob)/* Pdf and cosine are already applied!*/);
-                let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
-                if rnd.next_f32() >= rr_prob {
-                    return(Option[Ray]::None)
-                }
-    
-                let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / (rr_prob * prob * mat_sample.pdf + rr_prob * (1 - prob) * pdf_ae) };
-                let new_contrib = color_mulf(contrib, 1 / rr_prob);
-                
-                write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {
-                    inv_pdf = inv_pdf,
-                    contrib = new_contrib,
-                    depth   = pt.depth + 1,
-                    eta     = pt.eta * mat_sample.eta,
-                });
-                make_option(
-                    make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
-                )
-            } else {
-                Option[Ray]::None
-            }
-        }
-
         if rnd.next_f32() < ae_prob {
             let (pdf_ae, in_dir) = guiding.sample(ctx.surf.point, make_vec2(rnd.next_f32(), rnd.next_f32()));
+    
             if pt.depth == 1 {
                 aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
+                aov_guiding.splat(ctx.pixel, color_builtins::green);
             }
 
             let eval_bsdf = mat.bsdf.eval(in_dir, out_dir);
             let pdf_bsdf  = mat.bsdf.pdf(in_dir, out_dir);
-
-            /*if pdf_bsdf <= flt_eps {
-                // Bad or singular bsdf. Fallback to sample bsdf only
-                aov_guiding.splat(ctx.pixel, color_builtins::red);
-                sample_bsdf(ae_prob)
-            } else*/ {
-                aov_guiding.splat(ctx.pixel, color_builtins::green);
-                let contrib = color_mul(pt.contrib, color_mulf(eval_bsdf, 1 / (pdf_ae * ae_prob)));
-                let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
-                if rnd.next_f32() >= rr_prob {
-                    return(Option[Ray]::None)
-                }
-
-                let inv_pdf     = 1 / (rr_prob * ae_prob * pdf_ae  + rr_prob * (1 - ae_prob) * pdf_bsdf);
-                let new_contrib = color_mulf(contrib, 1 / rr_prob);
-
-                write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {
-                    inv_pdf = inv_pdf,
-                    contrib = new_contrib,
-                    depth   = pt.depth + 1,
-                    eta     = pt.eta * 1, // TODO
-                });
-                make_option(
-                    make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_bounce)
-                )
+            if pdf_bsdf <= flt_eps {
+                // Invalid direction
+                return(Option[Ray]::None)
             }
+
+            let contrib = color_mul(pt.contrib, color_mulf(eval_bsdf, 1 / (pdf_ae * ae_prob)));
+            let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+            if rnd.next_f32() >= rr_prob {
+                return(Option[Ray]::None)
+            }
+
+            let inv_pdf     = 1 / (rr_prob * ae_prob * pdf_ae  + rr_prob * (1 - ae_prob) * pdf_bsdf);
+            let new_contrib = color_mulf(contrib, 1 / rr_prob);
+
+            write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {
+                inv_pdf = inv_pdf,
+                contrib = new_contrib,
+                depth   = pt.depth + 1,
+                eta     = pt.eta * 1, // TODO
+            });
+            make_option(
+                make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_bounce)
+            )
+        } else if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+            let pdf_ae = guiding.eval(ctx.surf.point, mat_sample.in_dir);
+
+            if pt.depth == 1 {
+                aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
+                aov_guiding.splat(ctx.pixel, color_builtins::red);
+            }
+
+            let contrib = color_mul(pt.contrib, color_mulf(mat_sample.color, 1 / (1 - ae_prob))/* Pdf and cosine are already applied!*/);
+            let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+            if rnd.next_f32() >= rr_prob {
+                return(Option[Ray]::None)
+            }
+
+            let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / (rr_prob * (1 - ae_prob) * mat_sample.pdf + rr_prob * ae_prob * pdf_ae) };
+            let new_contrib = color_mulf(contrib, 1 / rr_prob);
+            
+            write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {
+                inv_pdf = inv_pdf,
+                contrib = new_contrib,
+                depth   = pt.depth + 1,
+                eta     = pt.eta * mat_sample.eta,
+            });
+            make_option(
+                make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
+            )
         } else {
-            aov_guiding.splat(ctx.pixel, color_builtins::red);
-            sample_bsdf(1 - ae_prob)
+            Option[Ray]::None
         }
     }
 

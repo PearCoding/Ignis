@@ -38,6 +38,8 @@ struct CDF1D {
 }
 
 // Creates a cdf with func_size + 1 entries accessed by the get function
+// Note: Our implementation of a CDF has to be strict monotonically increasing. The previous value CAN NOT match the current one, else bias is injected
+// TODO: The CDF can work with not necesserily strict monotonically increasing CDFs if the count the non-zero (pdf!=0) instead of the func_size only
 fn @make_cdf_1d(func_size: i32, get: fn (i32) -> f32) -> CDF1D {
     let pdf_discrete     = @|x:i32| DiscretePdf1d { pdf = get(x + 1) - get(x) };
     let sample_discrete  = @|u:f32| {
@@ -56,10 +58,10 @@ fn @make_cdf_1d(func_size: i32, get: fn (i32) -> f32) -> CDF1D {
     };
 
     CDF1D {
-        func_size        = func_size,
-        get              = get,
-        sample_discrete  = sample_discrete,
-        pdf_discrete     = pdf_discrete,
+        func_size         = func_size,
+        get               = get,
+        sample_discrete   = sample_discrete,
+        pdf_discrete      = pdf_discrete,
         sample_continuous = sample_continuous,
         pdf_continuous    = pdf_continuous
     }
@@ -98,6 +100,9 @@ struct CDF2D {
     sample_continuous: fn (Vec2) -> ContinuousSample2d,
     pdf_continuous:    fn (Vec2) -> ContinuousPdf2d,
 }
+
+// ---------------------------------------------
+// Marginal & Conditional
 
 // (x ~ conditional, y ~ marginal)
 fn @make_cdf_2d(marginal: CDF1D, conditional: fn (i32) -> CDF1D) -> CDF2D {
@@ -140,8 +145,8 @@ fn @make_cdf_2d(marginal: CDF1D, conditional: fn (i32) -> CDF1D) -> CDF2D {
     };
 
     CDF2D {
-        sample_discrete  = sample_discrete,
-        pdf_discrete     = pdf_discrete,
+        sample_discrete   = sample_discrete,
+        pdf_discrete      = pdf_discrete,
         sample_continuous = sample_continuous,
         pdf_continuous    = pdf_continuous
     }
@@ -152,6 +157,9 @@ fn @make_cdf_2d_from_buffer(data: DeviceBuffer, size_x: i32, size_y: i32) = make
     make_cdf_1d_from_buffer(data, size_y, 0),
     @|i:i32| make_cdf_1d_from_buffer(data, size_x, size_y + i * size_x)
 );
+
+// ---------------------------------------------
+// Summed Area Table
 
 fn @make_cdf_2d_sat(data: DeviceBuffer, width: i32, height: i32) -> CDF2D {
     fn @lookup(x: i32, y: i32)      = data.load_f32(y * width + x);
@@ -260,6 +268,9 @@ fn @make_cdf_2d_sat(data: DeviceBuffer, width: i32, height: i32) -> CDF2D {
         pdf_continuous    = pdf_continuous
     }
 }
+
+// ---------------------------------------------
+// Hierachical
 
 fn @make_cdf_2d_hierachical(data: DeviceBuffer, levels: i32) -> CDF2D {
     // Assumptions: The mip-map levels are in sequential order, with level 0 being the initial image. The image is also square!
