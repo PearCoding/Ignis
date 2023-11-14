@@ -38,8 +38,8 @@ struct CDF1D {
 }
 
 // Creates a cdf with func_size + 1 entries accessed by the get function
-// Note: Our implementation of a CDF has to be strict monotonically increasing. The previous value CAN NOT match the current one, else bias is injected
-// TODO: The CDF can work with not necesserily strict monotonically increasing CDFs if the count the non-zero (pdf!=0) instead of the func_size only
+// Note: Our implementation of a CDF has to be strict monotonically increasing. The previous value CAN NOT match the current one, else bias is injected in the continuous case.
+// TODO: The CDF can work with not necesserily strict monotonically increasing CDFs if we count the non-zero (pdf!=0) instead of the func_size only. This is only necessary for continuous sample & pdf.
 fn @make_cdf_1d(func_size: i32, get: fn (i32) -> f32) -> CDF1D {
     let pdf_discrete     = @|x:i32| DiscretePdf1d { pdf = get(x + 1) - get(x) };
     let sample_discrete  = @|u:f32| {
