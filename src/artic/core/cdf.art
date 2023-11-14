@@ -40,7 +40,7 @@ struct CDF1D {
 // Creates a cdf with func_size + 1 entries accessed by the get function
 // Note: Our implementation of a CDF has to be strict monotonically increasing. The previous value CAN NOT match the current one, else bias is injected in the continuous case.
 // TODO: The CDF can work with not necesserily strict monotonically increasing CDFs if we count the non-zero (pdf!=0) instead of the func_size only. This is only necessary for continuous sample & pdf.
-fn @make_cdf_1d_fix(func_size: i32, non_zero_count: i32, get: fn (i32) -> f32) -> CDF1D {
+fn @make_cdf_1d(func_size: i32, get: fn (i32) -> f32) -> CDF1D {
     let pdf_discrete     = @|x:i32| DiscretePdf1d { pdf = get(x + 1) - get(x) };
     let sample_discrete  = @|u:f32| {
         let off = all::min(interval::binary_search(func_size + 1, @|i:i32| get(i) <= u), func_size - 1); // We omit the rare event of u=1 and pull down to u=0.99...
@@ -48,13 +48,13 @@ fn @make_cdf_1d_fix(func_size: i32, non_zero_count: i32, get: fn (i32) -> f32) -
     };
     let pdf_continuous    = @|x:f32| {
         let off = all::clamp((x * func_size as f32) as i32, 0, func_size - 1);
-        ContinuousPdf1d { off = off, pdf = pdf_discrete(off).pdf * non_zero_count as f32}
+        ContinuousPdf1d { off = off, pdf = pdf_discrete(off).pdf * func_size as f32}
     };
     let sample_continuous = @|u:f32| {
         let sample = sample_discrete(u);
         let rem    = all::safe_div(u - get(sample.off), sample.pdf);
         let pos    = all::clampf((sample.off as f32 + rem) / func_size as f32, 0, 1);
-        ContinuousSample1d { off = sample.off, rem = rem, pos = pos, pdf = sample.pdf * non_zero_count as f32 }
+        ContinuousSample1d { off = sample.off, rem = rem, pos = pos, pdf = sample.pdf * func_size as f32 }
     };
 
     CDF1D {
@@ -67,15 +67,10 @@ fn @make_cdf_1d_fix(func_size: i32, non_zero_count: i32, get: fn (i32) -> f32) -
     }
 }
 
-fn @make_cdf_1d(func_size: i32, get: fn (i32) -> f32) = make_cdf_1d_fix(func_size, func_size, get);
-
 // This underlying buffer of the CDF omits the first 0 entry and only contains [x1, x2, ..., xn-1, 1] as data.
 // The CDF itself handles [0, x1, x2, ..., xn-1, 1] virtually.
 fn @make_cdf_1d_from_buffer(data: DeviceBuffer, func_size: i32, off: i32) 
     = make_cdf_1d(func_size, @|i:i32| if i == 0 { 0 } else { data.load_f32(i - 1 + off) });
-
-fn @make_cdf_1d_from_buffer_fix(data: DeviceBuffer, func_size: i32, non_zero_count: i32, off: i32) 
-    = make_cdf_1d_fix(func_size, non_zero_count, @|i:i32| if i == 0 { 0 } else { data.load_f32(i - 1 + off) });
 
 ////////////////// 2D
 struct DiscreteSample2d {
