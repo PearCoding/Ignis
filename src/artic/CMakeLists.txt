@@ -11,6 +11,7 @@ set(ARTIC_MAIN_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/bsdf/plastic.art
     ${CMAKE_CURRENT_SOURCE_DIR}/bsdf/principled.art
     ${CMAKE_CURRENT_SOURCE_DIR}/bsdf/tensortree.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/bsdf/neural.art
     ${CMAKE_CURRENT_SOURCE_DIR}/camera/common.art
     ${CMAKE_CURRENT_SOURCE_DIR}/camera/fishlens.art
     ${CMAKE_CURRENT_SOURCE_DIR}/camera/orthogonal.art

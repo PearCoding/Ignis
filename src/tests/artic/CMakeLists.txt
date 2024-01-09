@@ -10,6 +10,7 @@ set(ARTIC_TEST_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/test_microfacet.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_reduction.art
     ${CMAKE_CURRENT_SOURCE_DIR}/test_warp.art
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_neural.art
 )
 
 # Compile artic stuff

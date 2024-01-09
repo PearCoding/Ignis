@@ -7,6 +7,7 @@
 
 #include "bsdf/BlendBSDF.h"
 #include "bsdf/ConductorBSDF.h"
+#include "bsdf/NeuralBSDF.h"
 #include "bsdf/DJMeasuredBSDF.h"
 #include "bsdf/DielectricBSDF.h"
 #include "bsdf/DiffuseBSDF.h"
@@ -67,6 +68,11 @@ static std::shared_ptr<BSDF> bsdf_tensortree(const std::string& name, const std:
 static std::shared_ptr<BSDF> bsdf_djmeasured(const std::string& name, const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<DJMeasuredBSDF>(name, obj);
+}
+
+static std::shared_ptr<BSDF> bsdf_neural(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<NeuralBSDF>(name, obj);
 }
 
 static std::shared_ptr<BSDF> bsdf_add(const std::string& name, const std::shared_ptr<SceneObject>& obj)
@@ -140,6 +146,7 @@ static const struct {
     { "klems", bsdf_klems },
     { "tensortree", bsdf_tensortree },
     { "djmeasured", bsdf_djmeasured },
+    { "neural", bsdf_neural },
     { "add", bsdf_add },
     { "blend", bsdf_mix },
     { "mix", bsdf_mix },

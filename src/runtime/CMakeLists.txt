@@ -42,6 +42,8 @@ set(SRC
   bsdf/DiffuseBSDF.h
   bsdf/DJMeasuredBSDF.cpp
   bsdf/DJMeasuredBSDF.h
+  bsdf/NeuralBSDF.cpp
+  bsdf/NeuralBSDF.h
   bsdf/DoubleSidedBSDF.cpp
   bsdf/DoubleSidedBSDF.h
   bsdf/ErrorBSDF.cpp

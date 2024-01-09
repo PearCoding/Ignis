@@ -1,3 +1,3 @@
 #[export] fn test_main(no_gpu: bool) -> i32 { 
-    test_bbox() + test_matrix() + test_intersection() + test_interval() + test_microfacet() + test_reduction(no_gpu) + test_cdf() + test_warp()
+    test_bbox() + test_matrix() + test_intersection() + test_interval() + test_microfacet() + test_reduction(no_gpu) + test_cdf() + test_warp() + test_neural()
 }

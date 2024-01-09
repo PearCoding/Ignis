@@ -1,0 +1,85 @@
+fn neural_propagate(inputs: fn(i32) -> f32, input_count: i32, weights: fn(i32,i32) -> f32, bias: fn(i32) -> f32) -> (fn(i32) -> f32) {
+    |i:i32| -> f32 {
+        let mut sum: f32 = 0.0;
+        for j in safe_unroll(0, input_count) {
+            sum += inputs(j) * weights(i, j);
+        }
+        sum + bias(i)
+    }
+}
+
+fn @relu(val:f32) -> f32 {
+    if val > 0 {
+        val
+    } else {
+        0
+    }
+}
+
+fn @map_relu(values:fn(i32) -> f32) -> fn(i32) -> f32 {
+    @|i:i32| {relu(values(i))}
+}
+
+fn neural_eval(in_dir: Vec3, out_dir: Vec3, values: fn(i32) -> f32) -> Vec3 {
+    let bias_offset = 126 + 441 + 63;
+
+    let input_values = [in_dir.x, in_dir.y, in_dir.z, out_dir.x, out_dir.y, out_dir.z];
+    let inputs_layer_0 = |i : i32| {input_values(i)};
+    let weights_layer_0 = |i:i32, o:i32| {values(o * 21 + i)};
+    let bias_layer_0 = |i:i32| {values(bias_offset + i)};
+    let outputs_layer_0 = map_relu(neural_propagate(inputs_layer_0, 6, weights_layer_0, bias_layer_0));
+
+    let weights_layer_1 = |i:i32, o:i32| {values(o * 21 + i + 126)};
+    let bias_layer_1 = |i:i32| {values(bias_offset + i + 21)};
+    let outputs_layer_1 = map_relu(neural_propagate(outputs_layer_0, 21, weights_layer_1, bias_layer_1));
+
+    let weights_layer_2 = |i:i32, o:i32| {values(o * 3 + i + 126 + 441)};
+    let bias_layer_2 = |i:i32| {values(bias_offset + i + 21 + 21)};
+    let outputs_layer_2 = neural_propagate(outputs_layer_1, 21, weights_layer_2, bias_layer_2);
+
+    make_vec3(
+        math_builtins::exp(outputs_layer_2(0)) - 1.0,
+        math_builtins::exp(outputs_layer_2(1)) - 1.0,
+        math_builtins::exp(outputs_layer_2(2)) - 1.0
+    )
+}
+
+fn @rotate_vector(v : Vec3, axis : Vec3, angle : f32) -> Vec3 {
+    let cos_angle = math_builtins::cos(angle);
+	let sin_angle = math_builtins::sin(angle);
+	let mut out = vec3_mulf(v, cos_angle);
+	let tmp1 = vec3_dot(axis, v);
+	let tmp2 = tmp1 * (1.0 - cos_angle);
+	out = vec3_add(out, vec3_mulf(axis, tmp2));
+	vec3_add(out, vec3_mulf(vec3_cross(axis, v), sin_angle))
+}
+
+fn @make_neural_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
+    let eval = @ |in_dir : Vec3, out_dir : Vec3| {
+        let wo = shading::to_local(surf.local, vec3_mulf(out_dir, 1.0));
+        let wi = shading::to_local(surf.local, vec3_mulf(in_dir, 1.0));
+        // convert to Rusinkiewicz coordinates
+        let half = vec3_normalize(vec3_add(wi, wo));
+        let (theta_h, phi_h) = spherical_from_dir(half);
+        let mut difference = rotate_vector(wo, make_vec3(0,0,1), -phi_h);
+        difference = rotate_vector(difference, make_vec3(0,1,0), -theta_h);
+        difference = vec3_normalize(difference);
+        //let e = neural_eval(half, difference, @|i| buffer.load_f32(i));
+        let e = neural_eval(make_vec3(math_builtins::sin(theta_h),0,math_builtins::cos(theta_h)), difference, |i| buffer.load_f32(i));
+        let eval_color = make_color(e.x, e.y, e.z, 1.0);
+        let cos_term = absolute_cos(in_dir,  surf.local.col(2));
+        color_mulf(eval_color, cos_term)
+        //eval_color
+    };
+
+    Bsdf {
+        eval = eval,
+        pdf = @ |in_dir, _| cosine_hemisphere_pdf(positive_cos(in_dir, surf.local.col(2))),
+        sample = @ |rnd, out_dir, _| {
+            let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
+            let gdir   = mat3x3_mul(surf.local, sample.dir);
+            make_bsdf_sample(gdir, sample.pdf, color_mulf(eval(gdir, out_dir), 1 / sample.pdf), 1)
+        },
+        is_specular = false
+    }
+}
