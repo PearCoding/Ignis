@@ -3,6 +3,6 @@
 #include "TriMesh.h"
 
 namespace IG::ply {
-[[nodiscard]] TriMesh load(const Path& path);
-bool save(const TriMesh& mesh, const Path& path);
+[[nodiscard]] IG_LIB TriMesh load(const Path& path);
+IG_LIB bool save(const TriMesh& mesh, const Path& path);
 }

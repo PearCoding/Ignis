@@ -5,7 +5,6 @@ import numpy as np
 import argparse
 import simpleimageio as sio
 import figuregen
-import numpy as np
 import matplotlib.cm as cm
 
 
@@ -95,11 +94,13 @@ predef_eps = {
     "cycles-principled": 5e-2,
     "cycles-tex": 1e-2,
     "cycles-sun": 1e-2,
+    "cycles-mix-diff-trans": 5e-3,
     "room": 1e-3,
     "volume": 5e-3,
     "env4k": 8e-2,
     "env4k-nocdf": 8e-2,
     "env4k-nomisc": 8e-2,
+    "env4k-sat": 8e-2,
     "multilight-uniform": 3e-4,
     "multilight-simple": 3e-4,
     "multilight-hierarchy": 3e-4,
@@ -211,7 +212,7 @@ def make_figure(scenes, args):
     rows.append([title])
     rows.append([grid])
 
-    print("Writing summary to Evaluation.pdf")
+    print(f"Writing summary to {out_dir}/Evaluation.pdf")
 
     # Generate the figure with the pdflatex backend and default settings
     figuregen.figure(rows, width_cm=10, filename=f"{out_dir}/Evaluation.pdf")

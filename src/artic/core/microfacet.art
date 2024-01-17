@@ -175,9 +175,9 @@ fn @g_1_smith(local: Mat3x3, w: Vec3, _m: Vec3, alpha_u: f32, alpha_v: f32) -> f
 }
 
 fn @ndf_beckmann(local: Mat3x3, m: Vec3, alpha_u: f32, alpha_v: f32) -> f32 {
-    let cosZ = all::vec3_dot(local.col(2), m);
-    let cosX = all::vec3_dot(local.col(0), m);
-    let cosY = all::vec3_dot(local.col(1), m);
+    let cosZ = all::vec3_dot(local.col(2), m); // cosTheta
+    let cosX = all::vec3_dot(local.col(0), m); // cosPhi * sinTheta
+    let cosY = all::vec3_dot(local.col(1), m); // sinPhi * sinTheta
 
     let kx = cosX / alpha_u;
     let ky = cosY / alpha_v;
@@ -337,7 +337,7 @@ fn @sample_vndf_ggx_11(rnd: RandomGenerator, cos_theta: f32) -> Vec2 {
     all::vec2_mulf(all::make_vec2(all::diff_of_prod(cos_theta, y, sin_theta, z), pc.x), norm)
 }
 
-fn @sample_vndf_ggx(rnd: RandomGenerator, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
+fn @sample_vndf_ggx_old(rnd: RandomGenerator, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
     // Transform to local
     let vL = shading::to_local(local, vN);
 
@@ -360,6 +360,36 @@ fn @sample_vndf_ggx(rnd: RandomGenerator, local: Mat3x3, vN: Vec3, alpha_u: f32,
         // Compute normal
         all::vec3_normalize(all::make_vec3(-slope2.x, -slope2.y, 1))
     };
+
+    // Transform back to global
+	shading::to_world(local, Nh)
+}
+
+// Based on:
+// Sampling Visible GGX Normals with Spherical Caps
+// by Jonathan Dupuy and Anis Benyoub 
+// https://arxiv.org/pdf/2306.05044
+fn @sample_vndf_ggx(rnd: RandomGenerator, local: Mat3x3, vN: Vec3, alpha_u: f32, alpha_v: f32) -> Vec3 {
+    // Transform to local
+    let vL = shading::to_local(local, vN);
+
+    // Stretch
+    let sL = all::vec3_normalize(all::make_vec3(alpha_u * vL.x, alpha_v * vL.y, vL.z));
+    
+    // Compute
+    let u0 = rnd.next_f32();
+    let u1 = rnd.next_f32();
+
+    let phi = 2 * all::flt_pi * u0;
+    let z = (1 - u1) * (1 + sL.z) - sL.z;
+    let sinTheta = math_builtins::sqrt(all::clampf(1 - z * z, 0, 1));
+    let x = sinTheta * math_builtins::cos(phi);
+    let y = sinTheta * math_builtins::sin(phi);
+
+    let h = all::vec3_add(all::make_vec3(x,y,z), vL);
+
+    // Unstretch    
+    let Nh = all::vec3_normalize(all::make_vec3(h.x * alpha_u, h.y * alpha_v, h.z));
 
     // Transform back to global
 	shading::to_world(local, Nh)

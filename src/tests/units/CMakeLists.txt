@@ -1,4 +1,4 @@
-CPMAddPackage("gh:catchorg/Catch2@3.0.1")
+CPMAddPackage("gh:catchorg/Catch2@3.4.0")
     
 macro(push_test name files)
 	set(options NO_ADD)
@@ -21,3 +21,4 @@ push_test(perez perez.cpp)
 push_test(sun sun.cpp)
 push_test(trimesh_plane trimesh_plane.cpp)
 push_test(trimesh_sphere trimesh_sphere.cpp)
+push_test(trimesh_he trimesh_he.cpp)

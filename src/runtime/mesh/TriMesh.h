@@ -14,6 +14,8 @@ using StVector2f = StVectorXf<2>;
 static_assert(sizeof(StVector3f) == sizeof(float) * 3, "Expected storage vector types to be well sized");
 static_assert(sizeof(StVector2f) == sizeof(float) * 2, "Expected storage vector types to be well sized");
 
+constexpr uint32 NoHalfEdgeTwin = (uint32)-1;
+
 class IG_LIB TriMesh {
 public:
     // TODO: Refactor the direct access out
@@ -79,6 +81,16 @@ public:
     [[nodiscard]] static TriMesh MakeGaussianLobe(const Vector3f& origin, const Vector3f& direction,
                                                   const Vector3f& xAxis, const Vector3f& yAxis,
                                                   const Matrix2f& cov, uint32 theta_size, uint32 phi_size, float scale);
+
+    struct HalfEdge {
+        uint32 Vertex; // ID of the STARTING vertex
+        uint32 Twin;
+        uint32 Next;
+        uint32 Previous;
+    };
+    /// @brief Compute half edge representation only valid for the mesh it was created with.
+    /// Each face has three half edges. To access the half edges of a triangle t use t*3+i
+    std::vector<HalfEdge> computeHalfEdges() const;
 };
 
 } // namespace IG

@@ -1,5 +1,6 @@
 #include "PrincipledBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -13,11 +14,23 @@ PrincipledBSDF::PrincipledBSDF(const std::string& name, const std::shared_ptr<Sc
 void PrincipledBSDF::serialize(const SerializationInput& input) const
 {
     const float int_ior_default = getDielectricIOR("bk7").value();
-    const auto ior_spec         = getDielectricIOR(mBSDF->property("ior_material").getString());
+    auto reflective_ior_spec    = getDielectricIOR(mBSDF->property("reflective_ior_spec").getString());
+    auto refractive_ior_spec    = getDielectricIOR(mBSDF->property("refractive_ior_spec").getString());
+
+    if (!reflective_ior_spec.has_value())
+        reflective_ior_spec = getDielectricIOR(mBSDF->property("ior_spec").getString());
+    if (!refractive_ior_spec.has_value())
+        refractive_ior_spec = getDielectricIOR(mBSDF->property("ior_spec").getString());
 
     input.Tree.beginClosure(name());
     input.Tree.addColor("base_color", *mBSDF, Vector3f::Constant(0.8f));
-    input.Tree.addNumber("ior", *mBSDF, ior_spec.value_or(int_ior_default), ShadingTree::NumberOptions::Dynamic());
+    if (mBSDF->hasProperty("reflective_ior") || mBSDF->hasProperty("refractive_ior") || reflective_ior_spec.has_value() || refractive_ior_spec.has_value()) {
+        input.Tree.addNumber("reflective_ior", *mBSDF, reflective_ior_spec.value_or(int_ior_default), ShadingTree::NumberOptions::Dynamic());
+        input.Tree.addNumber("refractive_ior", *mBSDF, refractive_ior_spec.value_or(int_ior_default), ShadingTree::NumberOptions::Dynamic());
+    } else {
+        input.Tree.addNumber("ior", *mBSDF, reflective_ior_spec.value_or(int_ior_default), ShadingTree::NumberOptions::Dynamic());
+    }
+
     input.Tree.addNumber("diffuse_transmission", *mBSDF, 0.0f, ShadingTree::NumberOptions::Zero());
     input.Tree.addNumber("specular_transmission", *mBSDF, 0.0f);
     input.Tree.addNumber("specular_tint", *mBSDF, 0.0f);
@@ -47,12 +60,20 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
         input.Stream << "let ru = " << input.Tree.getInline("roughness_u") << ";"
                      << "let rv = " << input.Tree.getInline("roughness_v") << ";";
     } else {
-        input.Stream << "let (ru, rv) = principled::compute_roughness(" << input.Tree.getInline("roughness") << "," << input.Tree.getInline("anisotropic") << ");";
+        input.Stream << "let (ru, rv) = microfacet::compute_explicit(" << input.Tree.getInline("roughness") << "," << input.Tree.getInline("anisotropic") << ");";
+    }
+
+    if (mBSDF->hasProperty("reflective_ior") || mBSDF->hasProperty("refractive_ior") || reflective_ior_spec.has_value() || refractive_ior_spec.has_value()) {
+        input.Stream << "let ior_refl = " << input.Tree.getInline("reflective_ior") << ";"
+                     << "let ior_refr = " << input.Tree.getInline("refractive_ior") << ";";
+    } else {
+        input.Stream << "let ior_refl = " << input.Tree.getInline("ior") << ";"
+                     << "let ior_refr = ior_refl;";
     }
 
     input.Stream << "make_principled_bsdf(ctx.surf, "
                  << input.Tree.getInline("base_color") << ", "
-                 << input.Tree.getInline("ior") << ", "
+                 << "ior_refl, ior_refr, "
                  << input.Tree.getInline("diffuse_transmission") << ", "
                  << input.Tree.getInline("specular_transmission") << ", "
                  << input.Tree.getInline("specular_tint") << ", "
@@ -69,4 +90,6 @@ void PrincipledBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<PrincipledBSDF> sPrincipledBSDF("principled");
 } // namespace IG

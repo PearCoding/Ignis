@@ -521,6 +521,8 @@ Image ShadingTree::computeImage(const std::string& name, const Transpiler::Resul
     const std::string script = BakeShader::setupTexture2d(mContext, inner_script.str(), width, height);
 
     void* shader = mContext.Options.Compiler->compile(mContext.Options.Compiler->prepare(script), "ig_bake_shader");
+    if (shader == nullptr)
+        return Image::createSolidImage(Vector4f::Zero(), width, height);
 
     Image image          = Image::createSolidImage(Vector4f::Zero(), width, height);
     const auto resources = mContext.generateResourceMap();

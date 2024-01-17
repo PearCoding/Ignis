@@ -233,6 +233,11 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, tree: Ten
                 }
             }
         },
+        albedo = @ |out_dir| {
+            let wo = to_local(out_dir);
+            let wi = to_local(vec3_reflect(out_dir, surf.local.col(2)));
+            color_mulf(color, tree.eval(surf, wi, wo))
+        },
         is_specular = false
     }
 }

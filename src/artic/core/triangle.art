@@ -4,14 +4,16 @@ struct Triangle {
     v2: Vec3,
     e1: Vec3,
     e2: Vec3,
+    e3: Vec3,
     n:  Vec3,
     area: f32
 }
 
 fn @make_triangle(v0: Vec3, v1: Vec3, v2: Vec3) -> Triangle {
-    let e1 = vec3_sub(v1, v0);
-    let e2 = vec3_sub(v2, v0);
-    let n  = vec3_cross(e1, e2);
+    let e1 = vec3_sub(v2, v0);
+    let e2 = vec3_sub(v0, v1);
+    let e3 = vec3_sub(v1, v2);
+    let n  = compute_stable_triangle_normal(e1, e2, e3);
     let nn = vec3_len(n);
 
     Triangle{
@@ -20,7 +22,23 @@ fn @make_triangle(v0: Vec3, v1: Vec3, v2: Vec3) -> Triangle {
         v2 = v2,
         e1 = e1,
         e2 = e2,
+        e3 = e3,
         n  = vec3_mulf(n, 1/nn),
         area = nn / 2
     }
+}
+
+/// Ensure a stable triangle normal using all three edges instead of only two
+fn @compute_stable_triangle_normal(e1: Vec3, e2: Vec3, e3: Vec3) -> Vec3 {
+    let x12 = e1.z * e2.y; let y12 = e1.x * e2.z; let z12 = e1.y * e2.x;
+    let x23 = e2.z * e3.y; let y23 = e2.x * e3.z; let z23 = e2.y * e3.x;
+
+    let c12 = make_vec3(e1.y * e2.z - x12, e1.z * e2.x - y12, e1.x * e2.y - z12);
+    let c23 = make_vec3(e2.y * e3.z - x23, e2.z * e3.x - y23, e2.x * e3.y - z23);
+
+    make_vec3(
+        select(math_builtins::fabs(x12) < math_builtins::fabs(x23), c12.x, c23.x),
+        select(math_builtins::fabs(y12) < math_builtins::fabs(y23), c12.y, c23.y),
+        select(math_builtins::fabs(z12) < math_builtins::fabs(z23), c12.z, c23.z)
+    )
 }

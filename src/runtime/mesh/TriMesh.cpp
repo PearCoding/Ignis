@@ -272,6 +272,7 @@ void TriMesh::transform(const Transformf& t)
         n = transform.applyNormal(n);
 }
 
+/// @brief Simple pair key. It is associative (a,b) == (b,a)
 struct EdgeKey {
     uint32 A;
     uint32 B;
@@ -320,10 +321,10 @@ static EdgeMap computeEdgeMap(const std::vector<uint32>& triangleIndices, const 
     return edges;
 }
 
-static std::array<uint32, 6> subdivideQuadToTriangle(uint32 q0, const Vector3f& v0,
-                                                     uint32 q1, const Vector3f& v1,
-                                                     uint32 q2, const Vector3f& v2,
-                                                     uint32 q3, const Vector3f& v3)
+static inline std::array<uint32, 6> subdivideQuadToTriangle(uint32 q0, const Vector3f& v0,
+                                                            uint32 q1, const Vector3f& v1,
+                                                            uint32 q2, const Vector3f& v2,
+                                                            uint32 q3, const Vector3f& v3)
 {
     // TODO: Would be nice to get rid of the normalization
     const Vector3f e01 = (v1 - v0).normalized();
@@ -635,7 +636,8 @@ std::optional<PlaneShape> TriMesh::getAsPlane() const
 
 std::optional<SphereShape> TriMesh::getAsSphere() const
 {
-    constexpr float SphereEPS = 1e-5f;
+    constexpr float SphereEPS   = 1e-4f;
+    constexpr float Sphere90EPS = 1e-7f;
 
     // A sphere requires a sufficient amount of resolution. We pick some empirical value
     if (faceCount() < 32)
@@ -649,21 +651,52 @@ std::optional<SphereShape> TriMesh::getAsSphere() const
         return std::nullopt;
 
     // Check if it is symmetric
-    const float wh = std::abs(bbox.diameter().x() - bbox.diameter().y());
-    const float wd = std::abs(bbox.diameter().x() - bbox.diameter().z());
-    const float hd = std::abs(bbox.diameter().y() - bbox.diameter().z());
+    const float wh = std::abs((bbox.diameter().x() - bbox.diameter().y()) / std::max(1e-5f, bbox.diameter().x() + bbox.diameter().y()));
+    const float wd = std::abs((bbox.diameter().x() - bbox.diameter().z()) / std::max(1e-5f, bbox.diameter().x() + bbox.diameter().z()));
+    const float hd = std::abs((bbox.diameter().y() - bbox.diameter().z()) / std::max(1e-5f, bbox.diameter().y() + bbox.diameter().z()));
     if (wh > SphereEPS || wd > SphereEPS || hd > SphereEPS)
         return std::nullopt;
 
-    // Compute squared radius from first vertex
-    const float radius2 = (origin - vertices.at(0)).squaredNorm();
+    // Compute squared radius from average
+    float radius2 = 0;
+    for (const auto& v : vertices)
+        radius2 += (origin - v).squaredNorm();
+    radius2 /= vertices.size();
     if (radius2 <= SphereEPS) // Points are not spheres... at least not here
         return std::nullopt;
 
     // Check if all vertices are spread around the origin by the given radius
-    for (size_t i = 1; i < vertices.size(); ++i) {
-        const float r2 = (origin - vertices.at(i)).squaredNorm();
+    for (const auto& v : vertices) {
+        const float r2 = (origin - v).squaredNorm();
         if (std::abs(r2 - radius2) > SphereEPS)
+            return std::nullopt;
+    }
+
+    const auto getFaceNormal = [&](size_t t) {
+        const Vector3f v0 = vertices.at(indices.at(t * 4 + 0));
+        const Vector3f v1 = vertices.at(indices.at(t * 4 + 1));
+        const Vector3f v2 = vertices.at(indices.at(t * 4 + 2));
+        return computeTriangleNormal(v0, v1, v2).normalized();
+    };
+
+    const auto halfEdges = computeHalfEdges();
+
+    // Some more complex test to ensure not to detect our default cylinder as a sphere.
+    for (size_t id = 0; id < halfEdges.size(); ++id) {
+        const auto he = halfEdges[id];
+        if (he.Twin == NoHalfEdgeTwin)
+            continue;
+
+        const Vector3f N1 = getFaceNormal(id / 3);
+        if (N1.hasNaN()) // Zero area triangles are always bad
+            return std::nullopt;
+
+        const Vector3f N2 = getFaceNormal(he.Twin / 3);
+        if (N2.hasNaN()) // Zero area triangles are always bad
+            return std::nullopt;
+
+        // Check if any normal is 90° to to its neighbors. This should never be the case for a sphere.
+        if (std::abs(N1.dot(N2)) <= Sphere90EPS)
             return std::nullopt;
     }
 
@@ -695,6 +728,45 @@ std::optional<SphereShape> TriMesh::getAsSphere() const
 
     // The given sphere is only approximative. Texture coordinates are ignored and actual face connectivities (indices) are also neglected
     return shape;
+}
+
+std::vector<TriMesh::HalfEdge> TriMesh::computeHalfEdges() const
+{
+    const size_t triangles = faceCount();
+
+    std::vector<TriMesh::HalfEdge> halfEdges;
+    halfEdges.reserve(triangles * 3);
+
+    EdgeMap edges; // always [e0, e1]...
+    edges.reserve(triangles * 3);
+
+    for (size_t t = 0; t < triangles; ++t) {
+        const uint32 id = t * 3;
+        for (uint32 k = 0; k < 3 /*Triangle*/; ++k) {
+            const uint32 v  = indices[t * 4 + k];
+            const uint32 vn = indices[t * 4 + (k + 1) % 3];
+
+            HalfEdge he = {
+                v,
+                NoHalfEdgeTwin,   // Will be set later
+                id + (k + 1) % 3, // Next
+                id + (k + 2) % 3  // Previous
+            };
+
+            halfEdges.emplace_back(he);
+
+            // Setup half edge face twins
+            if (const auto it = edges.find(EdgeKey(v, vn)); it != edges.end()) {
+                IG_ASSERT(halfEdges[it->second].Vertex == vn, "Expected well oriented vertices");
+                halfEdges[id + k].Twin     = it->second;
+                halfEdges[it->second].Twin = id + k;
+            } else {
+                edges.emplace(EdgeKey(v, vn), id + k);
+            }
+        }
+    }
+
+    return halfEdges;
 }
 
 inline static void addTriangle(TriMesh& mesh, const Vector3f& origin, const Vector3f& xAxis, const Vector3f& yAxis)
@@ -745,7 +817,7 @@ inline static void addPlane(TriMesh& mesh, const Vector3f& origin, const Vector3
 }
 
 inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f& N, const Vector3f& Nx, const Vector3f& Ny,
-                           float radius, uint32 sections, bool fill_cap, bool flip=false)
+                           float radius, uint32 sections, bool fill_cap, bool flip = false)
 {
     const float step = 1.0f / sections;
     const uint32 off = (uint32)mesh.vertices.size();
@@ -772,7 +844,7 @@ inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f
     for (uint32 i = 0; i < sections; ++i) {
         uint32 C  = i + start;
         uint32 NC = (i + 1 < sections ? i + 1 : 0) + start;
-        if(flip)
+        if (flip)
             mesh.indices.insert(mesh.indices.end(), { 0 + off, NC + off, C + off, 0 });
         else
             mesh.indices.insert(mesh.indices.end(), { 0 + off, C + off, NC + off, 0 });
@@ -781,6 +853,9 @@ inline static void addDisk(TriMesh& mesh, const Vector3f& origin, const Vector3f
 
 TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stacks, uint32 slices)
 {
+    stacks = std::max<uint32>(2, stacks);
+    slices = std::max<uint32>(2, slices);
+
     TriMesh mesh;
 
     const uint32 count = slices * stacks;
@@ -788,8 +863,8 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
     mesh.normals.reserve(count);
     mesh.texcoords.reserve(count);
 
-    float drho   = 3.141592f / (float)stacks;
-    float dtheta = 2 * 3.141592f / (float)slices;
+    float drho   = Pi / (float)stacks;
+    float dtheta = 2 * Pi / (float)slices;
 
     // TODO: We create a 2*stacks of redundant vertices at the two critical points... remove them
     // Vertices
@@ -816,18 +891,15 @@ TriMesh TriMesh::MakeUVSphere(const Vector3f& center, float radius, uint32 stack
     }
 
     // Indices
-    for (uint32 i = 0; i <= stacks; ++i) {
-        const uint32 currSliceOff = i * slices;
-        const uint32 nextSliceOff = ((i + 1) % (stacks + 1)) * slices;
+    mesh.indices.reserve(stacks * slices * 8);
+    for (uint32 i = 0; i < stacks; ++i) {
+        const uint32 c = (i + 0) * slices;
+        const uint32 n = (i + 1) * slices;
 
         for (uint32 j = 0; j < slices; ++j) {
-            const uint32 nextJ = ((j + 1) % slices);
-            const uint32 id0   = currSliceOff + j;
-            const uint32 id1   = currSliceOff + nextJ;
-            const uint32 id2   = nextSliceOff + j;
-            const uint32 id3   = nextSliceOff + nextJ;
-
-            mesh.indices.insert(mesh.indices.end(), { id2, id3, id1, 0, id2, id1, id0, 0 });
+            const uint32 nj = (j + 1) % slices;
+            mesh.indices.insert(mesh.indices.end(), { n + j, n + nj, c + nj, 0,
+                                                      n + j, c + nj, c + j, 0 });
         }
     }
 

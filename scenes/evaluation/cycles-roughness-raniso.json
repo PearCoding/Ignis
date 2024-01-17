@@ -1,0 +1,24 @@
+{
+  "externals": [
+    {"filename": "cycles-roughness-base.json"}
+  ],
+  "bsdfs": [
+    {
+      "type": "principled",
+      "name": "Material",
+      "base_color": "mix(_tex_0((uvw).xy), max(_tex_0((uvw).xy), color(0.0, 0.002233547391369939, 0.5, 1.0)), clamp(1.0,0,1))",
+      "metallic": 0.95,
+      "roughness": 0.06,
+      "anisotropic": 0.0,
+      "sheen": 0.0,
+      "sheen_tint": 0.5,
+      "clearcoat": 0.0,
+      "clearcoat_roughness": 0.029999999329447746,
+      "flatness": 0.0,
+      "specular_transmission": 0.0,
+      "specular_tint": 0.0,
+      "reflective_ior": 1.7887885053796064,
+      "refractive_ior": 1.4500000476837158
+    }
+  ]
+}

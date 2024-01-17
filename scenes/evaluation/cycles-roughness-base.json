@@ -1,0 +1,129 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 32
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -0.9521293640136719,
+      -0.012801197357475758,
+      -0.30542710423469543,
+      1.3688405752182007,
+      -0.3056952655315399,
+      0.03987182304263115,
+      0.9512941837310791,
+      -4.263437271118164,
+      2.2472998750799889e-07,
+      0.9991227984428406,
+      -0.041876357048749924,
+      1.4294512271881104,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "GroundPlane",
+      "filename": "meshes/GroundPlane.ply"
+    },
+    {
+      "type": "ply",
+      "name": "IcosphereHQ",
+      "filename": "meshes/IcosphereHQ.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "Ground",
+      "reflectance": "select(checkerboard(uvw * 10.0) == 1, color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0), color(0.20000000298023224, 0.20000000298023224, 0.20000000298023224, 1.0))"
+    }
+  ],
+  "entities": [
+    {
+      "name": "GroundPlane-GroundPlane",
+      "shape": "GroundPlane",
+      "bsdf": "Ground",
+      "transform": [
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        4.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "name": "IcosphereHQ-Mesh",
+      "shape": "IcosphereHQ",
+      "bsdf": "Material",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "type": "point",
+      "name": "Light",
+      "position": [
+        1.699600100517273,
+        -1.2251337766647339,
+        1.8338091373443604
+      ],
+      "power": [
+        1000.0,
+        1000.0,
+        1000.0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "type": "image",
+      "name": "_tex_0",
+      "filename": "../textures/grid_weight.png",
+      "wrap_mode": "repeat",
+      "filter_type": "bilinear",
+      "linear": false
+    }
+  ]
+}

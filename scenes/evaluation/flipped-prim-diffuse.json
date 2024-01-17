@@ -1,6 +1,6 @@
 {
 	"bsdfs": [
-		{"type":"diffuse", "name": "base", "reflectance":[0.8, 0.8, 0.8]}
+		{"type":"diffuse", "name": "Material", "reflectance":[0.8, 0.8, 0.8]}
 	],
   "externals": [
     {"filename": "flipped-prim-base.json"}

@@ -148,7 +148,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
     };
     let branchless = bvh.arity > 4;
 
-    let mut hit = empty_hit(ray.tmax);
+    let mut hit = invalid_hit(ray.tmax);
     let stack = alloc_stack();
 
     stack.push(root, ray.tmin);
@@ -274,7 +274,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
         _  => vector_width / 2
     };
 
-    let mut hit = empty_hit(ray.tmax);
+    let mut hit = invalid_hit(ray.tmax);
     let mut terminated = false;
     let stack = alloc_stack();
     stack.push(root, ray.tmin);

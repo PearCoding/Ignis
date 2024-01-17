@@ -143,6 +143,31 @@ inline std::ostream& operator<<(std::ostream& stream, const FormatMemory<T>& mem
     return i == 0 ? stream : (stream << "B");
 }
 
+/// Format vectors givin in row order, columnwise for better reading
+template <typename Scalar, int Rows>
+class FormatVector {
+public:
+    using Vector = Eigen::Matrix<Scalar, Rows, 1>;
+
+    inline explicit FormatVector(const Vector& vec)
+        : mValue(vec)
+    {
+    }
+
+    inline const Vector& value() const { return mValue; }
+
+private:
+    Vector mValue;
+};
+
+template <typename Scalar, int Rows>
+inline std::ostream& operator<<(std::ostream& stream, const FormatVector<Scalar, Rows>& vec)
+{
+    static Eigen::IOFormat format(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "", "", "", "", "", ' ');
+    stream << "[" << vec.value().transpose().format(format) << "]";
+    return stream;
+}
+
 // Time printer based on https://stackoverflow.com/questions/22063979/elegant-time-print-in-c11
 
 namespace detail {
@@ -213,8 +238,7 @@ struct print_duration_impl_<> {
     template <typename Duration>
     static int print(std::ostream& os, Duration& dur)
     {
-        IG_UNUSED(os);
-        IG_UNUSED(dur);
+        IG_UNUSED(os, dur);
         return 0;
     }
 };

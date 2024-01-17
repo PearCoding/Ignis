@@ -50,6 +50,10 @@ struct IG_LIB Image {
     /// Depending on the sRGB flag, can be 2.2 gamma or the sRGB gamma function
     void applyGammaCorrection(bool inverse = false, bool sRGB = false);
 
+    /// Apply exposure and offset
+    /// In contrary to proper tonemapping, this applies for each component individually
+    void applyExposureOffset(float exposure, float offset = 0);
+
     /// Flip image in y-axis
     void flipY();
 

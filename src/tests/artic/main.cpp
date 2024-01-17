@@ -1,6 +1,7 @@
+#include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iostream>
-#include <cstring>
 
 #if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
 #ifdef _MSC_VER
@@ -20,7 +21,7 @@ int main(int argc, char** argv)
 #endif
 
     bool no_gpu = argc > 1 && std::strcmp(argv[1], "--no-gpu") == 0;
-    int err = test_main(no_gpu);
+    int err     = test_main(no_gpu);
 
     if (err != 0)
         std::cout << err << " failed tests!" << std::endl;

@@ -198,20 +198,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         "Disables specialization for parameters in shading tree. This might decrease compile time drastically for worse runtime optimization");
 
     if (type != ApplicationType::Trace) {
-        if (type == ApplicationType::CLI) {
-            // Focus on quality
-            DenoiserFollowSpecular     = true;
-            DenoiserOnlyFirstIteration = false;
-        } else {
-            // Focus on interactivity
-            DenoiserFollowSpecular     = false;
-            DenoiserOnlyFirstIteration = true;
-        }
-
         app.add_flag("--denoise", Denoise, "Apply denoiser if available");
-        app.add_flag("--denoiser-follow-specular,!--denoiser-skip-specular", DenoiserFollowSpecular, "Follow specular paths or terminate at them");
-        app.add_flag("--denoiser-aov-first-iteration,!--denoiser-aov-every-iteration", DenoiserOnlyFirstIteration, "Acquire scene normal, albedo and depth information every iteration or only at the first");
-    
         app.add_flag("--glare", Glare, "Enable glare overlay");
     }
 
@@ -414,9 +401,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.AddExtraEnvLight = AddExtraEnvLight;
     options.Specialization   = Specialization;
 
-    options.Denoiser.Enabled            = Denoise;
-    options.Denoiser.FollowSpecular     = DenoiserFollowSpecular;
-    options.Denoiser.OnlyFirstIteration = DenoiserOnlyFirstIteration;
+    options.Denoiser.Enabled = Denoise;
 
     options.Glare.Enabled = Glare;
 

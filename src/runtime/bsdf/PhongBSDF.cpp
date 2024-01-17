@@ -1,5 +1,6 @@
 #include "PhongBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -24,4 +25,7 @@ void PhongBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<PhongBSDF> sPhongBSDF("phong");
+
 } // namespace IG

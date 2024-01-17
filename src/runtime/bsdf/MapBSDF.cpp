@@ -51,4 +51,16 @@ void MapBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static std::shared_ptr<BSDF> bsdf_bumpmap(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<MapBSDF>(MapBSDF::Type::Bump, name, obj);
+}
+static BSDFRawRegister sBumpMapBSDF(bsdf_bumpmap, "bumpmap");
+
+static std::shared_ptr<BSDF> bsdf_normalmap(const std::string& name, const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<MapBSDF>(MapBSDF::Type::Normal, name, obj);
+}
+static BSDFRawRegister sNormalMapBSDF(bsdf_normalmap, "normalmap");
 } // namespace IG

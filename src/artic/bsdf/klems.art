@@ -275,6 +275,11 @@ fn @make_klems_bsdf(surf: SurfaceElement, color: Color, up: Vec3, klems: KlemsMo
                 }
             }
         },
+        albedo = @ |out_dir| {
+            let wo = to_local(out_dir);
+            let wi = to_local(vec3_reflect(out_dir, surf.local.col(2)));
+            local_eval(wi, wo)
+        },
         is_specular = false
     }
 }

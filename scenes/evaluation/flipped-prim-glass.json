@@ -1,6 +1,13 @@
 {
 	"bsdfs": [
-		{"type":"glass", "name": "base", "int_ior":1.55}
+		{
+      "type": "dielectric",
+      "name": "Material",
+      "specular_reflectance": 1,
+      "specular_transmittance": 1,
+      "roughness": "(0.17499999701976776)^2",
+      "int_ior": 1.55
+    }
 	],
   "externals": [
     {"filename": "flipped-prim-base.json"}

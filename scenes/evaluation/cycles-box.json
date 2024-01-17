@@ -43,34 +43,21 @@
   ],
   "bsdfs": [
     {
-      "type": "diffuse",
-      "name": "__bsdf_black",
-      "reflectance": 0
-    },
-    {
-      "type": "diffuse",
-      "name": "__bsdf_error",
-      "reflectance": [
-        1,
-        0.75,
-        0.8
-      ]
-    },
-    {
       "type": "principled",
       "name": "Material",
-      "base_color": "color(0.800000011920929, 0.800000011920929, 0.800000011920929, 1.0)",
+      "base_color": 0.8,
       "metallic": 0.0,
       "roughness": 0.5,
       "anisotropic": 0.0,
       "sheen": 0.0,
       "sheen_tint": 0.5,
       "clearcoat": 0.0,
-      "clearcoat_roughness": 0.029999999329447746,
+      "clearcoat_roughness": 0.03,
       "flatness": 0.0,
       "specular_transmission": 0.0,
       "specular_tint": 0.0,
-      "ior": 1.5
+      "reflective_ior": 1.5,
+      "refractive_ior": 1.45
     }
   ],
   "entities": [

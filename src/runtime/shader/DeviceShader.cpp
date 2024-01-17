@@ -16,7 +16,7 @@ std::string DeviceShader::setup(const LoaderContext& ctx)
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl // TODO
            << "  ig_render_pipeline(device, scene, payload_info)" << std::endl
            << "}";
-    
+
     return stream.str();
 }
 } // namespace IG

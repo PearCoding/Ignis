@@ -82,6 +82,20 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
     }
 }
 
+void Image::applyExposureOffset(float exposure, float offset)
+{
+    const float factor = std::pow(2.0f, exposure);
+    tbb::parallel_for(
+        tbb::blocked_range<size_t>(0, width * height),
+        [&](tbb::blocked_range<size_t> r) {
+            for (size_t k = r.begin(); k < r.end(); ++k) {
+                auto* pix = &pixels[4 * k];
+                for (int i = 0; i < 3; ++i)
+                    pix[i] = factor * pix[i] + offset;
+            }
+        });
+}
+
 void Image::flipY()
 {
     const size_t slice = channels * width;
@@ -302,7 +316,7 @@ void Image::copyToPackedFormat(std::vector<uint8>& dst) const
                 for (size_t k = range.begin(); k < range.end(); ++k)
                     dst[k] = static_cast<uint8>(pixels[k] * 255);
             });
-    } else if(channels == 3) {
+    } else if (channels == 3) {
         uint32* ptr = (uint32*)dst.data();
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, width * height),
@@ -422,7 +436,11 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
                     metaData->Iteration = getIntAttribute(attr);
                 else if (strcmp(attr.name, "igFrame") == 0 && strcmp(attr.type, "int") == 0)
                     metaData->Frame = getIntAttribute(attr);
-                else if (strcmp(attr.name, "igRendertime") == 0 && strcmp(attr.type, "int") == 0)
+                else if (strcmp(attr.name, "igRendertimeS") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->RendertimeInSeconds = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igRendertimeMS") == 0 && strcmp(attr.type, "int") == 0)
+                    metaData->RendertimeInMilliseconds = getIntAttribute(attr);
+                else if (strcmp(attr.name, "igRendertime") == 0 && strcmp(attr.type, "int") == 0) // Deprecated
                     metaData->RendertimeInSeconds = getIntAttribute(attr);
             }
         }

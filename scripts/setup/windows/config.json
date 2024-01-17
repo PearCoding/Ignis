@@ -2,13 +2,14 @@
     "LOCATION": "",
     "BUILD_DIR": "build/Release",
     "CONFIGURE_IGNIS": true,
+    "IGNIS_BUILD_TYPE": "Release",
     "GIT_BIN": "git",
     "CMAKE_BIN": "cmake",
     "CMAKE_EXTRA_ARGS": ["-GNinja", "-UCMAKE_CONFIGURATION_TYPES"],
     "SKIP_VC_ENV": false,
     "GET_ZLIB": true,
     "ZLIB_BUILD_TYPE": "Release",
-    "ZLIB_URL": "https://zlib.net/zlib1213.zip",
+    "ZLIB_URL": "https://zlib.net/zlib13.zip",
     "GET_AnyDSL": true,
     "AnyDSL_BUILD_TYPE": "Release",
     "AnyDSL_LLVM_VERSION": "14.0.6",
@@ -17,9 +18,9 @@
     "AnyDSL_RV_TAG": "origin/release/14.x",
     "AnyDSL_CMAKE_EXTRA_ARGS": [],
     "GET_TBB": true,
-    "TBB_URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.5.0/oneapi-tbb-2021.5.0-win.zip",
+    "TBB_URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.10.0/oneapi-tbb-2021.10.0-win.zip",
     "GET_SDL2": true,
-    "SDL2_URL":"https://github.com/libsdl-org/SDL/releases/download/release-2.24.0/SDL2-devel-2.24.0-VC.zip",
+    "SDL2_URL":"https://github.com/libsdl-org/SDL/releases/download/release-2.28.3/SDL2-devel-2.28.3-VC.zip",
     "GET_OIDN": true,
-    "OIDN_URL": "https://github.com/OpenImageDenoise/oidn/releases/download/v2.0.0/oidn-2.0.0.x64.windows.zip"
+    "OIDN_URL": "https://github.com/OpenImageDenoise/oidn/releases/download/v2.0.1/oidn-2.0.1.x64.windows.zip"
 }

@@ -1,5 +1,6 @@
 #include "DiffuseBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/ShadingTree.h"
 
 namespace IG {
@@ -24,4 +25,7 @@ void DiffuseBSDF::serialize(const SerializationInput& input) const
                  << input.Tree.getInline("reflectance") << ");" << std::endl;
     input.Tree.endClosure();
 }
+
+static BSDFRegister<DiffuseBSDF> sDiffuseBSDF("diffuse", "roughdiffuse" /* Deprecated */);
+
 } // namespace IG

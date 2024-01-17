@@ -14,6 +14,8 @@ struct Bsdf {
     pdf: fn (Vec3, Vec3) -> f32,
     // Samples a direction
     sample: fn (RandomGenerator, Vec3, bool) -> Option[BsdfSample],
+    // Evaluates the albedo of the material. This is only an approximation. The cosine term is not applied as the incoming direction is missing
+    albedo: fn (Vec3) -> Color,
     // Is true if the material is purely specular
     is_specular: bool
 }

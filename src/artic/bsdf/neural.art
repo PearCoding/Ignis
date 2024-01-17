@@ -80,6 +80,11 @@ fn @make_neural_bsdf(surf: SurfaceElement, buffer : DeviceBuffer) {
             let gdir   = mat3x3_mul(surf.local, sample.dir);
             make_bsdf_sample(gdir, sample.pdf, color_mulf(eval(gdir, out_dir), 1 / sample.pdf), 1)
         },
+        albedo = @ |out_dir| {
+            let wo = shading::to_local(surf.local, out_dir);
+            let wi = vec3_reflect(wo, make_vec3(0,0,1));
+            eval(wi, wo)
+        },
         is_specular = false
     }
 }

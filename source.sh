@@ -64,6 +64,7 @@ fi
 export PATH="$BUILD_DIR/bin:$PATH"
 export PATH="$BUILD_DIR/lib:$PATH"
 export PYTHONPATH="$BUILD_DIR/api:$PYTHONPATH"
+export IGNIS_SCRIPT_DIR="$IGNIS_DIR/scripts"
 
 if [ "$no_completion" = false ]; then
     # Include completion scripts if available
@@ -74,9 +75,10 @@ fi
 
 if [ "$quiet" = false ]; then
     echo $(igcli --version)
-    echo "  - Root:   $IGNIS_DIR" 
-    echo "  - Build:  $BUILD_DIR" 
-    echo "  - Bin:    $BUILD_DIR/bin" 
-    echo "  - Lib:    $BUILD_DIR/lib" 
-    echo "  - Python: $BUILD_DIR/api" 
+    echo "  - Root:    $IGNIS_DIR" 
+    echo "  - Build:   $BUILD_DIR" 
+    echo "  - Bin:     $BUILD_DIR/bin" 
+    echo "  - Lib:     $BUILD_DIR/lib" 
+    echo "  - Python:  $BUILD_DIR/api" 
+    echo "  - Scripts: $IGNIS_SCRIPT_DIR" 
 fi

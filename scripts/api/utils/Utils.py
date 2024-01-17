@@ -1,6 +1,6 @@
 import os
 import sys
-import importlib
+from importlib import util as imp_util
 from pathlib import Path
 
 
@@ -34,9 +34,9 @@ def load_api():
         raise RuntimeError(
             "Could not find the ignis directory inside the api directory! Maybe the Python API is not enabled via cmake?")
 
-    spec = importlib.util.spec_from_file_location(
+    spec = imp_util.spec_from_file_location(
         "ignis", ig_dir.joinpath("__init__.py"))
-    module = importlib.util.module_from_spec(spec)
+    module = imp_util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
 

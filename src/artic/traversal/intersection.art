@@ -11,9 +11,10 @@ struct Tri {
     v0: Vec3, // First vertex
     v1: Vec3, // Second vertex
     v2: Vec3, // Third vertex
-    e1: Vec3, // First edge (= v0 - v1)
-    e2: Vec3, // Second edge (= v2 - v0)
-    n:  Vec3  // Geometric normal (= cross(e1, e2))
+    e1: Vec3, // First edge (= v2 - v0)
+    e2: Vec3, // Second edge (= v0 - v1)
+    e3: Vec3, // Third edge (= v1 - v2)
+    n:  Vec3  // Geometric normal
 }
 
 // Min/max functions required to perform the ray-box test
@@ -58,43 +59,47 @@ fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
 
 fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
     v0 = v0,
-    v1 = vec3_sub(v0, e1),
-    v2 = vec3_add(v0, e2),
+    v1 = vec3_sub(v0, e2),
+    v2 = vec3_add(v0, e1),
     e1 = e1,
     e2 = e2,
+    e3 = vec3_sub(vec3_mulf(v0, 2), vec3_add(e1, e2)),
     n  = n
 };
 
-fn @empty_hit(tmax: f32) = make_hit(InvalidHitId, InvalidHitId, tmax, undef[Vec2]());
+fn @invalid_hit(tmax: f32) = make_hit(InvalidHitId, InvalidHitId, tmax, undef[Vec2]());
 
 // Möller - Trumbore approach
-fn @intersect_ray_tri_mt_gen(backface_culling: bool, ray: Ray, tri: Tri, check: fn (bool) -> bool) -> Option[(f32, f32, f32)] {
-    let tolerance = -flt_eps;
-
+// No watertightness :/
+fn @intersect_ray_tri_mt_gen(backface_culling: bool, ray: Ray, tri: Tri, check_if_none: fn (bool) -> bool) -> Option[(f32, f32, f32)] {
     let c = vec3_sub(tri.v0, ray.org);
-    let r = vec3_cross(ray.dir, c);
+    let r = vec3_cross(c, ray.dir);
     let det = vec3_dot(tri.n, ray.dir);
-    let inv_det = 1 / det;
+    let abs_det = math_builtins::fabs(det);
+    let sgn_det = fp_signmask(det);
 
-    let u = vec3_dot(r, tri.e2) * inv_det;
-    let v = vec3_dot(r, tri.e1) * inv_det;
-    let w = 1 - u - v;
-    let mut mask = u >= tolerance;
-    mask &= v >= tolerance;
-    mask &= w >= tolerance;
-    
+    let u = bitcast[f32](bitcast[u32](vec3_dot(r, tri.e1)) ^ bitcast[u32](sgn_det));
+    let v = bitcast[f32](bitcast[u32](vec3_dot(r, tri.e2)) ^ bitcast[u32](sgn_det));
+
+    let mut mask = u >= 0;
+    mask &= v >= 0;
+    mask &= u + v <= abs_det;
+
     if backface_culling {
         mask &= det < 0;
+    } else {
+        mask &= det != 0;
     }
 
-    if check(mask) { return(Option[(f32, f32, f32)]::None) }
+    if check_if_none(mask) { return(Option[(f32, f32, f32)]::None) }
 
-    let t = vec3_dot(c, tri.n) * inv_det;
-    mask &= t >= ray.tmin;
-    mask &= t <= ray.tmax;
+    let t = bitcast[f32](bitcast[u32](vec3_dot(c, tri.n)) ^ bitcast[u32](sgn_det));
+    mask &= t >= abs_det * ray.tmin;
+    mask &= t <= abs_det * ray.tmax;
 
     if mask {
-        make_option(t, if u > 0 { u } else { 0 }, if v > 0 { v } else { 0 })
+        let rcp = 1 / abs_det;
+        make_option(t * rcp, math_builtins::fmax[f32](u * rcp, 0), math_builtins::fmax[f32](v * rcp, 0))
     } else {
         Option[(f32, f32, f32)]::None
     }
@@ -105,8 +110,50 @@ fn @intersect_ray_tri_mt_cpu(backface_culling: bool, ray: Ray, tri: Tri)
 fn @intersect_ray_tri_mt_gpu(backface_culling: bool, ray: Ray, tri: Tri)
     = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| !mask);
 
+// Plücker approach
+// This one is watertight along the edges
+// TODO: Not really watertight :(
+fn @intersect_ray_tri_pl_gen(backface_culling: bool, ray: Ray, tri: Tri, check_if_none: fn (bool) -> bool) -> Option[(f32, f32, f32)] {
+    let v0 = vec3_sub(tri.v0, ray.org);
+    let v1 = vec3_sub(tri.v1, ray.org);
+    let v2 = vec3_sub(tri.v2, ray.org);
+
+    let u = vec3_dot(vec3_cross(vec3_sub(v2, v0), vec3_add(v2, v0)), ray.dir);
+    let v = vec3_dot(vec3_cross(vec3_sub(v0, v1), vec3_add(v0, v1)), ray.dir);
+    let w = vec3_dot(vec3_cross(vec3_sub(v1, v2), vec3_add(v1, v2)), ray.dir);
+
+    let eps = math_builtins::fabs(u + v + w) * flt_eps;
+
+    let mut mask = if backface_culling {
+        math_builtins::fmax(u,math_builtins::fmax(v, w)) <= eps
+    } else {
+        math_builtins::fmax(u,math_builtins::fmax(v, w)) <= eps || math_builtins::fmin(u,math_builtins::fmin(v, w)) >= -eps
+    };
+
+    if check_if_none(mask) { return(Option[(f32, f32, f32)]::None) }
+
+    let den = 2 * vec3_dot(ray.dir, tri.n);
+    let t   = 2 * vec3_dot(v0, tri.n) / den;
+
+    mask &= t >= ray.tmin;
+    mask &= t <= ray.tmax;
+    mask &= den != 0;
+    
+    if mask {
+        let rcp = safe_div(1, u + v + w);
+        make_option(t, math_builtins::fmin[f32](u * rcp, 1), math_builtins::fmin[f32](v * rcp, 1))
+    } else {
+        Option[(f32, f32, f32)]::None
+    }
+}
+
+fn @intersect_ray_tri_pl_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
+    = intersect_ray_tri_pl_gen(backface_culling, ray, tri, @|mask| cpu_likely(rv_all(!mask)));
+fn @intersect_ray_tri_pl_gpu(backface_culling: bool, ray: Ray, tri: Tri)
+    = intersect_ray_tri_pl_gen(backface_culling, ray, tri, @|mask| !mask);
+
 // Baldwin - Weber approach
-fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check: fn (bool) -> bool) -> Option[(f32, f32, f32)] {
+fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check_if_none: fn (bool) -> bool) -> Option[(f32, f32, f32)] {
     // Permute components of triangle vertices and ray direction
     let kz = vec3_max_index(vec3_abs(ray.dir));
     let kx = select(kz + 1 == 3, 0, kz + 1);
@@ -137,7 +184,7 @@ fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check:
     let abs_det = math_builtins::fabs(det);
     let mut mask = !((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0)) && abs_det != 0;
 
-    if check(mask) { return(Option[(f32, f32, f32)]::None) }
+    if check_if_none(mask) { return(Option[(f32, f32, f32)]::None) }
 
     // Compute scaled hit distance to triangle and test against ray range
     p0t.z *= Sz;
@@ -146,11 +193,11 @@ fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check:
     let t = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
     mask &= !(det < 0 && (t >= ray.tmin * det || t < ray.tmax * det)) && !(det > 0 && (t <= ray.tmin * det || t > ray.tmax * det));
 
-    if check(mask) { return(Option[(f32, f32, f32)]::None) }
+    if check_if_none(mask) { return(Option[(f32, f32, f32)]::None) }
 
     if mask {
         let inv_det = 1 / det;
-        make_option(t * inv_det, e0 * inv_det, e1 * inv_det)
+        make_option(t * inv_det, e1 * inv_det, e2 * inv_det)
     } else {
         Option[(f32, f32, f32)]::None
     }

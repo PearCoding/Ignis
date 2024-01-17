@@ -83,9 +83,8 @@ def _export_refraction_bsdf(ctx, bsdf, export_name):
 
 
 def _export_transparent_bsdf(ctx, bsdf, export_name):
-    reflectance = export_node(ctx, bsdf.inputs["Color"])
-    return {"type": "dielectric", "name": export_name,
-            "specular_reflectance": reflectance, "specular_transmittance": reflectance, "ext_ior": 1, "int_ior": 1}
+    color = export_node(ctx, bsdf.inputs["Color"])
+    return {"type": "transparent", "name": export_name, "color": color}
 
 
 def _export_translucent_bsdf(ctx, bsdf, export_name):
@@ -136,19 +135,17 @@ def _export_principled_bsdf(ctx, bsdf, export_name):
     clearcoat = export_node(ctx, bsdf.inputs["Clearcoat"])
     clearcoat_roughness = export_node(
         ctx, bsdf.inputs["Clearcoat Roughness"])
-    ior = export_node(ctx, bsdf.inputs["IOR"])
 
-    has_transmission = try_extract_node_value(transmission, default=1) > 0
-
-    if not has_transmission:
-        # Map specular variable to our IOR interpretation
-        ior = _map_specular_to_ior(specular)
+    refr_ior = export_node(ctx, bsdf.inputs["IOR"])
+    # Map specular variable to our IOR interpretation
+    refl_ior = _map_specular_to_ior(specular)
 
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name, "base_color": base_color, "metallic": metallic,
                            "roughness": roughness, "anisotropic": anisotropic, "sheen": sheen, "sheen_tint": sheen_tint,
                            "clearcoat": clearcoat, "clearcoat_roughness": clearcoat_roughness, "flatness": subsurface,
-                           "specular_transmission": transmission, "specular_tint": specular_tint, "ior": ior})
+                           "specular_transmission": transmission, "specular_tint": specular_tint,
+                           "reflective_ior": refl_ior, "refractive_ior": refr_ior})
 
 
 def _export_add_bsdf(ctx, bsdf, export_name):
@@ -242,12 +239,19 @@ def _export_bsdf(ctx, socket, name):
     return handle_node_implicit_mappings(socket, expr)
 
 
+def _get_active_output(material):
+    for node in material.node_tree.nodes:
+        if node.type == 'OUTPUT_MATERIAL' and node.is_active_output:
+            return node
+    return None
+
+
 def _get_bsdf_link(material):
     if material.node_tree is None:
         print(f"Material {material.name} has no valid node tree")
         return None
 
-    output = material.node_tree.nodes.get("Material Output")
+    output = _get_active_output(material)
     if output is None:
         print(f"Material {material.name} has no output node")
         return None

@@ -38,12 +38,13 @@ fn @color_min_index(c: Color)     = vec3_min_index(color_to_vec3(c));
 
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
 fn @is_white(c: Color) = (c.r == 1 && c.g == 1 && c.b == 1);
-fn @is_equal_eps(a: Color, b: Color, eps: f32) -> bool {
+fn @color_is_equal_eps(a: Color, b: Color, eps: f32) -> bool {
     let diff = color_abs(color_sub(a, b));
     diff.r <= eps && diff.g <= eps && diff.b <= eps
 }
-fn @is_black_eps(c: Color, eps: f32) = is_equal_eps(c, color_builtins::black, eps);
-fn @is_white_eps(c: Color, eps: f32) = is_equal_eps(c, color_builtins::white, eps);
+fn @is_black_eps(c: Color, eps: f32) = color_is_equal_eps(c, color_builtins::black, eps);
+fn @is_white_eps(c: Color, eps: f32) = color_is_equal_eps(c, color_builtins::white, eps);
+fn @color_is_finite(c: Color)        = math_builtins::isfinite(c.r) && math_builtins::isfinite(c.g) && math_builtins::isfinite(c.b);
 
 fn @vec3_to_color(v: Vec3)  = make_color(v.x, v.y, v.z, 1);
 fn @vec4_to_color(v: Vec4)  = make_color(v.x, v.y, v.z, v.w);
@@ -262,4 +263,32 @@ fn @color_mix_color(a: Color, b: Color, t: f32) {
     let ahsv = srgb_to_hsv(a);
     let bhsv = srgb_to_hsv(b);
     color_lerp(a, hsv_to_srgb(make_color(bhsv.r, bhsv.g, ahsv.b, ahsv.a)), t)
+}
+
+fn @encode_rgbe(color: Color) -> i32 {
+    let max = color_max_component(color);
+    if max <= flt_eps {
+        0
+    } else {
+        let (val, exp) = frexp(max);
+        let val2 = val * 256 / max;
+        let r = (color.r * val2) as i32 & 0xFF;
+        let g = (color.g * val2) as i32 & 0xFF;
+        let b = (color.b * val2) as i32 & 0xFF;
+        (r << 24) | (g << 16) | (b << 8) | (exp + 128)
+    }
+}
+
+fn @decode_rgbe(color: i32) -> Color {
+    if color == 0 {
+        color_builtins::black
+    } else {
+        let r = ((color >> 24) & 0xFF) as f32;
+        let g = ((color >> 16) & 0xFF) as f32;
+        let b = ((color >>  8) & 0xFF) as f32;
+        let e = (color & 0xFF);
+        let f = ldexp(1, e - 128 - 8);
+
+        make_color(r * f, g * f, b * f, 1)
+    }
 }

@@ -4,7 +4,6 @@ from pathlib import Path
 import numpy as np
 import argparse
 import simpleimageio as sio
-import numpy as np
 
 
 def get_output_path(scene_file, out_dir, prefix):

@@ -100,77 +100,76 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
         IG_LOG(L_DEBUG) << "Generating shaders for " << ctx.Technique->info().Variants.size() << " variants" << std::endl;
 
     ctx.TechniqueVariants.resize(ctx.Technique->info().Variants.size());
-    try {
-        for (size_t i = 0; i < ctx.Technique->info().Variants.size(); ++i) {
-            const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
+    for (size_t i = 0; i < ctx.Technique->info().Variants.size(); ++i) {
+        const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
+            try {
                 ctx.resetLocalRegistry();
                 IG_LOG(L_DEBUG) << "Generating " << name << " shader for variant " << i << std::endl;
                 output.Exec = func();
-                if (output.Exec.empty()) {
+                if (output.Exec.empty())
                     throw std::runtime_error("Constructed empty " + name + " shader.");
-                }
                 output.LocalRegistry = std::move(ctx.LocalRegistry);
-            };
+            } catch (const std::exception& e) {
+                IG_LOG(L_ERROR) << "Exception in " << name << " shader for variant " << i << ": " << e.what() << std::endl;
+                ctx.signalError();
+            }
+        };
 
-            auto& variant                   = ctx.TechniqueVariants[i];
-            const auto& info                = ctx.Technique->info().Variants[i];
-            ctx.CurrentTechniqueVariant     = i;
-            ctx.Options.SamplesPerIteration = info.GetSPI(opts.SamplesPerIteration);
+        auto& variant                   = ctx.TechniqueVariants[i];
+        const auto& info                = ctx.Technique->info().Variants[i];
+        ctx.CurrentTechniqueVariant     = i;
+        ctx.Options.SamplesPerIteration = info.GetSPI(opts.SamplesPerIteration);
 
-            // Generate shaders
-            setup(
-                "device", [&]() { return DeviceShader::setup(ctx); }, variant.DeviceShader);
-            setup(
-                "tonemap", [&]() { return UtilityShader::setupTonemap(ctx); }, variant.TonemapShader);
-            setup(
-                "glare", [&]() { return UtilityShader::setupGlare(ctx); }, variant.GlareShader);
-            setup(
-                "imageinfo", [&]() { return UtilityShader::setupImageinfo(ctx); }, variant.ImageinfoShader);
-            setup(
-                "primary traversal", [&]() { return TraversalShader::setupPrimary(ctx); }, variant.PrimaryTraversalShader);
-            setup(
-                "secondary traversal", [&]() { return TraversalShader::setupSecondary(ctx); }, variant.SecondaryTraversalShader);
-            setup(
-                "ray generation", [&]() { return info.OverrideCameraGenerator ? info.OverrideCameraGenerator(ctx) : RayGenerationShader::setup(ctx); }, variant.RayGenerationShader);
-            setup(
-                "miss", [&]() { return MissShader::setup(ctx); }, variant.MissShader);
+        // Generate shaders
+        setup(
+            "device", [&]() { return DeviceShader::setup(ctx); }, variant.DeviceShader);
+        setup(
+            "tonemap", [&]() { return UtilityShader::setupTonemap(ctx); }, variant.TonemapShader);
+        setup(
+            "glare", [&]() { return UtilityShader::setupGlare(ctx); }, variant.GlareShader);
+        setup(
+            "imageinfo", [&]() { return UtilityShader::setupImageinfo(ctx); }, variant.ImageinfoShader);
+        setup(
+            "primary traversal", [&]() { return TraversalShader::setupPrimary(ctx); }, variant.PrimaryTraversalShader);
+        setup(
+            "secondary traversal", [&]() { return TraversalShader::setupSecondary(ctx); }, variant.SecondaryTraversalShader);
+        setup(
+            "ray generation", [&]() { return info.OverrideCameraGenerator ? info.OverrideCameraGenerator(ctx) : RayGenerationShader::setup(ctx); }, variant.RayGenerationShader);
+        setup(
+            "miss", [&]() { return MissShader::setup(ctx); }, variant.MissShader);
 
-            // Generate hit shaders
-            for (size_t j = 0; j < ctx.Materials.size(); ++j) {
+        // Generate hit shaders
+        for (size_t j = 0; j < ctx.Materials.size(); ++j) {
+            ShaderOutput<std::string> output;
+            setup(
+                "hit " + std::to_string(j), [&]() { return HitShader::setup(j, ctx); }, output);
+            variant.HitShaders.emplace_back(std::move(output));
+        }
+
+        // Generate advanced shadow shaders if requested
+        if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
+            const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Materials.size();
+            for (size_t j = 0; j < max_materials; ++j) {
                 ShaderOutput<std::string> output;
                 setup(
-                    "hit " + std::to_string(j), [&]() { return HitShader::setup(j, ctx); }, output);
-                variant.HitShaders.emplace_back(std::move(output));
+                    "advanced shadow hit " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(true, j, ctx); }, output);
+                variant.AdvancedShadowHitShaders.emplace_back(std::move(output));
             }
-
-            // Generate advanced shadow shaders if requested
-            if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
-                const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Materials.size();
-                for (size_t j = 0; j < max_materials; ++j) {
-                    ShaderOutput<std::string> output;
-                    setup(
-                        "advanced shadow hit " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(true, j, ctx); }, output);
-                    variant.AdvancedShadowHitShaders.emplace_back(std::move(output));
-                }
-                for (size_t j = 0; j < max_materials; ++j) {
-                    ShaderOutput<std::string> output;
-                    setup(
-                        "advanced shadow miss " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(false, j, ctx); }, output);
-                    variant.AdvancedShadowMissShaders.emplace_back(std::move(output));
-                }
-            }
-
-            // Generate callback shaders if requested
-            for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
-                if (info.CallbackGenerators.at(j) != nullptr) {
-                    setup(
-                        "callback " + std::to_string(j), [&]() { return info.CallbackGenerators.at(j)(ctx); }, variant.CallbackShaders[j]);
-                }
+            for (size_t j = 0; j < max_materials; ++j) {
+                ShaderOutput<std::string> output;
+                setup(
+                    "advanced shadow miss " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(false, j, ctx); }, output);
+                variant.AdvancedShadowMissShaders.emplace_back(std::move(output));
             }
         }
-    } catch (const std::exception& e) {
-        IG_LOG(L_ERROR) << e.what() << std::endl;
-        return std::nullopt;
+
+        // Generate callback shaders if requested
+        for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
+            if (info.CallbackGenerators.at(j) != nullptr) {
+                setup(
+                    "callback " + std::to_string(j), [&]() { return info.CallbackGenerators.at(j)(ctx); }, variant.CallbackShaders[j]);
+            }
+        }
     }
 
     // Put some information into the registry
@@ -180,10 +179,12 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.GlobalRegistry.VectorParameters["__scene_bbox_lower"] = ctx.SceneBBox.min;
     ctx.GlobalRegistry.VectorParameters["__scene_bbox_upper"] = ctx.SceneBBox.max;
 
-    if (ctx.HasError)
+    if (ctx.HasError) {
+        IG_LOG(L_ERROR) << "Aborting loading due to previous errors." << std::endl;
         return std::nullopt;
-    else
+    } else {
         return std::optional<LoaderContext>(std::in_place, std::move(ctx));
+    }
 }
 
 std::vector<std::string> Loader::getAvailableTechniqueTypes()

@@ -17,5 +17,6 @@ fn @make_phong_bsdf(surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
         let color       = color_mulf(ks, cos * (ns + 2) / (ns + 1)); // TODO: Really cos?
         make_bsdf_sample(in_dir, sample.pdf, color, 1)
     },
+    albedo = @ |_| ks,
     is_specular = false
 };

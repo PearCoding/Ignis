@@ -1,5 +1,6 @@
 #include "KlemsBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/LoaderContext.h"
 #include "loader/LoaderUtils.h"
 #include "loader/ShadingTree.h"
@@ -65,8 +66,8 @@ void KlemsBSDF::serialize(const SerializationInput& input) const
 
     const auto data = setup_klems(name(), mBSDF, input.Tree.context());
 
-    const Path buffer_path = std::get<0>(data);
-    const KlemsSpecification spec           = std::get<1>(data);
+    const Path buffer_path        = std::get<0>(data);
+    const KlemsSpecification spec = std::get<1>(data);
 
     size_t res_id             = input.Tree.context().registerExternalResource(buffer_path);
     const std::string bsdf_id = input.Tree.currentClosureID();
@@ -80,4 +81,7 @@ void KlemsBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<KlemsBSDF> sKlemsBSDF("klems");
+
 } // namespace IG

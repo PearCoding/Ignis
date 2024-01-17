@@ -1,5 +1,6 @@
 #include "NeuralBSDF.h"
 #include "SceneObject.h"
+#include "loader/LoaderBSDF.h"
 #include "loader/LoaderContext.h"
 #include "loader/ShadingTree.h"
 
@@ -33,4 +34,6 @@ void NeuralBSDF::serialize(const SerializationInput& input) const
 
     input.Tree.endClosure();
 }
+
+static BSDFRegister<NeuralBSDF> sNeuralBSDF("neural");
 } // namespace IG

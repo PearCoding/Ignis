@@ -10,6 +10,10 @@ static flt_sqrt2  = 1.41421356237:f32;
 static flt_sqrt3  = 1.73205080757:f32;
 static flt_e      = 2.71828182845904523536:f32;
 
+static flt_twoTo127  : f32 = 0.1701411834604692e39;   // 0x1p127
+static flt_twoToM126 : f32 = 0.1175494350822288e-37;  // 0x1p-126
+static flt_twoTo25   : f32 = 33554432.0e0;            // 0x1p25
+
 // Convert from radians to degree
 fn deg(v: f32) = v * 180 * flt_inv_pi;
 // Convert from degree to radians
@@ -85,6 +89,119 @@ fn @fastpow(x: f32, p: f32) -> f32 {
     fastpow2(p * fastlog2(x))
 }
 
+// Fp32  ---------------------------------------------------------------------------
+fn @fp_signmask(a: f32) = bitcast[f32](bitcast[u32](a) & 0x80000000);
+
+/// Split into magnitude and exponent
+fn @frexp(x: f32) -> (f32, i32) {
+    let val = bitcast[i32](x) & 0x7FFFFFFF; // |x|
+    if val >= 0x7F800000 || val == 0 { // 0, Inf, NaN
+        return (x, 0)
+    }
+
+    if val < 0x00800000 { // Denormalized
+        let val2 = bitcast[i32](x * flt_twoTo25) & 0x7FFFFFFF;
+        let f  = bitcast[f32]((bitcast[i32](x * flt_twoTo25) & 0x807FFFFF) | 0x3F000000);
+        let ee = (val2 >> 23) - 126 - 25;
+        (f, ee)
+    } else {
+        let f  = bitcast[f32]((bitcast[i32](x) & 0x807FFFFF) | 0x3F000000);
+        let ee = (val >> 23) - 126;
+        (f, ee)
+    }
+}
+
+/// Construct floating point number from magnitude and exponent
+fn @ldexp(x: f32, e: i32) = scalbnf(x, e);
+
+/// Construct floating point number from magnitude and exponent
+fn @scalbnf(x: f32, e: i32) -> f32 {
+    let mut y = x;
+    let mut n = e;
+
+    if n > 127 {
+		y *= flt_twoTo127;
+		n -= 127;
+		if n > 127 {
+			y *= flt_twoTo127;
+			n -= 127;
+			if n > 127 {
+				n = 127;
+            }
+		}
+	} else if n < -126 {
+		y *= flt_twoToM126;
+		n += 126;
+		if n < -126 {
+			y *= flt_twoToM126;
+			n += 126;
+			if n < -126 {
+				n = -126;
+            }
+		}
+	}
+
+	let ei = ((127 + n) as u32) << 23;
+	y * bitcast[f32](ei)
+}
+
+/* Octahedron Projection method
+* MEYER, Q., SÜSSMUTH, J., SUSSNER, G., STAMMINGER, M., AND GREINER, G. 2010.
+* On floating-point normal vectors.
+* In Proceedings of the 21st Eurographics conference on Rendering,
+* Eurographics Association, Aire-la-Ville, Switzerland, Switzerland, EGSR’10, 1405–1409.
+* http://dx.doi.org/10.1111/j.1467-8659.2010.01737.x.
+*/
+fn @encode_oct_proj(vec: Vec3) -> Vec2 {
+    // Project
+    let a  = math_builtins::fabs(vec.x) + math_builtins::fabs(vec.y) + math_builtins::fabs(vec.z);
+    let ox = vec.x / a;
+    let oy = vec.y / a;
+
+    // Reflect
+    if vec.z < 0 {
+        make_vec2(
+            (1 - math_builtins::fabs(oy)) * select(ox >= 0, 1 : f32, -1 : f32),
+            (1 - math_builtins::fabs(ox)) * select(oy >= 0, 1 : f32, -1 : f32))
+    } else {
+        make_vec2(ox, oy)
+    }
+}
+
+fn @decode_oct_proj(vec: Vec2) -> Vec3 {
+    let oz = 1 - math_builtins::fabs(vec.x) - math_builtins::fabs(vec.y);
+
+    // Reflect
+    let (ox, oy) = if oz < 0 {
+        (1 - math_builtins::fabs(vec.y) * select(vec.x >= 0, 1 : f32, -1 : f32),
+         1 - math_builtins::fabs(vec.x) * select(vec.y >= 0, 1 : f32, -1 : f32))
+    } else {
+        (vec.x, vec.y)
+    };
+
+    vec3_normalize(make_vec3(ox, oy, oz))
+}
+
+/// Signed normalized fp [-1,1]
+fn @encode_signed_norm_8(f:  f32) = math_builtins::round(f * ((1 <<  8) - 1) as f32) as  i8;
+fn @encode_signed_norm_16(f: f32) = math_builtins::round(f * ((1 << 16) - 1) as f32) as i16;
+
+fn @decode_signed_norm_8(v:  i8)  = clampf((v as f32) / ((1 <<  8) - 1) as f32, -1, 1);
+fn @decode_signed_norm_16(v: i16) = clampf((v as f32) / ((1 << 16) - 1) as f32, -1, 1);
+
+fn @encode_normal_32(norm: Vec3) -> i32 {
+    let oct = encode_oct_proj(norm);
+    let ex  = encode_signed_norm_16(oct.x);
+    let ey  = encode_signed_norm_16(oct.y);
+    (ex as i32 << 16) | (ey as i32)
+}
+
+fn @decode_normal_32(val: i32) -> Vec3 {
+    let dx = decode_signed_norm_16((val >> 16) as i16);
+    let dy = decode_signed_norm_16(val as i16);
+    decode_oct_proj(make_vec2(dx, dy))
+}
+
 // Misc. ---------------------------------------------------------------------------
 
 fn @  null_likely(cond: bool) = cond;
@@ -146,7 +263,12 @@ fn @sum_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
 
 fn @positive_cos(a: Vec3, b: Vec3) -> f32 {
     let cos = vec3_dot(a, b);
-    if cos >= 0 { cos } else { 0 }
+    select(cos >= 0, cos, 0:f32)
+}
+
+fn @negative_cos(a: Vec3, b: Vec3) -> f32 {
+    let cos = vec3_dot(a, b);
+    select(cos <= 0, cos, 0:f32)
 }
 
 fn @absolute_cos(a: Vec3, b: Vec3) = math_builtins::fabs(vec3_dot(a, b));

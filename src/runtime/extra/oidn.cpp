@@ -6,11 +6,10 @@ namespace IG {
 static void errorFunc(void* userPtr, oidn::Error code, const char* message)
 {
     IG_UNUSED(userPtr);
-    IG_UNUSED(code);
 
     if (code == oidn::Error::None)
         IG_LOG(IG::L_INFO) << "OIDN: " << message << std::endl;
-    else
+    else if(strcmp(message, "driver shutting down") != 0 /* Ignore this message */)
         IG_LOG(IG::L_ERROR) << "OIDN: " << message << std::endl;
 }
 
