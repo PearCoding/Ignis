@@ -42,7 +42,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 set(CMAKE_DEBUG_POSTFIX  "_d")
 
-set(Ignis_VENDOR "Ignis project 2020-2023")
+string(TIMESTAMP THIS_YEAR "%Y")
+set(Ignis_VENDOR "Ignis project 2020-${THIS_YEAR}")
 set(Ignis_DESCRIPTION "Device agnostic raytracing framework with shared codebase for offline and realtime rendering and for CPU and GPU")
 set(Ignis_URL "https://github.com/PearCoding/Ignis")
 include(Git)
