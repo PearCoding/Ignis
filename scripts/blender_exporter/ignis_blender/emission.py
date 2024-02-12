@@ -45,7 +45,7 @@ def _get_emission_add(ctx: NodeContext, bsdf: bpy.types.Node):
 
 
 def _get_emission_principled(ctx: NodeContext, bsdf: bpy.types.Node):
-    color_n = bsdf.inputs["Emission"]
+    color_n = bsdf.inputs.get("Emission", bsdf.inputs.get("Emission Color"))
     if check_socket_if_black(color_n):
         return None
 

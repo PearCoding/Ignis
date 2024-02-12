@@ -1405,6 +1405,9 @@ def handle_node_implicit_mappings(ctx: NodeContext, socket: bpy.types.NodeSocket
 
 
 def export_node(ctx: NodeContext, socket: bpy.types.NodeSocket):
+    if socket is None:
+        return None
+
     # Missing:
     # ShaderNodeAttribute, ShaderNodeBevel, ShaderNodeCameraData,
     # ShaderNodeCustomGroup, ShaderNodeHairInfo, ShaderNodeLightFalloff,

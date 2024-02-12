@@ -124,22 +124,23 @@ def _map_specular_to_ior(specular):
 def _export_principled_bsdf(ctx: NodeContext, bsdf: bpy.types.Node, export_name: str):
     base_color = export_node(ctx, bsdf.inputs["Base Color"])
     roughness = export_node(ctx, bsdf.inputs["Roughness"])
-    subsurface = export_node(ctx, bsdf.inputs["Subsurface"])
+    subsurface = export_node(ctx, bsdf.inputs.get("Subsurface", bsdf.inputs.get("Subsurface Weight")))
     metallic = export_node(ctx, bsdf.inputs["Metallic"])
-    specular = export_node(ctx, bsdf.inputs["Specular"])
+    specular = export_node(ctx, bsdf.inputs.get("Specular", bsdf.inputs.get("Specular Weight")))
     specular_tint = export_node(ctx, bsdf.inputs["Specular Tint"])
-    transmission = export_node(ctx, bsdf.inputs["Transmission"])
-    anisotropic = export_node(ctx, bsdf.inputs["Anisotropic"])
+    transmission = export_node(ctx, bsdf.inputs.get("Transmission", bsdf.inputs.get("Transmission Weight")))
+    anisotropic = export_node(ctx, bsdf.inputs.get("Anisotropic", bsdf.inputs.get("Specular Anisotropic")))
     # anisotropic_rotation = export_node(ctx, bsdf.inputs["Anisotropic Rotation"])
-    sheen = export_node(ctx, bsdf.inputs["Sheen"])
+    sheen = export_node(ctx, bsdf.inputs.get("Sheen", bsdf.inputs.get("Sheen Weight")))
     sheen_tint = export_node(ctx, bsdf.inputs["Sheen Tint"])
-    clearcoat = export_node(ctx, bsdf.inputs["Clearcoat"])
-    clearcoat_roughness = export_node(
-        ctx, bsdf.inputs["Clearcoat Roughness"])
+    clearcoat = export_node(ctx, bsdf.inputs.get("Clearcoat", bsdf.inputs.get("Coat Weight")))
+    clearcoat_roughness = export_node(ctx, bsdf.inputs.get("Clearcoat Roughness", bsdf.inputs.get("Coat Roughness")))
+
+    # TODO: Blender 4+ Changed Specular quite drastically
 
     refr_ior = export_node(ctx, bsdf.inputs["IOR"])
     # Map specular variable to our IOR interpretation
-    refl_ior = _map_specular_to_ior(specular)
+    refl_ior = _map_specular_to_ior(specular) if not specular is None else refr_ior
 
     return _handle_normal(ctx, bsdf,
                           {"type": "principled", "name": export_name, "base_color": base_color, "metallic": metallic,
