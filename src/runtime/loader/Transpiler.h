@@ -19,6 +19,7 @@ public:
         std::unordered_set<std::string> Textures;  // Textures used by the expression
         std::unordered_set<std::string> Variables; // Variables used by the expression. Constants will be omitted
         bool ScalarOutput;                         // Else it is a color
+        bool UsesSpecialFunctions;                 // Makes use of the ctx structure
     };
 
     /// Transpile the given expression to artic code.
