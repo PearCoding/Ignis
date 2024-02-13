@@ -100,27 +100,27 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
     // Load registry information
     input.Stream << "  let tech_photons = registry::get_global_parameter_i32(\"__tech_photon_count\", 1000);" << std::endl;
     if (!is_light_pass) {
-        if (mMaxCameraDepth < 2) // 0 & 1 can be an optimization
+        if (mMaxCameraDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
             input.Stream << "  let tech_max_camera_depth = " << mMaxCameraDepth << ":i32;" << std::endl;
         else
             input.Stream << "  let tech_max_camera_depth = registry::get_global_parameter_i32(\"__tech_max_camera_depth\", 8);" << std::endl;
 
-        if (mMinCameraDepth < 2) // 0 & 1 can be an optimization
+        if (mMinCameraDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
             input.Stream << "  let tech_min_camera_depth = " << mMinCameraDepth << ":i32;" << std::endl;
         else
             input.Stream << "  let tech_min_camera_depth = registry::get_global_parameter_i32(\"__tech_min_camera_depth\", 2);" << std::endl;
 
-        if (mMergeRadius <= 0) // 0 is a special case
+        if (mMergeRadius <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
             input.Stream << "  let tech_radius = " << mMergeRadius * input.Context.SceneDiameter << ":f32;" << std::endl;
         else
             input.Stream << "  let tech_radius = registry::get_global_parameter_f32(\"__tech_radius\", 0);" << std::endl;
 
-        if (mClamp <= 0) // 0 is a special case
+        if (mClamp <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
             input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
         else
             input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
     } else {
-        if (mMaxLightDepth < 2) // 0 & 1 can be an optimization
+        if (mMaxLightDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
             input.Stream << "  let tech_max_light_depth = " << mMaxLightDepth << ":i32;" << std::endl;
         else
             input.Stream << "  let tech_max_light_depth = registry::get_global_parameter_i32(\"__tech_max_light_depth\", 8);" << std::endl;
