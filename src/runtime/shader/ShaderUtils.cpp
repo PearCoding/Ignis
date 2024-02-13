@@ -144,9 +144,9 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    if (ctx.Options.SamplesPerIteration == 1) // Hardcode this case as some optimizations might apply
+    if (ctx.Options.SamplesPerIteration == 1 && ctx.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // Hardcode this case as some optimizations might apply
         stream << ctx.Options.SamplesPerIteration << " : i32";
-    else                                      // Fallback to dynamic spi
+    else // Fallback to dynamic spi
         stream << "settings.spi";
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
