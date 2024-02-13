@@ -62,6 +62,7 @@ TechniqueInfo AdaptiveEnvPathTechnique::getInfo(const LoaderContext&) const
 
     info.EnabledAOVs.emplace_back("Guiding");
     info.EnabledAOVs.emplace_back("Guiding PDF");
+    info.EnabledAOVs.emplace_back("Guiding Count");
 
     // TODO: We could increase the learning phase using a user parameter
     info.VariantSelector = [numLearn](size_t iteration) {
