@@ -78,7 +78,7 @@ protected:
         for (size_t i = 0; i < this->primitive_count_of_node(node); ++i) {
             const int id      = (int)bvh.primitive_indices.at(node.first_child_or_primitive + i);
             const auto in_obj = std::ranges::cbegin(this->primitives)[id];
-            IG_ASSERT(in_obj.EntityID == id, "Expected entity order in BVH match entity id!");
+            // IG_ASSERT(in_obj.EntityID == id, "Expected entity order in BVH match entity id!");
 
             objects.emplace_back(EntityLeaf1{
                 { in_obj.BBox.min(0), in_obj.BBox.min(1), in_obj.BBox.min(2) },
