@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# DEPRECATED, use the .ps1 version instead
+
 # Basic script running Radiance in a "Ignis"-compatible way and generating an EXR (instead of a HDR)
 # Use `run_rif.sh RIF_FILE`
 # In contrary to rad *.rif, this one does not cache files nor does is share the same command line parameters!
@@ -6,6 +9,7 @@
 # The script ignores QUALITY, DETAIL, VARIABILITY and EXPOSURE however.
 # The intended use case is limited to short renderings for comparison purposes
 # `oconv`, `rpict`, `rtrace` and `vwrays` (all Radiance tools) have to be available in the current scope
+
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 source $SCRIPT_DIR/../source.sh -- 

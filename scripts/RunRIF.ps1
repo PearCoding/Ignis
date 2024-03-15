@@ -1,7 +1,7 @@
 # Basic script running Radiance in a "Ignis"-compatible way and generating an EXR (instead of a HDR)
 # Use `run_rif.ps1 RIF_FILE`
 # In contrary to rad *.rif, this one does not cache files nor does is share the same command line parameters!
-# In contrary to run_rad.sh, this one extracts most information in the given rif file.
+# In contrary to run_rad.ps1, this one extracts most information in the given rif file.
 # The script ignores QUALITY, DETAIL, VARIABILITY and EXPOSURE however.
 # The intended use case is limited to short renderings for comparison purposes
 # `oconv`, `rpict`, `rtrace` and `vwrays` (all Radiance tools) have to be available in the current scope
@@ -11,6 +11,11 @@ param (
     [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
     [string]$RifFile
 )
+
+if (-not (Test-Path $RifFile)) {
+    Write-Error -Message "Could not find file '$RifFile'" -TargetObject $RifFile -Category ResourceUnavailable
+    exit
+}
 
 $CURRENT_DIR = Get-Location
 $RIF_PATH = Get-Item -Path $RifFile
@@ -37,17 +42,26 @@ else {
 $TMP_OCT = Get-ChildItem ([IO.Path]::GetTempFileName()) | Rename-Item -NewName { [IO.Path]::ChangeExtension($_, ".oct") } -PassThru
 
 # Get number of logical processors
+$thread_count = 8 # default
 try {
     # Only works on Windows
     $thread_count = (Get-CimInstance -ClassName Win32_ComputerSystem).NumberOfLogicalProcessors
 }
 catch {
-    $thread_count = 8
+    # Fallback for Linux
+    try {
+        $cpu_info = [string](& lscpu)
+        if ($cpu_info -match "CPU\(s\):\s*(\d+)") {
+            $thread_count = [int]$matches[1]
+        }
+    }
+    catch {
+        # Use default
+    }
 }
 
 # Get content of the rif file
 $RIF_TEXT = Get-Content $RIF_PATH -raw
-# echo $RIF_TEXT
 
 # Extract all the scenes required for oconv
 $SCENES = New-Object Collections.Generic.List[string]
