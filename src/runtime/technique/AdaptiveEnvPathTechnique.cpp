@@ -7,6 +7,7 @@
 #include "shader/RayGenerationShader.h"
 #include "shader/ShaderUtils.h"
 
+// Currently experimental and not improving scene!
 namespace IG {
 AdaptiveEnvPathTechnique::AdaptiveEnvPathTechnique(SceneObject& obj)
     : Technique("adaptive_env")
