@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="en" >
+<html lang="en" data-content_root="../../" >
 
   <head>
     <meta charset="utf-8" />
@@ -19,15 +19,15 @@
   </script>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
 
   
-  <link href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css?digest=927b94d3fcb96560df09" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2" />
+  <link href="../../_static/vendor/fontawesome/6.5.1/css/all.min.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.1/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.1/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.1/webfonts/fa-regular-400.woff2" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -36,11 +36,11 @@
     <link rel="stylesheet" type="text/css" href="../../_static/css/lightbox.css?v=1a4ee0e0" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=927b94d3fcb96560df09" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=927b94d3fcb96560df09" />
-  <script src="../../_static/vendor/fontawesome/6.1.2/js/all.min.js?digest=927b94d3fcb96560df09"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae" />
+  <script src="../../_static/vendor/fontawesome/6.5.1/js/all.min.js?digest=8d27b9dea8ad943066ae"></script>
 
-    <script src="../../_static/documentation_options.js?v=c73c0f3e"></script>
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../../_static/doctools.js?v=888ff710"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,10 +62,9 @@
 
   
   
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <a id="pst-skip-link" class="skip-link" href="#main-content">Skip to main content</a>
   
   <div id="pst-scroll-pixel-helper"></div>
-
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>
@@ -106,7 +105,7 @@
 </form></div>
   </div>
   
-    <nav class="bd-header navbar navbar-expand-lg bd-navbar">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
 <div class="bd-header__inner bd-page-width">
   <label class="sidebar-toggle primary-toggle" for="__primary">
     <span class="fa-solid fa-bars"></span>
@@ -116,9 +115,11 @@
   <div class="col-lg-3 navbar-header-items__start">
     
       <div class="navbar-item">
+
   
 
 <a class="navbar-brand logo" href="../../index.html">
+  
   
   
   
@@ -134,13 +135,8 @@
     
     <div class="me-auto navbar-header-items__center">
       
-        <div class="navbar-item"><nav class="navbar-nav">
-  <p class="sidebar-header-items__title"
-     role="heading"
-     aria-level="1"
-     aria-label="Site Navigation">
-    Site Navigation
-  </p>
+        <div class="navbar-item">
+<nav class="navbar-nav">
   <ul class="bd-navbar-elements navbar-nav">
     
                     <li class="nav-item">
@@ -173,12 +169,13 @@
       
         <div class="navbar-item navbar-persistent--container">
           
+
  <script>
  document.write(`
    <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__kbd-shortcut">Search</span>
-    <span><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
    </button>
  `);
  </script>
@@ -186,6 +183,7 @@
       
       
         <div class="navbar-item">
+
 <script>
 document.write(`
   <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -218,12 +216,13 @@ document.write(`
   
   
     <div class="navbar-persistent--mobile">
+
  <script>
  document.write(`
    <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__kbd-shortcut">Search</span>
-    <span><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
    </button>
  `);
  </script>
@@ -237,10 +236,13 @@ document.write(`
   
 </div>
 
-    </nav>
+    </header>
   
+
   <div class="bd-container">
     <div class="bd-container__inner bd-page-width">
+      
+      
       
       <div class="bd-sidebar-primary bd-sidebar">
         
@@ -251,13 +253,8 @@ document.write(`
     
       <div class="sidebar-header-items__center">
         
-          <div class="navbar-item"><nav class="navbar-nav">
-  <p class="sidebar-header-items__title"
-     role="heading"
-     aria-level="1"
-     aria-label="Site Navigation">
-    Site Navigation
-  </p>
+          <div class="navbar-item">
+<nav class="navbar-nav">
   <ul class="bd-navbar-elements navbar-nav">
     
                     <li class="nav-item">
@@ -290,6 +287,7 @@ document.write(`
       <div class="sidebar-header-items__end">
         
           <div class="navbar-item">
+
 <script>
 document.write(`
   <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -321,7 +319,8 @@ document.write(`
   </div>
   
     <div class="sidebar-primary-items__start sidebar-primary__section">
-        <div class="sidebar-primary-item"><nav class="bd-docs-nav bd-links"
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
@@ -391,7 +390,7 @@ document.write(`
               
                 
 <div id="searchbox"></div>
-                <article class="bd-article" role="main">
+                <article class="bd-article">
                   
   <section id="shapes">
 <h1>Shapes<a class="headerlink" href="#shapes" title="Link to this heading">#</a></h1>
@@ -436,7 +435,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-triangle">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id1" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_triangle.jpg" style="width: 60%" data-lightbox="-4804021759898604818" data-title=""><img alt="../../_images/shape_triangle.jpg" src="../../_images/shape_triangle.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_triangle.jpg" style="width: 60%" data-lightbox="-6180868537636959513" data-title=""><img alt="../../_images/shape_triangle.jpg" src="../../_images/shape_triangle.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Triangle shape with visualized primitive coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
@@ -477,7 +476,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-rectangle">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id2" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_rectangle.jpg" style="width: 60%" data-lightbox="-1763307354660939975" data-title=""><img alt="../../_images/shape_rectangle.jpg" src="../../_images/shape_rectangle.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_rectangle.jpg" style="width: 60%" data-lightbox="2437520262745269724" data-title=""><img alt="../../_images/shape_rectangle.jpg" src="../../_images/shape_rectangle.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Rectangle shape with visualized primitive coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
@@ -511,7 +510,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-box">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id3" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_box.jpg" style="width: 60%" data-lightbox="5341521109630209735" data-title=""><img alt="../../_images/shape_box.jpg" src="../../_images/shape_box.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_box.jpg" style="width: 60%" data-lightbox="5801497474895034405" data-title=""><img alt="../../_images/shape_box.jpg" src="../../_images/shape_box.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Box shape with visualized primitive coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
@@ -546,7 +545,7 @@ The type has to be one of the shape listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-shape-sphere">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id4" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_sphere.jpg" style="width: 60%" data-lightbox="-5499761044193360893" data-title=""><img alt="../../_images/shape_sphere.jpg" src="../../_images/shape_sphere.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_sphere.jpg" style="width: 60%" data-lightbox="-2238507361078972554" data-title=""><img alt="../../_images/shape_sphere.jpg" src="../../_images/shape_sphere.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Sphere shape with visualized primitive coordinates. The primitive coordinates map to the normalized spherical coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id4" title="Link to this image">#</a></p>
 </figcaption>
@@ -583,7 +582,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-icosphere">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id5" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_icosphere.jpg" style="width: 60%" data-lightbox="2531131034039224158" data-title=""><img alt="../../_images/shape_icosphere.jpg" src="../../_images/shape_icosphere.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_icosphere.jpg" style="width: 60%" data-lightbox="-6203878571863493035" data-title=""><img alt="../../_images/shape_icosphere.jpg" src="../../_images/shape_icosphere.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Ico sphere shape with visualized primitive coordinates. In contrary to the analytical sphere, the ico sphere consists of multiple tiny triangles</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id5" title="Link to this image">#</a></p>
 </figcaption>
@@ -621,7 +620,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-uvsphere">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id6" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_uvsphere.jpg" style="width: 60%" data-lightbox="1893225755280291578" data-title=""><img alt="../../_images/shape_uvsphere.jpg" src="../../_images/shape_uvsphere.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_uvsphere.jpg" style="width: 60%" data-lightbox="2096049467719613910" data-title=""><img alt="../../_images/shape_uvsphere.jpg" src="../../_images/shape_uvsphere.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">UV sphere shape with visualized primitive coordinates. In contrary to the analytical sphere, the uv sphere consists of multiple tiny triangles</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id6" title="Link to this image">#</a></p>
 </figcaption>
@@ -670,7 +669,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-cylinder">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id7" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_cylinder.jpg" style="width: 60%" data-lightbox="-5130503284578304505" data-title=""><img alt="../../_images/shape_cylinder.jpg" src="../../_images/shape_cylinder.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_cylinder.jpg" style="width: 60%" data-lightbox="-224312322338487788" data-title=""><img alt="../../_images/shape_cylinder.jpg" src="../../_images/shape_cylinder.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Cylinder shape with visualized primitive coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id7" title="Link to this image">#</a></p>
 </figcaption>
@@ -713,7 +712,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-cone">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id8" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_cone.jpg" style="width: 60%" data-lightbox="4599285225675375089" data-title=""><img alt="../../_images/shape_cone.jpg" src="../../_images/shape_cone.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_cone.jpg" style="width: 60%" data-lightbox="-1711847855533752095" data-title=""><img alt="../../_images/shape_cone.jpg" src="../../_images/shape_cone.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Cone shape with visualized primitive coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id8" title="Link to this image">#</a></p>
 </figcaption>
@@ -755,7 +754,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>The parameters specified in <a class="reference internal" href="#shape-triangular-mesh"><span class="std std-ref">Triangular Mesh</span></a> can be used as well.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-disk">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id9" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_disk.jpg" style="width: 60%" data-lightbox="6559127205053303342" data-title=""><img alt="../../_images/shape_disk.jpg" src="../../_images/shape_disk.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_disk.jpg" style="width: 60%" data-lightbox="2215022576107792590" data-title=""><img alt="../../_images/shape_disk.jpg" src="../../_images/shape_disk.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Disk shape with visualized primitive coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id9" title="Link to this image">#</a></p>
 </figcaption>
@@ -852,7 +851,7 @@ The type has to be one of the shape listed at this section below.</p>
 <p>This type of shape will load a obj (.obj), ply (.ply) or mitsuba serialized mesh (.mts or .serialized) depending on the extension of the filename. Additional properties will be forwarded to the actual shape type.</p>
 <div class="figure subfigure compound align-center" id="fig-shape-external">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id10" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_external.jpg" style="width: 60%" data-lightbox="-111721057221519798" data-title=""><img alt="../../_images/shape_external.jpg" src="../../_images/shape_external.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_external.jpg" style="width: 60%" data-lightbox="-4271701039603062873" data-title=""><img alt="../../_images/shape_external.jpg" src="../../_images/shape_external.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">External shape (the diamond used in the showcase) with visualized primitive coordinates</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id10" title="Link to this image">#</a></p>
 </figcaption>
@@ -902,7 +901,7 @@ The type has to be one of the shape listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-shape-external">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id11" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_inline.jpg" style="width: 60%" data-lightbox="-2775651777117940659" data-title=""><img alt="../../_images/shape_inline.jpg" src="../../_images/shape_inline.jpg" style="width: 90%;" /></a>
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/shape_inline.jpg" style="width: 60%" data-lightbox="-2631641880503938562" data-title=""><img alt="../../_images/shape_inline.jpg" src="../../_images/shape_inline.jpg" style="width: 90%;" /></a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Inline custom plane specified directly in the scene file</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id11" title="Link to this image">#</a></p>
 </figcaption>
@@ -998,7 +997,7 @@ The type has to be one of the shape listed at this section below.</p>
               
               
                 <footer class="prev-next-footer">
-                  <!-- Previous / next buttons -->
+                  
 <div class="prev-next-area">
     <a class="left-prev"
        href="pexpr.html"
@@ -1027,11 +1026,14 @@ The type has to be one of the shape listed at this section below.</p>
               
                 <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
+
   <div class="sidebar-secondary-item">
-  <div class="page-toc tocsection onthispage">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
     <i class="fa-solid fa-list"></i> On this page
   </div>
-  <nav class="bd-toc-nav page-toc">
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#triangle-triangle">Triangle (<span class="monosp">triangle</span>)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rectangle-rectangle">Rectangle (<span class="monosp">rectangle</span>)</a></li>
@@ -1067,8 +1069,8 @@ The type has to be one of the shape listed at this section below.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=927b94d3fcb96560df09"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=927b94d3fcb96560df09"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1076,6 +1078,7 @@ The type has to be one of the shape listed at this section below.</p>
     <div class="footer-items__start">
       
         <div class="footer-item">
+
   <p class="copyright">
     
       © Copyright 2020-2023, Ignis-Project.
@@ -1085,6 +1088,7 @@ The type has to be one of the shape listed at this section below.</p>
 </div>
       
         <div class="footer-item">
+
   <p class="sphinx-version">
     Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
     <br/>
@@ -1097,8 +1101,9 @@ The type has to be one of the shape listed at this section below.</p>
   
     <div class="footer-items__end">
       
-        <div class="footer-item"><p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.14.0.
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.2.
 </p></div>
       
     </div>
