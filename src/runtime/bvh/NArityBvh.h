@@ -66,8 +66,8 @@ inline typename NArityBvh<N>::Node clone_node(const bvh::Node& original)
 {
     return typename NArityBvh<N>::Node{
         .bounds                   = original.bounds, // Same ordering as libbvh
-        .primitive_or_child_count = original.is_leaf() ? -static_cast<int32>(original.index.prim_count) : (int32)N,
-        .first_child_or_primitive = original.index.first_id,
+        .primitive_or_child_count = original.is_leaf() ? -static_cast<int32>(original.index.prim_count()) : (int32)N,
+        .first_child_or_primitive = original.index.first_id(),
     };
 }
 
@@ -97,8 +97,8 @@ inline void convert_to_narity_node(const bvh::Bvh& original, const bvh::Node& no
 
     if (!node.is_leaf()) {
         std::queue<bvh::Node> queue;
-        queue.push(original.nodes[node.index.first_id + 0]);
-        queue.push(original.nodes[node.index.first_id + 1]);
+        queue.push(original.nodes[node.index.first_id() + 0]);
+        queue.push(original.nodes[node.index.first_id() + 1]);
 
         std::vector<bvh::Node> children;
         for (size_t k = 0; k < MaxIter && !queue.empty(); ++k) {
@@ -107,8 +107,8 @@ inline void convert_to_narity_node(const bvh::Bvh& original, const bvh::Node& no
             if (cur.is_leaf())
                 children.push_back(cur);
             else {
-                queue.push(original.nodes[cur.index.first_id + 0]);
-                queue.push(original.nodes[cur.index.first_id + 1]);
+                queue.push(original.nodes[cur.index.first_id() + 0]);
+                queue.push(original.nodes[cur.index.first_id() + 1]);
             }
         }
 
