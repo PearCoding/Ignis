@@ -157,6 +157,9 @@ def make_figure(scenes, args):
         img_cpu = sio.read(str(image_cpu_name))
         ref_img = sio.read(str(image_ref_name))
 
+        if ref_img.shape[2] == 4: # Drop potential alpha channel
+            ref_img = ref_img[..., 0:3]
+
         has_nan_gpu = np.isnan(img_gpu).any()
         has_inf_gpu = np.isinf(img_gpu).any()
         has_nan_cpu = np.isnan(img_cpu).any()
@@ -200,13 +203,13 @@ def make_figure(scenes, args):
 
         i += 1
 
-    grid.set_col_titles("top", ["Reference", "Render GPU",
+    grid.set_col_titles(figuregen.TOP, ["Reference", "Render GPU",
                         "Rel. Error GPU", "Render CPU", "Rel. Error CPU"])
-    grid.set_row_titles("left", names)
-    grid.set_row_titles("right", [
+    grid.set_row_titles(figuregen.LEFT, names)
+    grid.set_row_titles(figuregen.RIGHT, [
                         f"RelMSE (GPU,CPU)\\\\ {err:.2E} | {cerr:.2E}" for err, cerr in zip(gpu_errors, cpu_errors)])
-    grid.layout.set_row_titles("right", field_size_mm=10, fontsize=6)
-    grid.layout.set_row_titles("left", field_size_mm=8, fontsize=6)
+    grid.layout.row_titles[figuregen.RIGHT] = figuregen.TextFieldLayout(size=10, fontsize=6, rotation=-90)
+    grid.layout.row_titles[figuregen.LEFT] = figuregen.TextFieldLayout(size=8, fontsize=6, rotation=90)
 
     rows = []
     rows.append([title])

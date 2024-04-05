@@ -56,41 +56,47 @@ If($Config.GET_AnyDSL) {
                                         "The setup script will download and compile AnyDSL. This may take some time and will use a significant amount of CPU power. Are you sure you want to proceed?",
                                         $choices, 0)
     if ($decision -eq 1) {
+        cd $CURRENT
         throw "AnyDSL setup rejected by user"
     }
 }
 
 # Setup dev environment
-if(!$Config.SKIP_VC_ENV) {
-    & $PSScriptRoot\vc_dev_env.ps1
-}
+try {
+    if(!$Config.SKIP_VC_ENV) {
+        & $PSScriptRoot\vc_dev_env.ps1
+    }
 
-If($Config.GET_ZLIB) {
-    & $PSScriptRoot\setup_zlib.ps1
-}
+    If($Config.GET_ZLIB) {
+        & $PSScriptRoot\setup_zlib.ps1
+    }
 
-If($Config.GET_HALF) {
-    & $PSScriptRoot\setup_half.ps1
-}
+    If($Config.GET_HALF) {
+        & $PSScriptRoot\setup_half.ps1
+    }
 
-If($Config.GET_AnyDSL) {
-    & $PSScriptRoot\setup_anydsl.ps1
-}
+    If($Config.GET_AnyDSL) {
+        & $PSScriptRoot\setup_anydsl.ps1
+    }
 
-If($Config.GET_TBB) {
-    & $PSScriptRoot\setup_tbb.ps1
-}
+    If($Config.GET_TBB) {
+        & $PSScriptRoot\setup_tbb.ps1
+    }
 
-If($Config.GET_SDL2) {
-    & $PSScriptRoot\setup_sdl2.ps1
-}
+    If($Config.GET_SDL2) {
+        & $PSScriptRoot\setup_sdl2.ps1
+    }
 
-If($Config.GET_OIDN) {
-    & $PSScriptRoot\setup_oidn.ps1
-}
+    If($Config.GET_OIDN) {
+        & $PSScriptRoot\setup_oidn.ps1
+    }
 
-if($Config.CONFIGURE_IGNIS) {
-    & $PSScriptRoot\setup_ignis.ps1
+    if($Config.CONFIGURE_IGNIS) {
+        & $PSScriptRoot\setup_ignis.ps1
+    }
+} catch {
+    Write-Host "Setup failed:" -ForegroundColor red
+    Write-Host $_ -ForegroundColor red
 }
 
 cd $CURRENT

@@ -1,13 +1,13 @@
 $CURRENT = Get-Location
 
 # Some predefined locations
-$CUDA = $(Get-ChildItem env: | Where-Object {$_.Name -like "CUDA_PATH*"}).Value
-$CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/")
+$CUDA = $(Get-ChildItem env: | Where-Object { $_.Name -like "CUDA_PATH*" })[0].Value
+$CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/").Replace(" ", "` ")
 
 $ZLIB = "$DEPS_ROOT\zlib"
-$ZLIB_LIBRARY = "$ZLIB\lib\zlib.lib".Replace("\", "/")
-$ZLIB_INCLUDE_DIR = "$ZLIB\include".Replace("\", "/")
-$HALF = "$DEPS_ROOT\half".Replace("\", "/")
+$ZLIB_LIBRARY = "$ZLIB\lib\zlib.lib".Replace("\", "/").Replace(" ", "` ")
+$ZLIB_INCLUDE_DIR = "$ZLIB\include".Replace("\", "/").Replace(" ", "` ")
+$HALF = "$DEPS_ROOT\half".Replace("\", "/").Replace(" ", "` ")
 
 # Check for some possible mistakes beforehand
 If (!(Test-Path -Path "$ZLIB")) {
@@ -47,24 +47,28 @@ $BUILD_TYPE = $Config.AnyDSL_BUILD_TYPE
 $AnyDSL_Args = @()
 $AnyDSL_Args += $Config.CMAKE_EXTRA_ARGS
 $AnyDSL_Args += '-DRUNTIME_JIT:BOOL=ON'
-$AnyDSL_Args += '-DCMAKE_BUILD_TYPE:STRING="' + $BUILD_TYPE + '"'
+$AnyDSL_Args += '-DCMAKE_BUILD_TYPE:STRING=' + $BUILD_TYPE
 $AnyDSL_Args += '-DAnyDSL_PKG_Half_AUTOBUILD:BOOL=OFF'
-$AnyDSL_Args += '-DHalf_DIR:STRING="' + $HALF + '"'
+$AnyDSL_Args += '-DHalf_DIR:PATH=' + $HALF
+$AnyDSL_Args += '-DHalf_INCLUDE_DIR:PATH=' + $HALF + '/include'
 $AnyDSL_Args += '-DAnyDSL_runtime_BUILD_SHARED:BOOL=ON'
 $AnyDSL_Args += '-DAnyDSL_PKG_LLVM_AUTOBUILD:BOOL=ON'
-$AnyDSL_Args += '-DAnyDSL_PKG_LLVM_VERSION:STRING="' + $($Config.AnyDSL_LLVM_VERSION) + '"'
-$AnyDSL_Args += '-DAnyDSL_PKG_RV_TAG:STRING="' + $($Config.AnyDSL_RV_TAG) + '"'
-$AnyDSL_Args += '-DAnyDSL_PKG_LLVM_URL:STRING="' + $($Config.AnyDSL_LLVM_URL) + '"'
-$AnyDSL_Args += '-DLLVM_TARGETS_TO_BUILD:STRING="' + $($Config.AnyDSL_LLVM_TARGETS) + '"'
-$AnyDSL_Args += '-DLLVM_ENABLE_PROJECTS:STRING="clang;lld"'
+$AnyDSL_Args += '-DAnyDSL_PKG_LLVM_VERSION:STRING="' + $Config.AnyDSL_LLVM_VERSION + '"'
+$AnyDSL_Args += '-DAnyDSL_PKG_RV_TAG:STRING=' + $Config.AnyDSL_RV_TAG
+$AnyDSL_Args += '-DAnyDSL_PKG_LLVM_URL:STRING=' + $Config.AnyDSL_LLVM_URL
+$AnyDSL_Args += '-DLLVM_TARGETS_TO_BUILD:STRING=' + $Config.AnyDSL_LLVM_TARGETS
 $AnyDSL_Args += '-DLLVM_ENABLE_BINDINGS:BOOL=OFF'
+$AnyDSL_Args += '-DAnyDSL_PKG_LLVM_AUTOBUILD:BOOL=ON'
 $AnyDSL_Args += '-DTHORIN_ENABLE_CHECKS:BOOL=OFF'
 $AnyDSL_Args += '-DTHORIN_PROFILE:BOOL=OFF'
-$AnyDSL_Args += '-DZLIB_LIBRARY:PATH="' + $ZLIB_LIBRARY + '"'
-$AnyDSL_Args += '-DZLIB_INCLUDE_DIR:PATH="' + $ZLIB_INCLUDE_DIR + '"'
+$AnyDSL_Args += "-DAnyDSL_BUILD_stincilla:BOOL=OFF"
+$AnyDSL_Args += "-DAnyDSL_BUILD_rodent:BOOL=OFF"
+$AnyDSL_Args += '-DZLIB_LIBRARY:PATH=' + $ZLIB_LIBRARY
+$AnyDSL_Args += '-DZLIB_INCLUDE_DIR:PATH=' + $ZLIB_INCLUDE_DIR
+$AnyDSL_Args += '-DBUILD_TESTING:BOOL=OFF'
 
 If ($HasCuda) {
-    $AnyDSL_Args += '-DCUDAToolkit_NVVM_LIBRARY:PATH="' + $CUDAToolkit_NVVM_LIBRARY + '"'
+    $AnyDSL_Args += '-DCUDAToolkit_NVVM_LIBRARY:PATH=' + $CUDAToolkit_NVVM_LIBRARY
 }
 
 $AnyDSL_Args += $Config.AnyDSL_CMAKE_EXTRA_ARGS

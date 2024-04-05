@@ -539,7 +539,7 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
     } else {
         const auto& result = res.value();
 
-        if (result.Textures.empty() && result.Variables.empty()) {
+        if (result.Textures.empty() && result.Variables.empty() && !result.UsesSpecialFunctions) {
             if (options.SkipConstant)
                 return {};
 
@@ -561,7 +561,7 @@ ShadingTree::BakeOutputColor ShadingTree::bakeTextureExpressionAverage(const std
     } else {
         const auto& result = res.value();
 
-        if (result.Textures.empty() && result.Variables.empty()) {
+        if (result.Textures.empty() && result.Variables.empty() && !result.UsesSpecialFunctions) {
             const auto color = BakeOutputColor::AsConstant(computeConstantColor(name, result));
 
             mContext.Cache->ExprComputation[expr] = color;

@@ -21,6 +21,7 @@
 		}
 	],
 	"lights": [
-		{"type":"env", "name":"Environment", "radiance":"env"}
+		{"type":"env", "name":"Environment", 
+		"cdf": "hierachical", "compensate": true, "radiance":"env"}
 	]
 }

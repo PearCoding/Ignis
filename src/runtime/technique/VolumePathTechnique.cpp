@@ -33,17 +33,17 @@ void VolumePathTechnique::generateBody(const SerializationInput& input) const
     input.Context.GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMinDepth;
     input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
 
-    if (mMaxDepth < 2) // 0 & 1 can be an optimization
+    if (mMaxDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
         input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
     else
         input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
 
-    if (mMinDepth < 2) // 0 & 1 can be an optimization
+    if (mMinDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
         input.Stream << "  let tech_min_depth = " << mMinDepth << ":i32;" << std::endl;
     else
         input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 2);" << std::endl;
 
-    if (mClamp <= 0) // 0 is a special case
+    if (mClamp <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
         input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
     else
         input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;

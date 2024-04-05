@@ -112,16 +112,9 @@ bool saveImageOutput(const Path& path, const Runtime& runtime, const CameraOrien
 
         // Framebuffer
         if (aov == 0) {
-            if (aov_count == 1) {
-                // If we have no aovs, stick to the standard naming
-                image_names[3 * aov + 0] = "B";
-                image_names[3 * aov + 1] = "G";
-                image_names[3 * aov + 2] = "R";
-            } else {
-                image_names[3 * aov + 0] = "Default.B";
-                image_names[3 * aov + 1] = "Default.G";
-                image_names[3 * aov + 2] = "Default.R";
-            }
+            image_names[3 * aov + 0] = "B";
+            image_names[3 * aov + 1] = "G";
+            image_names[3 * aov + 2] = "R";
         } else {
             std::string name         = runtime.aovs()[aov - 1];
             image_names[3 * aov + 0] = name + ".B";

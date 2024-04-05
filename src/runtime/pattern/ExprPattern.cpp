@@ -56,7 +56,7 @@ void ExprPattern::serialize(const SerializationInput& input) const
     bool failed = !res.has_value();
     if (failed) {
         // Mark as failed output
-        res = Transpiler::Result{ "color_builtins::pink", {}, {}, false };
+        res = Transpiler::Result{ "color_builtins::pink", {}, {}, false, false };
     }
 
     // Patch output to color

@@ -1306,7 +1306,10 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
         break;
     }
 
-    return Result{ res, std::move(visitor.usedTextures()), visitor.usedVariables(), scalar_output };
+    // Some special use functions
+    const bool usesContext = res.find_first_of("check_ray_visibility(ctx.ray") != std::string::npos || res.find_first_of("ctx.coord.to_") != std::string::npos;   
+
+    return Result{ res, std::move(visitor.usedTextures()), visitor.usedVariables(), scalar_output, usesContext };
 }
 
 bool Transpiler::checkIfColor(const std::string& expr) const

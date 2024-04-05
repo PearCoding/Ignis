@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# DEPRECATED, use the .ps1 version instead
+
 # Basic script running Radiance in a "Ignis"-compatible way and generating an EXR (instead of a HDR)
 # Use `run_rad.sh RPICT_PARAMETERS.. -- SCENES.. OUTPUT`
 # In contrary to rad *.rif, this one does not cache files nor does is share the same command line parameters!

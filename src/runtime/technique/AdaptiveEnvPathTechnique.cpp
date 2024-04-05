@@ -7,6 +7,7 @@
 #include "shader/RayGenerationShader.h"
 #include "shader/ShaderUtils.h"
 
+// Currently experimental and not improving scene!
 namespace IG {
 AdaptiveEnvPathTechnique::AdaptiveEnvPathTechnique(SceneObject& obj)
     : Technique("adaptive_env")
@@ -45,7 +46,7 @@ TechniqueInfo AdaptiveEnvPathTechnique::getInfo(const LoaderContext&) const
 
         return stream.str();
     };
-    const size_t numLearn = mNumLearningIterations;
+    const size_t numLearn                                                  = mNumLearningIterations;
     info.Variants[0].CallbackGenerators[(int)CallbackType::AfterIteration] = [numLearn](const LoaderContext& ctx) {
         // Construct CDF
         std::stringstream stream;
@@ -62,6 +63,7 @@ TechniqueInfo AdaptiveEnvPathTechnique::getInfo(const LoaderContext&) const
 
     info.EnabledAOVs.emplace_back("Guiding");
     info.EnabledAOVs.emplace_back("Guiding PDF");
+    info.EnabledAOVs.emplace_back("Guiding Count");
 
     // TODO: We could increase the learning phase using a user parameter
     info.VariantSelector = [numLearn](size_t iteration) {
@@ -84,17 +86,17 @@ void AdaptiveEnvPathTechnique::generateBody(const SerializationInput& input) con
     input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
 
     // Load registry information
-    if (mMaxDepth < 2) // 0 & 1 can be an optimization
+    if (mMaxDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
         input.Stream << "  let tech_max_camera_depth = " << mMaxDepth << ":i32;" << std::endl;
     else
         input.Stream << "  let tech_max_camera_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
 
-    if (mMinDepth < 2) // 0 & 1 can be an optimization
+    if (mMinDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
         input.Stream << "  let tech_min_camera_depth = " << mMinDepth << ":i32;" << std::endl;
     else
         input.Stream << "  let tech_min_camera_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 2);" << std::endl;
 
-    if (mClamp <= 0) // 0 is a special case
+    if (mClamp <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
         input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
     else
         input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;

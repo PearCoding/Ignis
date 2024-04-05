@@ -22,14 +22,17 @@ static TileY =  16:i32;
 // Basic utils
 struct AdaptiveEnvironmentUtils {
     to_grid:   fn (Vec3) -> (i32, i32),
-    to_tile:   fn (Vec3) -> (i32, i32),
-    to_tile_f: fn (Vec3) -> (f32, f32),
+    to_tile_i: fn (Vec3) -> (i32, i32),
+    to_tile:   fn (Vec3) -> (f32, f32),
     from_tile: fn (f32, f32) -> Vec3,
 }
 
 fn @make_adaptive_env_utils(grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, cam_pos: Vec3) -> AdaptiveEnvironmentUtils {
     fn @to_grid(pos: Vec3) -> (i32, i32) {
-        let dir          = vec3_normalize(vec3_sub(pos, cam_pos));
+        let udir = vec3_sub(pos, cam_pos);
+        if vec3_len2(udir) <= flt_eps { return (0, 0) }
+
+        let dir          = vec3_normalize(udir);
         let (theta, phi) = spherical_from_dir(dir);
         
         let nx = grid_x as f32 * phi / (2 * flt_pi);
@@ -37,7 +40,7 @@ fn @make_adaptive_env_utils(grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, 
 
         (clamp(nx as i32, 0, grid_x - 1), clamp(ny as i32, 0, grid_y - 1))
     }
-    fn @to_tile(dir: Vec3) -> (i32, i32) {
+    fn @to_tile_i(dir: Vec3) -> (i32, i32) {
         let (theta, phi) = spherical_from_dir(dir);
 
         let nx = tile_x as f32 * phi / (2 * flt_pi); 
@@ -45,12 +48,12 @@ fn @make_adaptive_env_utils(grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, 
 
         (clamp(nx as i32, 0, tile_x - 1), clamp(ny as i32, 0, tile_y - 1))
     }
-    fn @to_tile_f(dir: Vec3) -> (f32, f32) {
+    fn @to_tile(dir: Vec3) -> (f32, f32) {
         // Normalized coordinates!
         let (theta, phi) = spherical_from_dir(dir);
 
-        let nx = clampf(phi / (2 * flt_pi), 0, 1); 
-        let ny = clampf(theta / flt_pi, 0, 1);
+        let nx = phi / (2 * flt_pi); 
+        let ny = theta / flt_pi;
 
         (nx, ny)
     }
@@ -64,8 +67,8 @@ fn @make_adaptive_env_utils(grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, 
 
     AdaptiveEnvironmentUtils {
         to_grid   = to_grid, 
+        to_tile_i = to_tile_i,
         to_tile   = to_tile,
-        to_tile_f = to_tile_f,
         from_tile = from_tile
     }
 }
@@ -90,7 +93,7 @@ fn @make_adaptive_env_learning_cache(device: Device, grid_x: i32, grid_y: i32, t
     AdaptiveEnvironmentLearningCache {
         add = @|pos: Vec3, dir: Vec3, contrib: f32| -> () {
             let (gx, gy) = utils.to_grid(pos);
-            let (tx, ty) = utils.to_tile(dir);
+            let (tx, ty) = utils.to_tile_i(dir);
 
             let index = get_index(gx, gy, tx, ty);
             buffer.add_atomic_f32(index + 0, contrib);
@@ -98,7 +101,7 @@ fn @make_adaptive_env_learning_cache(device: Device, grid_x: i32, grid_y: i32, t
         },
         get = @|pos: Vec3, dir: Vec3| -> f32 {
             let (gx, gy) = utils.to_grid(pos);
-            let (tx, ty) = utils.to_tile(dir);
+            let (tx, ty) = utils.to_tile_i(dir);
 
             let index = get_index(gx, gy, tx, ty);
             buffer.load_f32(index)
@@ -124,11 +127,13 @@ fn @make_adaptive_env_learning_cache(device: Device, grid_x: i32, grid_y: i32, t
 struct AdaptiveEnvironmentSamplingMap {
     eval:   fn (/*pos*/ Vec3, /*dir*/ Vec3) -> f32,
     sample: fn (/*pos*/ Vec3, /*uv*/ Vec2) -> (f32, Vec3),
+    count:  fn (/*pos*/ Vec3) -> i32, // Number of samples in the current training iteration
 }
 
 fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, tile_x: i32, tile_y: i32, cam_pos: Vec3) -> AdaptiveEnvironmentSamplingMap {
-    let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y), 0);
-    let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y), 0);
+    let sampling_buffer_cond  = device.request_buffer("__apt_env_sampling_cache_cond",  compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y), 0);
+    let sampling_buffer_marg  = device.request_buffer("__apt_env_sampling_cache_marg",  compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y), 0);
+    let sampling_buffer_count = device.request_buffer("__apt_env_sampling_cache_count", compute_adaptive_env_buffer_size(grid_x, grid_y, 1, 1),           0);
 
     let get_cdf1d_marg = @|gx: i32, gy: i32|          cdf::make_cdf_1d_from_buffer(sampling_buffer_marg, tile_y, gy * grid_x * tile_y + gx * tile_y);
     let get_cdf1d_cond = @|gx: i32, gy: i32, ty: i32| cdf::make_cdf_1d_from_buffer(sampling_buffer_cond, tile_x, gy * grid_x * tile_y * tile_x + gx * tile_y * tile_x + ty * tile_x);
@@ -140,24 +145,36 @@ fn @make_adaptive_env_sampling_cache(device: Device, grid_x: i32, grid_y: i32, t
     AdaptiveEnvironmentSamplingMap {
         eval = @|pos: Vec3, dir: Vec3| -> f32 {
             let (gx, gy)   = utils.to_grid(pos);
-            let (ntx, nty) = utils.to_tile_f(dir);
+            let (ntx, nty) = utils.to_tile(dir);
 
             let cdf       = get_cdf2d(gx, gy);
             let cdf_pdf   = cdf.pdf_continuous(make_vec2(ntx, nty)).pdf;
+
             let sin_theta = math_builtins::sin(nty * flt_pi);
             safe_div(cdf_pdf, sin_theta * flt_pi * flt_pi * 2)
+            // cdf_pdf
         },
         sample = @|pos: Vec3, uv: Vec2| -> (f32, Vec3) {
             let (gx, gy) = utils.to_grid(pos);
 
             let cdf    = get_cdf2d(gx, gy);
             let sample = cdf.sample_continuous(uv);
+            // let cdf_pdf = cdf.pdf_continuous(sample.pos).pdf;
 
             let sin_theta = math_builtins::sin(sample.pos.y * flt_pi);
             let pdf       = safe_div(sample.pdf, sin_theta * flt_pi * flt_pi * 2);
+            // let pdf = select(math_builtins::fabs(cdf_pdf-sample.pdf) < 1e-5, 1:f32, 0:f32);
+
 
             let dir = utils.from_tile(sample.pos.x, sample.pos.y);
+            // let (kx,ky)= utils.to_tile(dir);
+            // let pdf = select(math_builtins::fabs(kx-sample.pos.x) < 1e-5, 1:f32, 0:f32);
+
             (pdf, dir)
+        },
+        count = @|pos: Vec3| {
+            let (gx, gy) = utils.to_grid(pos);
+            sampling_buffer_count.load_i32(gy * grid_x + gx)
         }
     }
 }
@@ -219,7 +236,7 @@ fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, 
 
     // TODO: NEE
 
-    fn @is_smooth(mat: Material, pdf: f32) = !mat.bsdf.is_specular && pdf < 2 /* Stupid constant. We assume that something smooth tends to be closer to 1/pi (lambertian pdf) */;
+    fn @is_smooth(mat: Material, pdf: f32) = !mat.bsdf.is_specular && pdf < flt_pi /* Stupid constant */;
 
     fn @on_miss( ctx: ShadingContext
                , payload: RayPayload) -> Option[Color] {
@@ -324,13 +341,16 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
     let tile_x = TileX;
     let tile_y = TileY;
 
-    let learning_buffer      = device.request_buffer("__apt_env_learning_cache"     , compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y) * 2, 0);
-    let sampling_buffer_cond = device.request_buffer("__apt_env_sampling_cache_cond", compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y),     0);
-    let sampling_buffer_marg = device.request_buffer("__apt_env_sampling_cache_marg", compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y),     0);
+    let learning_buffer       = device.request_buffer("__apt_env_learning_cache"     ,  compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y) * 2, 0);
+    let sampling_buffer_cond  = device.request_buffer("__apt_env_sampling_cache_cond",  compute_adaptive_env_buffer_size(grid_x, grid_y, tile_x, tile_y),     0);
+    let sampling_buffer_marg  = device.request_buffer("__apt_env_sampling_cache_marg",  compute_adaptive_env_buffer_size(grid_x, grid_y,      1, tile_y),     0);
+    let sampling_buffer_count = device.request_buffer("__apt_env_sampling_cache_count", compute_adaptive_env_buffer_size(grid_x, grid_y, 1, 1),               0);
 
     // TODO: This is a very naive implementation of the CDF construction on the GPU
     for i, j in device.parallel_range_2d(0, grid_x, 0, grid_y) {
         let m_id = j * grid_x * tile_y + i * tile_y;
+
+        let mut counter = 0:i32;
 
         // Construct conditional
         let mut marg = 0:f32;
@@ -341,13 +361,15 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
             for x in range(0, tile_x) {
                 let contrib = learning_buffer.load_f32((c_id + x) * 2 + 0);
                 let count   = learning_buffer.load_i32((c_id + x) * 2 + 1);
-                // cond += math_builtins::fmax[f32](1e-4, select(count > 0, contrib / count as f32, 0:f32));
+                // cond += math_builtins::fmax[f32](1e-4, select(count > 0, contrib / count as f32, 0:f32)); // Disable this if defensive sampling is already used!
                 cond += select(count > 0, contrib / count as f32, 0:f32);
                 sampling_buffer_cond.store_f32(c_id + x, cond);
+
+                counter += count;
             }
 
             // Store marginal
-            marg += cond / tile_x as f32; // Division is to keep the number in a good range and hopefully not throw an overflow
+            marg += cond /*/ tile_x as f32*/; // Division is to keep the number in a good range and hopefully not throw an overflow
             sampling_buffer_marg.store_f32(m_id + y, marg);
 
             // Normalize row
@@ -382,6 +404,7 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
 
         // Force 1 to make it numerically stable
         sampling_buffer_marg.store_f32(m_id + tile_y - 1, 1:f32);
+        sampling_buffer_count.store_i32(j * grid_x + i, counter);
     }
     device.sync();
 
@@ -390,6 +413,7 @@ fn @aept_handle_after_iteration_learning(device: Device, iter: i32, last_learnin
         device.dump_buffer("__apt_env_learning_cache", "learning.bin");
         device.dump_buffer("__apt_env_sampling_cache_marg", "marg.bin");
         device.dump_buffer("__apt_env_sampling_cache_cond", "cond.bin");
+        device.dump_buffer("__apt_env_sampling_cache_count", "count.bin");
     }
 }
 
@@ -435,12 +459,14 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
     // let learned = make_adaptive_env_learning_cache(device, GridX, GridY, TileX, TileY, cam_pos); // Debug only
     let guiding = make_adaptive_env_sampling_cache(device, GridX, GridY, TileX, TileY, cam_pos);
     
-    let aov_guiding     = device.load_aov_image("Guiding", spi);
-    let aov_guiding_pdf = device.load_aov_image("Guiding PDF", spi);
+    let aov_guiding       = device.load_aov_image("Guiding", spi);
+    let aov_guiding_pdf   = device.load_aov_image("Guiding PDF", spi);
+    let aov_guiding_count = device.load_aov_image("Guiding Count", spi);
     aov_guiding.mark_as_used();
     aov_guiding_pdf.mark_as_used();
+    aov_guiding_count.mark_as_used();
    
-    let ae_prob = 1.0:f32; // TODO: Make this adaptive?
+    let ae_prob = 0.75:f32; // TODO: Make this adaptive?
 
     let handle_color = if clamp_value > 0 {
         @|c: Color| color_saturate(c, clamp_value)
@@ -449,6 +475,11 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
     };
 
     fn @get_rr_prob(contrib: Color, pt: AdaptiveEnvSamplingRayPayload) = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+    fn @get_aeprob(mat: Material, pos: Vec3) = if mat.bsdf.is_specular { 
+        0:f32 
+    } else {
+        select(guiding.count(pos) > 100, ae_prob, 0:f32)
+    };
 
     fn @on_shadow( ctx: ShadingContext
                  , rnd: RandomGenerator
@@ -493,10 +524,11 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
             let mis = if light.delta { 
                 1:f32
             } else {
+                let ae_prob2 = get_aeprob(mat, ctx.surf.point);
                 let rr_prob  = get_rr_prob(contrib, pt);
                 let pdf_e_s  = mat.bsdf.pdf(in_dir, out_dir); // Pdf to sample the light based on bsdf
                 let pdf_ae_s = guiding.eval(ctx.surf.point, in_dir); // Pdf to sample the light based on adaptive env sampling
-                let mix_pdf  = (1 - ae_prob) * pdf_e_s + ae_prob * pdf_ae_s;
+                let mix_pdf  = (1 - ae_prob2) * pdf_e_s + ae_prob2 * pdf_ae_s;
                 1 / (1 + rr_prob * mix_pdf / pdf_l_s)
             };
 
@@ -526,9 +558,10 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
               , payload: RayPayload
               , mat: Material
               ) -> Option[Color] {
+        let pt = unwrap_adaptive_env_sampling_raypayload(payload);
+
         // Hits on a light source
         if mat.is_emissive && ctx.surf.is_entering {
-            let pt  = unwrap_adaptive_env_sampling_raypayload(payload);
             let dot = -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
                 let emit    = mat.emission(ctx);
@@ -538,6 +571,10 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
         
                 return(make_option(contrib))
             }
+        }
+
+        if pt.depth == 1 {
+            aov_guiding_count.splat(ctx.pixel, make_gray_color(guiding.count(ctx.surf.point) as f32));
         }
 
         Option[Color]::None
@@ -585,18 +622,21 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
         // Bounce
         let out_dir = vec3_neg(ctx.ray.dir);
 
-        let ae_prob2 = if mat.bsdf.is_specular { 0 } else { ae_prob };
-        if !mat.bsdf.is_specular && rnd.next_f32() < ae_prob2 {
+        let ae_prob2 = get_aeprob(mat, ctx.surf.point);
+        if rnd.next_f32() < ae_prob2 {
             let (pdf_ae, in_dir) = guiding.sample(ctx.surf.point, make_vec2(rnd.next_f32(), rnd.next_f32()));
     
             let eval_bsdf = mat.bsdf.eval(in_dir, out_dir);
             let pdf_bsdf  = mat.bsdf.pdf(in_dir, out_dir);
             if pdf_bsdf <= flt_eps {
                 // Invalid direction
+                if pt.depth == 1 {
+                    aov_guiding.splat(ctx.pixel, color_builtins::blue);
+                }
                 return(Option[Ray]::None)
             }
 
-            let mix_pdf = (1 - ae_prob) * pdf_bsdf + ae_prob * pdf_ae;
+            let mix_pdf = (1 - ae_prob2) * pdf_bsdf + ae_prob2 * pdf_ae;
             let contrib = color_mul(pt.contrib, color_mulf(eval_bsdf, 1 / mix_pdf));
             let rr_prob = get_rr_prob(contrib, pt);
             if rnd.next_f32() >= rr_prob {
@@ -604,7 +644,8 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
             }
 
             if pt.depth == 1 {
-                aov_guiding_pdf.splat(ctx.pixel, make_gray_color(rr_prob * mix_pdf));
+                // aov_guiding_pdf.splat(ctx.pixel, make_gray_color(rr_prob * mix_pdf));
+                aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
                 aov_guiding.splat(ctx.pixel, color_builtins::green);
             }
 
@@ -631,7 +672,8 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
             }
 
             if pt.depth == 1 {
-                aov_guiding_pdf.splat(ctx.pixel, make_gray_color(rr_prob * mix_pdf));
+                // aov_guiding_pdf.splat(ctx.pixel, make_gray_color(rr_prob * mix_pdf));
+                aov_guiding_pdf.splat(ctx.pixel, make_gray_color(pdf_ae));
                 aov_guiding.splat(ctx.pixel, color_builtins::red);
             }
 
