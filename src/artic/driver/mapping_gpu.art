@@ -1186,7 +1186,7 @@ fn @make_amdgpu_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConf
     make_gpu_device(
         dev_id,
         config,
-        amdgpu_accelerator(dev),
+        amdgpu_hsa_accelerator(dev), // TODO: Add support for PAL
         gpu_config,
         make_default_min_max(), //make_amdgpu_min_max(),
         @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
