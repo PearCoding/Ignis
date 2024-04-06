@@ -34,7 +34,7 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connec
                  , mat: Material
                  ) -> ShadowRay {
         // No shadow rays for specular materials
-        if mat.bsdf.is_specular || light_selector.count == 0 {
+        if mat.bsdf.is_all_delta || light_selector.count == 0 {
             return(ShadowRay::None)
         }
         
@@ -93,7 +93,7 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connec
         ) -> Option[Ray] {
         let pt = unwrap_lvprimarypayload(payload);
 
-        if pt.depth + 1 > max_path_len || !mat.bsdf.is_specular {
+        if pt.depth + 1 > max_path_len || !mat.bsdf.is_all_delta {
             return(Option[Ray]::None)
         }
 

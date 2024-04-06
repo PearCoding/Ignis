@@ -5,10 +5,10 @@ fn @make_lambertian_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
     sample = @ |rnd, _, _| {
         let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
         let gdir   = mat3x3_mul(surf.local, sample.dir);
-        make_bsdf_sample(gdir, sample.pdf, kd, 1)
+        make_bsdf_sample(gdir, sample.pdf, kd, 1, false)
     },
     albedo = @ |_| kd,
-    is_specular = false
+    is_all_delta = false
 };
 
 fn @make_lambertian_transmission_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
@@ -17,10 +17,10 @@ fn @make_lambertian_transmission_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
     sample = @ |rnd, _, _| {
         let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
         let gdir   = mat3x3_mul(surf.local, sample.dir);
-        make_bsdf_sample(vec3_neg(gdir), sample.pdf, kd, 1)
+        make_bsdf_sample(vec3_neg(gdir), sample.pdf, kd, 1, false)
     },
     albedo = @ |_| kd,
-    is_specular = false
+    is_all_delta = false
 };
 
 //--------------------------------------
@@ -45,10 +45,10 @@ fn @make_orennayar_bsdf(surf: SurfaceElement, alpha: f32, kd: Color) -> Bsdf {
         sample = @ |rnd, out_dir, _| {
             let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
             let gdir   = mat3x3_mul(surf.local, sample.dir);
-            make_bsdf_sample(gdir, sample.pdf, color_mulf(eval(gdir, out_dir), 1 / sample.pdf), 1)
+            make_bsdf_sample(gdir, sample.pdf, color_mulf(eval(gdir, out_dir), 1 / sample.pdf), 1, false)
         },
         albedo = @ |_| kd,
-        is_specular = false
+        is_all_delta = false
     }
 }
 

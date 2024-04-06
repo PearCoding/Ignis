@@ -23,7 +23,7 @@ fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specula
         },
         sample = @ |rnd, out_dir, adjoint| {
             if let Option[BsdfSample]::Some(s) = diffuse.sample(rnd, out_dir, adjoint) {
-                make_bsdf_sample(s.in_dir, s.pdf, color_mulf(s.color, diff_scattering(absolute_cos(s.in_dir, surf.local.col(2)))), 1)
+                make_bsdf_sample(s.in_dir, s.pdf, color_mulf(s.color, diff_scattering(absolute_cos(s.in_dir, surf.local.col(2)))), 1, false)
             } else {
                 reject_bsdf_sample()
             }

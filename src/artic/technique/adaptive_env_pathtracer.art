@@ -236,7 +236,7 @@ fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, 
 
     // TODO: NEE
 
-    fn @is_smooth(mat: Material, pdf: f32) = !mat.bsdf.is_specular && pdf < flt_pi /* Stupid constant */;
+    fn @is_smooth(pdf: f32) = pdf < flt_pi /* Stupid constant */;
 
     fn @on_miss( ctx: ShadingContext
                , payload: RayPayload) -> Option[Color] {
@@ -294,8 +294,8 @@ fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, 
                 contrib  = new_contrib,
                 depth    = pt.depth + 1,
                 eta      = pt.eta * mat_sample.eta,
-                last_pos = select(!is_smooth(mat, mat_sample.pdf), pt.last_pos, ctx.surf.point),
-                last_dir = select(!is_smooth(mat, mat_sample.pdf), pt.last_dir, mat_sample.in_dir),
+                last_pos = select(mat_sample.is_delta || !is_smooth(mat_sample.pdf), pt.last_pos, ctx.surf.point),
+                last_dir = select(mat_sample.is_delta || !is_smooth(mat_sample.pdf), pt.last_dir, mat_sample.in_dir),
             });
             make_option(
                 make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
@@ -475,7 +475,7 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
     };
 
     fn @get_rr_prob(contrib: Color, pt: AdaptiveEnvSamplingRayPayload) = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
-    fn @get_aeprob(mat: Material, pos: Vec3) = if mat.bsdf.is_specular { 
+    fn @get_aeprob(mat: Material, pos: Vec3) = if mat.bsdf.is_all_delta { 
         0:f32 
     } else {
         select(guiding.count(pos) > 100, ae_prob, 0:f32)
@@ -492,7 +492,7 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
         }
 
         // No shadow rays for specular materials
-        if mat.bsdf.is_specular || light_selector.count == 0 {
+        if mat.bsdf.is_all_delta || light_selector.count == 0 {
             return(ShadowRay::None)
         }
         
@@ -677,7 +677,7 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
                 aov_guiding.splat(ctx.pixel, color_builtins::red);
             }
 
-            let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / (rr_prob * mix_pdf) };
+            let inv_pdf     = if mat_sample.is_delta { 0 } else { 1 / (rr_prob * mix_pdf) };
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
             
             write_adaptive_env_sampling_raypayload(payload, AdaptiveEnvSamplingRayPayload {

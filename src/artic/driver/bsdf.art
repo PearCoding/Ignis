@@ -1,9 +1,10 @@
 // Result of sampling a BSDF
 struct BsdfSample {
-    in_dir: Vec3,  // Sampled direction
-    pdf:    f32,   // BSDF value for the sample
-    color:  Color, // Color of the sample, with cosine and pdf already applied
-    eta:    f32    // Eta on the sampled direction
+    in_dir:   Vec3,  // Sampled direction
+    pdf:      f32,   // BSDF value for the sample
+    color:    Color, // Color of the sample, with cosine and pdf already applied
+    eta:      f32,   // Eta on the sampled direction
+    is_delta: bool,  // True if the sample is from a delta distribution. Calls to bsdf.pdf and bsdf.eval with this sample will not include this (and very likely return zero or other parts not including this)
 }
 
 // Opaque BSDF structure
@@ -16,16 +17,17 @@ struct Bsdf {
     sample: fn (RandomGenerator, Vec3, bool) -> Option[BsdfSample],
     // Evaluates the albedo of the material. This is only an approximation. The cosine term is not applied as the incoming direction is missing
     albedo: fn (Vec3) -> Color,
-    // Is true if the material is purely specular
-    is_specular: bool
+    // Is true if the material is purely delta (e.g., all samples have set is_delta true)
+    is_all_delta: bool
 }
 
 // Creates a BSDF sample
-fn @make_bsdf_sample(in_dir: Vec3, pdf: f32, color: Color, eta: f32) = make_option(BsdfSample {
-    in_dir = in_dir,
-    pdf    = pdf,
-    color  = color,
-    eta    = eta
+fn @make_bsdf_sample(in_dir: Vec3, pdf: f32, color: Color, eta: f32, is_delta: bool) = make_option(BsdfSample {
+    in_dir   = in_dir,
+    pdf      = pdf,
+    color    = color,
+    eta      = eta,
+    is_delta = is_delta,
 });
 
 fn @reject_bsdf_sample() = Option[BsdfSample]::None;

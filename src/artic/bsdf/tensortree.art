@@ -170,11 +170,10 @@ fn @tt_check_peak_transmission(wo: Vec3, component: TensorTreeComponent) -> bool
         let offset = tt_dir2check(i);
         let wi     = vec3_add(vec3_neg(wo), make_vec3(offset.x * srchrad, offset.y * srchrad, 0));
 
-        // Let eval return proj sa
         let res = component.eval(wo, wi);
 
-        // Check if not part of peak
-		if res.proj_sa > 1.5*min_proj_sa || peakLum > 8 * res.factor * (peakCount as f32) {
+        // Check if not part of a peak
+		if res.proj_sa > 1.5 * min_proj_sa || peakLum > 8 * res.factor * (peakCount as f32) {
             omSurrSum += res.proj_sa;
         } else {
             peakLum   += res.factor;
@@ -298,7 +297,7 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, use_peake
                 cosine_hemisphere_pdf(shading::abs_cos_theta(wi)) * refl_prob
             } else { 
                 if use_peakextraction && tt_check_peak_transmission(wo, trans_comp) {
-                    1 - refl_prob * select(math_builtins::fabs(vec3_dot(wo, wi)) > 0.99 /* Close to an perfect transmission. */, 1.0:f32, 0.0:f32) // FIXME: This is bad design as it should be an "delta" event
+                    0:f32 // Delta event, not possible to use pdf here
                 } else {
                     cosine_hemisphere_pdf(shading::abs_cos_theta(wi)) * (1 - refl_prob)
                 }
@@ -309,22 +308,22 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, use_peake
 
             let (refl_prob, refl_comp, trans_comp) = get_refl_prob(wo);
 
-            let (wi, pdf, comp) = if refl_prob > 0 && rnd.next_f32() < refl_prob {
+            let (wi, pdf, comp, is_delta) = if refl_prob > 0 && rnd.next_f32() < refl_prob {
                 let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
-                (shading::make_same_hemisphere(wo, sample.dir), refl_prob * sample.pdf, refl_comp)
+                (shading::make_same_hemisphere(wo, sample.dir), refl_prob * sample.pdf, refl_comp, false)
             } else { 
                 if (use_peakextraction && tt_check_peak_transmission(wo, trans_comp)) { 
-                    (vec3_neg(wo), 1 - refl_prob, trans_comp)
+                    (vec3_neg(wo), 1 - refl_prob, trans_comp, true)
                 } else {
                     let sample = sample_cosine_hemisphere(rnd.next_f32(), rnd.next_f32());
-                    (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), (1 - refl_prob) * sample.pdf, trans_comp)
+                    (vec3_neg(shading::make_same_hemisphere(wo, sample.dir)), (1 - refl_prob) * sample.pdf, trans_comp, false)
                 }
             };
 
             if pdf <= flt_eps {
                 reject_bsdf_sample()
             } else {
-                make_bsdf_sample(to_global(wi), pdf, color_mulf(color, comp.eval(wi, wo).factor / pdf), 1)
+                make_bsdf_sample(to_global(wi), pdf, color_mulf(color, comp.eval(wi, wo).factor / pdf), 1, is_delta)
             }
         },
         albedo = @ |out_dir| {
@@ -332,6 +331,6 @@ fn @make_tensortree_bsdf(surf: SurfaceElement, color: Color, up: Vec3, use_peake
             let wi = to_local(vec3_reflect(out_dir, surf.local.col(2)));
             color_mulf(color, tree.eval(surf, wi, wo))
         },
-        is_specular = false
+        is_all_delta = false // use_peakextraction might introduce some delta lobes but there might be other components non-delta
     }
 }

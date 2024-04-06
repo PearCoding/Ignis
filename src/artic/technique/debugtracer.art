@@ -104,14 +104,14 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(if mat.is_emissive { color_builtins::true_color } else { color_builtins::false_color })
                 },
                 22 => { // DEBUG_SPECULAR
-                    make_option(if mat.bsdf.is_specular { color_builtins::true_color } else { color_builtins::false_color })
+                    make_option(if mat.bsdf.is_all_delta { color_builtins::true_color } else { color_builtins::false_color })
                 },
                 23 => { // DEBUG_ENTERING
                     make_option(if ctx.surf.is_entering { color_builtins::true_color } else { color_builtins::false_color })
                 },
                 24 => { // DEBUG_CHECK_BSDF
                     let out_dir = vec3_neg(ctx.ray.dir);
-                    if mat.bsdf.is_specular {
+                    if mat.bsdf.is_all_delta {
                         // PDF & Eval of specular materials should always return black / zero
                         let evl = mat.bsdf.eval(vec3_reflect(out_dir, ctx.surf.local.col(2)), out_dir);
                         let pdf = mat.bsdf.pdf( vec3_reflect(out_dir, ctx.surf.local.col(2)), out_dir);

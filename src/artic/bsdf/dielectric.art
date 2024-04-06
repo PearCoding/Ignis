@@ -4,10 +4,10 @@ fn @make_perfect_refraction_bsdf(_surf: SurfaceElement, kt: Color) = Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
-        make_bsdf_sample(vec3_neg(out_dir), 1, kt, 1)
+        make_bsdf_sample(vec3_neg(out_dir), 1, kt, 1, true)
     },
     albedo = @ |_| kt,
-    is_specular = true
+    is_all_delta = true
 };
 
 //--------------------------------------
@@ -26,14 +26,14 @@ fn @make_pure_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color,
             // Refraction
             let t = vec3_refract(out_dir, n, k, cos_o, fterm.cos_t);
             let adjoint_term = if adjoint { k * k } else { 1 };
-            make_bsdf_sample(t, 1, color_mulf(kt, adjoint_term), k)
+            make_bsdf_sample(t, 1, color_mulf(kt, adjoint_term), k, true)
         } else {
             // Reflection
-            make_bsdf_sample(vec3_reflect(out_dir, n), 1, ks, 1)
+            make_bsdf_sample(vec3_reflect(out_dir, n), 1, ks, 1, true)
         }
     },
     albedo = @ |_| color_lerp(ks, kt, 0.5),
-    is_specular = true
+    is_all_delta = true
 };
 
 //--------------------------------------
@@ -51,14 +51,14 @@ fn @make_thin_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color,
 
         if rnd.next_f32() > F {
             // Refraction
-            make_bsdf_sample(vec3_neg(out_dir), 1, kt, 1 /* It is thin*/)
+            make_bsdf_sample(vec3_neg(out_dir), 1, kt, 1 /* It is thin*/, true)
         } else {
             // Reflection
-            make_bsdf_sample(vec3_normalize(vec3_reflect(out_dir, N)), 1, ks, 1)
+            make_bsdf_sample(vec3_normalize(vec3_reflect(out_dir, N)), 1, ks, 1, true)
         }
     },
     albedo = @ |_| ks,
-    is_specular = true
+    is_all_delta = true
 };
 
 //--------------------------------------
@@ -183,11 +183,12 @@ fn @make_rough_dielectric_bsdf(surf: SurfaceElement, n1: f32, n2: f32, ks: Color
                 in_dir,
                 f_pdf,
                 color_mulf(eval(in_dir, out_dir), safe_div(adjoint_term, f_pdf)),
-                if !is_transmission { 1 } else { eta }
+                if !is_transmission { 1 } else { eta },
+                micro.is_delta
             )
         },
         albedo = @ |_| color_lerp(ks, kt, 0.5),
-        is_specular = micro.is_delta,
+        is_all_delta = micro.is_delta,
     }
 }
 

@@ -58,7 +58,7 @@ fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_select
         }
 
         // No shadow rays for specular materials
-        if mat.bsdf.is_specular || light_selector.count == 0 {
+        if mat.bsdf.is_all_delta || light_selector.count == 0 {
             return(ShadowRay::None)
         }
         
@@ -221,7 +221,7 @@ fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_select
                 if rnd.next_f32() >= rr_prob {
                     Option[Ray]::None
                 } else {
-                    let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / bsdf_sample.pdf };
+                    let inv_pdf     = if bsdf_sample.is_delta { 0 } else { 1 / bsdf_sample.pdf };
                     let new_contrib = color_mulf(contrib, 1 / rr_prob);
                     
                     let is_transmission = math_builtins::signbit(vec3_dot(ctx.surf.local.col(2), bsdf_sample.in_dir));

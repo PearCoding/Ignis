@@ -754,13 +754,13 @@ fn @make_djmeasured_bsdf(surf: SurfaceElement, isotropic : bool, jacobian : bool
             let out_local = shading::to_local(surf.local, out_dir);
             let sample = sample_brdf(brdf_data, make_vec2(rnd.next_f32(), rnd.next_f32()), out_local);
             let in_global = shading::to_world(surf.local, sample.out);
-            make_bsdf_sample(in_global, sample.pdf, color_mul(tint, vec3_to_color(sample.res)), 1)
+            make_bsdf_sample(in_global, sample.pdf, color_mul(tint, vec3_to_color(sample.res)), 1, false)
         },
         albedo = @ |out_dir| {
             let wo = shading::to_local(surf.local, out_dir);
             let wi = vec3_reflect(wo, make_vec3(0,0,1));
             color_mul(tint, evaluate_brdf(brdf_data, wi, wo))
         },
-        is_specular = false
+        is_all_delta = false
     }
 }

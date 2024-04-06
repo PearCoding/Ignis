@@ -3,10 +3,10 @@ fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
     eval   = @ |_, _| color_builtins::black,
     pdf    = @ |_, _| 0,
     sample = @ |_, out_dir, _| {
-        make_bsdf_sample(vec3_reflect(out_dir, surf.local.col(2)), 1, ks, 1)
+        make_bsdf_sample(vec3_reflect(out_dir, surf.local.col(2)), 1, ks, 1, true)
     },
     albedo = @ |_| ks,
-    is_specular = true
+    is_all_delta = true
 };
 
 //--------------------------------------
@@ -25,7 +25,7 @@ fn @make_pure_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Col
             1);
 
         let color = color_mul(ks, f);
-        make_bsdf_sample(vec3_reflect(out_dir, n), 1, color, 1)
+        make_bsdf_sample(vec3_reflect(out_dir, n), 1, color, 1, true)
     },
     albedo = @ |out_dir| {
         let n = surf.local.col(2);
@@ -39,7 +39,7 @@ fn @make_pure_conductor_bsdf(surf: SurfaceElement, ior: Color, k: Color, ks: Col
 
         color_mul(ks, f)
     },
-    is_specular = true
+    is_all_delta = true
 };
 
 //--------------------------------------
@@ -61,10 +61,10 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
             pdf    = @ |_, _| 0,
             sample = @ |_, out_dir, _| {
                 let color = compute_albedo(out_dir);
-                make_bsdf_sample(vec3_reflect(out_dir, N), 1, color, 1)
+                make_bsdf_sample(vec3_reflect(out_dir, N), 1, color, 1, true)
             },
             albedo = compute_albedo,
-            is_specular = true
+            is_all_delta = true
         }
     } else {
         let eval = @ |in_dir: Vec3, out_dir: Vec3| -> Color {
@@ -109,10 +109,10 @@ fn @make_rough_base_conductor_bsdf(surf: SurfaceElement, kd: Color, ks: Color, f
 
                 let pdf   = s.pdf * jacob;
                 let color = color_mulf(eval(in_dir, out_dir), safe_div(1, pdf));
-                make_bsdf_sample(in_dir, pdf, color, 1)
+                make_bsdf_sample(in_dir, pdf, color, 1, false)
             },
             albedo = compute_albedo, // Ignores roughness
-            is_specular = false
+            is_all_delta = false
         }
     }
 }

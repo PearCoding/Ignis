@@ -472,12 +472,12 @@ fn @make_principled_bsdf(surf: SurfaceElement,
                 let s_eta   = if closure.thin || shading::is_same_hemisphere(wo, sample.dir) { 1 } else { closure.refractive_eta };
                 let in_dir  = shading::to_world(surf.local, sample.dir);
                 
-                make_bsdf_sample(in_dir, sample.pdf, color_mulf(eval(in_dir, out_dir), spread / sample.pdf), s_eta)
+                make_bsdf_sample(in_dir, sample.pdf, color_mulf(eval(in_dir, out_dir), spread / sample.pdf), s_eta, false)
             } else {
                 reject_bsdf_sample()
             }
         },
         albedo = @|_| base_color, // TODO: Better approach? 
-        is_specular = false // We prevent a roughness = 0, so no chance to be specular
+        is_all_delta = false // We prevent a roughness = 0, so no chance to be specular
     }
 }

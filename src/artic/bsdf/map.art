@@ -20,7 +20,7 @@ fn @transform_surf_bsdf(old_surf: SurfaceElement, new_surf: SurfaceElement, bsdf
             if let Option[BsdfSample]::Some(s) = bsdf.sample(rnd, out_dir, adjoint) {
                 if adjoint {
                     let fac = shading_normal_adjoint(s.in_dir, out_dir, new_surf.local.col(2), old_surf.local.col(2));
-                    make_bsdf_sample(s.in_dir, s.pdf, color_mulf(s.color, fac), s.eta)
+                    make_option(s.{ color=color_mulf(s.color, fac) })
                 } else {
                     make_option(s)
                 }

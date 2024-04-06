@@ -59,8 +59,8 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
             return(ShadowRay::None)
         }
 
-        // No shadow rays for specular materials
-        if mat.bsdf.is_specular || light_selector.count == 0 {
+        // No shadow rays for purely specular materials
+        if mat.bsdf.is_all_delta || light_selector.count == 0 {
             return(ShadowRay::None)
         }
         
@@ -187,7 +187,7 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
                 return(Option[Ray]::None)
             }
 
-            let inv_pdf     = if mat.bsdf.is_specular { 0 } else { 1 / mat_sample.pdf };
+            let inv_pdf     = if mat_sample.is_delta { 0 } else { 1 / mat_sample.pdf };
             let new_contrib = color_mulf(contrib, 1 / rr_prob);
             
             write_ptraypayload(payload, PTRayPayload {

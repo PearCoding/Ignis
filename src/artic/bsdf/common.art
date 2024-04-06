@@ -1,10 +1,10 @@
 // Creates a fully absorbing BSDF non scattering bsdf
 fn @make_null_bsdf(_surf: SurfaceElement) = Bsdf {
-    eval        = @ |_, _| color_builtins::black,
-    pdf         = @ |_, _| 0,
-    sample      = @ |_, _, _| reject_bsdf_sample(),
-    albedo      = @ |_| color_builtins::black,
-    is_specular = false
+    eval         = @ |_, _| color_builtins::black,
+    pdf          = @ |_, _| 0,
+    sample       = @ |_, _, _| reject_bsdf_sample(),
+    albedo       = @ |_| color_builtins::black,
+    is_all_delta = false
 };
 
 // Creates a fully absorbing BSDF that behaves like black body. Internally it is just a black mirror
@@ -12,11 +12,11 @@ fn @make_black_bsdf(surf: SurfaceElement) = make_mirror_bsdf(surf, color_builtin
 
 // Error
 fn @make_error_bsdf(surf: SurfaceElement) = Bsdf {
-    eval        = @ |in_dir, _| color_mulf(color_builtins::pink, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
-    pdf         = @ |_, _| 0,
-    sample      = @ |_, _, _| reject_bsdf_sample(),
-    albedo      = @ |_| color_builtins::pink,
-    is_specular = false
+    eval         = @ |in_dir, _| color_mulf(color_builtins::pink, absolute_cos(in_dir, surf.local.col(2)) * flt_inv_pi),
+    pdf          = @ |_, _| 0,
+    sample       = @ |_, _, _| reject_bsdf_sample(),
+    albedo       = @ |_| color_builtins::pink,
+    is_all_delta = false
 };
 
 // Creates a BSDF that passthroughs all rays and behaves like a refractive interface with ior = 1

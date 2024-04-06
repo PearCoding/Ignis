@@ -75,7 +75,7 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, m
                  , mat: Material
                  ) -> ShadowRay {
         // No shadow rays for specular materials
-        if mat.bsdf.is_specular {
+        if mat.bsdf.is_all_delta {
             return(ShadowRay::None)
         }
         

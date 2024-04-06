@@ -57,7 +57,7 @@ fn @make_join_bsdf(mat1: Bsdf, mat2: Bsdf, mix_f: fn(Vec3) -> f32, eval_f: fn(Co
                        mat2.albedo(out_dir),
                        k)
         },
-        is_specular = mat1.is_specular & mat2.is_specular
+        is_all_delta = mat1.is_all_delta & mat2.is_all_delta
     }
 }
 

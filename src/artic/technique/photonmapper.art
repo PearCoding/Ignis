@@ -175,7 +175,7 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
         let pt = unwrap_ppmraypayload(payload);
 
         // Only on non emissive and non specular surfaces
-        if !mat.is_emissive && !mat.bsdf.is_specular {
+        if !mat.is_emissive && !mat.bsdf.is_all_delta {
             let cos_o = vec3_dot(vec3_neg(ctx.ray.dir), ctx.surf.local.col(2));
 
             if cos_o > flt_eps {        
@@ -202,7 +202,8 @@ fn @make_ppm_light_renderer(max_path_len: i32, _aovs: AOVTable, light_cache: Lig
         let pt = unwrap_ppmraypayload(payload);
 
         // Bounce until a diffuse element is found or max path-1 length is reached
-        if mat.bsdf.is_specular && pt.depth + 2 /* We need space for camera vertex */ <= max_path_len {
+        // TODO: Force to sample delta materials?
+        if mat.bsdf.is_all_delta && pt.depth + 2 /* We need space for camera vertex */ <= max_path_len {
             // Bounce
             let out_dir = vec3_neg(ctx.ray.dir);
             if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, true) {
@@ -293,7 +294,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, min_path_len: i32, light_selector:
 
         // Do final gather
         if pt.depth + 1 <= max_path_len /* Just to be consistent with the pathtracer and omit unnecessary merges */ 
-            && !mat.is_emissive && !mat.bsdf.is_specular {
+            && !mat.is_emissive && !mat.bsdf.is_all_delta {
             let actual_radius  = get_radius(ctx.hit, pt);
             let actual_radius2 = actual_radius * actual_radius;
 
@@ -381,7 +382,7 @@ fn @make_ppm_path_renderer(max_path_len: i32, min_path_len: i32, light_selector:
                 depth           = pt.depth + 1,
                 eta             = pt.eta * mat_sample.eta,
                 radius_or_light = get_radius(ctx.hit, pt),
-                path_type       = select(mat.bsdf.is_specular, pt.path_type, /*pt.path_type +*/ 1)
+                path_type       = select(mat_sample.is_delta, pt.path_type, /*pt.path_type +*/ 1)
             });
             make_option(
                 make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
