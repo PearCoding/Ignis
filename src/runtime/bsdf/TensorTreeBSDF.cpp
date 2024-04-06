@@ -42,6 +42,7 @@ static inline std::string dump_tt_specification(const TensorTreeSpecification& p
            << ", value_count=" << spec.value_count
            << ", total=" << spec.total
            << ", root_is_leaf=" << (spec.root_is_leaf ? "true" : "false")
+           << ", min_proj_sa=" << spec.min_proj_sa
            << "}";
     return stream.str();
 }
@@ -63,9 +64,12 @@ void TensorTreeBSDF::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
     input.Tree.addColor("base_color", *mBSDF, Vector3f::Ones());
 
+    bool usePeakExtraction  = mBSDF->property("peakExtraction").getBool(true);
     const Vector3f upVector = mBSDF->property("up").getVector3(Vector3f::UnitZ()).normalized();
 
     const auto data = setup_tensortree(name(), mBSDF, input.Tree.context());
+    if (data.second.front_transmission.total + data.second.back_transmission.total == 0)
+        usePeakExtraction = false;
 
     const Path buffer_path             = std::get<0>(data);
     const TensorTreeSpecification spec = std::get<1>(data);
@@ -73,11 +77,12 @@ void TensorTreeBSDF::serialize(const SerializationInput& input) const
     size_t res_id             = input.Tree.context().registerExternalResource(buffer_path);
     const std::string bsdf_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
-                 << "  let tt_" << bsdf_id << " = make_tensortree_model(device.request_debug_output(), device.load_buffer_by_id(" << res_id << "), "
+                 << "  let tt_" << bsdf_id << " = make_tensortree_model(device.load_buffer_by_id(" << res_id << "), "
                  << dump_tt_specification(spec) << ");" << std::endl
                  << "  let bsdf_" << bsdf_id << " : BSDFShader = @|ctx| make_tensortree_bsdf(ctx.surf, "
                  << input.Tree.getInline("base_color") << ", "
                  << LoaderUtils::inlineVector(upVector) << ", "
+                 << (usePeakExtraction ? "true" : "false") << ", "
                  << "tt_" << bsdf_id << ");" << std::endl;
 
     input.Tree.endClosure();

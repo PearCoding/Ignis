@@ -8,6 +8,7 @@ struct TensorTreeComponentSpecification {
     size_t value_count;
     float total;
     bool root_is_leaf;
+    float min_proj_sa;
 };
 struct TensorTreeSpecification {
     size_t ndim;

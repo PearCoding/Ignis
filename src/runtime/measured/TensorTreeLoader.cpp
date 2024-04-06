@@ -38,6 +38,18 @@ struct TensorTreeNode {
         return total;
     }
 
+    inline size_t computeMaxDepth(size_t depth) const
+    {
+        if (isLeaf())
+            return depth;
+
+        size_t d = 0;
+        for (const auto& child : Children)
+            d = std::max(d, child->computeMaxDepth(depth + 1));
+
+        return d;
+    }
+
     inline void dump(std::ostream& stream) const
     {
         if (isLeaf()) {
@@ -63,6 +75,7 @@ public:
         : mNDim(ndim)
         , mMaxValuesPerNode(1 << ndim)
         , mTotal(0)
+        , mMinProjSA(Pi)
         , mRootIsLeaf(false)
     {
     }
@@ -102,9 +115,10 @@ public:
 
     inline void makeBlack()
     {
-        mNodes  = std::vector<NodeValue>(mMaxValuesPerNode, 0);
-        mValues = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
-        mTotal  = 0;
+        mNodes     = std::vector<NodeValue>(mMaxValuesPerNode, 0);
+        mValues    = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
+        mTotal     = 0;
+        mMinProjSA = Pi;
 
         std::fill(mNodes.begin(), mNodes.end(), -1);
     }
@@ -131,12 +145,16 @@ public:
     [[nodiscard]] inline float total() const { return mTotal; }
     [[nodiscard]] inline float isRootLeaf() const { return mRootIsLeaf; }
 
+    inline void setMinProjSA(float sa) { mMinProjSA = sa; }
+    [[nodiscard]] inline float minProjSA() const { return mMinProjSA; }
+
 private:
     uint32 mNDim;
     uint32 mMaxValuesPerNode;
     std::vector<NodeValue> mNodes;
     std::vector<float> mValues;
     float mTotal;
+    float mMinProjSA;
     bool mRootIsLeaf;
 };
 
@@ -287,6 +305,9 @@ bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorT
         component->addNode(*root, {});
         component->setTotal(root->computeTotal(1));
 
+        const size_t maxDepth = root->computeMaxDepth(1);
+        component->setMinProjSA(Pi / (float)(1 << maxDepth)); // TODO: Validate
+
         // Select correct component
         // The window definition flips the front & back
         const std::string direction = block.child_value("WavelengthDataDirection");
@@ -339,6 +360,7 @@ bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorT
         spec.value_count  = comp.valueCount();
         spec.total        = comp.total();
         spec.root_is_leaf = comp.isRootLeaf();
+        spec.min_proj_sa  = comp.minProjSA();
     };
 
     assignSpec(spec.front_reflection, *reflectionFront);
