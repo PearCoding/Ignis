@@ -42,23 +42,7 @@ else {
 $TMP_OCT = Get-ChildItem ([IO.Path]::GetTempFileName()) | Rename-Item -NewName { [IO.Path]::ChangeExtension($_, ".oct") } -PassThru
 
 # Get number of logical processors
-$thread_count = 8 # default
-try {
-    # Only works on Windows
-    $thread_count = (Get-CimInstance -ClassName Win32_ComputerSystem).NumberOfLogicalProcessors
-}
-catch {
-    # Fallback for Linux
-    try {
-        $cpu_info = [string](& lscpu)
-        if ($cpu_info -match "CPU\(s\):\s*(\d+)") {
-            $thread_count = [int]$matches[1]
-        }
-    }
-    catch {
-        # Use default
-    }
-}
+$thread_count = [System.Environment]::ProcessorCount
 
 # Get content of the rif file
 $RIF_TEXT = Get-Content $RIF_PATH -raw
