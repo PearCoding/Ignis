@@ -6,29 +6,14 @@
     "configurations": [
 
         {
-            "name": "igview",
-            "type": "cppdbg",
+            "name": "test_aept",
+            "type": "cppvsdbg",
             "request": "launch",
-            "program": "${command:cmake.buildDirectory}/bin/igview",
-            "args": ["${workspaceFolder}/scenes/diamond_scene.json", "--gpu", "--dump-shader"],
+            "program": "${command:cmake.buildDirectory}/bin/igcli",
+            "args": ["c:/Users/Haddington/Documents/RoomBlender/Room.json", "--gpu", "--technique", "aept",  "--spp", "32", "-o", "testddd.exr", "--verbose"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
-            "environment": [
-                {
-                    "name": "IG_DRIVER_PATH",
-                    "value": "${command:cmake.buildDirectory}/lib"
-                }
-            ],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "targetArchitecture": "x64",
-            "setupCommands": [
-                {
-                    "description": "Automatische Strukturierung und Einrückung für \"gdb\" aktivieren",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
+            "console": "integratedTerminal"
         },
         {
             "name": "igcli",
@@ -38,12 +23,6 @@
             "args": ["${workspaceFolder}/scenes/room_tensortree.json", "--spp", "32", "-o", "test.exr", "--cpu"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
-            "environment": [
-                {
-                    "name": "IG_DRIVER_PATH",
-                    "value": "${command:cmake.buildDirectory}/lib"
-                }
-            ],
             "externalConsole": false,
             "MIMode": "gdb",
             "targetArchitecture": "x64",

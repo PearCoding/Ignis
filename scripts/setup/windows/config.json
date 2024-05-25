@@ -20,9 +20,9 @@
     "AnyDSL_RV_TAG": "origin/release/16.x",
     "AnyDSL_CMAKE_EXTRA_ARGS": [],
     "GET_TBB": true,
-    "TBB_URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.11.0/oneapi-tbb-2021.11.0-win.zip",
+    "TBB_URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.12.0/oneapi-tbb-2021.12.0-win.zip",
     "GET_SDL2": true,
-    "SDL2_URL":"https://github.com/libsdl-org/SDL/releases/download/release-2.30.0/SDL2-devel-2.30.0-VC.zip",
+    "SDL2_URL":"https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-devel-2.30.3-VC.zip",
     "GET_OIDN": true,
-    "OIDN_URL": "https://github.com/OpenImageDenoise/oidn/releases/download/v2.1.0/oidn-2.1.0.x64.windows.zip"
+    "OIDN_URL": "https://github.com/OpenImageDenoise/oidn/releases/download/v2.2.2/oidn-2.2.2.x64.windows.zip"
 }
