@@ -236,8 +236,10 @@ public:
             return 0;
         case GPUArchitecture::Nvidia:
             return ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
-        case GPUArchitecture::AMD:
+        case GPUArchitecture::AMD_HSA:
             return ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
+        // case GPUArchitecture::AMD_PAL:
+        //     return ANYDSL_DEVICE(ANYDSL_PAL, (int)device);
         }
     }
     inline int getDevID() const { return getDevID(setup.target.device()); }

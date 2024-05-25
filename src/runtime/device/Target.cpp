@@ -25,9 +25,12 @@ std::string Target::toString() const
     if (mGPU) {
         stream << "GPU[";
         switch (mGPUArchitecture) {
-        case GPUArchitecture::AMD:
+        case GPUArchitecture::AMD_HSA:
             stream << "AMD";
             break;
+        // case GPUArchitecture::AMD_PAL:
+        //     stream << "AMD";
+        //     break;
         case GPUArchitecture::Intel:
             stream << "Intel";
             break;
@@ -74,7 +77,7 @@ GPUArchitecture Target::getGPUArchitectureFromString(const std::string& str)
 {
     const std::string lstr = to_lowercase(str);
     if (lstr == "amd")
-        return GPUArchitecture::AMD;
+        return GPUArchitecture::AMD_HSA;
     else if (lstr == "intel")
         return GPUArchitecture::Intel;
     else if (lstr == "nvidia")
@@ -354,7 +357,7 @@ Target Target::pickGPU(size_t device)
     if (hasNvidiaSupport)
         return makeGPU(GPUArchitecture::Nvidia, device);
     else if (hasAMDSupport)
-        return makeGPU(GPUArchitecture::AMD, device);
+        return makeGPU(GPUArchitecture::AMD_HSA, device);
     else
         return makeGPU(GPUArchitecture::Unknown, device);
 }

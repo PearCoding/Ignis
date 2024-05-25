@@ -70,7 +70,7 @@ public:
         case oidn::DeviceType::HIP:
             if (!target.isGPU())
                 return false;
-            if (target.gpuArchitecture() == GPUArchitecture::AMD)
+            if (target.gpuArchitecture() == GPUArchitecture::AMD_HSA)
                 return true;         // TODO: Device number!
             return false;
         case oidn::DeviceType::SYCL: // TODO: Sycl is not necessarily Intel only

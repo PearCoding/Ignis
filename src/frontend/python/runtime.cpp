@@ -122,7 +122,7 @@ void runtime_module(nb::module_& m)
         .value("Unknown", CPUArchitecture::Unknown);
 
     nb::enum_<GPUArchitecture>(m, "GPUArchitecture", "Enum holding supported GPU architectures")
-        .value("AMD", GPUArchitecture::AMD)
+        .value("AMD", GPUArchitecture::AMD_HSA)
         .value("Intel", GPUArchitecture::Intel)
         .value("Nvidia", GPUArchitecture::Nvidia)
         .value("Unknown", GPUArchitecture::Unknown);
@@ -204,7 +204,7 @@ void runtime_module(nb::module_& m)
                 if (target.isGPU()) {
                     deviceId = (int32_t)target.device();
                     switch (target.gpuArchitecture()) {
-                    case GPUArchitecture::AMD:
+                    case GPUArchitecture::AMD_HSA:
                         deviceType = nb::device::rocm::value;
                         break;
                     case GPUArchitecture::Intel:

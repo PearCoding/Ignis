@@ -39,8 +39,8 @@ std::string ShaderUtils::constructDevice(const LoaderContext& ctx)
     } else {
         // TODO: Customize kernel config for device?
         switch (ctx.Options.Target.gpuArchitecture()) {
-        case GPUArchitecture::AMD:
-            stream << "make_amdgpu_device(settings.device, render_config, make_default_gpu_kernel_config());";
+        case GPUArchitecture::AMD_HSA:
+            stream << "make_amdgpu_hsa_device(settings.device, render_config, make_default_gpu_kernel_config());";
             break;
         default:
         case GPUArchitecture::Nvidia:

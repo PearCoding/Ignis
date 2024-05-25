@@ -4,7 +4,8 @@
 
 namespace IG {
 enum class GPUArchitecture {
-    AMD,
+    AMD_HSA,
+    // AMD_PAL, // TODO
     Intel, // TODO: Only listed here, no support at the moment
     Nvidia,
     Unknown
