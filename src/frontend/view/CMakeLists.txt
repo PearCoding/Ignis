@@ -1,7 +1,7 @@
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
-    GIT_TAG v1.90.4
+    GIT_TAG v1.90.6
     DOWNLOAD_ONLY YES
 )
 
