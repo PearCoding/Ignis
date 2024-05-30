@@ -46,6 +46,7 @@ struct SharedLibraryInternal {
 SharedLibrary::SharedLibrary() {}
 
 SharedLibrary::SharedLibrary(const Path& file)
+    : mPath(file)
 {
     const std::string u8 = file.generic_string();
 
@@ -81,5 +82,10 @@ void* SharedLibrary::symbol(const std::string& name) const
 void SharedLibrary::unload()
 {
     mInternal.reset();
+}
+
+bool SharedLibrary::isSharedLibrary(const Path& path)
+{
+    return path.extension() == ".so" || path.extension() == ".dll";
 }
 } // namespace IG

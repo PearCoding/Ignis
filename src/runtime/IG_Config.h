@@ -184,6 +184,7 @@ private:                              \
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -272,4 +273,23 @@ template <typename T>
     return (a < b) ? b : ((a > c) ? c : a);
 }
 
+template <typename Tuple>
+struct hash_tuple {
+    inline size_t operator()(Tuple const& tuple) const
+    {
+        size_t hash = 0x156462168574;
+
+        std::apply(
+            [&hash](const auto&... vals) {
+                const auto hash_combine = [&hash](const auto& x) {
+                    const size_t new_hash = std::hash<typename std::remove_cvref_t<decltype(x)>>{}(std::forward<decltype(x)>(x));
+                    hash ^= new_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2); // ~ boost::hash_combine
+                };
+
+                (hash_combine(vals), ...);
+            },
+            tuple);
+        return hash;
+    }
+};
 } // namespace IG

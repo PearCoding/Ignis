@@ -17,6 +17,9 @@ enum class CPUArchitecture {
     Unknown
 };
 
+using TargetArchitecture = std::tuple<CPUArchitecture, GPUArchitecture>;
+using TargetArchitectureHash = hash_tuple<TargetArchitecture>;
+
 class IG_LIB Target {
 public:
     Target();

@@ -8,6 +8,10 @@ struct Version {
     uint32 Minor;
     [[nodiscard]] inline uint32 asNumber() const { return ((Major) << 8) | (Minor); }
 };
+
+inline bool operator==(const Version& a, const Version& b) { return a.asNumber() == b.asNumber(); }
+inline bool operator!=(const Version& a, const Version& b) { return !(a == b); }
+
 /**
  * @brief Returns version of the build
  *
