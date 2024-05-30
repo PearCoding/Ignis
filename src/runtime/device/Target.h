@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IG_Config.h"
+#include <variant>
 
 namespace IG {
 enum class GPUArchitecture {
@@ -17,8 +18,7 @@ enum class CPUArchitecture {
     Unknown
 };
 
-using TargetArchitecture = std::tuple<CPUArchitecture, GPUArchitecture>;
-using TargetArchitectureHash = hash_tuple<TargetArchitecture>;
+using TargetArchitecture = std::variant<CPUArchitecture, GPUArchitecture>;
 
 class IG_LIB Target {
 public:

@@ -27,8 +27,8 @@ private:
 
     void* getInterface(const SharedLibrary& lib) const;
 
-    std::unordered_map<TargetArchitecture, SharedLibrary, TargetArchitectureHash> mLoadedDevices;
-    std::unordered_map<TargetArchitecture, Path, TargetArchitectureHash> mAvailableDevices;
+    std::unordered_map<TargetArchitecture, SharedLibrary> mLoadedDevices;
+    std::unordered_map<TargetArchitecture, Path> mAvailableDevices;
 };
 
 } // namespace IG
