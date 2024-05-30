@@ -25,6 +25,8 @@ set(SRC
   SceneProperty.h
   SHA256.cpp
   SHA256.h
+  SharedLibrary.cpp
+  SharedLibrary.h
   Statistics.cpp
   Statistics.h
   StringUtils.cpp

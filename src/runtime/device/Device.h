@@ -46,7 +46,7 @@ public:
         size_t IterationCount;
     };
 
-    Device(const SetupSettings& settings);
+    explicit Device(const SetupSettings& settings);
     ~Device();
 
     void assignScene(const SceneSettings& settings);
