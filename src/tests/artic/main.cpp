@@ -11,6 +11,8 @@
 #endif
 #endif
 
+#include "device/Target.h"
+
 #include "generated_test_interface.h"
 
 int main(int argc, char** argv)
@@ -20,8 +22,11 @@ int main(int argc, char** argv)
     _mm_setcsr(_mm_getcsr() | (_MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON));
 #endif
 
-    bool no_gpu = argc > 1 && std::strcmp(argv[1], "--no-gpu") == 0;
-    int err     = test_main(no_gpu);
+    bool no_gpu = !IG::Target::pickBest().isGPU();
+    if (argc > 1 && std::strcmp(argv[1], "--no-gpu") == 0)
+        no_gpu = true;
+
+    int err = test_main(no_gpu);
 
     if (err != 0)
         std::cout << err << " failed tests!" << std::endl;

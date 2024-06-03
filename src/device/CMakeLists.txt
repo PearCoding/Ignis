@@ -1,7 +1,5 @@
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "*.cpp")
 
-# TODO: The whole purpose of separating device and runtime is to utilize different anydsl runtimes to keep dll loading at bay!
-
 ###########################################################
 set(IG_DISABLE_DEVICES "" CACHE STRING "Devices to not build a device for.")
 mark_as_advanced(IG_DISABLE_DEVICES)
@@ -64,9 +62,20 @@ foreach(var ${VARIANTS})
     set(_target_name ig_device_${var})
     message(STATUS "Adding device for ${var}")
 
+    set(AnyDSLRuntimeDevice_LIBRARIES )
+    set(AnyDSLRuntimeDevice_INCLUDE_DIRS )
+
+    find_package(AnyDSLRuntimeDevice COMPONENTS ${var})
+    
+    if (NOT AnyDSLRuntimeDevice_${var}_FOUND)
+        message(WARNING "No specific AnyDSL runtime for device ${var} found. Using default one")
+        set(AnyDSLRuntimeDevice_LIBRARIES ${AnyDSL_runtime_LIBRARIES} ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES})
+        set(AnyDSLRuntimeDevice_INCLUDE_DIRS ${AnyDSL_runtime_INCLUDE_DIRS})
+    endif()
+
     add_library(${_target_name} MODULE ${SRC})
-    target_link_libraries(${_target_name} PUBLIC ig_lib_runtime PRIVATE ${AnyDSL_runtime_LIBRARIES} ${AnyDSL_runtime_ARTIC_JIT_LIBRARIES} TBB::tbb TBB::tbbmalloc )
-    target_include_directories(${_target_name} SYSTEM PRIVATE ${AnyDSL_runtime_INCLUDE_DIRS})
+    target_link_libraries(${_target_name} PUBLIC ig_lib_runtime PRIVATE ${AnyDSLRuntimeDevice_LIBRARIES} TBB::tbb TBB::tbbmalloc )
+    target_include_directories(${_target_name} SYSTEM PRIVATE ${AnyDSLRuntimeDevice_INCLUDE_DIRS})
     target_compile_definitions(${_target_name} PRIVATE $<BUILD_INTERFACE:"IG_BUILD_DEVICE_${VAR_UPPER}">)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
     add_checks(${_target_name})

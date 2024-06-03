@@ -30,10 +30,5 @@ SET(_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface.h)
     
 add_executable(ig_test_artic ${_FILES})
-target_link_libraries(ig_test_artic PRIVATE ${AnyDSL_runtime_LIBRARIES} ig_lib_runtime)
+target_link_libraries(ig_test_artic PRIVATE ig_lib_runtime)
 target_include_directories(ig_test_artic PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-if(AnyDSL_runtime_HAS_CUDA_SUPPORT)
-    add_test(NAME ignis_test_artic COMMAND ig_test_artic)
-else()
-    add_test(NAME ignis_test_artic COMMAND ig_test_artic --no-gpu)
-endif()

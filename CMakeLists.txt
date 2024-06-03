@@ -101,17 +101,6 @@ mark_as_advanced(IG_ARTIC_CLANG_FLAGS IG_ARTIC_FLAGS)
 # Setup CPM
 include(cmake/SetupCPM.cmake)
 
-# Locate stuff for windows
-# On Linux this is properly propagated
-# So it needs a fixing in AnyDSL
-if(WIN32)
-	find_package(CUDAToolkit)
-	find_package(OpenCL)
-endif()
-
-# Locate AnyDSL runtime
-find_package(AnyDSL_runtime REQUIRED)
-
 # Make sure the filesystem library is available
 find_package(Filesystem REQUIRED)
 
@@ -120,6 +109,17 @@ find_package(TBB REQUIRED)
 
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
+
+# Locate stuff for windows
+# On Linux this is properly propagated
+# So it needs a fixing in AnyDSL
+if(WIN32)
+	find_package(CUDAToolkit)
+	find_package(OpenCL)
+endif()
+
+# Locate AnyDSL runtime (general purpose)
+find_package(AnyDSL_runtime REQUIRED)
 
 if(IG_WITH_DENOISER)
 	find_package(OpenImageDenoise)
