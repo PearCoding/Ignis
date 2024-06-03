@@ -4,7 +4,7 @@
 #include "LoaderUtils.h"
 #include "Logger.h"
 #include "StringUtils.h"
-#include "device/Device.h"
+#include "device/IRenderDevice.h"
 #include "shader/BakeShader.h"
 #include "shader/ScriptCompiler.h"
 

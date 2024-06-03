@@ -1,6 +1,6 @@
 #include "OpenImageDenoise/oidn.hpp"
 #include "Logger.h"
-#include "device/Device.h"
+#include "device/IRenderDevice.h"
 
 namespace IG {
 static void errorFunc(void* userPtr, oidn::Error code, const char* message)
@@ -82,7 +82,7 @@ public:
         }
     }
 
-    inline void filter(Device* device)
+    inline void filter(IRenderDevice* device)
     {
         if (isSameDevice(device->target()))
             filterDevice(device);
@@ -90,7 +90,7 @@ public:
             filterHost(device);
     }
 
-    inline void filterHost(Device* device)
+    inline void filterHost(IRenderDevice* device)
     {
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
@@ -122,7 +122,7 @@ public:
         mOutputBuffer.read(0, sizeof(float) * framebufferSize, output.Data);
     }
 
-    inline void filterDevice(Device* device)
+    inline void filterDevice(IRenderDevice* device)
     {
         const auto color  = device->getFramebufferForDevice({});
         const auto normal = device->getFramebufferForDevice("Normals");
@@ -251,7 +251,7 @@ public:
         IG_LOG(IG::L_INFO) << "Using OpenImageDenoise " << versionMajor << "." << versionMinor << "." << versionPatch << std::endl;
     }
 
-    inline void filter(Device* device)
+    inline void filter(IRenderDevice* device)
     {
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
@@ -335,7 +335,7 @@ private:
 
 // Will be exposed to the device and used in Device.cpp
 // TODO: This can be handled waaaay cleaner
-void ignis_denoise(Device* device)
+void ignis_denoise(IRenderDevice* device)
 {
     using namespace oidn;
 

@@ -3,15 +3,16 @@
 #include "IG_Config.h"
 
 namespace IG {
-
-class ICompilerDevice {
+class IG_LIB ICompilerDevice {
 public:
+    virtual ~ICompilerDevice() = default;
+
     struct Settings {
         int OptimizationLevel = 3;
         bool Verbose          = false;
     };
 
-    virtual void* compile(const std::string& script, const std::string& function) = 0;
+    [[nodiscard]] virtual void* compile(const Settings& settings, const std::string& script, const std::string& function) const = 0;
 };
 
 } // namespace IG

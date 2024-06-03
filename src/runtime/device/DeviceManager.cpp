@@ -12,7 +12,7 @@
 
 namespace IG {
 
-using GetInterfaceFunction = IDeviceInterface* (*)();
+using GetInterfaceFunction = const IDeviceInterface* (*)();
 
 struct path_hash {
     std::size_t operator()(const Path& path) const
@@ -58,8 +58,12 @@ static path_set getDevicesFromPath(const std::filesystem::path& path)
     return drivers;
 }
 
-bool DeviceManager::init(const Path& dir, bool ignoreEnv)
+bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
 {
+    // Check if an initialization is required
+    if (!force && !mAvailableDevices.empty())
+        return true;
+
     path_set paths;
 
     bool skipSystem = false; // Skip the system search path
@@ -91,7 +95,7 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv)
         }
     }
 
-    if (mLoadedDevices.empty()) {
+    if (mAvailableDevices.empty()) {
         IG_LOG(L_ERROR) << "No device could been found!" << std::endl;
         return false;
     }
@@ -99,7 +103,7 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv)
     return true;
 }
 
-IDeviceInterface* DeviceManager::getDevice(const TargetArchitecture& target)
+const IDeviceInterface* DeviceManager::getDevice(const TargetArchitecture& target)
 {
     if (!load(target))
         return nullptr;
@@ -186,7 +190,7 @@ bool DeviceManager::addModule(const Path& path)
 
         const IDeviceInterface* interface = func();
         const auto target                 = checkModule(path, interface);
-        if (target.has_value())
+        if (!target.has_value())
             return false;
 
         mAvailableDevices[*target] = path;
@@ -211,13 +215,10 @@ bool DeviceManager::loadModule(const Path& path)
 
         const IDeviceInterface* interface = func();
         const auto target                 = checkModule(path, interface);
-        if (target.has_value())
+        if (!target.has_value())
             return false;
 
-        mAvailableDevices[*target] = path;
-
-        library.unload();
-
+        mLoadedDevices[*target] = library;
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl;
         return false;

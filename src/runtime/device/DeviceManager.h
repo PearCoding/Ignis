@@ -7,11 +7,11 @@
 namespace IG {
 class IDeviceInterface;
 
-class DeviceManager {
+class IG_LIB DeviceManager {
 public:
-    bool init(const Path& dir = Path{}, bool ignoreEnv = false);
+    bool init(const Path& dir = Path{}, bool ignoreEnv = false, bool force = false);
 
-    IDeviceInterface* getDevice(const TargetArchitecture& target);
+    [[nodiscard]] const IDeviceInterface* getDevice(const TargetArchitecture& target);
 
     bool load(const TargetArchitecture& target);
     bool unload(const TargetArchitecture& target);
@@ -25,7 +25,7 @@ private:
     bool addModule(const Path& path);
     bool loadModule(const Path& path);
 
-    void* getInterface(const SharedLibrary& lib) const;
+    [[nodiscard]] void* getInterface(const SharedLibrary& lib) const;
 
     std::unordered_map<TargetArchitecture, SharedLibrary> mLoadedDevices;
     std::unordered_map<TargetArchitecture, Path> mAvailableDevices;

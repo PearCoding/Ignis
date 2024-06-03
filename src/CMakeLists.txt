@@ -4,6 +4,7 @@ add_subdirectory(artic)
 add_subdirectory(internal/apicollector)
 
 add_subdirectory(runtime)
+add_subdirectory(device)
 add_subdirectory(frontend)
 
 if(IG_WITH_TOOLS)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "RuntimeStructs.h"
-#include "Target.h"
+#include "device/Target.h"
 #include "technique/TechniqueInfo.h"
 #include "technique/TechniqueVariant.h"
 #include <vector>
@@ -11,7 +11,7 @@ namespace IG {
 class Statistics;
 struct SceneDatabase;
 
-class IRenderDevice {
+class IG_LIB IRenderDevice {
 public:
     struct SetupSettings {
         Target target;

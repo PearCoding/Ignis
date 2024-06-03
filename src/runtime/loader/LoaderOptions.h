@@ -6,7 +6,7 @@
 
 namespace IG {
 class ScriptCompiler;
-class Device;
+class IRenderDevice;
 
 struct LoaderOptions {
     Path FilePath;
@@ -27,6 +27,6 @@ struct LoaderOptions {
     GlareOptions Glare;
 
     ScriptCompiler* Compiler;
-    IG::Device* Device;
+    IRenderDevice* Device;
 };
 } // namespace IG

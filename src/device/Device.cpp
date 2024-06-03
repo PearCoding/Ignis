@@ -2,13 +2,12 @@
 #include "Image.h"
 #include "Logger.h"
 #include "RuntimeStructs.h"
-#include "ShaderKey.h"
 #include "Statistics.h"
+#include "device/ShaderKey.h"
 #include "table/SceneDatabase.h"
+#include "device/ShallowArray.h"
 
 #include "generated_interface.h"
-
-#include "ShallowArray.h"
 
 #include <anydsl_jit.h>
 #include <anydsl_runtime.hpp>
@@ -238,8 +237,8 @@ public:
             return ANYDSL_DEVICE(ANYDSL_CUDA, (int)device);
         case GPUArchitecture::AMD_HSA:
             return ANYDSL_DEVICE(ANYDSL_HSA, (int)device);
-        // case GPUArchitecture::AMD_PAL:
-        //     return ANYDSL_DEVICE(ANYDSL_PAL, (int)device);
+            // case GPUArchitecture::AMD_PAL:
+            //     return ANYDSL_DEVICE(ANYDSL_PAL, (int)device);
         }
     }
     inline int getDevID() const { return getDevID(setup.target.device()); }
@@ -504,7 +503,7 @@ public:
     {
         if (setup.DebugTrace)
             IG_LOG(L_DEBUG) << "TRACE> Get Secondary Streams" << std::endl;
-    
+
         const size_t elements = roundUp(MinSecondaryStreamSize + getSecondaryPayloadBlockSize(), 4);
         auto& stream          = is_gpu ? *devices[dev].current_secondary.at(buffer) : getThreadData()->cpu_secondary;
         resizeArray(dev, stream.Data, size, elements);
@@ -878,7 +877,7 @@ public:
         auto& buffers = devices[dev].buffers;
         if (auto it = buffers.find(name); it != buffers.end()) {
             const size_t size = (size_t)it->second.Data.size();
-            
+
             IG_LOG(L_DEBUG) << "Dumping buffer '" << name << "' to '" << filename << "' with " << FormatMemory(size) << std::endl;
 
             // Copy data to host

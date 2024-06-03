@@ -3,7 +3,7 @@
 #include "IG_Config.h"
 
 namespace IG {
-class RuntimeInfo {
+class IG_LIB RuntimeInfo {
 public:
     [[nodiscard]] static Path executablePath(); // Path to the current executable
     [[nodiscard]] static Path modulePath();     // Path to the current module/dll

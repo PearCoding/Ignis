@@ -1,8 +1,6 @@
 #include "Target.h"
 #include "StringUtils.h"
 
-#include "anydsl_runtime.h"
-
 #if defined(IG_OS_WINDOWS)
 #include <intrin.h>
 #endif
@@ -23,41 +21,9 @@ std::string Target::toString() const
 {
     std::stringstream stream;
     if (mGPU) {
-        stream << "GPU[";
-        switch (mGPUArchitecture) {
-        case GPUArchitecture::AMD_HSA:
-            stream << "AMD";
-            break;
-        // case GPUArchitecture::AMD_PAL:
-        //     stream << "AMD";
-        //     break;
-        case GPUArchitecture::Intel:
-            stream << "Intel";
-            break;
-        case GPUArchitecture::Nvidia:
-            stream << "Nvidia";
-            break;
-        default:
-        case GPUArchitecture::Unknown:
-            stream << "Unknown";
-            break;
-        }
-        stream << ",D=" << mDevice << "]";
+        stream << "GPU[" << toString(mGPUArchitecture) << ",D=" << mDevice << "]";
     } else {
-        stream << "CPU[";
-        switch (mCPUArchitecture) {
-        case CPUArchitecture::ARM:
-            stream << "ARM";
-            break;
-        case CPUArchitecture::X86:
-            stream << "x86";
-            break;
-        default:
-        case CPUArchitecture::Unknown:
-            stream << "Unknown";
-            break;
-        }
-        stream << ",T=" << mThreadCount << ",V=" << mVectorWidth << "]";
+        stream << "CPU[" << toString(mCPUArchitecture) << ",T=" << mThreadCount << ",V=" << mVectorWidth << "]";
     }
     return stream.str();
 }
@@ -84,6 +50,44 @@ GPUArchitecture Target::getGPUArchitectureFromString(const std::string& str)
         return GPUArchitecture::Nvidia;
     else
         return GPUArchitecture::Unknown;
+}
+
+std::string_view Target::toString(CPUArchitecture arch)
+{
+    switch (arch) {
+    case CPUArchitecture::ARM:
+        return "ARM";
+    case CPUArchitecture::X86:
+        return "x86";
+    default:
+    case CPUArchitecture::Unknown:
+        return "Unknown";
+    }
+}
+
+std::string_view Target::toString(GPUArchitecture arch)
+{
+    switch (arch) {
+    case GPUArchitecture::AMD_HSA:
+        return "AMD";
+    // case GPUArchitecture::AMD_PAL:
+    //     return "AMD";
+    case GPUArchitecture::Intel:
+        return "Intel";
+    case GPUArchitecture::Nvidia:
+        return "Nvidia";
+    default:
+    case GPUArchitecture::Unknown:
+        return "Unknown";
+    }
+}
+
+std::string_view Target::toString(TargetArchitecture arch)
+{
+    if (std::holds_alternative<CPUArchitecture>(arch))
+        return toString(std::get<CPUArchitecture>(arch));
+    else
+        return toString(std::get<GPUArchitecture>(arch));
 }
 
 std::vector<std::string> Target::getAvailableCPUArchitectureNames()
@@ -349,7 +353,7 @@ Target Target::pickGPU(size_t device)
 #ifdef AnyDSL_runtime_HAS_HSA_SUPPORT
     bool hasAMDSupport = true;
 #else
-    bool hasAMDSupport    = false;
+    bool hasAMDSupport = false;
 #endif
 
     // TODO: Runtime check?

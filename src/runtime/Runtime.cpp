@@ -2,6 +2,8 @@
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "StringUtils.h"
+#include "device/DeviceManager.h"
+#include "device/IDeviceInterface.h"
 #include "loader/LoaderCamera.h"
 #include "loader/Parser.h"
 
@@ -94,9 +96,24 @@ Runtime::Runtime(const RuntimeOptions& opts)
 {
     checkCacheDirectory();
 
+    // Get device
+    if (!DeviceManager::instance().init(/*TODO Parameter*/))
+        throw std::runtime_error("Could not initialize devices");
+
+    const IDeviceInterface* interface = DeviceManager::instance().getDevice(mOptions.Target.architecture());
+    if (interface == nullptr)
+        throw std::runtime_error("Could not get requested device");
+
+    // Get compiler interface
+    std::shared_ptr<ICompilerDevice> compilerDevice = std::shared_ptr<ICompilerDevice>{ interface->createCompilerDevice() };
+    if (compilerDevice == nullptr)
+        throw std::runtime_error("Could not get compiler interface from requested device");
+
     // Configure compiler
-    mCompiler.setOptimizationLevel(std::min<size_t>(3, mOptions.ShaderOptimizationLevel));
-    mCompiler.setVerbose(IG_LOGGER.verbosity() == L_DEBUG);
+    mCompiler = std::make_unique<ScriptCompiler>(compilerDevice);
+
+    mCompiler->setOptimizationLevel(std::min<size_t>(3, mOptions.ShaderOptimizationLevel));
+    mCompiler->setVerbose(IG_LOGGER.verbosity() == L_DEBUG);
 
     // Check configuration
     if (!mOptions.Target.isValid())
@@ -108,17 +125,19 @@ Runtime::Runtime(const RuntimeOptions& opts)
     // Load standard library if necessary
     if (!mOptions.ScriptDir.empty()) {
         IG_LOG(L_INFO) << "Loading standard library from " << mOptions.ScriptDir << std::endl;
-        mCompiler.loadStdLibFromDirectory(mOptions.ScriptDir);
+        mCompiler->loadStdLibFromDirectory(mOptions.ScriptDir);
     }
 
-    Device::SetupSettings settings;
+    IRenderDevice::SetupSettings settings;
     settings.target        = mOptions.Target;
     settings.AcquireStats  = mOptions.AcquireStats;
     settings.DebugTrace    = mOptions.DebugTrace;
     settings.IsInteractive = mOptions.IsInteractive;
 
     IG_LOG(L_DEBUG) << "Init device" << std::endl;
-    mDevice = std::make_unique<Device>(settings);
+    mDevice = std::unique_ptr<IRenderDevice>{ interface->createRenderDevice(settings) };
+    if (mDevice == nullptr)
+        throw std::runtime_error("Could not creater render interface from requested device");
 }
 
 Runtime::~Runtime()
@@ -213,7 +232,7 @@ bool Runtime::load(const Path& path, const Scene* scene)
     lopts.Denoiser          = mOptions.Denoiser;
     lopts.Denoiser.Enabled  = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
     lopts.Glare             = mOptions.Glare;
-    lopts.Compiler          = &mCompiler;
+    lopts.Compiler          = mCompiler.get();
     lopts.Device            = mDevice.get();
 
     mHasSceneParameters = !scene->parameters().empty();
@@ -329,7 +348,7 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
     if (!lastVariant)
         ignoreDenoiser = true;
 
-    Device::RenderSettings settings;
+    IRenderDevice::RenderSettings settings;
     settings.rays      = nullptr; // No artificial ray streams
     settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser;
     settings.spi       = info.GetSPI(mSamplesPerIteration);
@@ -389,7 +408,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
 
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
-    Device::RenderSettings settings;
+    IRenderDevice::RenderSettings settings;
     settings.rays      = rays.data();
     settings.denoise   = false;
     settings.spi       = info.GetSPI(mSamplesPerIteration);
@@ -477,7 +496,7 @@ static void dumpRegistries(std::ostream& stream, const TechniqueVariantBase<void
 
 bool Runtime::setupScene()
 {
-    Device::SceneSettings settings;
+    IRenderDevice::SceneSettings settings;
     settings.database            = &mDatabase;
     settings.aov_map             = &mTechniqueInfo.EnabledAOVs;
     settings.resource_map        = &mResourceMap;
@@ -617,12 +636,12 @@ void* Runtime::compileShader(const std::string& src, const std::string& func, co
     if (mOptions.DumpShader)
         dumpShader(name + ".art", src);
 
-    const std::string full_shader = mCompiler.prepare(src);
+    const std::string full_shader = mCompiler->prepare(src);
 
     if (mOptions.DumpShaderFull)
         dumpShader(name + "_full.art", full_shader);
 
-    return mCompiler.compile(full_shader, func);
+    return mCompiler->compile(full_shader, func);
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)

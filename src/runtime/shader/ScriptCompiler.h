@@ -5,9 +5,11 @@
 #include <mutex>
 
 namespace IG {
+class ICompilerDevice;
+
 class IG_LIB ScriptCompiler {
 public:
-    ScriptCompiler();
+    explicit ScriptCompiler(const std::shared_ptr<ICompilerDevice>& compiler);
     ~ScriptCompiler();
 
     inline void setOptimizationLevel(size_t l) { mOptimizationLevel = l; }
@@ -21,6 +23,8 @@ public:
     void loadStdLibFromDirectory(const Path& dir);
 
 private:
+    std::shared_ptr<ICompilerDevice> mCompiler;
+
     std::string mStdLibOverride;
     size_t mOptimizationLevel;
     bool mVerbose;

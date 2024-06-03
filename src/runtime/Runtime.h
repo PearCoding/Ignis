@@ -4,7 +4,8 @@
 #include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "camera/CameraOrientation.h"
-#include "device/Device.h"
+#include "device/ICompilerDevice.h"
+#include "device/IRenderDevice.h"
 #include "loader/Loader.h"
 #include "shader/ScriptCompiler.h"
 #include "table/SceneDatabase.h"
@@ -14,7 +15,7 @@ namespace IG {
 struct LoaderOptions;
 class Scene;
 
-using AOVAccessor = Device::AOVAccessor;
+using AOVAccessor = IRenderDevice::AOVAccessor;
 
 class IG_LIB Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
@@ -178,9 +179,9 @@ private:
 
     SceneDatabase mDatabase;
     ParameterSet mGlobalRegistry;
-    ScriptCompiler mCompiler;
 
-    std::unique_ptr<Device> mDevice;
+    std::unique_ptr<ScriptCompiler> mCompiler;
+    std::unique_ptr<IRenderDevice> mDevice;
 
     size_t mSamplesPerIteration;
 

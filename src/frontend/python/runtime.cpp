@@ -137,8 +137,8 @@ void runtime_module(nb::module_& m)
         .def_prop_rw("Device", &Target::device, &Target::setDevice)
         .def_prop_rw("VectorWidth", &Target::vectorWidth, &Target::setVectorWidth)
         .def_prop_rw("ThreadCount", &Target::threadCount, &Target::setThreadCount)
-        .def("toString", &Target::toString)
-        .def("__str__", &Target::toString)
+        .def("toString", [](const Target& t) { return t.toString(); })
+        .def("__str__", [](const Target& t) { return t.toString(); })
         .def_static("makeGeneric", &Target::makeGeneric)
         .def_static("makeSingle", &Target::makeSingle)
         .def_static("makeCPU", nb::overload_cast<size_t, size_t>(&Target::makeCPU))
@@ -183,16 +183,12 @@ void runtime_module(nb::module_& m)
             return nb::ndarray<nb::numpy, float, nb::shape<nb::any, 3>>(r.getFramebufferForHost({}).Data, 2, shape);
         })
         .def("reset", &Runtime::reset)
-        .def(
-            "getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
+        .def("getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
-                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape);
-            },
-            nb::arg("aov") = "")
-        .def(
-            "getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
+                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape); }, nb::arg("aov") = "")
+        .def("getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
@@ -217,9 +213,7 @@ void runtime_module(nb::module_& m)
                     }
                 }
 
-                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId);
-            },
-            nb::arg("aov") = "")
+                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId); }, nb::arg("aov") = "")
         .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> output) {
             // TODO: Add device specific access!
             TonemapSettings settings;
@@ -237,8 +231,7 @@ void runtime_module(nb::module_& m)
                 throw nb::buffer_error("Incompatible buffer: Buffer has not the correct shape matching the framebuffer size");
 
             // TODO: Check stride?
-            r.tonemap((uint32*)output.data(), settings);
-        })
+            r.tonemap((uint32*)output.data(), settings); })
         .def("setParameter", nb::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", nb::overload_cast<const std::string&, float>(&Runtime::setParameter))
         .def("setParameter", nb::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
@@ -308,15 +301,12 @@ void runtime_module(nb::module_& m)
                 return Image::save(path, (const float*)b.data(), width, height, 3);
             },
             "Save an OpenEXR image to the filesystem")
-        .def(
-            "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> b) {
+        .def("saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);
                 size_t height = b.shape(0);
 
                 if (width == 0 || height == 0)
                     throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");
 
-                return Image::save(path, (const float*)b.data(), width, height, 1);
-            },
-            "Save an OpenEXR grayscale image to the filesystem");
+                return Image::save(path, (const float*)b.data(), width, height, 1); }, "Save an OpenEXR grayscale image to the filesystem");
 }

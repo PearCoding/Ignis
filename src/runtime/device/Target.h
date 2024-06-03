@@ -32,6 +32,7 @@ public:
 
     [[nodiscard]] inline GPUArchitecture gpuArchitecture() const { return mGPUArchitecture; }
     [[nodiscard]] inline CPUArchitecture cpuArchitecture() const { return mCPUArchitecture; }
+    [[nodiscard]] inline TargetArchitecture architecture() const { return isCPU() ? TargetArchitecture{ cpuArchitecture() } : TargetArchitecture{ gpuArchitecture() }; }
 
     [[nodiscard]] inline size_t device() const { return mDevice; }
     inline void setDevice(size_t d) { mDevice = d; }
@@ -55,6 +56,10 @@ public:
 
     [[nodiscard]] static CPUArchitecture getCPUArchitectureFromString(const std::string& str);
     [[nodiscard]] static GPUArchitecture getGPUArchitectureFromString(const std::string& str);
+
+    [[nodiscard]] static std::string_view toString(CPUArchitecture arch);
+    [[nodiscard]] static std::string_view toString(GPUArchitecture arch);
+    [[nodiscard]] static std::string_view toString(TargetArchitecture arch);
 
     [[nodiscard]] static std::vector<std::string> getAvailableCPUArchitectureNames();
     [[nodiscard]] static std::vector<std::string> getAvailableGPUArchitectureNames();

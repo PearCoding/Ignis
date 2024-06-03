@@ -6,12 +6,14 @@
 
 namespace IG {
 
-class IDeviceInterface {
+class IG_LIB IDeviceInterface {
 public:
-    virtual Build::Version getVersion() const                                               = 0;
-    virtual TargetArchitecture getArchitecture() const                                      = 0;
-    virtual IRenderDevice* createRenderDevice(const IRenderDevice::SetupSettings& settings) = 0;
-    virtual ICompilerDevice* createCompilerDevice()                                         = 0;
+    virtual ~IDeviceInterface() = default;
+
+    [[nodiscard]] virtual Build::Version getVersion() const                                                     = 0;
+    [[nodiscard]] virtual TargetArchitecture getArchitecture() const                                            = 0;
+    [[nodiscard]] virtual IRenderDevice* createRenderDevice(const IRenderDevice::SetupSettings& settings) const = 0;
+    [[nodiscard]] virtual ICompilerDevice* createCompilerDevice() const                                         = 0;
 };
 
 } // namespace IG
