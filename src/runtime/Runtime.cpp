@@ -134,7 +134,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
     settings.DebugTrace    = mOptions.DebugTrace;
     settings.IsInteractive = mOptions.IsInteractive;
 
-    IG_LOG(L_DEBUG) << "Init device" << std::endl;
+    IG_LOG(L_DEBUG) << "Init device"  << std::endl;
     mDevice = std::unique_ptr<IRenderDevice>{ interface->createRenderDevice(settings) };
     if (mDevice == nullptr)
         throw std::runtime_error("Could not creater render interface from requested device");

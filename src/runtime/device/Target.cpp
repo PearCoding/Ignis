@@ -1,4 +1,5 @@
 #include "Target.h"
+#include "DeviceManager.h"
 #include "StringUtils.h"
 
 #if defined(IG_OS_WINDOWS)
@@ -344,26 +345,17 @@ Target Target::pickCPU()
 
 Target Target::pickGPU(size_t device)
 {
-#ifdef AnyDSL_runtime_HAS_CUDA_SUPPORT
-    bool hasNvidiaSupport = true;
-#else
-    bool hasNvidiaSupport = false;
-#endif
-
-#ifdef AnyDSL_runtime_HAS_HSA_SUPPORT
-    bool hasAMDSupport = true;
-#else
-    bool hasAMDSupport = false;
-#endif
-
-    // TODO: Runtime check?
-
-    if (hasNvidiaSupport)
-        return makeGPU(GPUArchitecture::Nvidia, device);
-    else if (hasAMDSupport)
-        return makeGPU(GPUArchitecture::AMD_HSA, device);
-    else
+    if (!DeviceManager::instance().init())
         return makeGPU(GPUArchitecture::Unknown, device);
+
+    // Return first non-cpu
+    for (const auto arch : DeviceManager::instance().availableDevices()) {
+        if (std::holds_alternative<GPUArchitecture>(arch))
+            return makeGPU(std::get<GPUArchitecture>(arch), device);
+    }
+
+    // Nothing available
+    return makeGPU(GPUArchitecture::Unknown, device);
 }
 
 Target Target::pickBest()

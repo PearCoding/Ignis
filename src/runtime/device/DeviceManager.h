@@ -17,7 +17,7 @@ public:
     bool unload(const TargetArchitecture& target);
     bool unloadAll();
 
-    [[nodiscard]] std::vector<TargetArchitecture> availableDevices() const;
+    [[nodiscard]] std::unordered_set<TargetArchitecture> availableDevices() const;
 
     static DeviceManager& instance();
 

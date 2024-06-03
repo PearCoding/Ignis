@@ -152,13 +152,13 @@ bool DeviceManager::unloadAll()
     return true;
 }
 
-std::vector<TargetArchitecture> DeviceManager::availableDevices() const
+std::unordered_set<TargetArchitecture> DeviceManager::availableDevices() const
 {
-    std::vector<TargetArchitecture> list;
+    std::unordered_set<TargetArchitecture> list;
     list.reserve(mAvailableDevices.size());
 
     for (const auto& pair : mAvailableDevices)
-        list.push_back(pair.first);
+        list.insert(pair.first);
 
     return list;
 }
