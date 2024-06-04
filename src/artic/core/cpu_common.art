@@ -62,6 +62,13 @@ fn @vectorized_range(body: fn (i32, i32) -> ()) = @|vector_width: i32, a: i32, b
     }
 };
 
+fn @vectorize_safe(vector_length: i32, body: fn(i32) -> ()) = 
+    if ?vector_length && vector_length == 1 {
+        @body(0)
+    } else {
+        @vectorize(vector_length, body)
+    };
+
 /// Will reduce based on the given operator
 fn @cpu_reduce[T](n: i32, elem: fn (i32) -> T, op: fn (T, T) -> T) -> T {
     if ?n && n <= 0 { return(undef[T]()) }

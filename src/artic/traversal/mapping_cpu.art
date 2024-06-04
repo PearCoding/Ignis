@@ -1,16 +1,37 @@
 // BVH layouts ---------------------------------------------------------------------
 
-struct Node4 {
-    bounds: [[f32 * 4] * 6],
-    child:   [i32 * 4],
-    pad:     [i32 * 4]
-}
-
-struct Node8 {
-    bounds: [[f32 * 8] * 6],
-    child:   [i32 * 8],
-    pad:     [i32 * 8]
-}
+fn @make_cpu_node2(j: i32, nodes: &[Node2]) = Node {
+    bbox = @ |i| {
+        make_bbox(make_vec3(nodes(j).bounds(6 * i + 0), nodes(j).bounds(6 * i + 2), nodes(j).bounds(6 * i + 4)),
+                  make_vec3(nodes(j).bounds(6 * i + 1), nodes(j).bounds(6 * i + 3), nodes(j).bounds(6 * i + 5)))
+    },
+    ordered_bbox = @ |i, octant| {
+        let ox = (octant & 1);
+        let oy = (octant & 2) >> 1;
+        let oz = (octant & 4) >> 2;
+        make_bbox(make_vec3(nodes(j).bounds(6 * i + 1 - ox), nodes(j).bounds(6 * i + 3 - oy), nodes(j).bounds(6 * i + 5 - oz)),
+                  make_vec3(nodes(j).bounds(6 * i + 0 + ox), nodes(j).bounds(6 * i + 2 + oy), nodes(j).bounds(6 * i + 4 + oz)))
+        // let ptr = &nodes(j).bounds as &[f32];
+        // let align_ptr = @ |k: i32| rv_align(&ptr(k/4) as &i8, 16) as &[f32];
+        // let get_f = @ |k: i32| ptr(k/4)
+        // let ox = (octant & 1) << 2;
+        // let oy = (octant & 2) << 1;
+        // let oz = (octant & 4);
+        // make_bbox(
+        //     make_vec3(
+        //         get_f(4  - ox)(i),
+        //         get_f(12 - oy)(i),
+        //         get_f(20 - oz)(i)
+        //     ),
+        //     make_vec3(
+        //         get_f(0  + ox)(i),
+        //         get_f(8  + oy)(i),
+        //         get_f(16 + oz)(i)
+        //     )
+        // )
+    },
+    child = @ |i| nodes(j).child(i)
+};
 
 fn @make_cpu_node4(j: i32, nodes: &[Node4]) = Node {
     bbox = @ |i| {
@@ -161,7 +182,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
     };
 
     // Traversal loop
-    vectorize(bvh.arity, |i| {
+    vectorize_safe(bvh.arity, |i| {
         while true {
             let restart = continue;
             let exit    = break;
@@ -228,7 +249,7 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                 let prim = bvh.prim(prim_id++);
                 
                 // Intersect primitives
-                vectorize(prim.size, |j| {
+                vectorize_safe(prim.size, |j| {
                     if !prim.is_valid(j) { return() }
                     if let Option[Hit]::Some(prim_hit) = prim.intersect(j, ray) { 
                         if any_hit {
@@ -504,7 +525,7 @@ fn @cpu_traverse( min_max: MinMax
                 , any_hit: bool
                 ) -> () {
     for i in range(0, num_packets) {
-        vectorize(packet_size, |j| {
+        vectorize_safe(packet_size, |j| {
             let ray = rays(i, j);
             hits(i, j, cpu_traverse_helper(ray, packet_size, min_max, scene, any_hit, 1 /*root*/, init_hits(i, j, ray)))
         });

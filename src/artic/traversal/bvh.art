@@ -70,3 +70,21 @@ fn @make_entity_leaf(bbox: BBox, entity_id: i32, shape_id: i32, mat_id: i32, use
     local     = local,
     flags     = flags
 };
+
+struct Node2 {
+    bounds: [f32 * 12], // lo_x, hi_x, lo_y, hi_y, ...
+    child:  [i32 * 2],
+    pad:    [i32 * 2]
+}
+
+struct Node4 {
+    bounds: [[f32 * 4] * 6],
+    child:   [i32 * 4],
+    pad:     [i32 * 4]
+}
+
+struct Node8 {
+    bounds: [[f32 * 8] * 6],
+    child:   [i32 * 8],
+    pad:     [i32 * 8]
+}

@@ -1,11 +1,5 @@
 // BVH layout ----------------------------------------------------------------------
 
-struct Node2 {
-    bounds: [f32 * 12], // lo_x, hi_x, lo_y, hi_y, ...
-    child:  [i32 * 2],
-    pad:    [i32 * 2]
-}
-
 fn @make_gpu_node(j: i32, nodes: &[Node2], accessor: DeviceBufferAccessor) -> Node {
     let d = accessor(&nodes(j) as &[f32], 0);
     
@@ -192,7 +186,6 @@ fn @gpu_traverse_scene( min_max: MinMax
                       , any_hit: bool
                       , root: i32
                       ) -> Hit {
-
     let bvh = scene.bvh;
     fn @scene_handle(leaf_ref: NodeRef, ray2: &mut Ray, hit: &mut Hit) -> bool {
         let mut ref_id = !leaf_ref.node;
