@@ -1,0 +1,70 @@
+{
+    "LOCATION": "",
+    "SKIP_VC_ENV": false,
+    "GIT": {
+        "BINARY": "git"
+    },
+    "CMAKE": {
+        "BINARY": "cmake",
+        "PARALLEL_JOBS": 0, // <- Automatic
+        "EXTRA_ARGS": ["-GNinja", "-UCMAKE_CONFIGURATION_TYPES"]
+    },
+    "LLVM" : {
+        "ENABLED": true,
+        "BUILD_TYPE": "Release",
+        "BRANCH": "llvmorg-16.0.6",
+        "GIT": "https://github.com/llvm/llvm-project.git",
+        "TARGETS": "AMDGPU;NVPTX;X86",
+        "EXTRA_ARGS": []
+    },
+    "ZLIB": {
+        // Only on Windows
+        "ENABLED": true,
+        "BUILD_TYPE": "Release",
+        "URL": "https://zlib.net/current/zlib.tar.gz"
+    },
+    "HALF": {
+        // Only on Windows
+        "ENABLED": true,
+        "URL": "https://sourceforge.net/projects/half/files/latest/download"
+    },
+    "THORIN": {
+        "ENABLED": true,
+        "BUILD_TYPE": "Release",
+        "BRANCH": "master",
+        "GIT": "https://github.com/AnyDSL/thorin.git"
+    },
+    "ARTIC": {
+        "ENABLED": true,
+        "BUILD_TYPE": "Release",
+        "BRANCH": "master",
+        "GIT": "https://github.com/AnyDSL/artic.git"
+    },
+    "RUNTIME": {
+        "ENABLED": true,
+        "BUILD_TYPE": "Release",
+        "BRANCH": "master",
+        "GIT": "https://github.com/AnyDSL/runtime.git",
+        "DEVICES": ["cpu", "cuda", "amd_hsa"]
+    },
+    "TBB": {
+        // Only on Windows
+        "ENABLED": true,
+        "URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.12.0/oneapi-tbb-2021.12.0-win.zip"
+    },
+    "SDL2": {
+        // Only on Windows
+        "ENABLED": true,
+        "URL": "https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-devel-2.30.3-VC.zip"
+    },
+    "OIDN": {
+        // Only on Windows
+        "ENABLED": true,
+        "URL": "https://github.com/OpenImageDenoise/oidn/releases/download/v2.2.2/oidn-2.2.2.x64.windows.zip"
+    },
+    "IGNIS": {
+        "ENABLED": true,
+        "BUILD_DIR": "build/Release",
+        "BUILD_TYPE": "Release"
+    }
+}

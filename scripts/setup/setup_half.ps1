@@ -1,10 +1,15 @@
 $CURRENT=Get-Location
 
+if($IsLinux) {
+    Write-Output "Using system libraries for half"
+    return
+}
+
 cd "tmp"
 
 # Get zip
 if (!(Test-Path "half.zip")) {
-    Invoke-WebRequest -UserAgent "Wget" -Uri "$($Config.HALF_URL)" -OutFile "half.zip"
+    Invoke-WebRequest -UserAgent "Wget" -Uri $Config.HALF.URL -OutFile "half.zip"
     Expand-Archive half.zip -DestinationPath half > $null
 }
 

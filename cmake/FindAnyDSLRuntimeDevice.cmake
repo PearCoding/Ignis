@@ -28,7 +28,9 @@ function(_AnyDSLRuntimeDevice_FIND_LIB setname)
     )
 endfunction()
 
-SET(AnyDSLRuntimeDevice_FOUND FALSE)
+set(AnyDSLRuntimeDevice_FOUND FALSE)
+set(AnyDSLRuntimeDevice_INCLUDE_DIRS )
+set(AnyDSLRuntimeDevice_LIBRARIES )
 
 foreach(component ${AnyDSLRuntimeDevice_FIND_COMPONENTS})
     if(NOT ${component} IN_LIST _AnyDSLRuntimeDevice_COMPONENTS)
@@ -40,10 +42,17 @@ foreach(component ${AnyDSLRuntimeDevice_FIND_COMPONENTS})
             ENV ANYDSL_HOME
         PATH_SUFFIXES include/ local/include/
         PATHS ${_def_search_paths}
-        )
+    )
 
     get_filename_component(_AnyDSLRuntimeDevice_${component}_ROOT_DIR "${AnyDSLRuntimeDevice_${component}_INCLUDE_DIR}" DIRECTORY)
-    set(AnyDSLRuntimeDevice_${component}_INCLUDE_DIRS "${AnyDSLRuntimeDevice_${component}_INCLUDE_DIR}")
+
+    find_path(AnyDSLRuntimeDevice_${component}_INCLUDE_CONFIG_DIR anydsl_runtime_config.h
+        PATH_SUFFIXES include/ local/include/
+        PATHS ${_def_search_paths} ${_AnyDSLRuntimeDevice_${component}_ROOT_DIR}/build
+    )
+
+    set(AnyDSLRuntimeDevice_${component}_INCLUDE_DIRS "${AnyDSLRuntimeDevice_${component}_INCLUDE_DIR}" "${AnyDSLRuntimeDevice_${component}_INCLUDE_CONFIG_DIR}")
+    set(AnyDSLRuntimeDevice_INCLUDE_DIRS ${AnyDSLRuntimeDevice_INCLUDE_DIRS} ${AnyDSLRuntimeDevice_${component}_INCLUDE_DIRS})
 
     _AnyDSLRuntimeDevice_FIND_LIB(AnyDSLRuntimeDevice_${component}_LIBRARY_RELEASE runtime)
     _AnyDSLRuntimeDevice_FIND_LIB(AnyDSLRuntimeDevice_${component}_LIBRARY_JIT_RELEASE runtime)
@@ -81,7 +90,7 @@ foreach(component ${AnyDSLRuntimeDevice_FIND_COMPONENTS})
     mark_as_advanced(
         AnyDSLRuntimeDevice_${component}_LIBRARY_RELEASE AnyDSLRuntimeDevice_${component}_LIBRARY_DEBUG 
         AnyDSLRuntimeDevice_${component}_LIBRARY_JIT_RELEASE AnyDSLRuntimeDevice_${component}_LIBRARY_JIT_DEBUG 
-        AnyDSLRuntimeDevice_${component}_INCLUDE_DIRS)
+        AnyDSLRuntimeDevice_${component}_INCLUDE_DIR)
 endforeach(component)
 
 include(FindPackageHandleStandardArgs)

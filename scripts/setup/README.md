@@ -1,4 +1,4 @@
-# Automatic Windows Setup Script
+# Automatic Setup Script
 
 The ``setup.ps1`` script will download AnyDSL and other dependencies, build them and preconfigure Ignis for further development.
 
