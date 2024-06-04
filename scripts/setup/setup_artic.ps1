@@ -26,6 +26,7 @@ $CMAKE_Args += $Config.CMAKE.EXTRA_ARGS
 $CMAKE_Args += $Config.ARTIC.EXTRA_ARGS
 $CMAKE_Args += '-DCMAKE_BUILD_TYPE:STRING=' + $BUILD_TYPE
 $CMAKE_Args += '-DThorin_DIR:PATH=' + "$THORIN/build/share/anydsl/cmake"
+$CMAKE_Args += '-DBUILD_SHARED_LIBS:BOOL=OFF'
 $CMAKE_Args += '-DBUILD_TESTING:BOOL=OFF'
 
 & $CMAKE_BIN -S . -B build $CMAKE_Args 

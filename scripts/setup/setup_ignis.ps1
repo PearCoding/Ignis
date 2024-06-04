@@ -62,11 +62,11 @@ if ($LASTEXITCODE -ne 0) {
 # Make sure all the dlls are in the correct place (for Release at least)
 If(!$Config.CMAKE.EXTRA_ARGS.Contains("-GNinja")) { # TODO: What about other single configuration generators?
     $OUTPUT_DIR="$BUILD_DIR\bin"
-    if(!(Test-Path "$OUTPUT_DIR\$($Config.IGNIS_BUILD_TYPE)")) {
-        mkdir "$OUTPUT_DIR\$($Config.IGNIS_BUILD_TYPE)" > $null
+    if(!(Test-Path "$OUTPUT_DIR\$($Config.IGNIS.BUILD_TYPE)")) {
+        mkdir "$OUTPUT_DIR\$($Config.IGNIS.BUILD_TYPE)" > $null
     }
 
-    Copy-Item "$BIN_ROOT\*" "$OUTPUT_DIR\$($Config.IGNIS_BUILD_TYPE)" > $null
+    Copy-Item "$BIN_ROOT\*" "$OUTPUT_DIR\$($Config.IGNIS.BUILD_TYPE)" > $null
 } Else {
     $OUTPUT_DIR="$BUILD_DIR\bin"
     if(!(Test-Path "$OUTPUT_DIR")) {

@@ -22,12 +22,9 @@ If (!(Test-Path "$TBB_ROOT")) {
     Copy-Item -Recurse -Path "oneapi*\redist" -Destination "$TBB_ROOT\redist" > $null
 }
 
-If ($Config.TBB.BUILD_TYPE -eq "Release") {
-    Copy-Item -Path "oneapi*\redist\intel64\vc14\tbb12.dll" -Destination "$BIN_ROOT\" > $null
-    Copy-Item -Path "oneapi*\redist\intel64\vc14\tbbmalloc.dll" -Destination "$BIN_ROOT\" > $null
-} else {
-    Copy-Item -Path "oneapi*\redist\intel64\vc14\tbb12_debug.dll" -Destination "$BIN_ROOT\" > $null
-    Copy-Item -Path "oneapi*\redist\intel64\vc14\tbbmalloc_debug.dll" -Destination "$BIN_ROOT\" > $null
-}
+Copy-Item -Path "oneapi*\redist\intel64\vc14\tbb12.dll" -Destination "$BIN_ROOT\" > $null
+Copy-Item -Path "oneapi*\redist\intel64\vc14\tbbmalloc.dll" -Destination "$BIN_ROOT\" > $null
+Copy-Item -Path "oneapi*\redist\intel64\vc14\tbb12_debug.dll" -Destination "$BIN_ROOT\" > $null
+Copy-Item -Path "oneapi*\redist\intel64\vc14\tbbmalloc_debug.dll" -Destination "$BIN_ROOT\" > $null
 
 Set-Location $CURRENT
