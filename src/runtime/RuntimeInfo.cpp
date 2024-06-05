@@ -99,10 +99,13 @@ Path RuntimeInfo::dataPath()
     wchar_t* path = nullptr;
     HRESULT res   = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path);
 
-    if (SUCCEEDED(res))
-        return ((Path)path) / "Ignis";
-    else
+    if (SUCCEEDED(res)) {
+        Path full_path = path;
+        CoTaskMemFree(static_cast<PWSTR>(path));
+        return full_path / "Ignis";
+    } else {
         return {};
+    }
 #endif
 }
 
