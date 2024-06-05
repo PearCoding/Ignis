@@ -13,6 +13,7 @@
 #elif defined(IG_OS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <shlobj_core.h>
 #else
 #error DLL implementation missing
 #endif
@@ -85,13 +86,29 @@ Path RuntimeInfo::modulePath()
 #endif
 }
 
+Path RuntimeInfo::dataPath()
+{
+#if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
+    // TODO: Better path?
+    const auto dir = executablePath();
+    if (dir.empty())
+        return modulePath().parent_path();
+    else
+        return dir.parent_path();
+#elif defined(IG_OS_WINDOWS)
+    wchar_t* path = nullptr;
+    HRESULT res   = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path);
+
+    if (SUCCEEDED(res))
+        return ((Path)path) / "Ignis";
+    else
+        return {};
+#endif
+}
+
 Path RuntimeInfo::cacheDirectory()
 {
-    auto exe = modulePath();
-    if (exe.empty())
-        exe = executablePath();
-
-    const auto dir = exe.parent_path();
+    const auto dir = dataPath();
 
     if (dir.empty())
         return {};
@@ -99,17 +116,15 @@ Path RuntimeInfo::cacheDirectory()
     return dir / "cache";
 }
 
-size_t RuntimeInfo::cacheDirectorySize()
+size_t RuntimeInfo::sizeOfDirectory(const Path& dir)
 {
-    const auto cacheDir = cacheDirectory();
-
-    if (!std::filesystem::exists(cacheDir))
+    if (!std::filesystem::exists(dir))
         return 0;
 
     // Non-recursive as the cache directory should be flat
     size_t size = 0;
     for (std::filesystem::directory_entry const& entry :
-         std::filesystem::directory_iterator(cacheDir)) {
+         std::filesystem::directory_iterator(dir)) {
         if (entry.is_regular_file())
             size += entry.file_size();
     }

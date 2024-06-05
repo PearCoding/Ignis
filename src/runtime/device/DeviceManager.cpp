@@ -77,9 +77,12 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
     }
 
     if (!skipSystem) {
-        const auto exePath = RuntimeInfo::executablePath();
-        const auto libPath = exePath.parent_path().parent_path() / "lib";
-        paths.insert(libPath);
+        auto exePath = RuntimeInfo::modulePath();
+        if (exePath.empty())
+            exePath = RuntimeInfo::executablePath();
+
+        paths.insert(exePath.parent_path().parent_path() / "lib");
+        paths.insert(exePath.parent_path().parent_path() / "bin");
     }
 
     if (!dir.empty())

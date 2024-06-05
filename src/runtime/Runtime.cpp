@@ -134,7 +134,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
     settings.DebugTrace    = mOptions.DebugTrace;
     settings.IsInteractive = mOptions.IsInteractive;
 
-    IG_LOG(L_DEBUG) << "Init device"  << std::endl;
+    IG_LOG(L_DEBUG) << "Init device" << std::endl;
     mDevice = std::unique_ptr<IRenderDevice>{ interface->createRenderDevice(settings) };
     if (mDevice == nullptr)
         throw std::runtime_error("Could not creater render interface from requested device");
@@ -147,12 +147,24 @@ Runtime::~Runtime()
 void Runtime::checkCacheDirectory()
 {
     constexpr size_t WarnSize = 1024 * 1024 * 1024 * 10ULL; // 10GB
-    const size_t size         = RuntimeInfo::cacheDirectorySize();
-    const auto dir            = RuntimeInfo::cacheDirectory();
 
+    auto dir = RuntimeInfo::cacheDirectory();
     if (dir.empty())
         return;
 
+    try {
+        std::filesystem::create_directories(dir); // Make sure this directory exists
+    } catch (const std::filesystem::filesystem_error&) {
+        dir = std::filesystem::temp_directory_path() / dir.filename();
+        IG_LOG(L_WARNING) << "Could not use " << RuntimeInfo::cacheDirectory() << " as jit cache. Trying to use " << dir << " instead." << std::endl;
+        try {
+            std::filesystem::create_directories(dir);
+        } catch (const std::filesystem::filesystem_error&) {
+            IG_LOG(L_ERROR) << "Could not use " << dir << " as jit cache. Proceeding might fail." << std::endl;
+        }
+    }
+
+    const size_t size = RuntimeInfo::sizeOfDirectory(dir);
     if (size >= WarnSize)
         IG_LOG(L_WARNING) << "Cache directory " << dir << " occupies " << FormatMemory(size) << " of disk space and exceeds " << FormatMemory(WarnSize) << " warn limit " << std::endl;
     else
