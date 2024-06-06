@@ -1,9 +1,6 @@
 $CURRENT = Get-Location
 
 $BUILD_DIR = $Config.IGNIS.BUILD_DIR
-If (!(Test-Path "$BUILD_DIR")) {
-    mkdir "$BUILD_DIR" > $null
-}
 
 Set-Location $IGNIS_ROOT
 

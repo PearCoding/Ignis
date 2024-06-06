@@ -71,7 +71,7 @@ function CompileRuntime {
     $CMAKE_Args += '-DCMAKE_REQUIRE_FIND_PACKAGE_LLVM:BOOL=ON' # We really want JIT
     $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_OpenCL:BOOL=ON' # Not supported
 
-    if (($Device -eq 'default') || ($Device -eq 'cuda')) {
+    if (($Device -eq 'default') -or ($Device -eq 'cuda')) {
         If ($HasCuda) {
             $CMAKE_Args += '-DCUDAToolkit_NVVM_LIBRARY:PATH=' + $CUDAToolkit_NVVM_LIBRARY
         }
@@ -87,7 +87,7 @@ function CompileRuntime {
         $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_CUDAToolkit:BOOL=ON'
     }
 
-    if (($Device -eq "amd_hsa") || ($Device -eq "amd_pal")) {
+    if (($Device -eq "amd_hsa") -or ($Device -eq "amd_pal")) {
         Write-Warning 'Support for AMD GPUs over this setup is not supported yet. Sorry :/'
         return
     }
