@@ -93,8 +93,7 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
         for (auto& device_path : getDevicesFromPath(path)) {
             IG_LOG(L_DEBUG) << "Adding device " << device_path << std::endl;
 
-            if (!addModule(device_path))
-                return false;
+            addModule(device_path); // Ignore output
         }
     }
 
@@ -201,7 +200,8 @@ bool DeviceManager::addModule(const Path& path)
         library.unload();
 
     } catch (const std::exception& e) {
-        IG_LOG(L_ERROR) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl;
+        IG_LOG(L_DEBUG) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl
+                        << "Ignoring it." << std::endl;
         return false;
     }
     return true;
