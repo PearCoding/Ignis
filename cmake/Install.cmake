@@ -3,8 +3,8 @@ include(CMakePackageConfigHelpers)
 
 # CPack stuff
 # set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
-# set(CMAKE_INSTALL_SYSTEM_RUNTIME_COMPONENT runtime)
-# include(InstallRequiredSystemLibraries)
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_COMPONENT runtime)
+include(InstallRequiredSystemLibraries)
 
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${Ignis_DESCRIPTION}")
 set(CPACK_PACKAGE_VENDOR "${Ignis_VENDOR}")
