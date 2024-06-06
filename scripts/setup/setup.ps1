@@ -76,47 +76,47 @@ $TMP_ROOT="$DEPS_ROOT\tmp"
 
 # Setup dev environment
 try {
-    if($IsWindows -and !(GetPD($Config.SKIP_VC_ENV, $false))) {
+    if($IsWindows -and (!(GetPD $Config.SKIP_VC_ENV $false))) {
         & $PSScriptRoot\vc_dev_env.ps1
     }
 
-    If($Config.ZLIB -and (GetPD($Config.ZLIB.ENABLED, $true))) {
+    If($Config.ZLIB -and (GetPD $Config.ZLIB.ENABLED $true)){
         & $PSScriptRoot\setup_zlib.ps1
     }
 
-    If($Config.TBB -and (GetPD($Config.TBB.ENABLED, $true))) {
+    If($Config.TBB -and (GetPD $Config.TBB.ENABLED $true)) {
         & $PSScriptRoot\setup_tbb.ps1
     }
 
-    If($Config.HALF -and (GetPD($Config.HALF.ENABLED, $true))) {
+    If($Config.HALF -and (GetPD $Config.HALF.ENABLED $true)) {
         & $PSScriptRoot\setup_half.ps1
     }
 
-    If($Config.LLVM -and (GetPD($Config.LLVM.ENABLED, $true))) {
+    If($Config.LLVM -and (GetPD $Config.LLVM.ENABLED $true)) {
         & $PSScriptRoot\setup_llvm.ps1
     }
 
-    If($Config.THORIN -and (GetPD($Config.THORIN.ENABLED, $true))) {
+    If($Config.THORIN -and (GetPD $Config.THORIN.ENABLED $true)) {
         & $PSScriptRoot\setup_thorin.ps1
     }
 
-    If($Config.ARTIC -and (GetPD($Config.ARTIC.ENABLED, $true))) {
+    If($Config.ARTIC -and (GetPD $Config.ARTIC.ENABLED $true)) {
         & $PSScriptRoot\setup_artic.ps1
     }
 
-    If($Config.RUNTIME -and (GetPD($Config.RUNTIME.ENABLED, $true))) {
+    If($Config.RUNTIME -and (GetPD $Config.RUNTIME.ENABLED $true)) {
         & $PSScriptRoot\setup_runtime.ps1
     }
 
-    If($Config.SDL2 -and (GetPD($Config.SDL2.ENABLED, $true))) {
+    If($Config.SDL2 -and (GetPD $Config.SDL2.ENABLED $true)) {
         & $PSScriptRoot\setup_sdl2.ps1
     }
 
-    If($Config.OIDN -and (GetPD($Config.OIDN.ENABLED, $true))) {
+    If($Config.OIDN -and (GetPD $Config.OIDN.ENABLED $true)) {
         & $PSScriptRoot\setup_oidn.ps1
     }
 
-    if($Config.IGNIS -and (GetPD($Config.IGNIS.ENABLED, $true))) {
+    if($Config.IGNIS -and (GetPD $Config.IGNIS.ENABLED $true)) {
         & $PSScriptRoot\setup_ignis.ps1
     }
 } catch {

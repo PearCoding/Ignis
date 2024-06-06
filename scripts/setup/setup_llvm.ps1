@@ -2,10 +2,20 @@ $CURRENT = Get-Location
 
 # TODO: RV
 
-if ((!(GetPD($Config.LLVM.FORCE, $false))) -and (Test-Path -Path 'llvm-install/bin/lld*')) {
+if ((!(GetPD $Config.LLVM.FORCE $false)) -and (Test-Path -Path 'llvm-install/bin/lld*')) {
     Write-Host "Skipping LLVM as it seems to be already installed. Use LLVM.FORCE=true to proceed with LLVM."
     return
 }
+
+# if (!([string]::IsNullOrEmpty($Config.LLVM.DOWNLOAD_URL))) {
+#     Set-Location "tmp"
+#     if (!(Test-Path -Path 'llvm_install.exe')) {
+#         Invoke-WebRequest -UserAgent "Wget" -Uri $Config.LLVM.DOWNLOAD_URL -OutFile "llvm_install.exe"
+#     }
+#     Start-Process -FilePath .\llvm_install.exe -ArgumentList "/D=$DEPS_ROOT\llvm-install" -Wait
+#     Set-Location $CURRENT
+#     return
+# }
 
 # Ask for permissions first
 $choices = New-Object Collections.ObjectModel.Collection[Management.Automation.Host.ChoiceDescription]
@@ -18,7 +28,7 @@ if ($decision -eq 1) {
     throw "LLVM setup rejected by user"
 }
 
-# Clone or update if necessary
+# Clone or update if necessary 
 If (!(Test-Path -Path "llvm-src")) {
     & $GIT_BIN clone --depth 1 --branch $Config.LLVM.BRANCH $Config.LLVM.GIT llvm-src
 }
