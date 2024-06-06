@@ -48,8 +48,8 @@ foreach($device in $Config.RUNTIME.DEVICES) {
     $runtime_device_dir="$DEPS_ROOT\runtime-$device"
     if (Test-Path -Path "$runtime_device_dir/build/lib/runtime.lib") {
         $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_INCLUDE_DIR:PATH=" + ($runtime_device_dir+"/src").Replace("\", "/")
-        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY_RELEASE:FILEPATH=" + ($runtime_device_dir+"/build/lib/runtime_$($device).lib").Replace("\", "/")
-        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY_JIT_RELEASE:FILEPATH=" + ($runtime_device_dir+"/build/lib/runtime_jit_artic_$($device).lib").Replace("\", "/")
+        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY:FILEPATH=" + ($runtime_device_dir+"/build/bin/runtime_$($device).lib").Replace("\", "/")
+        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY_JIT:FILEPATH=" + ($runtime_device_dir+"/build/bin/runtime_jit_artic_$($device).lib").Replace("\", "/")
     }
 }
 

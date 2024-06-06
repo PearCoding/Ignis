@@ -112,10 +112,12 @@ function CompileRuntime {
 
     # Rename stuff if necessary
     if ($Device -ne 'default') {
-        Copy-Item -Path 'build/bin/runtime.dll' -Destination "build/bin/runtime_$device.dll"
-        Copy-Item -Path 'build/bin/runtime_jit_artic.dll' -Destination "build/bin/runtime_jit_artic_$device.dll"
-        Copy-Item -Path 'build/lib/runtime.lib' -Destination "build/lib/runtime_$device.lib"
-        Copy-Item -Path 'build/lib/runtime_jit_artic.lib' -Destination "build/lib/runtime_jit_artic_$device.lib"
+        RenameDLL -InputDLL 'build/bin/runtime.dll' -OutputDLL "build/bin/runtime_$device.dll"
+        RenameDLL -InputDLL 'build/bin/runtime_jit_artic.dll' -OutputDLL "build/bin/runtime_jit_artic_$device.dll"
+        # Copy-Item -Path 'build/bin/runtime.dll' -Destination "build/bin/runtime_$device.dll"
+        # Copy-Item -Path 'build/bin/runtime_jit_artic.dll' -Destination "build/bin/runtime_jit_artic_$device.dll"
+        # Copy-Item -Path 'build/lib/runtime.lib' -Destination "build/lib/runtime_$device.lib"
+        # Copy-Item -Path 'build/lib/runtime_jit_artic.lib' -Destination "build/lib/runtime_jit_artic_$device.lib"
 
         Copy-Item -Path "build/bin/runtime_$device.dll" -Destination "$BIN_ROOT\" > $null
         Copy-Item -Path "build/bin/runtime_jit_artic_$device.dll" -Destination "$BIN_ROOT\" > $null
