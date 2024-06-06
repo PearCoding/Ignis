@@ -32,11 +32,13 @@ ConsoleLogListener::ConsoleLogListener(bool useAnsi)
     , mUseAnsi(useAnsi)
 {
 #ifdef IG_OS_WINDOWS
-    const auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (handle == INVALID_HANDLE_VALUE)
-        mUseAnsi = false; // Failed
-    if (SetConsoleMode(handle, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0)
-        mUseAnsi = false; // Failed to setup color output
+    if (mUseAnsi) {
+        const auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (handle == INVALID_HANDLE_VALUE)
+            mUseAnsi = false; // Failed
+        if (SetConsoleMode(handle, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0)
+            mUseAnsi = false; // Failed to setup color output
+    }
 #endif
 }
 
