@@ -22,8 +22,8 @@ $choices = New-Object Collections.ObjectModel.Collection[Management.Automation.H
 $choices.Add((New-Object Management.Automation.Host.ChoiceDescription -ArgumentList '&Yes'))
 $choices.Add((New-Object Management.Automation.Host.ChoiceDescription -ArgumentList '&No'))
 $decision = $Host.UI.PromptForChoice("Automatic Ignis Setup",
-                                    "The setup script will download and compile LLVM. This may take some time and will use a significant amount of CPU power. Are you sure you want to proceed?",
-                                    $choices, 0)
+    "The setup script will download and compile LLVM. This may take some time and will use a significant amount of CPU power. Are you sure you want to proceed?",
+    $choices, 0)
 if ($decision -eq 1) {
     throw "LLVM setup rejected by user"
 }

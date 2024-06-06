@@ -5,7 +5,7 @@ $CUDA = $(Get-ChildItem env: | Where-Object { $_.Name -like "CUDA_PATH*" })[0].V
 $CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/").Replace(" ", "` ")
 $ARTIC = "$DEPS_ROOT\artic".Replace("\", "/").Replace(" ", "` ")
 $LLVM = "$DEPS_ROOT\llvm-install".Replace("\", "/").Replace(" ", "` ")
-$TBB="$DEPS_ROOT\tbb".Replace("\", "/")
+$TBB = "$DEPS_ROOT\tbb".Replace("\", "/")
 
 # Check for some possible mistakes beforehand
 
@@ -42,7 +42,8 @@ function CompileRuntime {
 
     if ($Device -eq 'default') {
         $runtime_dir = "runtime"
-    } else {
+    }
+    else {
         $runtime_dir = "runtime-$Device"
     }
 
@@ -50,7 +51,8 @@ function CompileRuntime {
     If (!(Test-Path -Path $runtime_dir)) {
         & $GIT_BIN clone --depth 1 --branch $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT $runtime_dir
         Set-Location $runtime_dir
-    } else {
+    }
+    else {
         Set-Location $runtime_dir
         & $GIT_BIN pull
     }
@@ -72,13 +74,15 @@ function CompileRuntime {
     if (($Device -eq 'default') || ($Device -eq 'cuda')) {
         If ($HasCuda) {
             $CMAKE_Args += '-DCUDAToolkit_NVVM_LIBRARY:PATH=' + $CUDAToolkit_NVVM_LIBRARY
-        } else {
+        }
+        else {
             Write-Warning 'No CUDA support. Proceeding will not build the runtime with Nvidia GPU support'
             if ($Device -ne 'default') {
                 return
             }
         }
-    } else {
+    }
+    else {
         # $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_CUDA:BOOL=ON'
         $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_CUDAToolkit:BOOL=ON'
     }
@@ -86,7 +90,8 @@ function CompileRuntime {
     if (($Device -eq "amd_hsa") || ($Device -eq "amd_pal")) {
         Write-Warning 'Support for AMD GPUs over this setup is not supported yet. Sorry :/'
         return
-    } elseif ($Device -ne 'default') {
+    }
+    elseif ($Device -ne 'default') {
         $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_hsa-runtime64:BOOL=ON'
         $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_pal:BOOL=ON'
     }
@@ -121,7 +126,8 @@ function CompileRuntime {
 
         Copy-Item -Path "build/bin/runtime_$device.dll" -Destination "$BIN_ROOT\" > $null
         Copy-Item -Path "build/bin/runtime_jit_artic_$device.dll" -Destination "$BIN_ROOT\" > $null
-    } else {
+    }
+    else {
         Copy-Item -Path "build/bin/*" -Destination "$BIN_ROOT\" > $null
     }
 

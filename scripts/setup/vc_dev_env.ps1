@@ -1,4 +1,4 @@
-$Arch="amd64"
+$Arch = "amd64"
 
 # A simplified version of the Launch.VsDevShell.ps1
 function LaunchDevShell {
@@ -16,7 +16,8 @@ function LaunchDevShell {
     if (Test-Path $modulePath) {
         try {
             Import-Module $modulePath
-        } catch [System.IO.FileLoadException] {
+        }
+        catch [System.IO.FileLoadException] {
             Write-Verbose "The module has already been imported from a different installation of Visual Studio:"
             (Get-Module Microsoft.VisualStudio.DevShell).Path | Write-Verbose
         }

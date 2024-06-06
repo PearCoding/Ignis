@@ -1,6 +1,6 @@
 $CURRENT = Get-Location
 
-if($IsLinux) {
+if ($IsLinux) {
     Write-Output "Using system libraries for zlib"
     return
 }

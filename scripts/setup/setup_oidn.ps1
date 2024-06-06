@@ -1,7 +1,7 @@
-$CURRENT=Get-Location
+$CURRENT = Get-Location
 
 # TODO: This might be a good idea to support
-if($IsLinux) {
+if ($IsLinux) {
     Write-Output "Using system libraries for OIDN"
     return
 }
@@ -15,12 +15,12 @@ if (!(Test-Path "oidn.zip")) {
 }
 
 # Copy
-$OIDN_ROOT="$DEPS_ROOT/oidn"
+$OIDN_ROOT = "$DEPS_ROOT/oidn"
 If (!(Test-Path "$OIDN_ROOT")) {
     mkdir "$OIDN_ROOT" > $null
 }
 
-$EX_DIR=Get-ChildItem -Path "oidn*" -Directory
+$EX_DIR = Get-ChildItem -Path "oidn*" -Directory
 
 robocopy "$($EX_DIR.FullName)\include" "$OIDN_ROOT\include" /mir  > $null
 robocopy "$($EX_DIR.FullName)\lib" "$OIDN_ROOT\lib" /mir > $null

@@ -20,17 +20,17 @@ function RenameDLL {
     Copy-Item -Path $InputDLL -Destination $OutputDLL
 
     # Copy the lib file takes some work
-    $OutputDef = [System.IO.Path]::ChangeExtension($OutputDLL,".def")
-    $OutputLib = [System.IO.Path]::ChangeExtension($OutputDLL,".lib")
+    $OutputDef = [System.IO.Path]::ChangeExtension($OutputDLL, ".def")
+    $OutputLib = [System.IO.Path]::ChangeExtension($OutputDLL, ".lib")
 
     $dumpbin = (dumpbin.exe /Exports $InputDLL)
     
     $lib_file = "EXPORTS `n"
-    foreach($line in $dumpbin) {
+    foreach ($line in $dumpbin) {
         $match = [regex]::Matches($line, "^\s*(\d+)\s+[A-Z0-9]+\s+[A-Z0-9]{8}\s+([^ ]+)")
         if ($match) {
             $func = $match.Groups[2].Value
-            if($null -ne $func) {
+            if ($null -ne $func) {
                 $lib_file = $lib_file + $func + "`n"
             }
         }

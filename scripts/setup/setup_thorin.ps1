@@ -4,7 +4,8 @@ $CURRENT = Get-Location
 If (!(Test-Path -Path "thorin")) {
     & $GIT_BIN clone --depth 1 --branch $Config.THORIN.BRANCH $Config.THORIN.GIT thorin
     Set-Location "thorin/"
-} else {
+}
+else {
     Set-Location "thorin/"
     & $GIT_BIN pull
 }

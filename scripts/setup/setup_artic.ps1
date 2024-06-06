@@ -4,7 +4,8 @@ $CURRENT = Get-Location
 If (!(Test-Path -Path "artic")) {
     & $GIT_BIN clone --depth 1 --branch $Config.ARTIC.BRANCH $Config.ARTIC.GIT artic
     Set-Location "artic/"
-} else {
+}
+else {
     Set-Location "artic/"
     & $GIT_BIN pull
 }

@@ -1,6 +1,6 @@
-$CURRENT=Get-Location
+$CURRENT = Get-Location
 
-if($IsLinux) {
+if ($IsLinux) {
     Write-Output "Using system libraries for tbb"
     return
 }
@@ -14,7 +14,7 @@ if (!(Test-Path "tbb.zip")) {
 }
 
 # Copy
-$TBB_ROOT="$DEPS_ROOT/tbb"
+$TBB_ROOT = "$DEPS_ROOT/tbb"
 If (!(Test-Path "$TBB_ROOT")) {
     mkdir "$TBB_ROOT" > $null
     Copy-Item -Recurse -Path "oneapi*\include" -Destination "$TBB_ROOT\include" > $null

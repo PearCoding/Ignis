@@ -1,11 +1,11 @@
-$CURRENT=Get-Location
+$CURRENT = Get-Location
 
-if($IsLinux) {
+if ($IsLinux) {
     Write-Output "Using system libraries for half"
     return
 }
 
-cd "tmp"
+Set-Location "tmp"
 
 # Get zip
 if (!(Test-Path "half.zip")) {
@@ -14,10 +14,10 @@ if (!(Test-Path "half.zip")) {
 }
 
 # Copy
-$HALF_ROOT="$DEPS_ROOT/half"
+$HALF_ROOT = "$DEPS_ROOT/half"
 If (!(Test-Path "$HALF_ROOT")) {
-    md "$HALF_ROOT" > $null
+    mkdir "$HALF_ROOT" > $null
     Copy-Item -Recurse -Path "half/include" -Destination "$HALF_ROOT\include" > $null
 }
 
-cd $CURRENT
+Set-Location $CURRENT

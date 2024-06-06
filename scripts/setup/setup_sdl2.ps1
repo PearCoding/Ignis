@@ -1,6 +1,6 @@
-$CURRENT=Get-Location
+$CURRENT = Get-Location
 
-if($IsLinux) {
+if ($IsLinux) {
     Write-Output "Using system libraries for SDL2"
     return
 }
@@ -14,7 +14,7 @@ if (!(Test-Path "sdl2.zip")) {
 }
 
 # Copy
-$SDL2_ROOT="$DEPS_ROOT/SDL2"
+$SDL2_ROOT = "$DEPS_ROOT/SDL2"
 If (!(Test-Path "$SDL2_ROOT")) {
     mkdir "$SDL2_ROOT" > $null
     Copy-Item -Recurse -Path "SDL2*/*" -Destination "$SDL2_ROOT" > $null
