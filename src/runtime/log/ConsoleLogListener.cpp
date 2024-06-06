@@ -1,5 +1,12 @@
 #include "ConsoleLogListener.h"
 
+#ifdef IG_OS_WINDOWS
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <Windows.h>
+#endif
+
 namespace IG {
 
 [[maybe_unused]] constexpr std::string_view ANSI_BLACK         = "\u001b[0;30m";
@@ -24,12 +31,19 @@ ConsoleLogListener::ConsoleLogListener(bool useAnsi)
     : LogListener()
     , mUseAnsi(useAnsi)
 {
+#ifdef IG_OS_WINDOWS
+    const auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (handle == INVALID_HANDLE_VALUE)
+        mUseAnsi = false; // Failed
+    if (SetConsoleMode(handle, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0)
+        mUseAnsi = false; // Failed to setup color output
+#endif
 }
 
 void ConsoleLogListener::startEntry(LogLevel level)
 {
     std::cout << "[";
-    if (mUseAnsi) 
+    if (mUseAnsi)
         startColoring(level);
 
     std::cout << Logger::levelString(level);
@@ -45,7 +59,7 @@ void ConsoleLogListener::writeEntry(char c)
     std::cout.put(c);
 }
 
-void ConsoleLogListener::startColoring(LogLevel level) 
+void ConsoleLogListener::startColoring(LogLevel level)
 {
     switch (level) {
     case L_DEBUG:
@@ -65,7 +79,7 @@ void ConsoleLogListener::startColoring(LogLevel level)
     }
 }
 
-void ConsoleLogListener::stopColoring() 
+void ConsoleLogListener::stopColoring()
 {
     std::cout << ANSI_RESET;
 }
