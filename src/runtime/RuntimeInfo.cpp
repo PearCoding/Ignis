@@ -55,12 +55,15 @@ Path RuntimeInfo::executablePath()
 #endif
 }
 
-Path RuntimeInfo::modulePath()
+Path RuntimeInfo::modulePath(void* func)
 {
+    if (func == nullptr)
+        func = (void*)&Target::pickGPU;
+
 #if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
 #if __USE_GNU
     Dl_info dl_info;
-    dladdr((void*)&Target::pickGPU, &dl_info);
+    dladdr(func, &dl_info);
     return (dl_info.dli_fname);
 #else
     return {}; // TODO
@@ -70,7 +73,7 @@ Path RuntimeInfo::modulePath()
     HMODULE hm             = NULL;
 
     if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           (LPCWSTR)&Target::pickGPU, &hm)
+                           (LPCWSTR)func, &hm)
         == 0) {
         int ret = GetLastError();
         IG_LOG(L_ERROR) << "GetModuleHandleExW failed, error = " << ret << std::endl;
