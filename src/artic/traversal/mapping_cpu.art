@@ -156,7 +156,7 @@ fn @make_cpu_int_min_max() -> MinMax {
 // Traversal kernels ---------------------------------------------------------------
 
 // Traverses a primitive BVH with a single ray.
-fn @cpu_traverse_single_helper_prim( mut ray: Ray
+fn @cpu_traverse_single_helper_prim_rv( mut ray: Ray
                                    , octant: RayOctant
                                    , min_max: MinMax
                                    , bvh: PrimBvh
@@ -259,8 +259,8 @@ fn @cpu_traverse_single_helper_prim( mut ray: Ray
                             terminated = true;
                         } else {
                             let hit_distance = select(rv_mask(), prim_hit.distance, flt_max);
-                            let min_distance = cpu_vector_reduce(hit_distance, prim.size, min_max.fminf);
-                            let lane = cpu_index_of(hit_distance, min_distance);
+                            let min_distance = cpu_vector_reduce_rv(hit_distance, prim.size, min_max.fminf);
+                            let lane = cpu_index_rv(hit_distance, min_distance);
                             hit = extract_hit(prim_hit, lane);
                             ray.tmax = hit.distance;
                         }
@@ -288,6 +288,8 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                             , root: i32
                             ) -> Hit {
 
+    let vec = if vector_width > 1 { make_rv_vectorizer() } else { make_null_vectorizer() };
+    
     let switch_threshold = match vector_width {
         4  => 3,
         8  => if bvh.arity == 4 { 4 } else { 6 },
@@ -303,21 +305,21 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
     let octant = ray_octant(ray);
 
     let load_ray = @ |ray_ptr: &Ray, lane: i32| Ray {
-        org     = make_vec3(rv_load(&ray_ptr.org.x, lane), rv_load(&ray_ptr.org.y, lane), rv_load(&ray_ptr.org.z, lane)),
-        dir     = make_vec3(rv_load(&ray_ptr.dir.x, lane), rv_load(&ray_ptr.dir.y, lane), rv_load(&ray_ptr.dir.z, lane)),
-        inv_org = make_vec3(rv_load(&ray_ptr.inv_org.x, lane), rv_load(&ray_ptr.inv_org.y, lane), rv_load(&ray_ptr.inv_org.z, lane)),
-        inv_dir = make_vec3(rv_load(&ray_ptr.inv_dir.x, lane), rv_load(&ray_ptr.inv_dir.y, lane), rv_load(&ray_ptr.inv_dir.z, lane)),
-        tmin    = rv_load(&ray_ptr.tmin, lane),
-        tmax    = rv_load(&ray_ptr.tmax, lane),
-        flags   = bitcast[u32](rv_load(&bitcast[f32](ray_ptr.flags), lane))
+        org     = make_vec3(vec.load(&ray_ptr.org.x, lane), vec.load(&ray_ptr.org.y, lane), vec.load(&ray_ptr.org.z, lane)),
+        dir     = make_vec3(vec.load(&ray_ptr.dir.x, lane), vec.load(&ray_ptr.dir.y, lane), vec.load(&ray_ptr.dir.z, lane)),
+        inv_org = make_vec3(vec.load(&ray_ptr.inv_org.x, lane), vec.load(&ray_ptr.inv_org.y, lane), vec.load(&ray_ptr.inv_org.z, lane)),
+        inv_dir = make_vec3(vec.load(&ray_ptr.inv_dir.x, lane), vec.load(&ray_ptr.inv_dir.y, lane), vec.load(&ray_ptr.inv_dir.z, lane)),
+        tmin    = vec.load(&ray_ptr.tmin, lane),
+        tmax    = vec.load(&ray_ptr.tmax, lane),
+        flags   = bitcast[u32](vec.load(&bitcast[f32](ray_ptr.flags), lane))
     };
 
     let store_hit = @ |hit_ptr: &mut Hit, lane: i32, hit2: Hit| {
-        rv_store(&mut hit_ptr.distance, lane, hit2.distance);
-        rv_store(&mut hit_ptr.prim_coords.x, lane, hit2.prim_coords.x);
-        rv_store(&mut hit_ptr.prim_coords.y, lane, hit2.prim_coords.y);
-        rv_store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit2.prim_id));
-        // rv_store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit2.ent_id)); // Optimization: No need for the ent id in prim BVH
+        vec.store(&mut hit_ptr.distance, lane, hit2.distance);
+        vec.store(&mut hit_ptr.prim_coords.x, lane, hit2.prim_coords.x);
+        vec.store(&mut hit_ptr.prim_coords.y, lane, hit2.prim_coords.y);
+        vec.store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit2.prim_id));
+        // vec.store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit2.ent_id)); // Optimization: No need for the ent id in prim BVH
     };
 
     while true {
@@ -328,13 +330,13 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
         while true {
             if cpu_unlikely(stack.is_empty()) { exit() }
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
-            let mask = rv_ballot(active);
+            let mask = vec.ballot(active);
             if cpu_likely(mask != 0) {
-                if single && cpu_popcount32(mask) <= switch_threshold {
+                if vector_width > 1 && single && cpu_popcount32(mask) <= switch_threshold {
                     for lane in cpu_one_bits(mask) {
                         let lane_ray = load_ray(&ray, lane);
                         let lane_octant = bitcast[RayOctant](rv_extract(bitcast[f32](octant), lane));
-                        let lane_hit = cpu_traverse_single_helper_prim(lane_ray, lane_octant, min_max, bvh, any_hit, stack.top().node);
+                        let lane_hit = cpu_traverse_single_helper_prim_rv(lane_ray, lane_octant, min_max, bvh, any_hit, stack.top().node);
                         if lane_hit.prim_id >= 0 {
                             store_hit(&mut hit, lane, lane_hit);
                             if !any_hit { rv_store(&mut ray.tmax, lane, lane_hit.distance); }
@@ -361,12 +363,12 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                 let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
                 // Special case when integer comparisons are faster than floating point comparisons
                 let miss = if min_max.is_integer { bitcast[i32](texit) < bitcast[i32](tentry)        } else { texit < tentry };
-                let push = if min_max.is_integer { !rv_ballot(miss) & ((1 << vector_width) - 1) != 0 } else { !rv_all(miss)  };
+                let push = if min_max.is_integer { !vec.ballot(miss) & ((1 << vector_width) - 1) != 0 } else { !vec.all(miss)  };
                 if push {
                     // Important: prevent nodes that are not intersected
                     // from being traversed with the single ray kernel
                     let thit = select(miss, flt_max, tentry);
-                    if any_hit || rv_any(stack.top().tmin > thit) {
+                    if any_hit || vec.any(stack.top().tmin > thit) {
                         bvh.prefetch(child_id);
                         stack.push(child_id, thit);
                     } else {
@@ -397,7 +399,7 @@ fn @cpu_traverse_helper_prim( mut ray: Ray
                             }
                         }
                     }
-                    if any_hit && cpu_unlikely(rv_all(terminated)) { exit() }
+                    if any_hit && cpu_unlikely(vec.all(terminated)) { exit() }
                 }
 
                 // Sentinel test
@@ -430,6 +432,8 @@ fn @cpu_traverse_helper( mut ray: Ray
     let stack = alloc_stack();
     stack.push(root, ray.tmin);
 
+    let vec = if vector_width > 1 { make_rv_vectorizer() } else { make_null_vectorizer() };
+
     while true {
         let exit = break;
         let cull = continue;
@@ -438,7 +442,7 @@ fn @cpu_traverse_helper( mut ray: Ray
         while true {
             if cpu_unlikely(stack.is_empty()) { exit() }
             let active = (stack.top().tmin <= ray.tmax) & !terminated;
-            let mask = rv_ballot(active);
+            let mask = vec.ballot(active);
             if cpu_likely(mask != 0) { break() }
             stack.pop();
         }
@@ -456,12 +460,12 @@ fn @cpu_traverse_helper( mut ray: Ray
                 let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
                 // Special case when integer comparisons are faster than floating point comparisons
                 let miss = if min_max.is_integer { bitcast[i32](texit) < bitcast[i32](tentry)        } else { texit < tentry };
-                let push = if min_max.is_integer { !rv_ballot(miss) & ((1 << vector_width) - 1) != 0 } else { !rv_all(miss)  };
+                let push = if min_max.is_integer { !vec.ballot(miss) & ((1 << vector_width) - 1) != 0 } else { !vec.all(miss)  };
                 if push {
                     // Important: prevent nodes that are not intersected
                     // from being traversed with the single ray kernel
                     let thit = select(miss, flt_max, tentry);
-                    if any_hit || rv_any(stack.top().tmin > thit) {
+                    if any_hit || vec.any(stack.top().tmin > thit) {
                         bvh.prefetch(child_id);
                         stack.push(child_id, thit);
                     } else {
@@ -503,7 +507,7 @@ fn @cpu_traverse_helper( mut ray: Ray
                 }
 
                 // Early exit mode
-                if any_hit && cpu_unlikely(rv_all(terminated)) { exit() }
+                if any_hit && cpu_unlikely(vec.all(terminated)) { exit() }
 
                 if leaf.entity_id < 0 { break() }
             }
@@ -514,6 +518,7 @@ fn @cpu_traverse_helper( mut ray: Ray
 }
 
 // Wrapper ------------------------------------------------------------------------
+// TODO: The code for vector_width=1 is not really optimized and lacks performance
 
 fn @cpu_traverse( min_max: MinMax
                 , scene: SceneGeometry
@@ -525,7 +530,7 @@ fn @cpu_traverse( min_max: MinMax
                 , any_hit: bool
                 ) -> () {
     for i in range(0, num_packets) {
-        vectorize_safe(packet_size, |j| {
+        vectorize_safe(packet_size, @|j| {
             let ray = rays(i, j);
             hits(i, j, cpu_traverse_helper(ray, packet_size, min_max, scene, any_hit, 1 /*root*/, init_hits(i, j, ray)))
         });

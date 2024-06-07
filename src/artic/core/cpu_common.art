@@ -24,10 +24,10 @@ fn @cpu_one_bits(body: fn (i32) -> ()) {
 }
 
 // Performs a horizontal reduction over vector lanes
-fn @(?n) cpu_vector_reduce(value: f32, n: i32, op: fn (f32, f32) -> f32) -> f32 {
+fn @(?n) cpu_vector_reduce_rv(value: f32, n: i32, op: fn (f32, f32) -> f32) -> f32 {
     if n >= 2 {
         let m = n / 2;
-        cpu_vector_reduce(op(value, rv_shuffle(value, m)), m, op)
+        cpu_vector_reduce_rv(op(value, rv_shuffle(value, m)), m, op)
     } else {
         value
     }
@@ -41,7 +41,7 @@ fn @cpu_prefetch_bytes(ptr: &[u8], bytes: i32) -> () {
 }
 
 // Returns the first vector lane index i for which value[i] == lane
-fn @cpu_index_of(value: f32, lane: f32) -> i32 {
+fn @cpu_index_rv(value: f32, lane: f32) -> i32 {
     cpu_ctz32(rv_ballot(value == lane), true)
 }
 
@@ -136,4 +136,53 @@ fn @cpu_parallel_tiles(body: fn (i32, i32, i32, i32) -> ()) =
             @body(xmin, ymin, xmax, ymax)
         }
     }
+};
+
+// Vectorizing stuff
+struct Vectorizer {
+    mask      : fn () -> bool,
+    any       : fn (bool) -> bool,
+    all       : fn (bool) -> bool,
+    ballot    : fn (bool) -> i32,
+    extract   : fn (f32, i32) -> f32,
+    insert    : fn (f32, i32, f32) -> f32,
+    load      : fn (&f32, i32) -> f32,
+    store     : fn (&mut f32, i32, f32) -> (), 
+    shuffle   : fn (f32, i32) -> f32,
+    align     : fn (&i8, i32)-> &i8,
+    compact   : fn (f32, bool) -> f32,
+    lane_id   : fn () -> i32,
+    num_lanes : fn () -> i32,
+}
+
+fn @make_rv_vectorizer() = Vectorizer {
+    mask      = rv_mask,
+    any       = rv_any,
+    all       = rv_all,
+    ballot    = rv_ballot,
+    extract   = rv_extract,
+    insert    = rv_insert,
+    load      = rv_load,
+    store     = rv_store,
+    shuffle   = rv_shuffle,
+    align     = rv_align,
+    compact   = rv_compact,
+    lane_id   = rv_lane_id,
+    num_lanes = rv_num_lanes,
+};
+
+fn @make_null_vectorizer() = Vectorizer {
+    mask      = @|| true,
+    any       = @|b| b,
+    all       = @|b| b,
+    ballot    = @|b| select(b, 1, 0),
+    extract   = @|v,_| v,
+    insert    = @|_,_,v| v,
+    load      = @|r,_| *r,
+    store     = @|r:&mut f32,_,v| *r = v,
+    shuffle   = @|v,_| v,
+    align     = @|r,_| r,
+    compact   = @|v,_| v,
+    lane_id   = @|| 0,
+    num_lanes = @|| 1,
 };

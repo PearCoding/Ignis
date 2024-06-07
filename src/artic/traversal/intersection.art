@@ -106,6 +106,8 @@ fn @intersect_ray_tri_mt_gen(backface_culling: bool, ray: Ray, tri: Tri, check_i
 }
 
 fn @intersect_ray_tri_mt_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
+    = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| cpu_likely(!mask));
+fn @intersect_ray_tri_mt_cpu_rv(backface_culling: bool, ray: Ray, tri: Tri) 
     = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| cpu_likely(rv_all(!mask)));
 fn @intersect_ray_tri_mt_gpu(backface_culling: bool, ray: Ray, tri: Tri)
     = intersect_ray_tri_mt_gen(backface_culling, ray, tri, @|mask| !mask);
@@ -148,6 +150,8 @@ fn @intersect_ray_tri_pl_gen(backface_culling: bool, ray: Ray, tri: Tri, check_i
 }
 
 fn @intersect_ray_tri_pl_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
+    = intersect_ray_tri_pl_gen(backface_culling, ray, tri, @|mask| cpu_likely(!mask));
+fn @intersect_ray_tri_pl_cpu_rv(backface_culling: bool, ray: Ray, tri: Tri) 
     = intersect_ray_tri_pl_gen(backface_culling, ray, tri, @|mask| cpu_likely(rv_all(!mask)));
 fn @intersect_ray_tri_pl_gpu(backface_culling: bool, ray: Ray, tri: Tri)
     = intersect_ray_tri_pl_gen(backface_culling, ray, tri, @|mask| !mask);
@@ -205,12 +209,14 @@ fn @intersect_ray_tri_bw_gen(_backface_culling: bool, ray: Ray, tri: Tri, check_
 
 fn @intersect_ray_tri_bw_cpu(backface_culling: bool, ray: Ray, tri: Tri) 
     = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| cpu_likely(rv_all(!mask)));
+fn @intersect_ray_tri_bw_cpu_rv(backface_culling: bool, ray: Ray, tri: Tri) 
+    = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| cpu_likely(!mask));
 fn @intersect_ray_tri_bw_gpu(backface_culling: bool, ray: Ray, tri: Tri)
     = intersect_ray_tri_bw_gen(backface_culling, ray, tri, @|mask| !mask);
 
 // Pick triangle intersection method
 // TODO: In the future this might be a good (advanced) user parameter
-fn @intersect_ray_tri_cpu(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt_cpu(backface_culling, ray, tri);
+fn @intersect_ray_tri_cpu(backface_culling: bool, ray: Ray, tri: Tri, vector_width: i32) = if vector_width > 1 { intersect_ray_tri_mt_cpu_rv(backface_culling, ray, tri) } else { intersect_ray_tri_mt_cpu(backface_culling, ray, tri) };
 fn @intersect_ray_tri_gpu(backface_culling: bool, ray: Ray, tri: Tri) = intersect_ray_tri_mt_gpu(backface_culling, ray, tri);
 
 // Ray - Box intersection

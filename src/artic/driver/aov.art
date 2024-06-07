@@ -35,6 +35,22 @@ fn @make_atomic_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i3
     }
 }
 
+fn @make_std_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage {
+    let accumulate = make_standard_accumulator(pixels, spi);
+    AOVImage {
+        width  = w,
+        height = h,
+        splat  = @|coord, color| -> () { accumulate(coord.linear, color); },
+        get = @|coord| -> Color {
+            let ptr2 = &pixels(coord.linear * 3) as &[f32];
+            make_color(ptr2(0), ptr2(1), ptr2(2), 1)
+        },
+        mark_as_used = @|| -> () {
+            ignis_mark_aov_as_used(id, 1);
+        }
+    }
+}
+
 fn @make_rv_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage {
     let accumulate = make_standard_accumulator(pixels, spi);
     AOVImage {

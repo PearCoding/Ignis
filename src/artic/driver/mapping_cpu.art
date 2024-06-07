@@ -198,7 +198,7 @@ fn @cpu_move_ray_stream(rays: RayStream, i: i32, j: i32) -> () {
 
 fn @cpu_compact_primary(primary: &PrimaryStream, size: i32, payload_count: i32, capacity: i32, vector_width: i32, vector_compact: bool, is_payload_soa: bool) -> i32 {
     let mut k = 0;
-    if vector_compact {
+    if vector_compact && vector_width > 1 {
         for i in range_step(0, size, vector_width) {
             vectorize(vector_width, |j| { 
                 let id = primary.rays.id(i + j);
@@ -248,7 +248,7 @@ fn @cpu_compact_primary(primary: &PrimaryStream, size: i32, payload_count: i32, 
 
 fn @cpu_compact_secondary(secondary: &SecondaryStream, size: i32, payload_count: i32, capacity: i32, vector_width: i32, vector_compact: bool, is_payload_soa: bool) -> i32 {
     let mut k = 0;
-    if vector_compact {
+    if vector_compact && vector_width > 1{
         for i in range_step(0, size, vector_width) {
             vectorize(vector_width, |j| {
                 let id = secondary.rays.id(i + j);
@@ -423,23 +423,33 @@ fn @cpu_traverse_secondary(scene: SceneTracer, size: i32, min_max: MinMax, vecto
     }
 }
 
-fn @cpu_splat_rv(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32, spi: i32) {
-    for lane in unroll(0, vector_width) {
-        let j  = bitcast[i32](rv_extract(bitcast[f32](id), lane));
-        let pj = j / spi;
-        let color_lane = make_color(
-            rv_extract(color.r, lane),
-            rv_extract(color.g, lane),
-            rv_extract(color.b, lane),
-            1
-        );
-        framebuffer.splat(make_pixelcoord_from_linear(pj, framebuffer.width, framebuffer.height, 0, 0), color_lane);
+fn @cpu_splat(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32, spi: i32) {
+    if vector_width > 1 {
+        for lane in unroll(0, vector_width) {
+            let j  = bitcast[i32](rv_extract(bitcast[f32](id), lane));
+            let pj = j / spi;
+            let color_lane = make_color(
+                rv_extract(color.r, lane),
+                rv_extract(color.g, lane),
+                rv_extract(color.b, lane),
+                1
+            );
+            framebuffer.splat(make_pixelcoord_from_linear(pj, framebuffer.width, framebuffer.height, 0, 0), color_lane);
+        }
+    } else {
+        framebuffer.splat(make_pixelcoord_from_linear(id / spi, framebuffer.width, framebuffer.height, 0, 0), color);
     }
 }
 
-fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool) -> AOVImage {
+fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool, vector_width: i32) -> AOVImage {
     let (film_pixels, film_width, film_height) = cpu_get_film_data();
-    if !use_framebuffer { make_empty_aov_image() } else { make_rv_aov_image("", film_pixels, film_width, film_height, spi) }
+    if !use_framebuffer {
+        make_empty_aov_image()
+    } else if vector_width > 1 { 
+        make_rv_aov_image("", film_pixels, film_width, film_height, spi)
+    } else {
+        make_std_aov_image("", film_pixels, film_width, film_height, spi)
+    }
 }
 
 // Hit shader ------------------------------------------------------------------
@@ -502,7 +512,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
         let mat       = @shader(ctx);
         let hit_color = if let Option[Color]::Some(color) = @on_hit(ctx, primary_payload, mat) { color } else { color_builtins::black };
         
-        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width, config.spi);
+        cpu_splat(ray_id, hit_color, framebuffer, r_vector_width, config.spi);
 
         // Compute shadow rays
         match @on_shadow(ctx, rnd, primary_payload, secondary_payload, mat) {
@@ -553,7 +563,7 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
 
-    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
+    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
     cpu_hit_shade(primary, secondary, shader, scene, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
@@ -589,7 +599,7 @@ fn @cpu_miss_shade(primary: &PrimaryStream
         let ctx       = make_miss_shading_context(pixel, ray, shading_info);
         let hit_color = if let Option[Color]::Some(color) = @on_miss(ctx, payload) { color } else { color_builtins::black };
 
-        cpu_splat_rv(ray_id, hit_color, framebuffer, r_vector_width, spi);
+        cpu_splat(ray_id, hit_color, framebuffer, r_vector_width, spi);
 
         primary.rays.id(i) = -1;
     }
@@ -607,7 +617,7 @@ fn @cpu_miss_shade_handler(technique: Technique
     let mut primary : PrimaryStream;
     ignis_get_primary_stream_const(0, 0, &mut primary);
 
-    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
+    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
     cpu_miss_shade(primary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
@@ -649,7 +659,7 @@ fn @cpu_advanced_shadow(is_hit: bool
         // Execute hit point shading, and add the contribution of each lane to the frame buffer
         let ctx = make_miss_shading_context(pixel, ray, shading_info);
         if let Option[Color]::Some(new_color) = @callback(ctx, shader, payload, color) { 
-            cpu_splat_rv(ray_id, new_color, framebuffer, r_vector_width, spi);
+            cpu_splat(ray_id, new_color, framebuffer, r_vector_width, spi);
         }
     }
 }
@@ -668,7 +678,7 @@ fn @cpu_advanced_shadow_handler(shader: MaterialShader
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(0, 0, &mut secondary);
 
-    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer);
+    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
     cpu_advanced_shadow(is_hit, shader, secondary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
@@ -681,11 +691,15 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @cpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32) -> AOVImage {
+fn @cpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, vector_width: i32) -> AOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(0, id, &mut ptr);
-    make_rv_aov_image(id, ptr, w, h, spi)
+    if vector_width > 1 {
+        make_rv_aov_image(id, ptr, w, h, spi)
+    } else {
+        make_std_aov_image(id, ptr, w, h, spi)
+    }
 }
 
 // Main shader ------------------------------------------------------------------
@@ -713,7 +727,7 @@ fn @cpu_trace( scene: Scene
         ignis_get_primary_stream(  0, 0, &mut primary,   capacity);
         ignis_get_secondary_stream(0, 0, &mut secondary, capacity);
 
-        let framebuffer = cpu_get_framebuffer(spi, true/*!work_info.framebuffer_locked*/); // Will only be used if framebuffer is not locked down the line
+        let framebuffer = cpu_get_framebuffer(spi, true/*!work_info.framebuffer_locked*/, vector_width); // Will only be used if framebuffer is not locked down the line
 
         let mut temp_host : TemporaryStorageHost;
         ignis_get_temporary_storage_host(0, &mut temp_host);
@@ -965,7 +979,7 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
     },
     load_aov_image = @|id, spi| {
         let work_info = get_work_info();
-        cpu_get_aov_image(id, work_info.width, work_info.height, spi)
+        cpu_get_aov_image(id, work_info.width, work_info.height, spi, vector_width)
     },
     load_rays = @ || {
         let mut rays: &[StreamRay];
