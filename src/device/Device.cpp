@@ -4,8 +4,8 @@
 #include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "device/ShaderKey.h"
-#include "table/SceneDatabase.h"
 #include "device/ShallowArray.h"
+#include "table/SceneDatabase.h"
 
 #include "generated_interface.h"
 
@@ -1591,6 +1591,9 @@ Device::Device(const Device::SetupSettings& settings)
     sInterface = std::make_unique<Interface>(this, settings);
 
     IG_LOG(L_INFO) << "Using device " << anydsl_device_name(sInterface->getDevID()) << std::endl;
+
+    if (settings.target.isCPU() && settings.target.vectorWidth() > 1)
+        IG_LOG(L_WARNING) << "CPU device with vector width > 1 is experimental and might crash!" << std::endl;
 }
 
 Device::~Device()
