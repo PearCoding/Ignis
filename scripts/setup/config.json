@@ -69,6 +69,6 @@
         "ENABLED": true,
         "BUILD_DIR": "build/Release",
         "BUILD_TYPE": "Release",
-        "BUILD_INSTALLER": true
+        "BUILD_INSTALLER": false
     }
 }
