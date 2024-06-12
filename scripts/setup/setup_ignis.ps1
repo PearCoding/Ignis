@@ -11,12 +11,13 @@ if (Test-Path "$CLANG_BIN_DIR") {
 Else {
     $CLANG_BIN_DIR = "$DEPS_ROOT\llvm-install\bin".Replace("\", "/")
 }
-$CLANG_BIN = "$CLANG_BIN_DIR\clang.exe".Replace("\", "/")
 
 $ARTIC_BIN_DIR = $BIN_ROOT
 if ($IsWindows) {
-    $ARTIC_BIN = "$BIN_ROOT\artic.exe".Replace("\", "/")
+    $ARTIC_BIN = "$BIN_ROOT\artic.exe".Repla
+    $CLANG_BIN = "$CLANG_BIN_DIR\clang.exe".Replace("\", "/")ce("\", "/")
 } else {
+    $CLANG_BIN = "$CLANG_BIN_DIR\clang".Replace("\", "/")
     $ARTIC_BIN = "$BIN_ROOT\artic".Replace("\", "/")
 }
 
