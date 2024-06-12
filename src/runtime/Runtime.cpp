@@ -637,6 +637,7 @@ bool Runtime::compileShaders()
 
         if (!manager.waitForFinish()) {
             IG_LOG(L_ERROR) << "Compiling shaders failed" << std::endl;
+            manager.dumpLogs();
             return false;
         }
 

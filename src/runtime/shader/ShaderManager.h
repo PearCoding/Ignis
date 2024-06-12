@@ -23,6 +23,8 @@ public:
     void* getResult(const std::string& id) const;
     std::string getLog(const std::string& id) const;
 
+    void dumpLogs() const;
+
 private:
     std::unique_ptr<class ShaderManagerInternal> mInternal;
     const size_t mThreadCount;

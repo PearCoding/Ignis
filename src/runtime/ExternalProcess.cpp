@@ -167,7 +167,7 @@ public:
     inline void waitForInit()
     {
         using namespace std::chrono_literals;
-        std::this_thread::sleep_for(200ms);
+        std::this_thread::sleep_for(20ms);
         // if (WaitForInputIdle(pi.hProcess, INFINITE) == WAIT_FAILED)
         //     IG_LOG(L_ERROR) << "WaitForInputIdle failed: " << std::system_category().message(GetLastError()) << std::endl;
     }

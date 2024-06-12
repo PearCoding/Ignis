@@ -241,4 +241,15 @@ std::string ShaderManager::getLog(const std::string& id) const
         return it->second.Log;
     return {};
 }
+
+void ShaderManager::dumpLogs() const
+{
+    for (const auto& p : mInternal->mResultMap) {
+        if (p.second.Log.empty())
+            continue;
+
+        IG_LOG(L_INFO) << "Build log '" << p.first << "':" << std::endl
+                       << p.second.Log << std::endl;
+    }
+}
 } // namespace IG
