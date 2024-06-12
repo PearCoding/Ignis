@@ -237,7 +237,7 @@ void* DeviceManager::getInterface(const SharedLibrary& lib) const
         return nullptr;
     }
 
-    return func;
+    return (void*)func;
 }
 
 DeviceManager& DeviceManager::instance()
