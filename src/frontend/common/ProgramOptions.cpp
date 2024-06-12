@@ -119,6 +119,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_option("--script-dir", ScriptDir, "Override internal script standard library by '.art' files from the given directory");
 
     app.add_option("-O,--shader-optimization", ShaderOptimizationLevel, "Level of optimization applied to shaders. Range is [0, 3]. Level 0 will also add debug information")->default_val(ShaderOptimizationLevel);
+    app.add_option("--shader-threads", ShaderCompileThreads, "Number of threads to use to compile large shaders. Set to 0 to detect automatically")->default_val(ShaderCompileThreads);
 
     app.add_flag("--add-env-light", AddExtraEnvLight, "Add additional constant environment light. This is automatically done for glTF scenes without any lights");
     app.add_option("--specialization", Specialization, "Set the type of specialization. Force will increase compile time drastically for potential runtime optimization.")->transform(EnumValidator(SpecializationModeMap, CLI::ignore_case))->default_str("default");
@@ -342,6 +343,7 @@ void ProgramOptions::populate(RuntimeOptions& options) const
 
     options.ScriptDir               = ScriptDir;
     options.ShaderOptimizationLevel = std::min<size_t>(3, ShaderOptimizationLevel);
+    options.ShaderCompileThreads    = ShaderCompileThreads;
 
     options.WarnUnused = !NoUnused;
 

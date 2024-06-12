@@ -10,6 +10,7 @@
 
 #include <chrono>
 #include <fstream>
+#include <thread>
 
 namespace IG {
 
@@ -567,7 +568,15 @@ bool Runtime::setupScene()
 
 bool Runtime::compileShaders()
 {
-    ShaderManager manager(mCompiler.get(), 1 /*TODO*/);
+    size_t threads = mOptions.ShaderCompileThreads;
+    if (threads == 0)
+        threads = std::thread::hardware_concurrency();
+    if (RuntimeInfo::igcPath().empty()) {
+        IG_LOG(L_WARNING) << "Could not find " << RuntimeInfo::igcPath() << ". Falling back to single threaded shader compilation" << std::endl;
+        threads = 1;
+    }
+
+    ShaderManager manager(mCompiler.get(), threads);
 
     const auto compile = [&](size_t i, const std::string& name, const std::string& func, const ShaderOutput<std::string>& input) {
         manager.add("v" + std::to_string(i) + " " + name, input.Exec, func);

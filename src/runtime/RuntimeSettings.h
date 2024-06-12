@@ -37,6 +37,7 @@ struct RuntimeOptions {
     Path CacheDir    = {};
 
     size_t ShaderOptimizationLevel = 3;
+    size_t ShaderCompileThreads = 0;
 
     enum class SpecializationMode {
         Default = 0, // Depending on the parameter it will be embedded or not.
