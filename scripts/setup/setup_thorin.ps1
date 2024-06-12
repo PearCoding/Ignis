@@ -30,7 +30,9 @@ $CMAKE_Args = @()
 $CMAKE_Args += $Config.CMAKE.EXTRA_ARGS
 $CMAKE_Args += $Config.THORIN.EXTRA_ARGS
 $CMAKE_Args += '-DCMAKE_BUILD_TYPE:STRING=' + $BUILD_TYPE
-$CMAKE_Args += '-DBUILD_SHARED_LIBS:BOOL=OFF' # No need for this
+if ($IsWindows) {
+    $CMAKE_Args += '-DBUILD_SHARED_LIBS:BOOL=OFF' # No need for this
+}
 $CMAKE_Args += '-DHalf_DIR:PATH=' + $HALF
 $CMAKE_Args += '-DHalf_INCLUDE_DIR:PATH=' + "$HALF/include"
 $CMAKE_Args += '-DLLVM_DIR:PATH=' + "$LLVM/lib/cmake/llvm"

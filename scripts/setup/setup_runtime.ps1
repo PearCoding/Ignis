@@ -1,8 +1,6 @@
 $CURRENT = Get-Location
 
 # Some predefined locations
-$CUDA = $(Get-ChildItem env: | Where-Object { $_.Name -like "CUDA_PATH*" })[0].Value
-$CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/").Replace(" ", "` ")
 $ARTIC = "$DEPS_ROOT\artic".Replace("\", "/").Replace(" ", "` ")
 $LLVM = "$DEPS_ROOT\llvm-install".Replace("\", "/").Replace(" ", "` ")
 $TBB = "$DEPS_ROOT\tbb".Replace("\", "/")
@@ -17,23 +15,30 @@ If (!(Test-Path -Path "$LLVM")) {
     throw 'The LLVM directory is not valid'
 }
 
-If (!(Test-Path -Path "$TBB")) {
+If (!$IsLinux -and !(Test-Path -Path "$TBB")) {
     throw 'The TBB directory is not valid'
 }
 
 $BUILD_TYPE = $Config.RUNTIME.BUILD_TYPE
 
-If ([string]::IsNullOrEmpty($CUDA) -or !(Test-Path -Path "$CUDA")) {
-    Write-Warning 'The CUDA directory is not valid. Proceeding will install without Nvidia GPU support'
-    $HasCuda = $false
-}
-Else {
+If ($IsLinux) {
     $HasCuda = $true
+} else {
+    $CUDA = $(Get-ChildItem env: | Where-Object { $_.Name -like "CUDA_PATH*" })[0].Value
+    $CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/").Replace(" ", "` ")
+    If ([string]::IsNullOrEmpty($CUDA) -or !(Test-Path -Path "$CUDA")) {
+        Write-Warning 'The CUDA directory is not valid. Proceeding will install without Nvidia GPU support'
+        $HasCuda = $false
+    }
+    Else {
+        $HasCuda = $true
+    }
+
+    If ($HasCuda) {
+        Copy-Item "$CUDA\nvvm\bin\nvvm*.dll" "$BIN_ROOT/" > $null
+    }
 }
 
-If ($HasCuda) {
-    Copy-Item "$CUDA\nvvm\bin\nvvm*.dll" "$BIN_ROOT/" > $null
-}
 function CompileRuntime {
     param (
         [ValidateNotNullOrEmpty()]
@@ -65,20 +70,24 @@ function CompileRuntime {
     # $CMAKE_Args += '-DCMAKE_INSTALL_PREFIX:PATH=install' 
     $CMAKE_Args += '-DArtic_DIR:PATH=' + "$ARTIC/build/share/anydsl/cmake"
     $CMAKE_Args += '-DLLVM_DIR:PATH=' + "$LLVM/lib/cmake/llvm"
-    $CMAKE_Args += '-DTBB_DIR:PATH=' + "$TBB/lib/cmake/tbb"
+    If (!$IsLinux) {
+        $CMAKE_Args += '-DTBB_DIR:PATH=' + "$TBB/lib/cmake/tbb"
+    }
     $CMAKE_Args += '-DBUILD_SHARED_LIBS:BOOL=ON'
     $CMAKE_Args += '-DRUNTIME_JIT:BOOL=ON'
     $CMAKE_Args += '-DCMAKE_REQUIRE_FIND_PACKAGE_LLVM:BOOL=ON' # We really want JIT
     $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_OpenCL:BOOL=ON' # Not supported
 
     if (($Device -eq 'default') -or ($Device -eq 'cuda')) {
-        If ($HasCuda) {
-            $CMAKE_Args += '-DCUDAToolkit_NVVM_LIBRARY:PATH=' + $CUDAToolkit_NVVM_LIBRARY
-        }
-        else {
-            Write-Warning 'No CUDA support. Proceeding will not build the runtime with Nvidia GPU support'
-            if ($Device -ne 'default') {
-                return
+        if (!$IsLinux){
+            If ($HasCuda) {
+                $CMAKE_Args += '-DCUDAToolkit_NVVM_LIBRARY:PATH=' + $CUDAToolkit_NVVM_LIBRARY
+            }
+            else {
+                Write-Warning 'No CUDA support. Proceeding will not build the runtime with Nvidia GPU support'
+                if ($Device -ne 'default') {
+                    return
+                }
             }
         }
     }
@@ -116,19 +125,21 @@ function CompileRuntime {
     # }
 
     # Rename stuff if necessary
-    if ($Device -ne 'default') {
-        RenameDLL -InputDLL 'build/bin/runtime.dll' -OutputDLL "build/bin/runtime_$device.dll"
-        RenameDLL -InputDLL 'build/bin/runtime_jit_artic.dll' -OutputDLL "build/bin/runtime_jit_artic_$device.dll"
-        # Copy-Item -Path 'build/bin/runtime.dll' -Destination "build/bin/runtime_$device.dll"
-        # Copy-Item -Path 'build/bin/runtime_jit_artic.dll' -Destination "build/bin/runtime_jit_artic_$device.dll"
-        # Copy-Item -Path 'build/lib/runtime.lib' -Destination "build/lib/runtime_$device.lib"
-        # Copy-Item -Path 'build/lib/runtime_jit_artic.lib' -Destination "build/lib/runtime_jit_artic_$device.lib"
+    if ($IsWindows) {
+        if ($Device -ne 'default') {
+            RenameDLL -InputDLL 'build/bin/runtime.dll' -OutputDLL "build/bin/runtime_$device.dll"
+            RenameDLL -InputDLL 'build/bin/runtime_jit_artic.dll' -OutputDLL "build/bin/runtime_jit_artic_$device.dll"
+            # Copy-Item -Path 'build/bin/runtime.dll' -Destination "build/bin/runtime_$device.dll"
+            # Copy-Item -Path 'build/bin/runtime_jit_artic.dll' -Destination "build/bin/runtime_jit_artic_$device.dll"
+            # Copy-Item -Path 'build/lib/runtime.lib' -Destination "build/lib/runtime_$device.lib"
+            # Copy-Item -Path 'build/lib/runtime_jit_artic.lib' -Destination "build/lib/runtime_jit_artic_$device.lib"
 
-        Copy-Item -Path "build/bin/runtime_$device.dll" -Destination "$BIN_ROOT\" > $null
-        Copy-Item -Path "build/bin/runtime_jit_artic_$device.dll" -Destination "$BIN_ROOT\" > $null
-    }
-    else {
-        Copy-Item -Path "build/bin/*" -Destination "$BIN_ROOT\" > $null
+            Copy-Item -Path "build/bin/runtime_$device.dll" -Destination "$BIN_ROOT\" > $null
+            Copy-Item -Path "build/bin/runtime_jit_artic_$device.dll" -Destination "$BIN_ROOT\" > $null
+        }
+        else {
+            Copy-Item -Path "build/bin/*" -Destination "$BIN_ROOT\" > $null
+        }
     }
 
     Set-Location $CURRENT

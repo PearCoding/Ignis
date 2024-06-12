@@ -14,31 +14,40 @@ Else {
 $CLANG_BIN = "$CLANG_BIN_DIR\clang.exe".Replace("\", "/")
 
 $ARTIC_BIN_DIR = $BIN_ROOT
-$ARTIC_BIN = "$BIN_ROOT\artic.exe".Replace("\", "/")
+if ($IsWindows) {
+    $ARTIC_BIN = "$BIN_ROOT\artic.exe".Replace("\", "/")
+} else {
+    $ARTIC_BIN = "$BIN_ROOT\artic".Replace("\", "/")
+}
 
 $RUNTIME_DIR = "$DEPS_ROOT\runtime\build\share\anydsl\cmake".Replace("\", "/")
-$TBB_DIR = "$DEPS_ROOT\tbb\lib\cmake\tbb".Replace("\", "/")
-$ZLIB_LIB = "$DEPS_ROOT\zlib\lib\zlib.lib".Replace("\", "/")
-$ZLIB_INCLUDE = "$DEPS_ROOT\zlib\include".Replace("\", "/")
-$SDL2_LIB = "$DEPS_ROOT\SDL2\lib\x64\SDL2.lib".Replace("\", "/")
-$SDL2_INCLUDE = "$DEPS_ROOT\SDL2\include".Replace("\", "/")
 
-$OIDN_DIR = Get-ChildItem -Path "$DEPS_ROOT/oidn/lib/cmake" -Directory | Sort-Object -Descending | Select-Object -First 1
+if ($IsWindows) {
+    $TBB_DIR = "$DEPS_ROOT\tbb\lib\cmake\tbb".Replace("\", "/")
+    $ZLIB_LIB = "$DEPS_ROOT\zlib\lib\zlib.lib".Replace("\", "/")
+    $ZLIB_INCLUDE = "$DEPS_ROOT\zlib\include".Replace("\", "/")
+    $SDL2_LIB = "$DEPS_ROOT\SDL2\lib\x64\SDL2.lib".Replace("\", "/")
+    $SDL2_INCLUDE = "$DEPS_ROOT\SDL2\include".Replace("\", "/")
+
+    $OIDN_DIR = Get-ChildItem -Path "$DEPS_ROOT/oidn/lib/cmake" -Directory | Sort-Object -Descending | Select-Object -First 1
+}
 
 $CMAKE_Args = @()
 $CMAKE_Args += $Config.CMAKE.EXTRA_ARGS
 $CMAKE_Args += $Config.IGNIS.EXTRA_ARGS
 $CMAKE_Args += '-DCMAKE_BUILD_TYPE:STRING=' + $BUILD_TYPE
 $CMAKE_Args += '-DClang_BIN:FILEPATH=' + $CLANG_BIN
-$CMAKE_Args += '-DArtic_BINARY_DIR:PATH=' + $ARTIC_BIN_DIR
-$CMAKE_Args += '-DArtic_BIN:FILEPATH=' + $ARTIC_BIN
 $CMAKE_Args += '-DAnyDSL_runtime_DIR:PATH=' + $RUNTIME_DIR # Default variant
-$CMAKE_Args += '-DTBB_DIR:PATH=' + $TBB_DIR
-$CMAKE_Args += '-DZLIB_LIBRARY:FILEPATH=' + $ZLIB_LIB
-$CMAKE_Args += '-DZLIB_INCLUDE_DIR:PATH=' + $ZLIB_INCLUDE
-$CMAKE_Args += '-DSDL2_LIBRARY:FILEPATH=' + $SDL2_LIB
-$CMAKE_Args += '-DSDL2_INCLUDE_DIR:PATH=' + $SDL2_INCLUDE
-$CMAKE_Args += '-DOpenImageDenoise_DIR:PATH=' + $($OIDN_DIR.FullName)
+if ($IsWindows) {
+    $CMAKE_Args += '-DArtic_BINARY_DIR:PATH=' + $ARTIC_BIN_DIR
+    $CMAKE_Args += '-DArtic_BIN:FILEPATH=' + $ARTIC_BIN
+    $CMAKE_Args += '-DTBB_DIR:PATH=' + $TBB_DIR
+    $CMAKE_Args += '-DZLIB_LIBRARY:FILEPATH=' + $ZLIB_LIB
+    $CMAKE_Args += '-DZLIB_INCLUDE_DIR:PATH=' + $ZLIB_INCLUDE
+    $CMAKE_Args += '-DSDL2_LIBRARY:FILEPATH=' + $SDL2_LIB
+    $CMAKE_Args += '-DSDL2_INCLUDE_DIR:PATH=' + $SDL2_INCLUDE
+    $CMAKE_Args += '-DOpenImageDenoise_DIR:PATH=' + $($OIDN_DIR.FullName)
+}
 $CMAKE_Args += '-DIG_WITH_ASSERTS:BOOL=ON'
 $CMAKE_Args += '-DBUILD_TESTING:BOOL=OFF'
 

@@ -1,10 +1,5 @@
 $CURRENT = Get-Location
 
-if ($IsLinux) {
-    Write-Output "Using system libraries for half"
-    return
-}
-
 Set-Location "tmp"
 
 # Get zip
