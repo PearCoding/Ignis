@@ -20,6 +20,8 @@
 
 #include "device/Target.h"
 
+#define APP_NAME "Ignis"
+
 namespace IG {
 Path RuntimeInfo::executablePath()
 {
@@ -89,15 +91,29 @@ Path RuntimeInfo::modulePath(void* func)
 #endif
 }
 
-Path RuntimeInfo::dataPath()
+Path RuntimeInfo::cacheDirectory()
 {
-#if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
+#if defined(IG_OS_LINUX)
+    const char* cache_home = std::getenv("XDG_CACHE_HOME");
+    if (cache_home == nullptr) {
+        const char* home = std::getenv("HOME");
+        if (home == nullptr) {
+            const auto dir = executablePath();
+            if (dir.empty())
+                return modulePath().parent_path() / "cache";
+            else
+                return dir.parent_path() / "cache";
+        }
+        return Path(home) / ".cache" / APP_NAME;
+    }
+    return Path(cache_home) / APP_NAME;
+#elif defined(IG_OS_APPLE)
     // TODO: Better path?
     const auto dir = executablePath();
     if (dir.empty())
-        return modulePath().parent_path();
+        return modulePath().parent_path() / "cache";
     else
-        return dir.parent_path();
+        return dir.parent_path() / "cache";
 #elif defined(IG_OS_WINDOWS)
     wchar_t* path = nullptr;
     HRESULT res   = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path);
@@ -105,21 +121,11 @@ Path RuntimeInfo::dataPath()
     if (SUCCEEDED(res)) {
         Path full_path = path;
         CoTaskMemFree(static_cast<PWSTR>(path));
-        return full_path / "Ignis";
+        return full_path / APP_NAME / "cache";
     } else {
         return {};
     }
 #endif
-}
-
-Path RuntimeInfo::cacheDirectory()
-{
-    const auto dir = dataPath();
-
-    if (dir.empty())
-        return {};
-
-    return dir / "cache";
 }
 
 size_t RuntimeInfo::sizeOfDirectory(const Path& dir)
