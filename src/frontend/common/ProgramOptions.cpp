@@ -1,81 +1,13 @@
 #include "ProgramOptions.h"
+#include "EnumValidator.h"
 #include "Runtime.h"
 #include "config/Build.h"
 #include "loader/Transpiler.h"
-
-#include <CLI/CLI.hpp>
 
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };
 static const std::map<std::string, SPPMode> SPPModeMap{ { "fixed", SPPMode::Fixed }, { "capped", SPPMode::Capped }, { "continuous", SPPMode::Continuous } };
 static const std::map<std::string, RuntimeOptions::SpecializationMode> SpecializationModeMap{ { "default", RuntimeOptions::SpecializationMode::Default }, { "force", RuntimeOptions::SpecializationMode::Force }, { "disable", RuntimeOptions::SpecializationMode::Disable } };
-
-class MyTransformer : public CLI::Validator {
-public:
-    using filter_fn_t = std::function<std::string(std::string)>;
-
-    /// This allows in-place construction
-    template <typename... Args>
-    MyTransformer(std::initializer_list<std::pair<std::string, std::string>> values, Args&&... args)
-        : MyTransformer(CLI::TransformPairs<std::string>(values), std::forward<Args>(args)...)
-    {
-    }
-
-    /// direct map of std::string to std::string
-    template <typename T>
-    explicit MyTransformer(T&& mapping)
-        : MyTransformer(std::forward<T>(mapping), nullptr)
-    {
-    }
-
-    /// This checks to see if an item is in a set: pointer or copy version. You can pass in a function that will filter
-    /// both sides of the comparison before computing the comparison.
-    template <typename T, typename F>
-    explicit MyTransformer(T mapping, F filter_function)
-    {
-
-        static_assert(CLI::detail::pair_adaptor<typename CLI::detail::element_type<T>::type>::value,
-                      "mapping must produce value pairs");
-        // Get the type of the contained item - requires a container have ::value_type
-        // if the type does not have first_type and second_type, these are both value_type
-        using element_t    = typename CLI::detail::element_type<T>::type;               // Removes (smart) pointers if needed
-        using item_t       = typename CLI::detail::pair_adaptor<element_t>::first_type; // Is value_type if not a map
-        using local_item_t = typename CLI::IsMemberType<item_t>::type;                  // Will convert bad types to good ones
-                                                                                        // (const char * to std::string)
-
-        // Make a local copy of the filter function, using a std::function if not one already
-        std::function<local_item_t(local_item_t)> filter_fn = filter_function;
-
-        // This is the type name for help, it will take the current version of the set contents
-        desc_function_ = [mapping]() { return CLI::detail::generate_map(CLI::detail::smart_deref(mapping), true /*The only difference*/); };
-
-        func_ = [mapping, filter_fn](std::string& input) {
-            local_item_t b;
-            if (!CLI::detail::lexical_cast(input, b)) {
-                return std::string();
-                // there is no possible way we can match anything in the mapping if we can't convert so just return
-            }
-            if (filter_fn) {
-                b = filter_fn(b);
-            }
-            auto res = CLI::detail::search(mapping, b, filter_fn);
-            if (res.first) {
-                input = CLI::detail::value_string(CLI::detail::pair_adaptor<element_t>::second(*res.second));
-            }
-            return std::string{};
-        };
-    }
-
-    /// You can pass in as many filter functions as you like, they nest
-    template <typename T, typename... Args>
-    MyTransformer(T&& mapping, filter_fn_t filter_fn_1, filter_fn_t filter_fn_2, Args&&... other)
-        : MyTransformer(
-            std::forward<T>(mapping),
-            [filter_fn_1, filter_fn_2](std::string a) { return filter_fn_2(filter_fn_1(a)); },
-            other...)
-    {
-    }
-};
 
 static void handleListPExprVariables()
 {
@@ -124,7 +56,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_flag_callback(
         "-v,--verbose", [&]() { VerbosityLevel = L_DEBUG; }, "Set the verbosity level to 'debug'. Shortcut for --log-level debug");
 
-    app.add_option("--log-level", VerbosityLevel, "Set the verbosity level")->transform(MyTransformer(LogLevelMap, CLI::ignore_case));
+    app.add_option("--log-level", VerbosityLevel, "Set the verbosity level")->transform(EnumValidator(LogLevelMap, CLI::ignore_case));
     app.add_flag("--no-unused", NoUnused, "Do not warn about unused properties");
 
     app.add_flag("--no-color", NoColor, "Do not use decorations to make console output better");
@@ -161,7 +93,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_option("--spp", SPP, "Number of samples per pixel a frame contains");
     app.add_option("--spi", SPI, "Number of samples per iteration. This is only considered a hint for the underlying technique");
     if (type == ApplicationType::View) {
-        app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(MyTransformer(SPPModeMap, CLI::ignore_case))->default_str("fixed");
+        app.add_option("--spp-mode", SPPMode, "Sets the current spp mode")->transform(EnumValidator(SPPModeMap, CLI::ignore_case))->default_str("fixed");
         app.add_flag_callback(
             "--realtime", [&]() { this->SPPMode = SPPMode::Continuous; SPI = 1; SPP = 1; },
             "Same as setting SPPMode='Continuous', SPI=1 and SPP=1 to emulate realtime rendering");
@@ -189,7 +121,7 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.add_option("-O,--shader-optimization", ShaderOptimizationLevel, "Level of optimization applied to shaders. Range is [0, 3]. Level 0 will also add debug information")->default_val(ShaderOptimizationLevel);
 
     app.add_flag("--add-env-light", AddExtraEnvLight, "Add additional constant environment light. This is automatically done for glTF scenes without any lights");
-    app.add_option("--specialization", Specialization, "Set the type of specialization. Force will increase compile time drastically for potential runtime optimization.")->transform(MyTransformer(SpecializationModeMap, CLI::ignore_case))->default_str("default");
+    app.add_option("--specialization", Specialization, "Set the type of specialization. Force will increase compile time drastically for potential runtime optimization.")->transform(EnumValidator(SpecializationModeMap, CLI::ignore_case))->default_str("default");
     app.add_flag_callback(
         "--force-specialization", [&]() { this->Specialization = RuntimeOptions::SpecializationMode::Force; },
         "Enforce specialization for parameters in shading tree. This will increase compile time drastically for potential runtime optimization");

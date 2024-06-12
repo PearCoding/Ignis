@@ -26,7 +26,7 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
     // AnyDSL has no support for multi-threaded compile process :/
     std::lock_guard<std::mutex> _guard(mCompileMutex);
 
-    return mCompiler->compile(
+    return mCompiler->compileAndGet(
         ICompilerDevice::Settings{
             .OptimizationLevel = (int)mOptimizationLevel,
             .Verbose           = mVerbose },

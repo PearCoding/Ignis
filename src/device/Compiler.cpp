@@ -10,7 +10,7 @@ extern "C" const IG::IDeviceInterface* ig_get_interface(); // Defined in Interfa
 
 namespace IG {
 
-void* Compiler::compile(const ICompilerDevice::Settings& settings, const std::string& script, const std::string& function) const
+static int compileScript(const ICompilerDevice::Settings& settings, const std::string& script)
 {
     static std::once_flag once;
     std::call_once(once, []() {
@@ -30,7 +30,17 @@ void* Compiler::compile(const ICompilerDevice::Settings& settings, const std::st
     anydsl_set_log_level(settings.Verbose ? 3 /* warn */ : 4 /* error */);
 #endif
 
-    const int ret = anydsl_compile(script.c_str(), (uint32_t)script.length(), (uint32_t)settings.OptimizationLevel);
+    return anydsl_compile(script.c_str(), (uint32_t)script.length(), (uint32_t)settings.OptimizationLevel);
+}
+
+bool Compiler::compile(const ICompilerDevice::Settings& settings, const std::string& script) const
+{
+    return compileScript(settings, script) >= 0;
+}
+
+void* Compiler::compileAndGet(const ICompilerDevice::Settings& settings, const std::string& script, const std::string& function) const
+{
+    int ret = compileScript(settings, script);
     if (ret < 0)
         return nullptr;
 

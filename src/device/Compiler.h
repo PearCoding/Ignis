@@ -5,6 +5,7 @@
 namespace IG {
 class Compiler : public ICompilerDevice {
 public:
-    void* compile(const Settings& settings, const std::string& script, const std::string& function) const override;
+    bool compile(const Settings& settings, const std::string& script) const override;
+    void* compileAndGet(const Settings& settings, const std::string& script, const std::string& function) const override;
 };
 } // namespace IG
