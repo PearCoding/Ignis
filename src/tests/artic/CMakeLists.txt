@@ -30,5 +30,5 @@ SET(_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface.h)
     
 add_executable(ig_test_artic ${_FILES})
-target_link_libraries(ig_test_artic PRIVATE ig_lib_runtime)
+target_link_libraries(ig_test_artic PRIVATE ig_lib_runtime ${AnyDSL_runtime_LIBRARIES})
 target_include_directories(ig_test_artic PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
