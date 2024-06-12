@@ -57,6 +57,25 @@ Path RuntimeInfo::executablePath()
 #endif
 }
 
+Path RuntimeInfo::igcPath()
+{
+    // Should reside in the same directory!
+    const Path exePath = executablePath();
+    if (exePath.empty())
+        return {};
+
+#if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
+    const Path igcPath = exePath.parent_path() / "igc";
+#else
+    const Path igcPath     = exePath.parent_path() / "igc.exe";
+#endif
+
+    if (std::filesystem::exists(igcPath))
+        return igcPath;
+    else
+        return {};
+}
+
 Path RuntimeInfo::modulePath(void* func)
 {
     if (func == nullptr)

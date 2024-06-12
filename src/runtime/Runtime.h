@@ -168,9 +168,7 @@ private:
     void checkCacheDirectory();
     bool load(const Path& path, const Scene* scene);
     bool setupScene();
-    void shutdown();
     bool compileShaders();
-    void* compileShader(const std::string& src, const std::string& func, const std::string& name);
     void stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant);
     void traceVariant(const std::vector<Ray>& rays, size_t variant);
     void handleTime();
