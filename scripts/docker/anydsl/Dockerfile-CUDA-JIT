@@ -1,7 +1,7 @@
-FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.5.0-devel-ubuntu22.04
 
 LABEL maintainer="Ömercan Yazici" \
-      description="Anydsl Meta package with CUDA 12.2 GPU support" \
+      description="Anydsl Meta package with CUDA 12.5 GPU support" \
       version="0.1.1"
 
 ENV DEBIAN_FRONTEND noninteractive
