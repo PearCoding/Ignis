@@ -37,6 +37,7 @@ CompilerOptions::CompilerOptions(int argc, char** argv, const std::string& desc)
     app.add_option("--log-level", VerbosityLevel, "Set the verbosity level")->transform(EnumValidator(LogLevelMap, CLI::ignore_case));
 
     app.add_flag("--no-color", NoColor, "Do not use decorations to make console output better");
+    app.add_flag("--no-logo", NoLogo, "Do not use show copyright");
 
     app.add_option("-O,--optimization", OptimizationLevel, "Level of optimization applied to shaders. Range is [0, 3]. Level 0 will also add debug information")->default_val(OptimizationLevel);
 

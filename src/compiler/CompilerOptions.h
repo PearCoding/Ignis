@@ -13,6 +13,7 @@ public:
     bool Quiet              = false;
     LogLevel VerbosityLevel = L_INFO;
     bool NoColor            = false;
+    bool NoLogo             = false;
 
     size_t OptimizationLevel = 3;
 

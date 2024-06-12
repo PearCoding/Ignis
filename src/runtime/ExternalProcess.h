@@ -1,0 +1,27 @@
+#pragma once
+
+#include "IG_Config.h"
+
+namespace IG {
+class ExternalProcess {
+public:
+    ExternalProcess();
+    ExternalProcess(const Path& exe, const std::vector<std::string>& parameters);
+    ~ExternalProcess();
+
+    [[nodiscard]] bool start();
+
+    [[nodiscard]] int exitCode() const;
+    [[nodiscard]] bool isRunning() const;
+
+    void waitForInit();
+    void waitForFinish();
+
+    // Both functions can only be used once!
+    void sendOnce(const std::string& data);
+    std::string receiveOnce();
+
+private:
+    std::unique_ptr<class ExternalProcessInternal> mInternal;
+};
+} // namespace IG
