@@ -1,6 +1,8 @@
-#include "OpenImageDenoise/oidn.hpp"
 #include "Logger.h"
 #include "device/IRenderDevice.h"
+
+#ifdef IG_HAS_DENOISER
+#include "OpenImageDenoise/oidn.hpp"
 
 namespace IG {
 static void errorFunc(void* userPtr, oidn::Error code, const char* message)
@@ -343,3 +345,5 @@ void ignis_denoise(IRenderDevice* device)
     ctx.filter(device);
 }
 } // namespace IG
+
+#endif
