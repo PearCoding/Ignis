@@ -1,9 +1,12 @@
 #include "ExternalProcess.h"
 #include "Logger.h"
+#include "RuntimeInfo.h"
+#include "StringUtils.h"
 
 #include <thread>
 
 #ifdef IG_OS_LINUX
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -29,21 +32,27 @@ class ExternalProcessInternal {
 public:
     const Path mPath;
     const std::vector<std::string> mParameters;
+    Path logFile;
 
     pid_t pid;
     mutable int exit_code;
 
     int stdIn[2];
-    int stdOut[2];
+    // int stdOut[2];
+    int tmpOut;
 
-    inline ExternalProcessInternal(const Path& exe, const std::vector<std::string>& parameters)
+    inline ExternalProcessInternal(const std::string& name, const Path& exe, const std::vector<std::string>& parameters)
         : mPath(exe)
         , mParameters(parameters)
         , pid(-1)
         , exit_code(-1)
         , stdIn{ InvalidPipe, InvalidPipe }
-        , stdOut{ InvalidPipe, InvalidPipe }
+        // , stdOut{ InvalidPipe, InvalidPipe }
+        , tmpOut{ InvalidPipe }
     {
+        static size_t counter = 0;
+        std::filesystem::create_directories(std::filesystem::temp_directory_path() / "Ignis");
+        logFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(name) + "_tmp.txt");
     }
 
     inline ~ExternalProcessInternal()
@@ -51,8 +60,15 @@ public:
         if (stdIn[PipeWrite] != InvalidPipe)
             close(stdIn[PipeWrite]);
 
-        if (stdOut[PipeRead] != InvalidPipe)
-            close(stdOut[PipeRead]);
+        // if (stdOut[PipeRead] != InvalidPipe)
+        //     close(stdOut[PipeRead]);
+
+        if (tmpOut != InvalidPipe)
+            close(tmpOut);
+
+        // Remove empty logs
+        if (std::filesystem::file_size(logFile) == 0)
+            std::filesystem::remove(logFile);
     }
 
     inline bool start()
@@ -64,10 +80,24 @@ public:
             return false;
         }
 
-        if (pipe(stdOut) < 0) {
-            IG_LOG(L_ERROR) << "Initializing stdout for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
+        // if (pipe(stdOut) < 0) {
+        //     IG_LOG(L_ERROR) << "Initializing stdout for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
+        //     return false;
+        // }
+
+        // FILE* tmpOutFile = std::tmpfile();
+        // if (tmpOutFile == nullptr) {
+        //     IG_LOG(L_ERROR) << "Creating temporary file for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
+        //     return false;
+        // }
+
+        tmpOut = open(logFile.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+        if (tmpOut < 0) {
+            IG_LOG(L_ERROR) << "Getting file handle for temporary file for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
             return false;
         }
+
+        logFile = std::filesystem::read_symlink(Path("/proc/self/fd") / std::to_string(tmpOut));
 
         // Prepare for child
         const std::string path  = mPath.string();
@@ -88,19 +118,20 @@ public:
             if (dup2(stdIn[PipeRead], STDIN_FILENO) == -1)
                 IG_LOG(L_FATAL) << "dup2 for stdin of process failed: " << std::strerror(errno) << std::endl;
 
-            // Redirect stdout
-            if (dup2(stdOut[PipeWrite], STDOUT_FILENO) == -1)
+            // // Redirect stdout
+            if (dup2(tmpOut, STDOUT_FILENO) == -1)
                 IG_LOG(L_FATAL) << "dup2 for stdout of process failed: " << std::strerror(errno) << std::endl;
 
             // Redirect stderr
-            if (dup2(stdOut[PipeWrite], STDERR_FILENO) == -1)
+            if (dup2(tmpOut, STDERR_FILENO) == -1)
                 IG_LOG(L_FATAL) << "dup2 for stderr of process failed: " << std::strerror(errno) << std::endl;
 
             // all these are for use by parent only
             close(stdIn[PipeRead]);
             close(stdIn[PipeWrite]);
-            close(stdOut[PipeRead]);
-            close(stdOut[PipeWrite]);
+            // close(stdOut[PipeRead]);
+            // close(stdOut[PipeWrite]);
+            close(tmpOut);
 
             if (execv(parameters[0], (char**)parameters) == -1)
                 IG_LOG(L_FATAL) << "fork/exec of process failed: " << std::strerror(errno) << std::endl;
@@ -119,8 +150,8 @@ public:
             // Close unnecessary handles
             close(stdIn[PipeRead]);
             stdIn[PipeRead] = InvalidPipe;
-            close(stdOut[PipeWrite]);
-            stdOut[PipeWrite] = InvalidPipe;
+            // close(stdOut[PipeWrite]);
+            // stdOut[PipeWrite] = InvalidPipe;
 
             // Check for error
             if (pid == -1) {
@@ -147,7 +178,7 @@ public:
 
         if (result < 0) {
             if (errno != ECHILD)
-                IG_LOG(L_ERROR) << "waitpid for " << mPath << " (" << pid << ") failed: " << std::strerror(errno) << std::endl;
+                IG_LOG(L_ERROR) << "waitpid for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
             return false;
         } else {
             if (result == 0) {
@@ -173,7 +204,7 @@ public:
 
         int status;
         if (waitpid(pid, &status, 0) < 0) {
-            IG_LOG(L_ERROR) << "waitpid for " << mPath << " (" << pid << ") failed: " << std::strerror(errno) << std::endl;
+            IG_LOG(L_ERROR) << "waitpid for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
             return;
         }
 
@@ -191,7 +222,7 @@ public:
             size_t toWrite = data.size() - written;
             int result     = write(stdIn[PipeWrite], data.c_str() + written, toWrite);
             if (result < 0) {
-                IG_LOG(L_ERROR) << "write for " << mPath << " (" << pid << ") failed: " << std::strerror(errno) << std::endl;
+                IG_LOG(L_ERROR) << "write for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
                 break;
             }
             written += (size_t)result;
@@ -211,9 +242,9 @@ public:
         std::string output;
         while (true) {
             char c;
-            int result = read(stdOut[PipeRead], &c, 1);
+            int result = read(tmpOut, &c, 1);
             if (result < 0) {
-                IG_LOG(L_ERROR) << "read for " << mPath << " (" << pid << ") failed: " << std::strerror(errno) << std::endl;
+                IG_LOG(L_ERROR) << "read for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
                 break;
             } else if (result == 0) {
                 // EOF
@@ -223,8 +254,10 @@ public:
             output += c;
         }
 
-        close(stdOut[PipeRead]);
-        stdOut[PipeRead] = InvalidPipe;
+        // close(stdOut[PipeRead]);
+        // stdOut[PipeRead] = InvalidPipe;
+        close(tmpOut);
+        tmpOut = InvalidPipe;
         return output;
     }
 };
@@ -251,7 +284,7 @@ public:
     HANDLE stdInWr  = INVALID_HANDLE_VALUE;
     // HANDLE stdInRd  = INVALID_HANDLE_VALUE;
 
-    inline ExternalProcessInternal(const Path& exe, const std::vector<std::string>& parameters)
+    inline ExternalProcessInternal(const std::string& name, const Path& exe, const std::vector<std::string>& parameters)
         : mPath(exe)
         , mParameters(parameters)
     {
@@ -441,8 +474,8 @@ ExternalProcess::ExternalProcess()
 {
 }
 
-ExternalProcess::ExternalProcess(const Path& exe, const std::vector<std::string>& parameters)
-    : mInternal(new ExternalProcessInternal(exe, parameters))
+ExternalProcess::ExternalProcess(const std::string& name, const Path& exe, const std::vector<std::string>& parameters)
+    : mInternal(new ExternalProcessInternal(name, exe, parameters))
 {
 }
 

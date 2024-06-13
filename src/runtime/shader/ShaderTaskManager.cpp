@@ -91,8 +91,8 @@ public:
 
     void start()
     {
-        mThreadRunning = true;
-        mWorkThread    = std::move(std::thread([this]() { this->run(); }));
+        if (!mThreadRunning.exchange(true))
+            mWorkThread = std::move(std::thread([this]() { this->run(); }));
     }
 
     void stop()
@@ -116,7 +116,7 @@ private:
         IG_LOG(L_DEBUG) << "Starting compilation of '" << proc.Work.ID << "'" << std::endl;
 
         proc.Start = std::chrono::steady_clock::now();
-        proc.Proc  = new ExternalProcess(igcPath, igcParameters);
+        proc.Proc  = new ExternalProcess(proc.Work.ID, igcPath, igcParameters);
 
         if (!proc.Proc->start()) {
             IG_LOG(L_ERROR) << "Compilation failed with compiler due to a startup error" << std::endl;
@@ -153,13 +153,21 @@ private:
         int exitCode = proc.Proc->exitCode();
 
         const auto dur = std::chrono::steady_clock::now() - proc.Start;
-        IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")" << std::endl;
+
         void* ptr = nullptr;
         if (exitCode == EXIT_SUCCESS) {
+            IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")" << std::endl;
+
             // All good -> recompile to get data from cache!
-            mWorkMutex.lock();
             ptr = mInternalCompiler->compile(proc.Work.Script, proc.Work.Function);
-            mWorkMutex.unlock();
+        } else {
+            // Dump shader into tmp folder
+            std::filesystem::create_directories(std::filesystem::temp_directory_path() / "Ignis");
+            const Path tmpFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(proc.Work.ID) + ".art");
+            dumpShader(tmpFile, proc.Work.Script);
+
+            IG_LOG(L_ERROR) << "Finished compilation of '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")." << std::endl
+                            << "Dump of shader is available at " << tmpFile << std::endl;
         }
 
         mWorkMutex.lock();
@@ -215,16 +223,14 @@ void ShaderTaskManager::add(const std::string& id, const std::string& script, co
             .Ptr = ptr,
         };
     } else {
-        std::lock_guard<std::mutex> _guard(mInternal->mWorkMutex);
         mInternal->mWorkQueue.push(ShaderTaskManagerInternal::Work{
             .ID       = id,
             .Script   = full_script,
             .Function = function });
 
         // Start threads
-        if (!mInternal->mThreadRunning) {
+        if (!mInternal->mThreadRunning)
             mInternal->start();
-        }
     }
 }
 
@@ -234,6 +240,7 @@ bool ShaderTaskManager::waitForFinish()
         mInternal->stopWhenFinished();
 
     // Return true if all compilations were successful
+    std::lock_guard<std::mutex> _guard(mInternal->mWorkMutex);
     for (const auto& p : mInternal->mResultMap) {
         if (p.second.Ptr == nullptr)
             return false;
@@ -243,6 +250,7 @@ bool ShaderTaskManager::waitForFinish()
 
 void* ShaderTaskManager::getResult(const std::string& id) const
 {
+    std::lock_guard<std::mutex> _guard(mInternal->mWorkMutex);
     if (const auto it = mInternal->mResultMap.find(id); it != mInternal->mResultMap.end())
         return it->second.Ptr;
     return nullptr;
@@ -250,6 +258,7 @@ void* ShaderTaskManager::getResult(const std::string& id) const
 
 std::string ShaderTaskManager::getLog(const std::string& id) const
 {
+    std::lock_guard<std::mutex> _guard(mInternal->mWorkMutex);
     if (const auto it = mInternal->mResultMap.find(id); it != mInternal->mResultMap.end())
         return it->second.Log;
     return {};
@@ -257,6 +266,7 @@ std::string ShaderTaskManager::getLog(const std::string& id) const
 
 void ShaderTaskManager::dumpLogs() const
 {
+    std::lock_guard<std::mutex> _guard(mInternal->mWorkMutex);
     for (const auto& p : mInternal->mResultMap) {
         if (p.second.Log.empty())
             continue;
