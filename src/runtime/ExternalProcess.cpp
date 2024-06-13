@@ -288,6 +288,8 @@ public:
         : mPath(exe)
         , mParameters(parameters)
     {
+        IG_UNUSED(name);
+
         pi.hProcess = INVALID_HANDLE_VALUE;
         pi.hThread  = INVALID_HANDLE_VALUE;
     }

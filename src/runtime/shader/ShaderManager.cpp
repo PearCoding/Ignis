@@ -19,8 +19,9 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
     // Start compilation of groups
     const auto& groups = reducer.groups();
     for (auto it = groups.begin(); it != groups.end();) {
-        const auto key = it->first;
-        manager.add(it->second, std::get<0>(key), std::get<1>(key));
+        const auto key             = it->first;
+        const std::string group_id = reducer.getGroupID(std::get<0>(key), std::get<1>(key));
+        manager.add(group_id, it->second, std::get<0>(key), std::get<1>(key));
 
         // Skip other elements with the same key
         while (++it != groups.end() && it->first == key)

@@ -9,10 +9,22 @@
 #include <tbb/concurrent_queue.h>
 
 namespace IG {
+static inline void dumpShader(const Path& filename, const std::string& shader)
+{
+    try {
+        std::ofstream stream(filename);
+        stream << shader;
+    } catch (const std::exception& e) {
+        IG_LOG(L_ERROR) << e.what() << std::endl;
+        // Ignore else
+    }
+}
+
 class ShaderTaskManagerInternal {
 public:
     struct Work {
         std::string ID;
+        std::string Name;
         std::string Script;
         std::string Function;
     };
@@ -45,6 +57,7 @@ public:
         : mInternalCompiler(compiler)
         , mThreadCount(threads)
         , mThreadRunning(false)
+        , mThreadRequestFinish(false)
     {
         igcPath = RuntimeInfo::igcPath();
 
@@ -73,8 +86,10 @@ public:
                     handleExit(p);
 
                     // Check if there is work todo
-                    if (mWorkQueue.try_pop(p.Work))
+                    if (mWorkQueue.try_pop(p.Work)) {
                         startProcess(p);
+                        break; // Start the parent loop anew
+                    }
                 }
             }
 
@@ -113,10 +128,10 @@ private:
         if (proc.Proc)
             delete proc.Proc;
 
-        IG_LOG(L_DEBUG) << "Starting compilation of '" << proc.Work.ID << "'" << std::endl;
+        IG_LOG(L_DEBUG) << "Starting compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "'" << std::endl;
 
         proc.Start = std::chrono::steady_clock::now();
-        proc.Proc  = new ExternalProcess(proc.Work.ID, igcPath, igcParameters);
+        proc.Proc  = new ExternalProcess(proc.Work.Name + "_" + proc.Work.ID, igcPath, igcParameters);
 
         if (!proc.Proc->start()) {
             IG_LOG(L_ERROR) << "Compilation failed with compiler due to a startup error" << std::endl;
@@ -156,7 +171,7 @@ private:
 
         void* ptr = nullptr;
         if (exitCode == EXIT_SUCCESS) {
-            IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")" << std::endl;
+            IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")" << std::endl;
 
             // All good -> recompile to get data from cache!
             ptr = mInternalCompiler->compile(proc.Work.Script, proc.Work.Function);
@@ -166,7 +181,7 @@ private:
             const Path tmpFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(proc.Work.ID) + ".art");
             dumpShader(tmpFile, proc.Work.Script);
 
-            IG_LOG(L_ERROR) << "Finished compilation of '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")." << std::endl
+            IG_LOG(L_ERROR) << "Finished compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")." << std::endl
                             << "Dump of shader is available at " << tmpFile << std::endl;
         }
 
@@ -193,30 +208,19 @@ ShaderTaskManager::~ShaderTaskManager()
 {
 }
 
-static inline void dumpShader(const std::string& filename, const std::string& shader)
-{
-    try {
-        std::ofstream stream(filename);
-        stream << shader;
-    } catch (const std::exception& e) {
-        IG_LOG(L_ERROR) << e.what() << std::endl;
-        // Ignore else
-    }
-}
-
-void ShaderTaskManager::add(const std::string& id, const std::string& script, const std::string& function)
+void ShaderTaskManager::add(const std::string& id, const std::string& name, const std::string& script, const std::string& function)
 {
     if (mDumpLevel == DumpLevel::Light)
-        dumpShader(whitespace_escaped(id) + ".art", script);
+        dumpShader(whitespace_escaped(name) + ".art", script);
 
     const std::string full_script = mInternal->mInternalCompiler->prepare(script);
 
     if (mDumpLevel == DumpLevel::Full)
-        dumpShader(whitespace_escaped(id) + ".art", full_script);
+        dumpShader(whitespace_escaped(name) + ".art", full_script);
 
     if (mThreadCount == 1) {
         // Fallback internal compilation
-        IG_LOG(L_DEBUG) << "Compiling '" << id << "'" << std::endl;
+        IG_LOG(L_DEBUG) << "Compiling '" << name << "' for group '" << id << "'" << std::endl;
         void* ptr                 = mInternal->mInternalCompiler->compile(full_script, function);
         mInternal->mResultMap[id] = ShaderTaskManagerInternal::Result{
             .Log = {}, // TODO
@@ -225,6 +229,7 @@ void ShaderTaskManager::add(const std::string& id, const std::string& script, co
     } else {
         mInternal->mWorkQueue.push(ShaderTaskManagerInternal::Work{
             .ID       = id,
+            .Name     = name,
             .Script   = full_script,
             .Function = function });
 

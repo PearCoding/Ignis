@@ -16,7 +16,7 @@ public:
     ShaderTaskManager(ScriptCompiler* compiler, size_t threads, DumpLevel dumpLevel = DumpLevel::None);
     ~ShaderTaskManager();
 
-    void add(const std::string& id, const std::string& script, const std::string& function);
+    void add(const std::string& id, const std::string& name, const std::string& script, const std::string& function);
 
     bool waitForFinish();
 
