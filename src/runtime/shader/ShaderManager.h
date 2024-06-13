@@ -1,33 +1,27 @@
 #pragma once
 
-#include "ScriptCompiler.h"
-
-#include <thread>
+#include "technique/TechniqueVariant.h"
 
 namespace IG {
+    class ScriptCompiler;
+
 class ShaderManager {
 public:
-    enum DumpLevel {
-        None,
-        Light,
-        Full
+    struct ShaderEntry {
+        const ShaderOutput<std::string>* Source;
+        std::string Function;
+        ShaderOutput<void*>* Compiled;
     };
 
-    ShaderManager(ScriptCompiler* compiler, size_t threads, DumpLevel dumpLevel = DumpLevel::None);
-    ~ShaderManager();
+    inline void add(const std::string& id, const ShaderEntry& entry)
+    {
+        mEntries[id] = entry;
+    }
 
-    void add(const std::string& id, const std::string& script, const std::string& function);
-
-    bool waitForFinish();
-
-    void* getResult(const std::string& id) const;
-    std::string getLog(const std::string& id) const;
-
-    void dumpLogs() const;
+    [[nodiscard]] bool compile(ScriptCompiler* compiler, size_t threads);
 
 private:
-    std::unique_ptr<class ShaderManagerInternal> mInternal;
-    const size_t mThreadCount;
-    const ShaderManager::DumpLevel mDumpLevel;
+    std::unordered_map<std::string, ShaderEntry> mEntries;
 };
+
 } // namespace IG

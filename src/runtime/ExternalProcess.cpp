@@ -69,18 +69,20 @@ public:
             return false;
         }
 
+        // Prepare for child
+        const std::string path  = mPath.string();
+        const char** parameters = new const char*[mParameters.size() + 2];
+
+        parameters[0] = path.c_str();
+        for (size_t i = 0; i < mParameters.size(); ++i)
+            parameters[i + 1] = mParameters[i].c_str();
+        parameters[mParameters.size() + 1] = nullptr;
+
         // Init process
         pid = fork();
 
         if (pid == 0) {
-            // Child process
-            const std::string path  = mPath.string();
-            const char** parameters = new const char*[mParameters.size() + 2];
-
-            parameters[0] = path.c_str();
-            for (size_t i = 0; i < mParameters.size(); ++i)
-                parameters[i + 1] = mParameters[i].c_str();
-            parameters[mParameters.size() + 1] = nullptr;
+            // -> Child process
 
             // Redirect stdin
             if (dup2(stdIn[PipeRead], STDIN_FILENO) == -1)
@@ -100,9 +102,10 @@ public:
             close(stdOut[PipeRead]);
             close(stdOut[PipeWrite]);
 
-            if (execv(path.c_str(), (char**)parameters) == -1) {
+            if (execv(parameters[0], (char**)parameters) == -1)
                 IG_LOG(L_FATAL) << "fork/exec of process failed: " << std::strerror(errno) << std::endl;
-            }
+
+            std::exit(-1);
 
 #if IG_CC_MSC
             __assume(false);
@@ -110,18 +113,22 @@ public:
             __builtin_unreachable();
 #endif
         } else {
+            // -> Parent process
+            delete[] parameters;
+
             // Close unnecessary handles
             close(stdIn[PipeRead]);
             stdIn[PipeRead] = InvalidPipe;
             close(stdOut[PipeWrite]);
             stdOut[PipeWrite] = InvalidPipe;
 
-            // Parent process
+            // Check for error
             if (pid == -1) {
                 IG_LOG(L_ERROR) << "Fork of process " << mPath << " failed: " << std::strerror(errno) << std::endl;
                 return false;
             }
         }
+
         return true;
     }
 
@@ -132,6 +139,9 @@ public:
 
     inline bool isRunning() const
     {
+        if (pid == -1)
+            return false;
+
         int status;
         int result = waitpid(pid, &status, WNOHANG);
 
@@ -158,6 +168,9 @@ public:
 
     inline void waitForFinish()
     {
+        if (pid == -1)
+            return;
+
         int status;
         if (waitpid(pid, &status, 0) < 0) {
             IG_LOG(L_ERROR) << "waitpid for " << mPath << " (" << pid << ") failed: " << std::strerror(errno) << std::endl;
@@ -170,6 +183,9 @@ public:
 
     inline bool sendOnce(const std::string& data)
     {
+        if (pid == -1)
+            return false;
+
         size_t written = 0;
         while (written < data.size()) {
             size_t toWrite = data.size() - written;
@@ -189,6 +205,9 @@ public:
 
     inline std::string receiveOnce()
     {
+        if (pid == -1)
+            return {};
+
         std::string output;
         while (true) {
             char c;

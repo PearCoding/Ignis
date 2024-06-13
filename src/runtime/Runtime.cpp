@@ -576,125 +576,65 @@ bool Runtime::compileShaders()
         threads = 1;
     }
 
-    ShaderManager manager(mCompiler.get(), threads);
-
-    const auto compile = [&](size_t i, const std::string& name, const std::string& func, const ShaderOutput<std::string>& input) {
-        manager.add("v" + std::to_string(i) + " " + name, input.Exec, func);
-    };
-
-    const auto extract = [&](size_t i, const std::string& name, const ShaderOutput<std::string>& input, ShaderOutput<void*>& output) {
+    ShaderManager manager;
+    const auto registerShader = [&](size_t i, const std::string& name, const std::string& function, const ShaderOutput<std::string>* source, ShaderOutput<void*>* compiled) {
         const std::string id = "v" + std::to_string(i) + " " + name;
-        output.Exec          = manager.getResult(id);
-        output.LocalRegistry = input.LocalRegistry;
-        if (output.Exec == nullptr) {
-            if (std::string log = manager.getLog(id); !log.empty())
-                IG_LOG(L_ERROR) << log << std::endl;
-            throw std::runtime_error("Failed to compile " + name + " shader in variant " + std::to_string(i) + ".");
-        } else {
-            if (std::string log = manager.getLog(id); !log.empty())
-                IG_LOG(L_DEBUG) << log << std::endl;
-        }
+        manager.add(id,
+                    ShaderManager::ShaderEntry{
+                        .Source   = source,
+                        .Function = function,
+                        .Compiled = compiled,
+                    });
     };
+
+    // Register all types
+    mTechniqueVariantShaderSets.resize(mTechniqueVariants.size());
+    for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
+        const auto& variant = mTechniqueVariants[i];
+        auto& shaders       = mTechniqueVariantShaderSets[i];
+        shaders.ID          = (uint32)i;
+
+        registerShader(i, "device", "ig_callback_shader", &variant.DeviceShader, &shaders.DeviceShader);
+        if (mOptions.EnableTonemapping) {
+            registerShader(i, "tonemap", "ig_tonemap_shader", &variant.TonemapShader, &shaders.TonemapShader);
+            registerShader(i, "imageinfo", "ig_imageinfo_shader", &variant.ImageinfoShader, &shaders.ImageinfoShader);
+        }
+        if (mOptions.Glare.Enabled)
+            registerShader(i, "glare", "ig_glare_shader", &variant.GlareShader, &shaders.GlareShader);
+        registerShader(i, "primary traversal", "ig_traversal_shader", &variant.PrimaryTraversalShader, &shaders.PrimaryTraversalShader);
+        registerShader(i, "secondary traversal", "ig_traversal_shader", &variant.SecondaryTraversalShader, &shaders.SecondaryTraversalShader);
+        registerShader(i, "ray generation", "ig_ray_generation_shader", &variant.RayGenerationShader, &shaders.RayGenerationShader);
+        registerShader(i, "miss", "ig_miss_shader", &variant.MissShader, &shaders.MissShader);
+
+        shaders.HitShaders.resize(variant.HitShaders.size());
+        for (size_t j = 0; j < variant.HitShaders.size(); ++j)
+            registerShader(i, "hit shader " + std::to_string(j), "ig_hit_shader", &variant.HitShaders[j], &shaders.HitShaders[j]);
+
+        if (!variant.AdvancedShadowHitShaders.empty()) {
+            shaders.AdvancedShadowHitShaders.resize(variant.AdvancedShadowHitShaders.size());
+            for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j)
+                registerShader(i, "advanced shadow hit shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowHitShaders[j], &shaders.HitShaders[j]);
+
+            shaders.AdvancedShadowMissShaders.resize(variant.AdvancedShadowMissShaders.size());
+            for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j)
+                registerShader(i, "advanced shadow miss shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowMissShaders[j], &shaders.HitShaders[j]);
+        }
+
+        for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
+            if (variant.CallbackShaders[j].Exec.empty()) {
+                shaders.CallbackShaders[j].Exec = nullptr;
+            } else {
+                registerShader(i, "callback " + std::to_string(j), "ig_callback_shader", &variant.CallbackShaders[j], &shaders.CallbackShaders[j]);
+            }
+        }
+    }
 
     const auto startJIT = std::chrono::high_resolution_clock::now();
-
-    mTechniqueVariantShaderSets.resize(mTechniqueVariants.size());
-    try {
-        // Start compilation
-        for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
-            const auto& variant = mTechniqueVariants[i];
-            auto& shaders       = mTechniqueVariantShaderSets[i];
-            shaders.ID          = (uint32)i;
-
-            compile(i, "device", "ig_callback_shader", variant.DeviceShader);
-            if (mOptions.EnableTonemapping) {
-                compile(i, "tonemap", "ig_tonemap_shader", variant.TonemapShader);
-                compile(i, "imageinfo", "ig_imageinfo_shader", variant.ImageinfoShader);
-            }
-            if (mOptions.Glare.Enabled)
-                compile(i, "glare", "ig_glare_shader", variant.GlareShader);
-            compile(i, "primary traversal", "ig_traversal_shader", variant.PrimaryTraversalShader);
-            compile(i, "secondary traversal", "ig_traversal_shader", variant.SecondaryTraversalShader);
-            compile(i, "ray generation", "ig_ray_generation_shader", variant.RayGenerationShader);
-            compile(i, "miss", "ig_miss_shader", variant.MissShader);
-
-            for (size_t j = 0; j < variant.HitShaders.size(); ++j)
-                compile(i, "hit shader " + std::to_string(j), "ig_hit_shader", variant.HitShaders.at(j));
-
-            if (!variant.AdvancedShadowHitShaders.empty()) {
-                for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j)
-                    compile(i, "advanced shadow hit shader " + std::to_string(j), "ig_advanced_shadow_shader", variant.AdvancedShadowHitShaders.at(j));
-
-                for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j)
-                    compile(i, "advanced shadow miss shader " + std::to_string(j), "ig_advanced_shadow_shader", variant.AdvancedShadowMissShaders.at(j));
-            }
-
-            for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
-                if (!variant.CallbackShaders.at(j).Exec.empty())
-                    compile(i, "callback " + std::to_string(j), "ig_callback_shader", variant.CallbackShaders.at(j));
-            }
-        }
-
-        if (!manager.waitForFinish()) {
-            IG_LOG(L_ERROR) << "Compiling shaders failed" << std::endl;
-            manager.dumpLogs();
-            return false;
-        }
-
-        for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
-            const auto& variant = mTechniqueVariants[i];
-            auto& shaders       = mTechniqueVariantShaderSets[i];
-            shaders.ID          = (uint32)i;
-
-            IG_LOG(L_DEBUG) << "Handling technique variant " << i << std::endl;
-            extract(i, "device", variant.DeviceShader, shaders.DeviceShader);
-            if (mOptions.EnableTonemapping) {
-                extract(i, "tonemap", variant.TonemapShader, shaders.TonemapShader);
-                extract(i, "imageinfo", variant.ImageinfoShader, shaders.ImageinfoShader);
-            }
-            if (mOptions.Glare.Enabled)
-                extract(i, "glare", variant.GlareShader, shaders.GlareShader);
-            extract(i, "primary traversal", variant.PrimaryTraversalShader, shaders.PrimaryTraversalShader);
-            extract(i, "secondary traversal", variant.SecondaryTraversalShader, shaders.SecondaryTraversalShader);
-            extract(i, "ray generation", variant.RayGenerationShader, shaders.RayGenerationShader);
-            extract(i, "miss", variant.MissShader, shaders.MissShader);
-
-            for (size_t j = 0; j < variant.HitShaders.size(); ++j) {
-                ShaderOutput<void*> result;
-                extract(i, "hit shader " + std::to_string(j), variant.HitShaders.at(j), result);
-                shaders.HitShaders.push_back(result);
-            }
-
-            if (!variant.AdvancedShadowHitShaders.empty()) {
-                for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j) {
-                    ShaderOutput<void*> result;
-                    extract(i, "advanced shadow hit shader " + std::to_string(j), variant.AdvancedShadowHitShaders.at(j), result);
-                    shaders.AdvancedShadowHitShaders.push_back(result);
-                }
-
-                for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j) {
-                    ShaderOutput<void*> result;
-                    extract(i, "advanced shadow miss shader " + std::to_string(j), variant.AdvancedShadowMissShaders.at(j), result);
-                    shaders.AdvancedShadowMissShaders.push_back(result);
-                }
-            }
-
-            for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
-                if (variant.CallbackShaders.at(j).Exec.empty()) {
-                    shaders.CallbackShaders[j].Exec = nullptr;
-                } else {
-                    extract(i, "callback " + std::to_string(j), variant.CallbackShaders.at(j), shaders.CallbackShaders[j]);
-                }
-            }
-        }
-    } catch (const std::exception& e) {
-        IG_LOG(L_ERROR) << e.what() << std::endl;
-        return false;
-    }
+    const bool result   = manager.compile(mCompiler.get(), threads);
 
     IG_LOG(L_DEBUG) << "Compiling shaders took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startJIT).count() / 1000.0f << " seconds" << std::endl;
 
-    return true;
+    return result;
 }
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)

@@ -17,7 +17,6 @@ struct ShaderOutput {
 
 template <typename T>
 struct TechniqueVariantBase {
-    // TODO: Make this struct more versatile to prevent code duplication
     uint32 ID;
     ShaderOutput<T> DeviceShader;
     ShaderOutput<T> TonemapShader;
