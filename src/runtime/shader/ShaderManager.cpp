@@ -10,8 +10,10 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
     ShaderReducer reducer;
 
     // Reduce the number of shaders
-    for (const auto& p : mEntries)
+    for (const auto& p : mEntries) {
+        p.second.Compiled->Exec = nullptr; // Reset
         reducer.registerGroupID(p.first, p.second.Source->Exec, p.second.Function);
+    }
 
     const size_t numberOfUniqueEntries = reducer.computeNumberOfUniqueEntries();
     IG_LOG(L_DEBUG) << "Reduced number of shaders from " << reducer.numberOfEntries() << " to " << numberOfUniqueEntries << " (" << (numberOfUniqueEntries / (float)reducer.numberOfEntries()) << "x)" << std::endl;
@@ -40,7 +42,7 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
         const std::string group_id = reducer.getGroupID(entry.Source->Exec, entry.Function);
 
         entry.Compiled->Exec          = manager.getResult(group_id);
-        entry.Compiled->LocalRegistry = entry.Compiled->LocalRegistry;
+        entry.Compiled->LocalRegistry = entry.Source->LocalRegistry;
         if (entry.Compiled->Exec == nullptr) {
             if (std::string log = manager.getLog(group_id); !log.empty())
                 IG_LOG(L_ERROR) << log << std::endl;
