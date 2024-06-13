@@ -24,6 +24,7 @@ public:
 
     struct RunningProcess {
         ExternalProcess* Proc;
+        std::chrono::time_point<std::chrono::steady_clock> Start;
         ShaderTaskManagerInternal::Work Work;
     };
 
@@ -114,7 +115,8 @@ private:
 
         IG_LOG(L_DEBUG) << "Starting compilation of '" << proc.Work.ID << "'" << std::endl;
 
-        proc.Proc = new ExternalProcess(igcPath, igcParameters);
+        proc.Start = std::chrono::steady_clock::now();
+        proc.Proc  = new ExternalProcess(igcPath, igcParameters);
 
         if (!proc.Proc->start()) {
             IG_LOG(L_ERROR) << "Compilation failed with compiler due to a startup error" << std::endl;
@@ -150,7 +152,8 @@ private:
         proc.Proc->waitForFinish();
         int exitCode = proc.Proc->exitCode();
 
-        IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.ID << "' with exit code " << exitCode << std::endl;
+        const auto dur = std::chrono::steady_clock::now() - proc.Start;
+        IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")" << std::endl;
         void* ptr = nullptr;
         if (exitCode == EXIT_SUCCESS) {
             // All good -> recompile to get data from cache!
