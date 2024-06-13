@@ -24,7 +24,7 @@ public:
 
     struct RunningProcess {
         ExternalProcess* Proc;
-        Work Work;
+        ShaderManagerInternal::Work Work;
     };
 
     ScriptCompiler* mInternalCompiler;
@@ -129,7 +129,13 @@ private:
             return;
         }
 
-        proc.Proc->sendOnce(proc.Work.Script);
+        if (!proc.Proc->sendOnce(proc.Work.Script)) {
+            IG_LOG(L_ERROR) << "Compilation failed due to failing to establish communication with compiler" << std::endl;
+            IG_LOG(L_DEBUG) << proc.Proc->receiveOnce();
+            delete proc.Proc;
+            proc.Proc = nullptr;
+            return;
+        }
     }
 
     void handleExit(RunningProcess& proc)

@@ -18,7 +18,7 @@ public:
     void waitForFinish();
 
     // Both functions can only be used once!
-    void sendOnce(const std::string& data);
+    bool sendOnce(const std::string& data);
     std::string receiveOnce();
 
 private:
