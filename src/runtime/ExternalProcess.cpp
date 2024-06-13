@@ -30,9 +30,9 @@ constexpr int PipeWrite   = 1;
 
 class ExternalProcessInternal {
 public:
-    const Path mPath;
-    const std::vector<std::string> mParameters;
-    Path logFile;
+    const Path exePath;
+    const std::vector<std::string> cmdParameters;
+    const Path logFile;
 
     pid_t pid;
     mutable int exit_code;
@@ -41,27 +41,21 @@ public:
     // int stdOut[2];
     int tmpOut;
 
-    inline ExternalProcessInternal(const std::string& name, const Path& exe, const std::vector<std::string>& parameters)
-        : mPath(exe)
-        , mParameters(parameters)
+    inline ExternalProcessInternal(const std::string& name, const Path& exe, const std::vector<std::string>& parameters, const Path& logFile)
+        : exePath(exe)
+        , cmdParameters(parameters)
+        , logFile(logFile)
         , pid(-1)
         , exit_code(-1)
         , stdIn{ InvalidPipe, InvalidPipe }
-        // , stdOut{ InvalidPipe, InvalidPipe }
         , tmpOut{ InvalidPipe }
     {
-        static size_t counter = 0;
-        std::filesystem::create_directories(std::filesystem::temp_directory_path() / "Ignis");
-        logFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(name) + "_tmp.txt");
     }
 
     inline ~ExternalProcessInternal()
     {
         if (stdIn[PipeWrite] != InvalidPipe)
             close(stdIn[PipeWrite]);
-
-        // if (stdOut[PipeRead] != InvalidPipe)
-        //     close(stdOut[PipeRead]);
 
         if (tmpOut != InvalidPipe)
             close(tmpOut);
@@ -74,39 +68,27 @@ public:
     inline bool start()
     {
         // Init pipes
-
         if (pipe(stdIn) < 0) {
-            IG_LOG(L_ERROR) << "Initializing stdin for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
+            IG_LOG(L_ERROR) << "Initializing stdin for process " << exePath << " failed: " << std::strerror(errno) << std::endl;
             return false;
         }
 
-        // if (pipe(stdOut) < 0) {
-        //     IG_LOG(L_ERROR) << "Initializing stdout for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
-        //     return false;
-        // }
-
-        // FILE* tmpOutFile = std::tmpfile();
-        // if (tmpOutFile == nullptr) {
-        //     IG_LOG(L_ERROR) << "Creating temporary file for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
-        //     return false;
-        // }
-
         tmpOut = open(logFile.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
         if (tmpOut < 0) {
-            IG_LOG(L_ERROR) << "Getting file handle for temporary file for process " << mPath << " failed: " << std::strerror(errno) << std::endl;
+            IG_LOG(L_ERROR) << "Getting file handle for temporary file for process " << exePath << " failed: " << std::strerror(errno) << std::endl;
             return false;
         }
 
         logFile = std::filesystem::read_symlink(Path("/proc/self/fd") / std::to_string(tmpOut));
 
         // Prepare for child
-        const std::string path  = mPath.string();
-        const char** parameters = new const char*[mParameters.size() + 2];
+        const std::string path  = exePath.string();
+        const char** parameters = new const char*[cmdParameters.size() + 2];
 
         parameters[0] = path.c_str();
-        for (size_t i = 0; i < mParameters.size(); ++i)
-            parameters[i + 1] = mParameters[i].c_str();
-        parameters[mParameters.size() + 1] = nullptr;
+        for (size_t i = 0; i < cmdParameters.size(); ++i)
+            parameters[i + 1] = cmdParameters[i].c_str();
+        parameters[cmdParameters.size() + 1] = nullptr;
 
         // Init process
         pid = fork();
@@ -129,8 +111,6 @@ public:
             // all these are for use by parent only
             close(stdIn[PipeRead]);
             close(stdIn[PipeWrite]);
-            // close(stdOut[PipeRead]);
-            // close(stdOut[PipeWrite]);
             close(tmpOut);
 
             if (execv(parameters[0], (char**)parameters) == -1)
@@ -150,12 +130,10 @@ public:
             // Close unnecessary handles
             close(stdIn[PipeRead]);
             stdIn[PipeRead] = InvalidPipe;
-            // close(stdOut[PipeWrite]);
-            // stdOut[PipeWrite] = InvalidPipe;
 
             // Check for error
             if (pid == -1) {
-                IG_LOG(L_ERROR) << "Fork of process " << mPath << " failed: " << std::strerror(errno) << std::endl;
+                IG_LOG(L_ERROR) << "Fork of process " << exePath << " failed: " << std::strerror(errno) << std::endl;
                 return false;
             }
         }
@@ -178,7 +156,7 @@ public:
 
         if (result < 0) {
             if (errno != ECHILD)
-                IG_LOG(L_ERROR) << "waitpid for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
+                IG_LOG(L_ERROR) << "waitpid for " << exePath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
             return false;
         } else {
             if (result == 0) {
@@ -204,7 +182,7 @@ public:
 
         int status;
         if (waitpid(pid, &status, 0) < 0) {
-            IG_LOG(L_ERROR) << "waitpid for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
+            IG_LOG(L_ERROR) << "waitpid for " << exePath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
             return;
         }
 
@@ -222,7 +200,7 @@ public:
             size_t toWrite = data.size() - written;
             int result     = write(stdIn[PipeWrite], data.c_str() + written, toWrite);
             if (result < 0) {
-                IG_LOG(L_ERROR) << "write for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
+                IG_LOG(L_ERROR) << "write for " << exePath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
                 break;
             }
             written += (size_t)result;
@@ -244,7 +222,7 @@ public:
             char c;
             int result = read(tmpOut, &c, 1);
             if (result < 0) {
-                IG_LOG(L_ERROR) << "read for " << mPath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
+                IG_LOG(L_ERROR) << "read for " << exePath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
                 break;
             } else if (result == 0) {
                 // EOF
@@ -274,19 +252,19 @@ static inline std::wstring s2ws(const std::string& str)
 
 class ExternalProcessInternal {
 public:
-    const Path mPath;
-    const std::vector<std::string> mParameters;
+    const Path exePath;
+    const std::vector<std::string> cmdParameters;
+    const Path logFile;
 
     PROCESS_INFORMATION pi;
 
-    // HANDLE stdOutWr = INVALID_HANDLE_VALUE;
-    HANDLE stdOutRd = INVALID_HANDLE_VALUE;
-    HANDLE stdInWr  = INVALID_HANDLE_VALUE;
-    // HANDLE stdInRd  = INVALID_HANDLE_VALUE;
+    HANDLE stdInWr    = INVALID_HANDLE_VALUE;
+    HANDLE stdOutFile = INVALID_HANDLE_VALUE;
 
-    inline ExternalProcessInternal(const std::string& name, const Path& exe, const std::vector<std::string>& parameters)
-        : mPath(exe)
-        , mParameters(parameters)
+    inline ExternalProcessInternal(const std::string& name, const Path& exe, const std::vector<std::string>& parameters, const Path& logFile)
+        : exePath(exe)
+        , cmdParameters(parameters)
+        , logFile(logFile)
     {
         IG_UNUSED(name);
 
@@ -302,48 +280,50 @@ public:
         if (pi.hThread != INVALID_HANDLE_VALUE)
             CloseHandle(pi.hThread);
 
-        // if (stdOutWr != INVALID_HANDLE_VALUE)
-        //     CloseHandle(stdOutWr);
-
-        if (stdOutRd != INVALID_HANDLE_VALUE)
-            CloseHandle(stdOutRd);
+        if (stdOutFile != INVALID_HANDLE_VALUE)
+            CloseHandle(stdOutFile);
 
         if (stdInWr != INVALID_HANDLE_VALUE)
             CloseHandle(stdInWr);
 
-        // if (stdInRd != INVALID_HANDLE_VALUE)
-        //     CloseHandle(stdInRd);
+        // Remove empty logs
+        if (std::filesystem::file_size(logFile) == 0)
+            std::filesystem::remove(logFile);
     }
 
     inline bool start()
     {
         // Setup commandline
         std::wstringstream cmdLineStream;
-        cmdLineStream << mPath << L" ";
-        for (const auto& str : mParameters)
+        cmdLineStream << exePath << L" ";
+        for (const auto& str : cmdParameters)
             cmdLineStream << s2ws(str) << L" ";
         std::wstring cmdLine = cmdLineStream.str();
 
-        // Setup pipes
+        // Setup security stuff
         SECURITY_ATTRIBUTES saAttr;
 
-        HANDLE stdOutWr = INVALID_HANDLE_VALUE;
-        HANDLE stdInRd  = INVALID_HANDLE_VALUE;
-
         ZeroMemory(&saAttr, sizeof(saAttr));
-        saAttr.nLength              = sizeof(SECURITY_ATTRIBUTES);
+        saAttr.nLength              = sizeof(saAttr);
         saAttr.bInheritHandle       = TRUE;
         saAttr.lpSecurityDescriptor = NULL;
-        if (!CreatePipe(&stdOutRd, &stdOutWr, &saAttr, 0)) {
-            IG_LOG(L_ERROR) << "CreatePipe failed: " << std::system_category().message(GetLastError()) << std::endl;
+
+        // Direct output to file
+        stdOutFile = CreateFileW(logFile.c_str(),
+                                 FILE_GENERIC_WRITE | FILE_GENERIC_READ,
+                                 FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
+                                 &saAttr,
+                                 OPEN_ALWAYS,
+                                 FILE_ATTRIBUTE_NORMAL,
+                                 NULL);
+
+        if (stdOutFile == INVALID_HANDLE_VALUE) {
+            IG_LOG(L_ERROR) << "CreateFileW failed: " << std::system_category().message(GetLastError()) << std::endl;
             return false;
         }
 
-        if (!SetHandleInformation(stdOutRd, HANDLE_FLAG_INHERIT, 0)) {
-            IG_LOG(L_ERROR) << "SetHandleInformation failed: " << std::system_category().message(GetLastError()) << std::endl;
-            return false;
-        }
-
+        // Setup pipes
+        HANDLE stdInRd = INVALID_HANDLE_VALUE;
         if (!CreatePipe(&stdInRd, &stdInWr, &saAttr, 0)) {
             IG_LOG(L_ERROR) << "CreatePipe failed: " << std::system_category().message(GetLastError()) << std::endl;
             return false;
@@ -358,24 +338,24 @@ public:
         STARTUPINFOW si;
         ZeroMemory(&si, sizeof(si));
         si.cb         = sizeof(si);
-        si.hStdError  = stdOutWr;
-        si.hStdOutput = stdOutWr;
+        si.hStdError  = stdOutFile;
+        si.hStdOutput = stdOutFile;
         si.hStdInput  = stdInRd;
         si.dwFlags |= STARTF_USESTDHANDLES;
 
         ZeroMemory(&pi, sizeof(pi));
 
         // Start the child process.
-        if (!CreateProcessW(NULL,           // No module name (use command line)
-                            cmdLine.data(), // Command line
-                            NULL,           // Process handle not inheritable
-                            NULL,           // Thread handle not inheritable
-                            TRUE,           // Set handle inheritance to TRUE
-                            0,              // No creation flags
-                            NULL,           // Use parent's environment block
-                            NULL,           // Use parent's starting directory
-                            &si,            // Pointer to STARTUPINFO structure
-                            &pi)            // Pointer to PROCESS_INFORMATION structure
+        if (!CreateProcessW(NULL,                    // No module name (use command line)
+                            cmdLine.data(),          // Command line
+                            NULL,                    // Process handle not inheritable
+                            NULL,                    // Thread handle not inheritable
+                            TRUE,                    // Set handle inheritance to TRUE
+                            INHERIT_PARENT_AFFINITY, // Only keep the affinity
+                            NULL,                    // Use parent's environment block
+                            NULL,                    // Use parent's starting directory
+                            &si,                     // Pointer to STARTUPINFO structure
+                            &pi)                     // Pointer to PROCESS_INFORMATION structure
         ) {
             IG_LOG(L_ERROR) << "CreateProcess failed: " << std::system_category().message(GetLastError()) << std::endl;
             return false;
@@ -386,9 +366,6 @@ public:
             CloseHandle(pi.hThread);
             pi.hThread = INVALID_HANDLE_VALUE;
         }
-
-        if (stdOutWr != INVALID_HANDLE_VALUE)
-            CloseHandle(stdOutWr);
 
         if (stdInRd != INVALID_HANDLE_VALUE)
             CloseHandle(stdInRd);
@@ -454,16 +431,16 @@ public:
         std::string output;
         while (true) {
             DWORD dwRead;
-            BOOL bSuccess = ReadFile(stdOutRd, chBuf, BUFSIZE, &dwRead, NULL);
+            BOOL bSuccess = ReadFile(stdOutFile, chBuf, BUFSIZE, &dwRead, NULL);
             if (!bSuccess || dwRead == 0)
                 break;
 
             output += std::string(chBuf, chBuf + dwRead);
         }
 
-        if (stdOutRd != INVALID_HANDLE_VALUE)
-            CloseHandle(stdOutRd);
-        stdOutRd = INVALID_HANDLE_VALUE;
+        if (stdOutFile != INVALID_HANDLE_VALUE)
+            CloseHandle(stdOutFile);
+        stdOutFile = INVALID_HANDLE_VALUE;
 
         return output;
     }
@@ -472,12 +449,8 @@ public:
 
 // -----------------------------------------------------------------------------------
 
-ExternalProcess::ExternalProcess()
-{
-}
-
-ExternalProcess::ExternalProcess(const std::string& name, const Path& exe, const std::vector<std::string>& parameters)
-    : mInternal(new ExternalProcessInternal(name, exe, parameters))
+ExternalProcess::ExternalProcess(const std::string& name, const Path& exe, const std::vector<std::string>& parameters, const Path& logFile)
+    : mInternal(new ExternalProcessInternal(name, exe, parameters, logFile))
 {
 }
 

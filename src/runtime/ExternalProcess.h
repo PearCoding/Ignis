@@ -5,8 +5,7 @@
 namespace IG {
 class ExternalProcess {
 public:
-    ExternalProcess();
-    ExternalProcess(const std::string& name, const Path& exe, const std::vector<std::string>& parameters);
+    ExternalProcess(const std::string& name, const Path& exe, const std::vector<std::string>& parameters, const Path& logFile);
     ~ExternalProcess();
 
     [[nodiscard]] bool start();

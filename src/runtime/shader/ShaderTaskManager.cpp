@@ -27,6 +27,8 @@ public:
         std::string Name;
         std::string Script;
         std::string Function;
+
+        inline std::string reasonableID() const { return Name + "_" + ID; }
     };
 
     struct Result {
@@ -130,8 +132,10 @@ private:
 
         IG_LOG(L_DEBUG) << "Starting compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "'" << std::endl;
 
+        const Path logFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(proc.Work.reasonableID()) + ".log");
+
         proc.Start = std::chrono::steady_clock::now();
-        proc.Proc  = new ExternalProcess(proc.Work.Name + "_" + proc.Work.ID, igcPath, igcParameters);
+        proc.Proc  = new ExternalProcess(proc.Work.Name + "_" + proc.Work.ID, igcPath, igcParameters, logFile);
 
         if (!proc.Proc->start()) {
             IG_LOG(L_ERROR) << "Compilation failed with compiler due to a startup error" << std::endl;
@@ -177,8 +181,7 @@ private:
             ptr = mInternalCompiler->compile(proc.Work.Script, proc.Work.Function);
         } else {
             // Dump shader into tmp folder
-            std::filesystem::create_directories(std::filesystem::temp_directory_path() / "Ignis");
-            const Path tmpFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(proc.Work.ID) + ".art");
+            const Path tmpFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(proc.Work.reasonableID()) + ".art");
             dumpShader(tmpFile, proc.Work.Script);
 
             IG_LOG(L_ERROR) << "Finished compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")." << std::endl
@@ -202,6 +205,7 @@ ShaderTaskManager::ShaderTaskManager(ScriptCompiler* compiler, size_t threads, D
     , mThreadCount(threads)
     , mDumpLevel(dumpLevel)
 {
+    std::filesystem::create_directories(std::filesystem::temp_directory_path() / "Ignis");
 }
 
 ShaderTaskManager::~ShaderTaskManager()
