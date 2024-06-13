@@ -124,7 +124,7 @@ bool LoaderShape::load(LoaderContext& ctx)
     for (size_t i = 0; i < names.size(); ++i)
         load_shape(i);
 #endif
-    IG_LOG(L_DEBUG) << "Loading of shapes took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+    IG_LOG(L_DEBUG) << "Loading of shapes took " << (std::chrono::high_resolution_clock::now() - start1) << std::endl;
 
     return true;
 }

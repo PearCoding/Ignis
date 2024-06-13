@@ -177,7 +177,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
         }
     }
 
-    IG_LOG(L_DEBUG) << "Storing Entities took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start1).count() / 1000.0f << " seconds" << std::endl;
+    IG_LOG(L_DEBUG) << "Storing Entities took " << (std::chrono::high_resolution_clock::now() - start1) << std::endl;
 
     if (mEntityCount == 0) {
         ctx.SceneDiameter = 0;
@@ -199,7 +199,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
             setup_bvh<8>(p.second, bvh);
         }
     }
-    IG_LOG(L_DEBUG) << "Building Scene BVH took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.0f << " seconds" << std::endl;
+    IG_LOG(L_DEBUG) << "Building Scene BVH took " << (std::chrono::high_resolution_clock::now() - start2) << std::endl;
 
     return true;
 }

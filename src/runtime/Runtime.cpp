@@ -175,7 +175,7 @@ bool Runtime::loadFromFile(const Path& path)
         const auto startParser = std::chrono::high_resolution_clock::now();
         SceneParser parser;
         auto scene = parser.loadFromFile(path);
-        IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
+        IG_LOG(L_DEBUG) << "Parsing scene took " << (std::chrono::high_resolution_clock::now() - startParser) << std::endl;
         if (scene == nullptr)
             return false;
 
@@ -197,7 +197,7 @@ bool Runtime::loadFromString(const std::string& str, const Path& dir)
         const auto startParser = std::chrono::high_resolution_clock::now();
         SceneParser parser;
         auto scene = parser.loadFromString(str, dir);
-        IG_LOG(L_DEBUG) << "Parsing scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startParser).count() / 1000.0f << " seconds" << std::endl;
+        IG_LOG(L_DEBUG) << "Parsing scene took " << (std::chrono::high_resolution_clock::now() - startParser) << std::endl;
         if (scene == nullptr)
             return false;
 
@@ -280,7 +280,7 @@ bool Runtime::load(const Path& path, const Scene* scene)
     if (!ctx)
         return false;
     mDatabase = std::move(ctx->Database);
-    IG_LOG(L_DEBUG) << "Loading scene took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startLoader).count() / 1000.0f << " seconds" << std::endl;
+    IG_LOG(L_DEBUG) << "Loading scene took " << (std::chrono::high_resolution_clock::now() - startLoader) << std::endl;
 
     mCameraName               = ctx->Options.CameraType;
     mTechniqueName            = ctx->Options.TechniqueType;
@@ -632,7 +632,7 @@ bool Runtime::compileShaders()
     const auto startJIT = std::chrono::high_resolution_clock::now();
     const bool result   = manager.compile(mCompiler.get(), threads);
 
-    IG_LOG(L_DEBUG) << "Compiling shaders took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startJIT).count() / 1000.0f << " seconds" << std::endl;
+    IG_LOG(L_DEBUG) << "Compiling shaders took " << (std::chrono::high_resolution_clock::now() - startJIT) << std::endl;
 
     return result;
 }
