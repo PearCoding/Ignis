@@ -2,8 +2,6 @@ name: Build Windows
 
 on:
   push:
-    branches: [ master, development ]
-    tags: [ 'v*.*.*' ]
   pull_request:
 
 env:
