@@ -50,6 +50,7 @@ public:
         , stdIn{ InvalidPipe, InvalidPipe }
         , tmpOut{ InvalidPipe }
     {
+        IG_UNUSED(name);
     }
 
     inline ~ExternalProcessInternal()
@@ -78,8 +79,6 @@ public:
             IG_LOG(L_ERROR) << "Getting file handle for temporary file for process " << exePath << " failed: " << std::strerror(errno) << std::endl;
             return false;
         }
-
-        logFile = std::filesystem::read_symlink(Path("/proc/self/fd") / std::to_string(tmpOut));
 
         // Prepare for child
         const std::string path  = exePath.string();
