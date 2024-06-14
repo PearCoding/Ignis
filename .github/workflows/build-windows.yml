@@ -1,0 +1,26 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [ master, development ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+
+env:
+  DEV_DOWNLOAD: #TODO
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # TODO: Get anydsl package
+      # - name: Download dev environment
+      #   run: wget -O dev_env.7z ${{ env.DEV_DOWNLOAD }}
+
+      # - name: Extract dev environment
+      #   run: 7z x archive.zip
