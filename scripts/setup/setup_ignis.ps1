@@ -14,7 +14,7 @@ Else {
 
 $ARTIC_BIN_DIR = $BIN_ROOT
 if ($IsWindows) {
-    $ARTIC_BIN = "$BIN_ROOT\artic.exe".Repla
+    $ARTIC_BIN = "$BIN_ROOT\artic.exe".Replace("\", "/")
     $CLANG_BIN = "$CLANG_BIN_DIR\clang.exe".Replace("\", "/")
 } else {
     $CLANG_BIN = "$CLANG_BIN_DIR\clang".Replace("\", "/")
@@ -53,11 +53,12 @@ $CMAKE_Args += '-DIG_WITH_ASSERTS:BOOL=ON'
 $CMAKE_Args += '-DBUILD_TESTING:BOOL=OFF'
 
 foreach ($device in $Config.RUNTIME.DEVICES) {
-    $runtime_device_dir = "$DEPS_ROOT\runtime-$device"
-    if (Test-Path -Path "$runtime_device_dir/build/lib/runtime.lib") {
+    $runtime_name = "runtime_$device"
+    $runtime_device_dir = "$DEPS_ROOT\$runtime_name"
+    if (Test-Path -Path "$runtime_device_dir/build/lib/$runtime_name.lib") {
         $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_INCLUDE_DIR:PATH=" + ($runtime_device_dir + "/src").Replace("\", "/")
-        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY:FILEPATH=" + ($runtime_device_dir + "/build/bin/runtime_$($device).lib").Replace("\", "/")
-        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY_JIT:FILEPATH=" + ($runtime_device_dir + "/build/bin/runtime_jit_artic_$($device).lib").Replace("\", "/")
+        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY:FILEPATH=" + ($runtime_device_dir + "/build/lib/$runtime_name.lib").Replace("\", "/")
+        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY_JIT:FILEPATH=" + ($runtime_device_dir + "/build/lib/$($runtime_name)_jit_artic.lib").Replace("\", "/")
     }
 }
 

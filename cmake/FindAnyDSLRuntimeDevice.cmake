@@ -44,6 +44,7 @@ foreach(component ${AnyDSLRuntimeDevice_FIND_COMPONENTS})
         PATHS ${_def_search_paths}
     )
 
+    # cmake_path(GET AnyDSLRuntimeDevice_${component}_INCLUDE_DIR PARENT_PATH _AnyDSLRuntimeDevice_${component}_ROOT_DIR)
     get_filename_component(_AnyDSLRuntimeDevice_${component}_ROOT_DIR "${AnyDSLRuntimeDevice_${component}_INCLUDE_DIR}" DIRECTORY)
 
     find_path(AnyDSLRuntimeDevice_${component}_INCLUDE_CONFIG_DIR anydsl_runtime_config.h

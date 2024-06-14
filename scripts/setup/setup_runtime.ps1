@@ -46,19 +46,19 @@ function CompileRuntime {
     )
 
     if ($Device -eq 'default') {
-        $runtime_dir = "runtime"
+        $runtime_name = "runtime"
     }
     else {
-        $runtime_dir = "runtime-$Device"
+        $runtime_name = "runtime_$Device"
     }
 
     # Clone or update if necessary
-    If (!(Test-Path -Path $runtime_dir)) {
-        & $GIT_BIN clone --depth 1 --branch $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT $runtime_dir
-        Set-Location $runtime_dir
+    If (!(Test-Path -Path $runtime_name)) {
+        & $GIT_BIN clone --depth 1 --branch $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT $runtime_name
+        Set-Location $runtime_name
     }
     else {
-        Set-Location $runtime_dir
+        Set-Location $runtime_name
         & $GIT_BIN pull
     }
     
@@ -77,6 +77,7 @@ function CompileRuntime {
     $CMAKE_Args += '-DRUNTIME_JIT:BOOL=ON'
     $CMAKE_Args += '-DCMAKE_REQUIRE_FIND_PACKAGE_LLVM:BOOL=ON' # We really want JIT
     $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_OpenCL:BOOL=ON' # Not supported
+    $CMAKE_Args += '-DAnyDSL_runtime_TARGET_NAME=' + $runtime_name
 
     if (($Device -eq 'default') -or ($Device -eq 'cuda')) {
         if (!$IsLinux){
@@ -124,22 +125,9 @@ function CompileRuntime {
     #     throw "Failed to install LLVM"
     # }
 
-    # Rename stuff if necessary
+    # Copy dlls
     if ($IsWindows) {
-        if ($Device -ne 'default') {
-            RenameDLL -InputDLL 'build/bin/runtime.dll' -OutputDLL "build/bin/runtime_$device.dll"
-            RenameDLL -InputDLL 'build/bin/runtime_jit_artic.dll' -OutputDLL "build/bin/runtime_jit_artic_$device.dll"
-            # Copy-Item -Path 'build/bin/runtime.dll' -Destination "build/bin/runtime_$device.dll"
-            # Copy-Item -Path 'build/bin/runtime_jit_artic.dll' -Destination "build/bin/runtime_jit_artic_$device.dll"
-            # Copy-Item -Path 'build/lib/runtime.lib' -Destination "build/lib/runtime_$device.lib"
-            # Copy-Item -Path 'build/lib/runtime_jit_artic.lib' -Destination "build/lib/runtime_jit_artic_$device.lib"
-
-            Copy-Item -Path "build/bin/runtime_$device.dll" -Destination "$BIN_ROOT\" > $null
-            Copy-Item -Path "build/bin/runtime_jit_artic_$device.dll" -Destination "$BIN_ROOT\" > $null
-        }
-        else {
-            Copy-Item -Path "build/bin/*" -Destination "$BIN_ROOT\" > $null
-        }
+        Copy-Item -Path "build/bin/*" -Destination "$BIN_ROOT\" > $null
     }
 
     Set-Location $CURRENT

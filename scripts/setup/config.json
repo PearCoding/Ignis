@@ -46,7 +46,7 @@
     "RUNTIME": {
         "ENABLED": true,
         "BUILD_TYPE": "Release",
-        "BRANCH": "master",
+        "BRANCH": "development",
         "GIT": "https://github.com/AnyDSL/runtime.git",
         "DEVICES": ["cpu", "cuda", "amd_hsa"]
     },
