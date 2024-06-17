@@ -1,5 +1,6 @@
 #include "ShaderManager.h"
 #include "Logger.h"
+#include "ShaderProgressBar.h"
 #include "ShaderReducer.h"
 #include "ShaderTaskManager.h"
 
@@ -30,7 +31,17 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
             ;
     }
 
-    if (!manager.waitForFinish()) {
+    manager.finalize();
+
+    ShaderProgressBar pb(true /*TODO*/, 2, numberOfUniqueEntries);
+    pb.begin();
+    while (!manager.isFinished()) {
+        pb.update(manager.numFinishedTasks());
+        std::this_thread::yield();
+    }
+    pb.end();
+
+    if (manager.hasError()) {
         IG_LOG(L_ERROR) << "Compiling shaders failed" << std::endl;
         manager.dumpLogs();
         return false;

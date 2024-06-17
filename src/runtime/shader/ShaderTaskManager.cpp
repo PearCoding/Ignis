@@ -118,9 +118,14 @@ public:
         mWorkThread.join();
     }
 
-    void stopWhenFinished()
+    void finalize()
     {
         mThreadRequestFinish = true;
+    }
+
+    void stopWhenFinished()
+    {
+        finalize();
         mWorkThread.join();
     }
 
@@ -243,18 +248,41 @@ void ShaderTaskManager::add(const std::string& id, const std::string& name, cons
     }
 }
 
+void ShaderTaskManager::finalize()
+{
+    mInternal->finalize();
+}
+
+bool ShaderTaskManager::isFinished()
+{
+    if (mThreadCount != 1)
+        return !mInternal->mThreadRunning;
+    else
+        return true;
+}
+
+bool ShaderTaskManager::hasError() const
+{
+    std::lock_guard<std::mutex> _guard(mInternal->mWorkMutex);
+    for (const auto& p : mInternal->mResultMap) {
+        if (p.second.Ptr == nullptr)
+            return true;
+    }
+    return false;
+}
+
 bool ShaderTaskManager::waitForFinish()
 {
     if (mThreadCount != 1 && mInternal->mThreadRunning)
         mInternal->stopWhenFinished();
 
-    // Return true if all compilations were successful
+    return !hasError();
+}
+
+size_t ShaderTaskManager::numFinishedTasks() const
+{
     std::lock_guard<std::mutex> _guard(mInternal->mWorkMutex);
-    for (const auto& p : mInternal->mResultMap) {
-        if (p.second.Ptr == nullptr)
-            return false;
-    }
-    return true;
+    return mInternal->mResultMap.size();
 }
 
 void* ShaderTaskManager::getResult(const std::string& id) const
