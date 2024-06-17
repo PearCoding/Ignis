@@ -175,7 +175,7 @@ private:
 
         void* ptr = nullptr;
         if (exitCode == EXIT_SUCCESS) {
-            IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")" << std::endl;
+            IG_LOG(L_DEBUG) << "Finished compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "' (" << dur << ")" << std::endl;
 
             // All good -> recompile to get data from cache!
             ptr = mInternalCompiler->compile(proc.Work.Script, proc.Work.Function);

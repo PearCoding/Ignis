@@ -83,8 +83,8 @@ fn @make_direct_emission_value(intensity: Color, pdf: Pdf) = DirectEmissionValue
 
 fn @make_null_light(id: i32) = Light {
     id              = id,
-    sample_direct   = @ |_, _| undef[DirectLightSample](),
-    sample_emission = @ |_|    undef[EmissionSample](),
+    sample_direct   = @ |_, _| make_direct_sample(make_vec3(0,0,0), make_vec3(0,0,0), color_builtins::black, make_solid_pdf(1), 0, 0),
+    sample_emission = @ |_|    make_emission_sample(make_vec3(0,0,0), make_vec3(0,0,0), color_builtins::black, 0, 0, 0),
     emission        = @ |_|    color_builtins::black,
     pdf_direct      = @ |_, _| make_solid_pdf(1),
     pdf_emission    = @ |_, _| make_emissive_pdf(1, 1),

@@ -8,9 +8,10 @@ struct ParallelReduceHandler {
 fn @make_cpu_parallel_reduce_handler() = ParallelReduceHandler { 
     is_gpu = false,
     dev_id = 0,
-    acc    = undef[Accelerator](),
-    config = undef[GPUKernelConfiguration]() 
+    acc    = undef[Accelerator](),            // TODO: This is quite dangerous as it might trigger a bug in Thorin if this is not removed during code generator
+    config = make_default_gpu_kernel_config() // Not used
 };
+
 fn @make_gpu_parallel_reduce_handler(dev_id: i32, acc: Accelerator, config: GPUKernelConfiguration) = ParallelReduceHandler {
     is_gpu = true,
     dev_id = dev_id,
