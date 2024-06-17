@@ -8,6 +8,19 @@ enum class Operation {
     Info
 };
 
+enum class ConvertOption {
+    Automatic,
+    JPG,
+    PNG,
+    BMP,
+    TGA,
+    HDR,
+    EXR,
+    PLY,
+    OBJ,
+    IG,
+};
+
 class UtilOptions {
 public:
     UtilOptions(int argc, char** argv, const std::string& desc);
@@ -23,6 +36,15 @@ public:
     Path InputFile;
     Path OutputFile;
 
-    Operation Op = Operation::Convert;
+    Operation Op                = Operation::Convert;
+    ConvertOption ConvertFormat = ConvertOption::Automatic;
+
+    float ToneMapExposure = 0;
+    float ToneMapOffset   = 0;
+
+    int JPGQuality = 90;
+
+    std::vector<Path> MtsLookupDirs;
+    std::unordered_map<std::string, std::string> MtsDefs;
 };
 } // namespace IG

@@ -91,7 +91,7 @@ static std::string genCommandLine(const ImageMetaData& metaData)
     }
 }
 
-bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, float exposure, float offset)
+bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, float exposure, float offset, int jpg_quality)
 {
     // Input
     Image image = Image::load(input);
@@ -114,16 +114,16 @@ bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, 
     int ret = 0;
     switch (type) {
     case ConvertToStdImage::PNG:
-        ret = stbi_write_png(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), static_cast<int>(sizeof(uint8) * 3 * image.width));
+        ret = stbi_write_png(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data(), static_cast<int>(sizeof(uint8) * 3 * image.width));
         break;
     case ConvertToStdImage::JPG:
-        ret = stbi_write_jpg(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), 90);
+        ret = stbi_write_jpg(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data(), jpg_quality);
         break;
     case ConvertToStdImage::BMP:
-        ret = stbi_write_bmp(output.c_str(), (int)image.width, (int)image.height, 3, data.data());
+        ret = stbi_write_bmp(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data());
         break;
     case ConvertToStdImage::TGA:
-        ret = stbi_write_tga(output.c_str(), (int)image.width, (int)image.height, 3, data.data());
+        ret = stbi_write_tga(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data());
         break;
     default:
         IG_ASSERT(false, "Invalid type!");
@@ -154,7 +154,7 @@ bool convert_hdr(const Path& input, const Path& output, float exposure, float of
     }
 
     std::string cmd_line = genCommandLine(metaData);
-    int ret              = write_hdr(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), cmd_line);
+    int ret              = write_hdr(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data(), cmd_line);
     return ret > 0;
 }
 } // namespace IG
