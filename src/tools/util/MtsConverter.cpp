@@ -9,9 +9,8 @@
 #endif
 
 namespace IG {
-using namespace TPM_NAMESPACE;
-
 #ifdef IG_WITH_CONVERTER_MITSUBA
+using namespace TPM_NAMESPACE;
 namespace Mts {
 static bool sIsQuiet = false;
 
