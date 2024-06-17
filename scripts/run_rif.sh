@@ -114,7 +114,7 @@ if [[ ${#VIEWS[@]} == 1 ]]; then
     echo "Rendering $OUTPUT.exr"
     #rpict ${VIEWS[0]} $RPARGS $TMP_OCT > $OUTPUT.hdr || exit 1
     vwrays -ff $VWARGS ${VIEWS[0]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[0]}) $TMP_OCT >$OUTPUT.hdr || exit 1
-    hdr2exr "$OUTPUT.hdr" "$OUTPUT.exr"
+    igutil convert "$OUTPUT.hdr" "$OUTPUT.exr"
     echo "Generated output $OUTPUT.exr"
 else
     for i in ${!VIEWS[@]}; do
@@ -122,7 +122,7 @@ else
         echo "[$i] Rendering $view_output.exr"
         #rpict ${VIEWS[$i]} $RPARGS $TMP_OCT > $OUTPUT.hdr || exit 1
         vwrays $VWARGS -ff ${VIEWS[$i]} | rtrace $TRARGS $(vwrays -d $VWARGS ${VIEWS[$i]}) $TMP_OCT >$OUTPUT.hdr || exit 1
-        hdr2exr "$OUTPUT.hdr" "$view_output.exr"
+        igutil convert "$OUTPUT.hdr" "$view_output.exr"
         echo "Generated output $view_output.exr"
     done
 fi

@@ -100,7 +100,7 @@ A quite recent version of the above documentation is available at: https://pearc
 Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures.
 A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
 
-You might use the `mts2ig` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
+You might use the `igutil` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
 
 You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.
 
@@ -108,13 +108,11 @@ Ignis is able to understand glTF files. You can embed glTF files in Ignis's own 
 
 A Blender plugin is available in `scripts/blender_exporter/`.
 
-## Tiny tools
+## Extra tools
 
-Two tiny tools `exr2hdr` and `hdr2exr` are available to convert between the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa.
+The tool `igutil` is able to convert between multiple formats like the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa. Further it can output information embedded inside images.
 
 This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option `IG_WITH_TOOLS` to Off.
-
-Actually, the tool might convert from any format the stb_image framework supports to the second format...
 
 ## How to use `igview`
 

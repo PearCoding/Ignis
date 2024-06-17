@@ -21,21 +21,21 @@ $CURRENT_DIR = Get-Location
 $RIF_PATH = Get-Item -Path $RifFile
 $WORK_DIR = Split-Path $RIF_PATH
 
-# Get hdr2exr command
-if (Get-Command "hdr2exr" -errorAction SilentlyContinue) {
-    $HDR2EXR_CMD = "hdr2exr"
+# Get igutil command
+if (Get-Command "igutil" -errorAction SilentlyContinue) {
+    $IGUTIL_CMD = "igutil"
 }
-elseif (Get-Command "$PSScriptRoot/../build/Release/bin/hdr2exr" -errorAction SilentlyContinue) {
-    $HDR2EXR_CMD = "$PSScriptRoot/../build/Release/bin/hdr2exr"
+elseif (Get-Command "$PSScriptRoot/../build/Release/bin/igutil" -errorAction SilentlyContinue) {
+    $IGUTIL_CMD = "$PSScriptRoot/../build/Release/bin/igutil"
 }
-elseif (Get-Command "$PSScriptRoot/../build/bin/hdr2exr" -errorAction SilentlyContinue) {
-    $HDR2EXR_CMD = "$PSScriptRoot/../build/bin/hdr2exr"
+elseif (Get-Command "$PSScriptRoot/../build/bin/igutil" -errorAction SilentlyContinue) {
+    $IGUTIL_CMD = "$PSScriptRoot/../build/bin/igutil"
 }
-elseif (Get-Command "$PSScriptRoot/../build/Debug/bin/hdr2exr" -errorAction SilentlyContinue) {
-    $HDR2EXR_CMD = "$PSScriptRoot/../build/Debug/bin/hdr2exr"
+elseif (Get-Command "$PSScriptRoot/../build/Debug/bin/igutil" -errorAction SilentlyContinue) {
+    $IGUTIL_CMD = "$PSScriptRoot/../build/Debug/bin/igutil"
 }
 else {
-    $HDR2EXR_CMD = "hdr2exr" # Default
+    $IGUTIL_CMD = "igutil" # Default
 }
 
 # We do not cache temporary files
@@ -125,7 +125,7 @@ function RenderView {
     #rpict $VIEWS[0] $RPARGS $TMP_OCT > $output_name.hdr
     $view_params = (vwrays -d $VWARGS $VIEWS[0]).Split()
     vwrays -ff $VWARGS $VIEWS[0] | rtrace $TRARGS $view_params $TMP_OCT > "$output_name.hdr"
-    & $HDR2EXR_CMD "$output_name.hdr" "$output_name.exr"
+    & $IGUTIL_CMD convert "$output_name.hdr" "$output_name.exr"
     Write-Host "Generated output $output_name.exr" -ForegroundColor Cyan
 }
 

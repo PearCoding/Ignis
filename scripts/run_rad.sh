@@ -51,4 +51,4 @@ ARGS="$DEF -ad $AD -lw $LW -ss $SS -t 10 -ps 1 -pj 0.65 -pt 0 ${ARGS[@]}"
 
 oconv ${SCENES[@]} > $TMP_OCT || exit 1
 rpict $ARGS $TMP_OCT > $TMP_HDR || exit 1
-hdr2exr "$TMP_HDR" "$OUTPUT"
+igutil convert "$TMP_HDR" "$OUTPUT"

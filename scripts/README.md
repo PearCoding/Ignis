@@ -4,7 +4,7 @@ This directory contains multiple scripts used in evaluation, showcase and featur
 
 ## Mts2Json
 
-Instead of `mts2json.py` it is recommended to use the `mts2ig` tool. It is listed here for historic reasons.
+Instead of `mts2json.py` it is recommended to use the `igutil` tool. It is listed here for historic reasons.
 
 ## Rad2Json
 
