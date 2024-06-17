@@ -1,131 +1,19 @@
-#include <algorithm>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-
+#include "JsonWriter.h"
+#include "MtsUtils.h"
 #include "SpectralMapper.h"
-#include "tinyparser-mitsuba.h"
 
+#include <fstream>
+
+#ifdef IG_WITH_CONVERTER_MITSUBA
+#include "tinyparser-mitsuba.h"
+#endif
+
+namespace IG {
 using namespace TPM_NAMESPACE;
 
-static bool sQuiet   = false;
-static bool sVerbose = false;
-
-static inline void check_arg(int argc, char** argv, int arg, int n)
-{
-    if (arg + n >= argc)
-        std::cerr << "Option '" << argv[arg] << "' expects " << n << " arguments, got " << (argc - arg) << std::endl;
-}
-
-static inline void version()
-{
-    std::cout << "mts2ig 0.1" << std::endl;
-}
-
-static inline void usage()
-{
-    std::cout
-        << "mts2ig - Mitsuba to Ignis converter" << std::endl
-        << "Usage: mts2ig [options] file" << std::endl
-        << "Available options:" << std::endl
-        << "   -h      --help                   Shows this message" << std::endl
-        << "           --version                Show version and exit" << std::endl
-        << "   -q      --quiet                  Do not print messages into console" << std::endl
-        << "   -v      --verbose                Print detailed information" << std::endl
-        << "           --no-ws                  Do not use any unnecessary whitespace" << std::endl
-        << "   -l      --lookup    directory    Add directory as lookup path for external files" << std::endl
-        << "   -D      --define    Key Value    Define key with value as an argument for mitsuba files" << std::endl
-        << "   -o      --output    scene.json   Writes the output to a given file and not the default input file with .json" << std::endl;
-}
-
-class JsonWriter {
-public:
-    inline JsonWriter(const std::filesystem::path& path, bool whitespace)
-        : mPath(path)
-        , mStream(path.generic_u8string())
-        , mUseWhitespace(whitespace)
-        , mCurrentDepth(0)
-    {
-    }
-
-    inline ~JsonWriter()
-    {
-        if (mUseWhitespace)
-            mStream << std::endl;
-    }
-
-    inline std::ostream& w() { return mStream; }
-    inline void s()
-    {
-        if (mUseWhitespace)
-            mStream << " ";
-    }
-
-    inline void endl()
-    {
-        if (mUseWhitespace) {
-            mStream << std::endl;
-
-            const int whitespaces = mCurrentDepth * 2;
-            for (int i = 0; i < whitespaces; ++i)
-                mStream << " ";
-        }
-    }
-
-    inline void goIn()
-    {
-        ++mCurrentDepth;
-        endl();
-    }
-
-    inline void goOut()
-    {
-        if (mCurrentDepth > 0) {
-            --mCurrentDepth;
-            endl();
-        } else {
-            std::cerr << "INVALID OUTPUT STREAM HANDLING!" << std::endl;
-        }
-    }
-
-    inline void objBegin()
-    {
-        mStream << "{";
-        goIn();
-    }
-
-    inline void objEnd()
-    {
-        goOut();
-        mStream << "}";
-    }
-
-    inline void arrBegin()
-    {
-        mStream << "[";
-        // goIn();
-    }
-
-    inline void arrEnd()
-    {
-        // goOut();
-        mStream << "]";
-    }
-
-    inline void key(const std::string& name)
-    {
-        mStream << "\"" << name << "\":";
-        if (mUseWhitespace)
-            mStream << " ";
-    }
-
-private:
-    const std::filesystem::path mPath;
-    std::ofstream mStream;
-    const bool mUseWhitespace;
-    int mCurrentDepth;
-};
+#ifdef IG_WITH_CONVERTER_MITSUBA
+namespace Mts {
+static bool sIsQuiet = false;
 
 static std::string make_id(const char* prefix, int id)
 {
@@ -200,7 +88,7 @@ static float lookupIOR(const std::string& name)
             return sLookupsIOR[i].Value;
     }
 
-    if (!sQuiet)
+    if (!sIsQuiet)
         std::cerr << "Unknown IOR material '" << s << "'" << std::endl;
 
     return 0;
@@ -216,7 +104,7 @@ static float lookupEta(const std::string& name)
             return sLookupsEta[i].Value;
     }
 
-    if (!sQuiet)
+    if (!sIsQuiet)
         std::cerr << "Unknown Conductor material '" << s << "'" << std::endl;
 
     return 0;
@@ -232,7 +120,7 @@ static float lookupKappa(const std::string& name)
             return sLookupsKappa[i].Value;
     }
 
-    if (!sQuiet)
+    if (!sIsQuiet)
         std::cerr << "Unknown Conductor material '" << s << "'" << std::endl;
 
     return 1;
@@ -242,7 +130,7 @@ static void export_property(const Property& prop, JsonWriter& writer)
 {
     switch (prop.type()) {
     case PT_ANIMATION:
-        if (!sQuiet)
+        if (!sIsQuiet)
             std::cerr << "No support for Animation" << std::endl;
         writer.w() << "0";
         break;
@@ -1065,84 +953,28 @@ static void export_scene(const Scene& scene, JsonWriter& writer)
         writer.arrEnd();
     }
 }
+} // namespace Mts
 
-int main(int argc, char** argv)
+bool convert_from_mts(const Path& input, const Path& output, const std::vector<Path>& lookup_dirs, const std::unordered_map<std::string, std::string>& defs, bool use_ws, bool is_quiet)
 {
-    if (argc <= 1) {
-        usage();
-        return EXIT_SUCCESS;
-    }
+    Mts::sIsQuiet = is_quiet;
+
+    std::ofstream stream(output);
+    JsonWriter writer(stream, use_ws);
 
     SceneLoader loader;
-    bool whitespace = true;
-    std::filesystem::path in_file;
-    std::filesystem::path out_file;
+    for (const auto& p : lookup_dirs)
+        loader.addLookupDir(p.generic_string());
+    for (const auto& pair : defs)
+        loader.addArgument(pair.first, pair.second);
 
-    for (int i = 1; i < argc; ++i) {
-        if (argv[i][0] == '-') {
-            if (!strcmp(argv[i], "-o")) {
-                check_arg(argc, argv, i, 1);
-                out_file = argv[i + 1];
-                ++i;
-            } else if (!strcmp(argv[i], "-q") || !strcmp(argv[i], "--quiet")) {
-                sQuiet = true;
-            } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
-                sVerbose = true;
-            } else if (!strcmp(argv[i], "--no-ws")) {
-                whitespace = false;
-            } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
-                usage();
-                return EXIT_SUCCESS;
-            } else if (!strcmp(argv[i], "--version")) {
-                version();
-                return EXIT_SUCCESS;
-            } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lookup")) {
-                check_arg(argc, argv, i, 1);
-                loader.addLookupDir(argv[i + 1]);
-                i += 1;
-            } else if (!strcmp(argv[i], "-D") || !strcmp(argv[i], "--define")) {
-                check_arg(argc, argv, i, 2);
-                loader.addArgument(argv[i + 1], argv[i + 2]);
-                i += 2;
-            } else {
-                std::cerr << "Unknown option '" << argv[i] << "'" << std::endl;
-                usage();
-                return EXIT_FAILURE;
-            }
-        } else {
-            if (in_file.empty()) {
-                in_file = argv[i];
-            } else {
-                std::cerr << "Unexpected argument '" << argv[i] << "'" << std::endl;
-                usage();
-                return EXIT_FAILURE;
-            }
-        }
-    }
+    Scene scene = loader.loadFromFile(input.generic_string());
+    writer.objBegin();
+    Mts::export_scene(scene, writer);
+    writer.objEnd();
 
-    // Check some stuff
-    if (in_file.empty()) {
-        std::cerr << "No input file given" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    if (out_file.empty()) {
-        out_file = in_file;
-        out_file.replace_extension(".json");
-    }
-
-    JsonWriter writer(out_file, whitespace);
-
-    // Load
-    try {
-        Scene scene = loader.loadFromFile(in_file.generic_u8string());
-        writer.objBegin();
-        export_scene(scene, writer);
-        writer.objEnd();
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
+    return true;
 }
+
+#endif
+} // namespace IG

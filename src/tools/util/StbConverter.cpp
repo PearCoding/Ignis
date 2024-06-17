@@ -1,7 +1,5 @@
-#include <filesystem>
-#include <iostream>
-
 #include "Image.h"
+#include "ImageUtils.h"
 #include "ImageIO.h"
 
 IG_BEGIN_IGNORE_WARNINGS
@@ -9,7 +7,16 @@ IG_BEGIN_IGNORE_WARNINGS
 #include "stb_image_write.h"
 IG_END_IGNORE_WARNINGS
 
-using namespace IG;
+namespace IG {
+
+static inline float gamma(float c)
+{
+    if (c <= 0.0031308f) {
+        return 12.92f * c;
+    } else {
+        return 1.055f * std::pow(c, 1 / 2.4f) - 0.055f;
+    }
+}
 
 // Similar to the one in stb, but with meta data
 static int write_hdr_core(stbi__write_context* s, int x, int y, int comp, float* data, const std::string_view& cmd_line)
@@ -84,41 +91,70 @@ static std::string genCommandLine(const ImageMetaData& metaData)
     }
 }
 
-int main(int argc, char** argv)
+bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, float exposure, float offset)
 {
-    if (argc != 2 && argc != 3) {
-        std::cout << "Expected exr2hdr INPUT (OUTPUT)" << std::endl;
-        return EXIT_FAILURE;
+    // Input
+    Image image = Image::load(input);
+    if (!image.isValid())
+        return false;
+
+    if (exposure != 1 || offset != 0)
+        image.applyExposureOffset(exposure, offset);
+
+    // Output
+    image.flipY();
+
+    std::vector<uint8> data(3 * image.width * image.height);
+    for (size_t i = 0; i < image.width * image.height; ++i) {
+        data[i * 3 + 0] = static_cast<uint8>(std::max(0.0f, std::min(255.0f, gamma(image.pixels[i * 4 + 0]) * 255)));
+        data[i * 3 + 1] = static_cast<uint8>(std::max(0.0f, std::min(255.0f, gamma(image.pixels[i * 4 + 1]) * 255)));
+        data[i * 3 + 2] = static_cast<uint8>(std::max(0.0f, std::min(255.0f, gamma(image.pixels[i * 4 + 2]) * 255)));
     }
 
-    const std::string input  = argv[1];
-    const std::string output = argc == 3 ? argv[2] : Path(input).replace_extension(".hdr").generic_string();
-
-    try {
-        // Input
-        ImageMetaData metaData;
-        Image image = Image::load(input, &metaData);
-        if (!image.isValid())
-            return EXIT_FAILURE;
-
-        // Output
-        image.flipY();
-
-        std::vector<float> data(3 * image.width * image.height);
-        for (size_t i = 0; i < image.width * image.height; ++i) {
-            data[i * 3 + 0] = image.pixels[i * 4 + 0];
-            data[i * 3 + 1] = image.pixels[i * 4 + 1];
-            data[i * 3 + 2] = image.pixels[i * 4 + 2];
-        }
-
-        std::string cmd_line = genCommandLine(metaData);
-        int ret              = write_hdr(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), cmd_line);
-        if (ret <= 0)
-            return EXIT_FAILURE;
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
+    int ret = 0;
+    switch (type) {
+    case ConvertToStdImage::PNG:
+        ret = stbi_write_png(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), static_cast<int>(sizeof(uint8) * 3 * image.width));
+        break;
+    case ConvertToStdImage::JPG:
+        ret = stbi_write_jpg(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), 90);
+        break;
+    case ConvertToStdImage::BMP:
+        ret = stbi_write_bmp(output.c_str(), (int)image.width, (int)image.height, 3, data.data());
+        break;
+    case ConvertToStdImage::TGA:
+        ret = stbi_write_tga(output.c_str(), (int)image.width, (int)image.height, 3, data.data());
+        break;
+    default:
+        IG_ASSERT(false, "Invalid type!");
     }
 
-    return EXIT_SUCCESS;
+    return ret > 0;
 }
+
+bool convert_hdr(const Path& input, const Path& output, float exposure, float offset)
+{
+    // Input
+    ImageMetaData metaData;
+    Image image = Image::load(input, &metaData);
+    if (!image.isValid())
+        return false;
+
+    if (exposure != 1 || offset != 0)
+        image.applyExposureOffset(exposure, offset);
+
+    // Output
+    image.flipY();
+
+    std::vector<float> data(3 * image.width * image.height);
+    for (size_t i = 0; i < image.width * image.height; ++i) {
+        data[i * 3 + 0] = image.pixels[i * 4 + 0];
+        data[i * 3 + 1] = image.pixels[i * 4 + 1];
+        data[i * 3 + 2] = image.pixels[i * 4 + 2];
+    }
+
+    std::string cmd_line = genCommandLine(metaData);
+    int ret              = write_hdr(output.c_str(), (int)image.width, (int)image.height, 3, data.data(), cmd_line);
+    return ret > 0;
+}
+} // namespace IG
