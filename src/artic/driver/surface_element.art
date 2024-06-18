@@ -1,3 +1,6 @@
+//#<include="core/vector.art">
+//#<include="core/matrix.art">
+
 // Opaque description of a point on a surface
 struct SurfaceElement {
     is_entering: bool,  // True if the path enters the surface

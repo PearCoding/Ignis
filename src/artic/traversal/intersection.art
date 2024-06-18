@@ -1,11 +1,8 @@
-static InvalidHitId : i32 = -1;
-struct Hit {
-    distance:    f32,  // Distance to the intersection point
-    prim_coords: Vec2, // Surface coordinates
-    prim_id:     i32,  // Primitive identifier, or -1 (no intersection found)
-    ent_id:      i32,  // Entity identifier, or -1 (no intersection found)
-    // mat_id:      i32,  // Entity identifier, or -1 (no intersection found)
-}
+//#<include="core/bbox.art">
+//#<include="core/common.art">
+//#<include="core/common_cpu.art">
+//#<include="traversal/hit.art">
+//#<include="traversal/ray.art">
 
 struct Tri {
     v0: Vec3, // First vertex
@@ -49,13 +46,6 @@ fn @make_default_min_max() -> MinMax {
     let fmaxf = @ |x: f32, y: f32| select(x > y, x, y);
     make_min_max(fminf, fmaxf, false)
 }
-
-fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
-    distance    = t,
-    prim_coords = uv,
-    prim_id     = prim_id,
-    ent_id      = ent_id,
-};
 
 fn @make_tri(v0: Vec3, e1: Vec3, e2: Vec3, n: Vec3) = Tri {
     v0 = v0,

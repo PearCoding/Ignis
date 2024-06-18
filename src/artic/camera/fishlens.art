@@ -1,3 +1,5 @@
+//#[include="test"]
+
 enum FisheyeAspectMode {
     Circular,
     Cropped,

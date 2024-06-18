@@ -1,3 +1,13 @@
+//#<include="core/bbox.art">
+//#<include="core/matrix.art">
+//#<include="traversal/hit.art">
+//#<include="traversal/ray.art">
+
+struct NodeRef {
+    node: i32,
+    tmin: f32
+}
+
 // Bottom level BVH
 struct PrimBvh {
     node:     fn (i32) -> Node, // Access to one node of the BVH

@@ -1,3 +1,5 @@
+//#<include="core/vector.art">
+
 // Constants -----------------------------------------------------------------------
 
 static flt_eps    = 1.1920928955e-07:f32;
@@ -341,3 +343,5 @@ fn @permute_element(mut i: u32, l: u32, seed: u32) -> u32 {
 // The following stuff is only for development purposes and should never ever be in production code
 #[import(cc = "device", name = "llvm.debugtrap")] fn ig_trap() -> ();
 #[import(cc = "device", name = "llvm.ubsantrap")] fn ig_trap_annotated(u8) -> ();
+
+#[import(cc = "device", name = "llvm.expect.i1")] fn llvm_expect(bool, bool) -> bool;

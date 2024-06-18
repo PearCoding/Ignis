@@ -1,3 +1,11 @@
+//#<include="driver/camera.art">
+//#<include="driver/pointmapper.art">
+//#<include="driver/registry.art">
+//#<include="driver/settings.art">
+//#<include="driver/surface_element.art">
+//#<include="traversal/ray.art">
+//#<include="traversal/hit.art">
+
 // Used as interface
 struct ShadingInfo {
     time:  f32, // Time since start in seconds, updated every frame

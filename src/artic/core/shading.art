@@ -1,3 +1,5 @@
+//#<include="core/common.art">
+
 mod shading {
 use super as all;
 use super::math_builtins;

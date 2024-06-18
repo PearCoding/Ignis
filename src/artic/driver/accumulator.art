@@ -1,3 +1,6 @@
+//#<include="core/color.art">
+//#<include="driver/atomics.art">
+
 // The film accumulator splats the given color to a given pixel on a framebuffer or aov
 type FilmAccumulator = fn (i32, Color) -> ();
 

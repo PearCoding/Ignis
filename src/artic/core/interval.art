@@ -1,3 +1,5 @@
+//#<include="core/common.art">
+
 mod interval {
     // Will return index to the greatest entry smaller then the predicate
     // If predicate equals the actual number, the left most entry of the equal valued entries

@@ -1,6 +1,7 @@
+//#<include="core/common.art">
+
 // Misc. ---------------------------------------------------------------------------
 
-#[import(cc = "device", name = "llvm.expect.i1")] fn llvm_expect(bool, bool) -> bool;
 fn @  cpu_likely(cond: bool) = llvm_expect(cond,  true);
 fn @cpu_unlikely(cond: bool) = llvm_expect(cond, false);
 

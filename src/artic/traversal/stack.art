@@ -1,7 +1,4 @@
-struct NodeRef {
-    node: i32,
-    tmin: f32
-}
+//#<include="core/sort.art">
 
 struct Stack {
     push:       fn (i32, f32) -> (),

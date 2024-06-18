@@ -1,3 +1,8 @@
+//#<include="core/common.art">
+//#<include="core/color.art">
+//#<include="core/fresnel.art">
+//#<include="core/interval.art">
+
 // Additional math functions
 
 mod math {

@@ -1,3 +1,5 @@
+//#<include="core/vector.art">
+
 struct Mat2x2 {
     col: [Vec2 * 2]
 }

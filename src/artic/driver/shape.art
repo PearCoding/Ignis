@@ -1,3 +1,5 @@
+//#<include="driver/device.art">
+
 // Abstract geometry object (tied to one device)
 struct Shape {
     // Computes the surface element after an intersection on this geometry

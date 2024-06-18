@@ -1,3 +1,6 @@
+//#<include="driver/buffer.art">
+//#<include="driver/device.art">
+
 struct Entity {
     id:         i32,
     shape_id:   i32,

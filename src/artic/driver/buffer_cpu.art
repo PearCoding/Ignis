@@ -1,3 +1,8 @@
+//#<include="core/vector.art">
+//#<include="core/common_cpu.art">
+//#<include="driver/buffer.art">
+//#<include="driver/driver.art">
+
 fn @cpu_load_vec4(p: &[f32], elem: i32) {
     let v = (p as &[simd[f32 * 4]])(elem);
     make_vec4(v(0), v(1), v(2), v(3)) 

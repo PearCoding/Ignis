@@ -1,3 +1,13 @@
+//#<include="core/color.art">
+//#<include="core/random.art">
+//#<include="driver/data.art">
+//#<include="driver/payload.art">
+//#<include="driver/pipeline.art">
+//#<include="driver/streams.art">
+//#<include="traversal/bvh.art">
+//#<include="traversal/hit.art">
+//#<include="traversal/ray.art">
+
 // TODO: Refactor out
 struct WorkInfo {
     width:                           i32,

@@ -1,3 +1,5 @@
+//#<include="core/color.art">
+
 mod colormap {
 use super as all;
 

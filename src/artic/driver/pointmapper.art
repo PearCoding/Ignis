@@ -1,3 +1,6 @@
+//#<include="core/bbox.art">
+//#<include="driver/shape.art">
+
 type PointMapper = fn (Vec3) -> Vec3;
 fn @make_zero_pointmapper()                              = @|_: Vec3| vec3_expand(0);
 fn @make_identity_pointmapper()                          = @|p: Vec3| p;

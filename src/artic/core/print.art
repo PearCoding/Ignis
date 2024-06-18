@@ -1,3 +1,7 @@
+//#<include="core/common.art">
+//#<include="core/random.art">
+//#<include="driver/buffer.art">
+
 // Allows prints inside device functions
 struct DebugOutput {
     rnd:       fn (f32)   -> f32, // This is a very low quality random generator and depends on the input random garbage.

@@ -1,3 +1,5 @@
+//#<include="core/vector.art">
+
 struct Color {
     r: f32,
     g: f32,

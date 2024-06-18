@@ -1,3 +1,6 @@
+//#<include="core/vector.art">
+//#<include="core/warp.art">
+
 // Result of sampling a direction
 struct DirSample {
     dir: Vec3,

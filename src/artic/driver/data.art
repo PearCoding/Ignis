@@ -1,3 +1,6 @@
+//#<include="driver/entity.art">
+//#<include="driver/shape.art">
+
 struct LookupEntry {
     type_id: u32, // Type ID depends on the actual dyntable usecase
     flags:   u32, // Optional flags, currently not used

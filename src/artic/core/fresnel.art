@@ -1,3 +1,6 @@
+//#<include="core/common.art">
+//#<include="core/color.art">
+
 // Result of sampling a BSDF
 struct FresnelTerm {
     cos_t:  f32,

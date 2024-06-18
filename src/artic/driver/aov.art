@@ -1,3 +1,11 @@
+//#<include="core/color.art">
+//#<include="core/random.art">
+//#<include="driver/accumulator.art">
+//#<include="driver/atomics.art">
+//#<include="driver/camera.art">
+//#<include="driver/driver.art">
+//#<include="traversal/ray.art">
+
 // A single AOV RGB image.
 // Ignis only supports RGB
 struct AOVImage {

@@ -1,3 +1,8 @@
+//#<include="core/color.art">
+//#<include="core/random.art">
+//#<include="driver/phase.art">
+//#<include="driver/shading_context.art">
+
 struct MediumSample {
     pos:   Vec3,
     pdf:   f32,

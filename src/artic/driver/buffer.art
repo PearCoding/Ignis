@@ -1,3 +1,6 @@
+//#<include="core/vector.art">
+//#<include="core/matrix.art">
+
 // Device buffer. Granularity is 4 byte per index
 // Everything with a _host suffix can be used on the host environment only
 // Without a _host suffix the function can only be used in the device environment

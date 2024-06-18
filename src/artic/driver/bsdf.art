@@ -1,3 +1,7 @@
+//#<include="core/common.art">
+//#<include="core/color.art">
+//#<include="core/random.art">
+
 // Result of sampling a BSDF
 struct BsdfSample {
     in_dir:   Vec3,  // Sampled direction

@@ -1,3 +1,18 @@
+//#<include="core/color.art">
+//#<include="core/print.art">
+//#<include="driver/aov.art">
+//#<include="driver/data.art">
+//#<include="driver/entity.art">
+//#<include="driver/image.art">
+//#<include="driver/pointmapper.art">
+//#<include="driver/scene.art">
+//#<include="driver/surface_element.art">
+//#<include="driver/technique.art">
+//#<include="traversal/bvh.art">
+//#<include="traversal/hit.art">
+//#<include="traversal/ray.art">
+//#<include="traversal/stack.art">
+
 struct GenerateRayInfo {
     next_id: i32,
     size: i32,

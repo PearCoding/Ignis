@@ -1,3 +1,5 @@
+//#<include="core/common.art">
+
 // See http://psgraphics.blogspot.com/2011/01/improved-code-for-concentric-map.html
 fn @square_to_concentric_disk(p: Vec2) -> Vec2 {
     let a = 2 * p.x - 1;

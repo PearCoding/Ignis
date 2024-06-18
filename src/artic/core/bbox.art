@@ -1,3 +1,5 @@
+//#<include="core/vector.art">
+
 struct BBox {
     min: Vec3, // Minimum corner
     max: Vec3  // Maximum corner

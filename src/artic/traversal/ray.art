@@ -1,3 +1,5 @@
+//#<include="core/common.art">
+
 // Ray structure used for data from host
 struct StreamRay {
     org: Vec3,     // Origin of the ray

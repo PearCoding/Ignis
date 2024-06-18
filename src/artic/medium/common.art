@@ -1,3 +1,5 @@
+//#<include="driver/medium.art">
+
 fn @make_vacuum_medium()-> Medium {
     Medium {
         phase          = @|_| make_delta_phase(1),

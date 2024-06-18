@@ -1,3 +1,5 @@
+//#<include="core/common.art">
+
 type SortingNetwork = fn (i32, fn (i32, i32) -> ()) -> ();
 
 fn @bose_nelson_sort(n: i32, cmp_swap: fn (i32, i32) -> ()) -> () {
