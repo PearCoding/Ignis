@@ -104,6 +104,8 @@ public:
         // Get all the process states
         for (auto& p : processes)
             handleExit(p);
+
+        mThreadRunning = false;
     }
 
     void start()
@@ -275,6 +277,10 @@ bool ShaderTaskManager::waitForFinish()
 {
     if (mThreadCount != 1 && mInternal->mThreadRunning)
         mInternal->stopWhenFinished();
+
+    // Join dangling thread
+    if (mThreadCount != 1 && mInternal->mWorkThread.joinable())
+        mInternal->mWorkThread.join();
 
     return !hasError();
 }

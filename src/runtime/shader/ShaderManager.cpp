@@ -41,11 +41,9 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
             std::this_thread::yield();
         }
         pb.end();
-    } else {
-        manager.waitForFinish();
     }
 
-    if (manager.hasError()) {
+    if (!manager.waitForFinish()) {
         IG_LOG(L_ERROR) << "Compiling shaders failed" << std::endl;
         manager.dumpLogs();
         return false;
