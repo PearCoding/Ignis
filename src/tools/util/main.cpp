@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 
 #ifdef IG_WITH_CONVERTER_MITSUBA
             case ConvertOption::IG:
-                convert_mts(cmd.InputFile, cmd.OutputFile, cmd.MtsLookupDirs, cmd.MtsDefs, true /*TODO*/, cmd.Quiet);
+                convert_from_mts(cmd.InputFile, cmd.OutputFile, cmd.MtsLookupDirs, cmd.MtsDefs, true /*TODO*/, cmd.Quiet);
                 break;
 #endif
 
