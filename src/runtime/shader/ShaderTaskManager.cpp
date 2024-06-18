@@ -176,7 +176,8 @@ private:
             return;
 
         proc.Proc->waitForFinish();
-        int exitCode = proc.Proc->exitCode();
+        const std::string log = proc.Proc->receiveOnce();
+        const int exitCode    = proc.Proc->exitCode();
 
         const auto dur = std::chrono::steady_clock::now() - proc.Start;
 
@@ -186,7 +187,19 @@ private:
 
             // All good -> recompile to get data from cache!
             ptr = mInternalCompiler->compile(proc.Work.Script, proc.Work.Function);
-        } else {
+        }
+
+        mWorkMutex.lock();
+        mResultMap[proc.Work.ID] = Result{
+            .Log = log,
+            .Ptr = ptr
+        };
+        mWorkMutex.unlock();
+
+        delete proc.Proc;
+        proc.Proc = nullptr;
+
+        if (exitCode != EXIT_SUCCESS) {
             // Dump shader into tmp folder
             const Path tmpFile = std::filesystem::temp_directory_path() / "Ignis" / (whitespace_escaped(proc.Work.reasonableID()) + ".art");
             dumpShader(tmpFile, proc.Work.Script);
@@ -194,16 +207,6 @@ private:
             IG_LOG(L_ERROR) << "Finished compilation of '" << proc.Work.Name << "' for group '" << proc.Work.ID << "' with exit code " << exitCode << " (" << dur << ")." << std::endl
                             << "Dump of shader is available at " << tmpFile << std::endl;
         }
-
-        mWorkMutex.lock();
-        mResultMap[proc.Work.ID] = Result{
-            .Log = proc.Proc->receiveOnce(),
-            .Ptr = ptr
-        };
-        mWorkMutex.unlock();
-
-        delete proc.Proc;
-        proc.Proc = nullptr;
     }
 };
 

@@ -11,6 +11,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <fstream>
+
 #elif defined(IG_OS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -38,8 +40,6 @@ public:
     mutable int exit_code;
 
     int stdIn[2];
-    // int stdOut[2];
-    int tmpOut;
 
     inline ExternalProcessInternal(const std::string& name, const Path& exe, const std::vector<std::string>& parameters, const Path& logFile)
         : exePath(exe)
@@ -48,7 +48,6 @@ public:
         , pid(-1)
         , exit_code(-1)
         , stdIn{ InvalidPipe, InvalidPipe }
-        , tmpOut{ InvalidPipe }
     {
         IG_UNUSED(name);
     }
@@ -57,9 +56,6 @@ public:
     {
         if (stdIn[PipeWrite] != InvalidPipe)
             close(stdIn[PipeWrite]);
-
-        if (tmpOut != InvalidPipe)
-            close(tmpOut);
 
         // Remove empty logs
         if (std::filesystem::file_size(logFile) == 0)
@@ -74,7 +70,7 @@ public:
             return false;
         }
 
-        tmpOut = open(logFile.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+        int tmpOut = open(logFile.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
         if (tmpOut < 0) {
             IG_LOG(L_ERROR) << "Getting file handle for temporary file for process " << exePath << " failed: " << std::strerror(errno) << std::endl;
             return false;
@@ -129,6 +125,7 @@ public:
             // Close unnecessary handles
             close(stdIn[PipeRead]);
             stdIn[PipeRead] = InvalidPipe;
+            close(tmpOut);
 
             // Check for error
             if (pid == -1) {
@@ -216,26 +213,13 @@ public:
         if (pid == -1)
             return {};
 
-        std::string output;
-        while (true) {
-            char c;
-            int result = read(tmpOut, &c, 1);
-            if (result < 0) {
-                IG_LOG(L_ERROR) << "read for " << exePath << " (" << pid << " | " << logFile << ") failed: " << std::strerror(errno) << std::endl;
-                break;
-            } else if (result == 0) {
-                // EOF
-                break;
-            }
-
-            output += c;
+        try {
+            std::stringstream stream;
+            stream << std::ifstream(logFile).rdbuf();
+            return stream.str();
+        } catch (...) {
+            return {};
         }
-
-        // close(stdOut[PipeRead]);
-        // stdOut[PipeRead] = InvalidPipe;
-        close(tmpOut);
-        tmpOut = InvalidPipe;
-        return output;
     }
 };
 
