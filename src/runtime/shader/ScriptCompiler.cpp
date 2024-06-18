@@ -45,21 +45,8 @@ static inline std::optional<std::string_view> getFromAPI(const std::string_view&
 
 std::string ScriptCompiler::prepare(const std::string& script) const
 {
-
-    // TODO
-    std::stringstream source;
-
-    if (mStdLibPath.empty()) {
-        for (int i = 0; ig_api[i]; ++i)
-            source << ig_api[i];
-    } else {
-        source << mStdLibPath;
-    }
-
-    source << std::endl;
-    source << script;
-
-    return source.str();
+    std::unordered_set<std::string> included_paths;
+    return prepare(script, "JIT", included_paths);
 }
 
 std::string ScriptCompiler::prepare(const std::string_view& script, const std::string_view& path, std::unordered_set<std::string>& included_paths) const
@@ -112,5 +99,7 @@ std::string ScriptCompiler::prepare(const std::string_view& script, const std::s
             break;
         }
     }
+
+    return copy;
 }
 } // namespace IG
