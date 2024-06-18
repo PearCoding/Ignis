@@ -33,13 +33,17 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
 
     manager.finalize();
 
-    ShaderProgressBar pb(true /*TODO*/, 2, numberOfUniqueEntries);
-    pb.begin();
-    while (!manager.isFinished()) {
-        pb.update(manager.numFinishedTasks());
-        std::this_thread::yield();
+    if (!IG_LOGGER.isQuiet()) {
+        ShaderProgressBar pb(IG_LOGGER.isUsingAnsiTerminal(), 2, numberOfUniqueEntries);
+        pb.begin();
+        while (!manager.isFinished()) {
+            pb.update(manager.numFinishedTasks());
+            std::this_thread::yield();
+        }
+        pb.end();
+    } else {
+        manager.waitForFinish();
     }
-    pb.end();
 
     if (manager.hasError()) {
         IG_LOG(L_ERROR) << "Compiling shaders failed" << std::endl;

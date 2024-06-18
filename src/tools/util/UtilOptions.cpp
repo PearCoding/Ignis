@@ -105,6 +105,10 @@ UtilOptions::UtilOptions(int argc, char** argv, const std::string& desc)
     if (ShouldExit)
         return;
 
+    IG_LOGGER.setQuiet(Quiet);
+    IG_LOGGER.setVerbosity(VerbosityLevel);
+    IG_LOGGER.enableAnsiTerminal(!NoColor);
+
     if (Op == Operation::Convert) {
         if (ConvertFormat == ConvertOption::Automatic) {
             using namespace std::string_view_literals;

@@ -68,6 +68,10 @@ CompilerOptions::CompilerOptions(int argc, char** argv, const std::string& desc)
 
     if (ShouldExit)
         return;
+
+    IG_LOGGER.setQuiet(Quiet);
+    IG_LOGGER.setVerbosity(VerbosityLevel);
+    IG_LOGGER.enableAnsiTerminal(!NoColor);
 }
 
 } // namespace IG
