@@ -43,9 +43,11 @@ static inline std::optional<std::string_view> getFromAPI(const std::string_view&
     return std::nullopt;
 }
 
-std::string ScriptCompiler::prepare(const std::string& script) const
+std::string ScriptCompiler::prepare(const std::string& script, const std::string& path) const
 {
     std::unordered_set<std::string> included_paths;
+    if (!path.empty())
+        included_paths.insert(path);
     return prepare(script, "JIT", included_paths);
 }
 
@@ -58,8 +60,11 @@ std::string ScriptCompiler::prepare(const std::string_view& script, const std::s
         std::smatch include_match;
         if (std::regex_search(copy, include_match, include_statement)) {
             const std::string include_path = std::string(include_match[1].first, include_match[1].second);
+            std::cout << include_match[0] << std::endl;
+            std::cout << include_path << std::endl;
             if (included_paths.contains(include_path)) {
                 // Already included
+                std::cout << "Already included"<<std::endl;
                 copy.replace(include_match[0].first, include_match[0].second, "");
             } else if (mStdLibPath.empty()) {
                 // Use internal API
@@ -92,9 +97,6 @@ std::string ScriptCompiler::prepare(const std::string_view& script, const std::s
                     return {};
                 }
             }
-
-            std::cout << include_match[0] << std::endl;
-            std::cout << include_match[1] << std::endl;
         } else {
             break;
         }

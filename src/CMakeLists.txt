@@ -2,6 +2,7 @@
 add_subdirectory(artic)
 
 add_subdirectory(internal/apicollector)
+add_subdirectory(internal/apicheck)
 
 add_subdirectory(runtime)
 add_subdirectory(device)

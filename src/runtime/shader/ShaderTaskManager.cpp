@@ -34,6 +34,7 @@ public:
     struct Result {
         std::string Log;
         void* Ptr;
+        std::string Name;
     };
 
     struct RunningProcess {
@@ -192,7 +193,8 @@ private:
         mWorkMutex.lock();
         mResultMap[proc.Work.ID] = Result{
             .Log = log,
-            .Ptr = ptr
+            .Ptr = ptr,
+            .Name = proc.Work.Name,
         };
         mWorkMutex.unlock();
 
@@ -239,6 +241,7 @@ void ShaderTaskManager::add(const std::string& id, const std::string& name, cons
         mInternal->mResultMap[id] = ShaderTaskManagerInternal::Result{
             .Log = {}, // TODO
             .Ptr = ptr,
+            .Name = name,
         };
     } else {
         mInternal->mWorkQueue.push(ShaderTaskManagerInternal::Work{
@@ -317,7 +320,7 @@ void ShaderTaskManager::dumpLogs() const
         if (p.second.Log.empty())
             continue;
 
-        IG_LOG(L_INFO) << "Build log '" << p.first << "':" << std::endl
+        IG_LOG(L_INFO) << "Build log '" << p.second.Name << "' for group '" << p.first << "':" << std::endl
                        << p.second.Log << std::endl;
     }
 }
