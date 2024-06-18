@@ -1,3 +1,8 @@
+//#<include="core/color.art">
+//#<include="core/random.art">
+//#<include="core/vector.art">
+//#<include="traversal/ray.art">
+
 struct PixelCoord {
     x: i32,      // X Coordinate
     y: i32,      // Y Coordinate

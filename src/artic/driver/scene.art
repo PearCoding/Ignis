@@ -1,3 +1,6 @@
+//#<include="driver/entity.art">
+//#<include="driver/shape.art">
+
 // Scene data
 struct Scene {
     num_entities:  i32,

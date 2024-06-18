@@ -1,3 +1,5 @@
+//#<include="core/color.art">
+
 // Module to get additional settings from the runtime
 mod registry {
     use super as all;
@@ -53,3 +55,8 @@ mod registry {
         super::make_color(r, g, b, a)
     }
 }
+
+#[import(cc = "C")] fn ignis_get_parameter_i32(i32, &[u8], i32, bool) -> i32;
+#[import(cc = "C")] fn ignis_get_parameter_f32(i32, &[u8], f32, bool) -> f32;
+#[import(cc = "C")] fn ignis_get_parameter_vector(i32, &[u8], f32, f32, f32, &mut f32, &mut f32, &mut f32, bool) -> ();
+#[import(cc = "C")] fn ignis_get_parameter_color(i32, &[u8], f32, f32, f32, f32, &mut f32, &mut f32, &mut f32, &mut f32, bool) -> ();

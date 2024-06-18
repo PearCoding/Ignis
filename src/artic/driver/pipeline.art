@@ -1,3 +1,14 @@
+//#<include="core/vector.art">
+
+struct GenerateRayInfo {
+    next_id: i32,
+    size: i32,
+    xmin: i32,
+    ymin: i32,
+    xmax: i32,
+    ymax: i32
+}
+
 struct Pipeline {
     on_generate: fn (GenerateRayInfo) -> i32,
 

@@ -1,3 +1,6 @@
+//#<include="core/random.art">
+//#<include="core/vector.art">
+
 // Result of sampling a phase function
 struct PhaseSample {
     in_dir: Vec3, // Sampled direction

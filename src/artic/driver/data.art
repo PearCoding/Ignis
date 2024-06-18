@@ -57,3 +57,6 @@ struct TraceAccessor {
     shapes:   ShapeTable,  // Defined in shape.art
     entities: EntityTable, // Defined in entity.art
 }
+
+#[import(cc = "C")] fn ignis_load_dyntable(i32, &[u8], &mut DynTableData) -> ();
+#[import(cc = "C")] fn ignis_load_fixtable(i32, &[u8], &mut &[u8], &mut i32) -> ();

@@ -1,3 +1,5 @@
+//#<include="driver/aov.art">
+
 fn @filter_square_kernel(body: fn(i32, i32) -> ()) {
     fn @loop(x: i32, y: i32, kw: i32, kh: i32, iw: i32, ih: i32) -> () {
         let rw = kw / 2;

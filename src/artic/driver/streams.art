@@ -1,3 +1,9 @@
+//#<include="core/color.art">
+//#<include="core/random.art">
+//#<include="driver/payload.art">
+//#<include="traversal/hit.art">
+//#<include="traversal/ray.art">
+
 struct RayStream {
     id:    &mut [i32], // this field is also used to indicate if the ray is alive
     org_x: &mut [f32],
@@ -174,3 +180,14 @@ fn @make_secondary_stream_color_reader(secondary: SecondaryStream, vector_width:
         make_color(secondary.color_r(k), secondary.color_g(k), secondary.color_b(k), 1/*Stream does not carry alpha information*/)
     }
 }
+
+#[import(cc = "C")] fn ignis_get_primary_stream(i32, i32, &mut PrimaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_get_primary_stream_const(i32, i32, &mut PrimaryStream) -> ();
+#[import(cc = "C")] fn ignis_get_secondary_stream(i32, i32, &mut SecondaryStream, i32) -> ();
+#[import(cc = "C")] fn ignis_get_secondary_stream_const(i32, i32, &mut SecondaryStream) -> ();
+#[import(cc = "C")] fn ignis_gpu_get_tmp_buffer(i32, &mut &mut [i32]) -> ();
+#[import(cc = "C")] fn ignis_gpu_swap_primary_streams(i32) -> ();
+#[import(cc = "C")] fn ignis_gpu_swap_secondary_streams(i32) -> ();
+
+#[import(cc = "C")] fn ignis_get_temporary_storage_host(i32, &mut TemporaryStorageHost) -> ();
+#[import(cc = "C")] fn ignis_get_temporary_storage_device(i32, &mut TemporaryStorageDevice) -> ();

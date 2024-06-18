@@ -1,0 +1,16 @@
+// TODO: Refactor out
+struct WorkInfo {
+    width:                           i32,
+    height:                          i32,
+    advanced_shadows:                bool,
+    advanced_shadows_with_materials: bool,
+    framebuffer_locked:              bool
+}
+
+fn @get_work_info() -> WorkInfo {
+    let mut work_info : WorkInfo;
+    ignis_get_work_info(&mut work_info);
+    work_info
+}
+
+#[import(cc = "C")] fn ignis_get_work_info(&mut WorkInfo) -> ();

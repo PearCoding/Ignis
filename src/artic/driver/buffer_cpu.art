@@ -1,7 +1,6 @@
 //#<include="core/vector.art">
 //#<include="core/common_cpu.art">
 //#<include="driver/buffer.art">
-//#<include="driver/driver.art">
 
 fn @cpu_load_vec4(p: &[f32], elem: i32) {
     let v = (p as &[simd[f32 * 4]])(elem);
@@ -108,3 +107,7 @@ fn @load_cpu_buffer_by_id(id: i32) {
     ignis_load_buffer_by_id(0, id, &mut ptr, &mut bytesize);
     make_cpu_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
 }
+
+#[import(cc = "C")] fn ignis_load_buffer(i32, &[u8], &mut &[u8], &mut i32) -> ();
+#[import(cc = "C")] fn ignis_load_buffer_by_id(i32, i32, &mut &[u8], &mut i32) -> ();
+#[import(cc = "C")] fn ignis_request_buffer(i32, &[u8], &mut &[u8], i32, i32) -> ();

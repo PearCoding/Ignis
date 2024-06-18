@@ -4,7 +4,10 @@
 //#<include="driver/data.art">
 //#<include="driver/entity.art">
 //#<include="driver/image.art">
+//#<include="driver/parallel_reduce.art">
+//#<include="driver/pipeline.art">
 //#<include="driver/pointmapper.art">
+//#<include="driver/shading_context.art">
 //#<include="driver/scene.art">
 //#<include="driver/surface_element.art">
 //#<include="driver/technique.art">
@@ -12,15 +15,6 @@
 //#<include="traversal/hit.art">
 //#<include="traversal/ray.art">
 //#<include="traversal/stack.art">
-
-struct GenerateRayInfo {
-    next_id: i32,
-    size: i32,
-    xmin: i32,
-    ymin: i32,
-    xmax: i32,
-    ymax: i32
-}
 
 // Rendering device
 // Methods marked with [Internal] are only for internal use and should not be called in random places

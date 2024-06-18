@@ -1,3 +1,6 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/light.art">
+
 struct Material {
     id:          i32,
     bsdf:        Bsdf,

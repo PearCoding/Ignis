@@ -3,7 +3,6 @@
 //#<include="driver/accumulator.art">
 //#<include="driver/atomics.art">
 //#<include="driver/camera.art">
-//#<include="driver/driver.art">
 //#<include="traversal/ray.art">
 
 // A single AOV RGB image.
@@ -93,3 +92,6 @@ fn @make_rv_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -
         }
     }
 }
+
+#[import(cc = "C")] fn ignis_get_aov_image(i32, &[u8], &mut &mut [f32]) -> ();
+#[import(cc = "C")] fn ignis_mark_aov_as_used(&[u8], i32) -> ();

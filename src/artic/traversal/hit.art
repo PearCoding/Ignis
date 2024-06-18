@@ -15,3 +15,5 @@ fn @make_hit(ent_id: i32, prim_id: i32, t: f32, uv: Vec2) = Hit {
     prim_id     = prim_id,
     ent_id      = ent_id,
 };
+
+fn @invalid_hit(tmax: f32) = make_hit(InvalidHitId, InvalidHitId, tmax, make_vec2(0, 0));

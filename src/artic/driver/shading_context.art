@@ -1,4 +1,6 @@
 //#<include="driver/camera.art">
+//#<include="driver/material.art">
+//#<include="driver/medium.art">
 //#<include="driver/pointmapper.art">
 //#<include="driver/registry.art">
 //#<include="driver/settings.art">

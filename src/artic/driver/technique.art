@@ -1,3 +1,9 @@
+//#<include="core/color.art">
+//#<include="core/random.art">
+//#<include="driver/payload.art">
+//#<include="driver/shading_context.art">
+//#<include="traversal/ray.art">
+
 // A simple shadow ray only has a color associated with the ray,
 // a advanced shadow ray however replaces the current material id for the upcoming ShadowHit or ShadowMiss function.
 // Make sure the material id is always positive and in valid range of the given materials. No bounding checks are applied.

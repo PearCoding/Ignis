@@ -1,3 +1,6 @@
+//#<include="core/color.art">
+//#<include="core/vector.art">
+
 // Images are discrete collections of pixels with a fixed number of channels
 struct Image {
     pixels: fn (i32, i32) -> Color,
@@ -32,3 +35,8 @@ fn @make_image_mono(pixels: fn (i32, i32) -> f32, width: i32, height: i32) = Ima
     width  = width,
     height = height
 };
+
+#[import(cc = "C")] fn ignis_load_image(i32, &[u8], &mut &[f32], &mut i32, &mut i32, i32) -> ();
+#[import(cc = "C")] fn ignis_load_image_by_id(i32, i32, &mut &[f32], &mut i32, &mut i32, i32) -> ();
+#[import(cc = "C")] fn ignis_load_packed_image(i32, &[u8], &mut &[u8], &mut i32, &mut i32, i32, bool) -> ();
+#[import(cc = "C")] fn ignis_load_packed_image_by_id(i32, i32, &mut &[u8], &mut i32, &mut i32, i32, bool) -> ();

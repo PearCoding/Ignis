@@ -1,3 +1,11 @@
+//#<include="core/color.art">
+//#<include="core/random.art">
+//#<include="core/vector.art">
+//#<include="driver/pdf.art">
+//#<include="driver/shading_context.art">
+//#<include="driver/surface_element.art">
+//#<include="traversal/ray.art">
+
 // Result from sampling a light source
 struct EmissionSample {
     pos:       Vec3,  // Position on the light source

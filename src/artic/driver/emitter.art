@@ -1,3 +1,11 @@
+//#<include="core/random.art">
+//#<include="driver/camera.art">
+//#<include="driver/payload.art">
+//#<include="driver/settings.art">
+//#<include="driver/technique.art">
+//#<include="sampler/pixel_sampler.art">
+//#<include="traversal/ray.art">
+
 type PayloadInitializer = fn (/*payload:*/ RayPayload, /*sample:*/ i32, /*coord:*/ PixelCoord) -> ();
 
 fn @make_simple_payload_initializer(f: fn(RayPayload)->()) = @|p: RayPayload, _:i32, _:PixelCoord| f(p);

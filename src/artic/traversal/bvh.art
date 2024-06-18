@@ -98,3 +98,7 @@ struct Node8 {
     child:   [i32 * 8],
     pad:     [i32 * 8]
 }
+
+#[import(cc = "C")] fn ignis_load_bvh2_ent(i32, &[u8], &mut &[Node2], &mut &[EntityLeaf1]) -> ();
+#[import(cc = "C")] fn ignis_load_bvh4_ent(i32, &[u8], &mut &[Node4], &mut &[EntityLeaf1]) -> ();
+#[import(cc = "C")] fn ignis_load_bvh8_ent(i32, &[u8], &mut &[Node8], &mut &[EntityLeaf1]) -> ();

@@ -702,6 +702,9 @@ fn @cpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, vector_width: i32) ->
     }
 }
 
+#[import(cc = "C")] fn ignis_register_thread() -> ();
+#[import(cc = "C")] fn ignis_unregister_thread() -> ();
+
 // Main shader ------------------------------------------------------------------
 fn @cpu_get_stream_capacity(spi: i32, tile_size: i32) = spi * tile_size * tile_size;
 
