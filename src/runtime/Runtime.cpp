@@ -106,7 +106,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
         throw std::runtime_error("Could not get compiler interface from requested device");
 
     // Configure compiler
-    mCompiler = std::make_unique<ScriptCompiler>(compilerDevice);
+    mCompiler = std::make_unique<ScriptCompiler>(compilerDevice, mOptions.ScriptDir);
 
     mCompiler->setOptimizationLevel(std::min<size_t>(3, mOptions.ShaderOptimizationLevel));
     mCompiler->setVerbose(IG_LOGGER.verbosity() == L_DEBUG);
@@ -117,12 +117,6 @@ Runtime::Runtime(const RuntimeOptions& opts)
 
     // Load interface
     IG_LOG(L_INFO) << "Using target " << mOptions.Target.toString() << std::endl;
-
-    // Load standard library if necessary
-    if (!mOptions.ScriptDir.empty()) {
-        IG_LOG(L_INFO) << "Loading standard library from " << mOptions.ScriptDir << std::endl;
-        mCompiler->loadStdLibFromDirectory(mOptions.ScriptDir);
-    }
 
     IRenderDevice::SetupSettings settings;
     settings.target        = mOptions.Target;

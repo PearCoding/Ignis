@@ -2,16 +2,18 @@
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "device/ICompilerDevice.h"
+
 #include <fstream>
+#include <regex>
 
 // Will be populated by api_collector
 extern const char* ig_api[];
 extern const char* ig_api_paths[];
 
 namespace IG {
-ScriptCompiler::ScriptCompiler(const std::shared_ptr<ICompilerDevice>& compiler)
+ScriptCompiler::ScriptCompiler(const std::shared_ptr<ICompilerDevice>& compiler, const Path& stdlibDir)
     : mCompiler(compiler)
-    , mStdLibOverride()
+    , mStdLibPath(stdlibDir)
     , mOptimizationLevel(3)
     , mVerbose(false)
 {
@@ -23,7 +25,6 @@ ScriptCompiler::~ScriptCompiler()
 
 void* ScriptCompiler::compile(const std::string& script, const std::string& function) const
 {
-    // AnyDSL has no support for multi-threaded compile process :/
     std::lock_guard<std::mutex> _guard(mCompileMutex);
 
     return mCompiler->compileAndGet(
@@ -33,15 +34,26 @@ void* ScriptCompiler::compile(const std::string& script, const std::string& func
         script, function);
 }
 
+static inline std::optional<std::string_view> getFromAPI(const std::string_view& path)
+{
+    for (int i = 0; ig_api_paths[i]; ++i) {
+        if (ig_api_paths[i] == path)
+            return ig_api[i];
+    }
+    return std::nullopt;
+}
+
 std::string ScriptCompiler::prepare(const std::string& script) const
 {
+
+    // TODO
     std::stringstream source;
 
-    if (mStdLibOverride.empty()) {
+    if (mStdLibPath.empty()) {
         for (int i = 0; ig_api[i]; ++i)
             source << ig_api[i];
     } else {
-        source << mStdLibOverride;
+        source << mStdLibPath;
     }
 
     source << std::endl;
@@ -50,41 +62,55 @@ std::string ScriptCompiler::prepare(const std::string& script) const
     return source.str();
 }
 
-static inline bool checkShaderFileName(const Path& path)
+std::string ScriptCompiler::prepare(const std::string_view& script, const std::string_view& path, std::unordered_set<std::string>& included_paths) const
 {
-    if (path.empty())
-        return false;
+    static const std::regex include_statement = std::regex(R"(\/\/\#\<\s*include\s*\=\s*\"([^\"]*)\"\s*\>)", std::regex::ECMAScript);
 
-    if (path.extension() != ".art")
-        return false;
+    std::string copy = (std::string)script;
+    while (true) {
+        std::smatch include_match;
+        if (std::regex_search(copy, include_match, include_statement)) {
+            const std::string include_path = std::string(include_match[1].first, include_match[1].second);
+            if (included_paths.contains(include_path)) {
+                // Already included
+                copy.replace(include_match[0].first, include_match[0].second, "");
+            } else if (mStdLibPath.empty()) {
+                // Use internal API
+                if (const auto val = getFromAPI(include_path); val) {
+                    included_paths.insert(include_path);
+                    const std::string result = prepare((std::string)val.value(), include_path, included_paths);
+                    copy.replace(include_match[0].first, include_match[0].second, result);
+                } else {
+                    IG_LOG(L_ERROR) << "Could not resolve API include '" << include_path << "' in '" << path << "'" << std::endl;
+                    return {};
+                }
+            } else {
+                // Use external files
+                const auto full_path = mStdLibPath / include_path;
+                if (std::filesystem::exists(full_path)) {
+                    std::string content;
+                    try {
+                        std::ifstream f(full_path);
+                        content = std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+                    } catch (const std::exception& e) {
+                        IG_LOG(L_ERROR) << "Could not find include " << full_path << " in '" << path << "': " << e.what() << std::endl;
+                        return {};
+                    }
 
-    if (path.filename().generic_string()[0] == '.')
-        return false;
-
-    if (path.stem().generic_string() == "dummy_main")
-        return false;
-
-    return true;
-}
-
-void ScriptCompiler::loadStdLibFromDirectory(const Path& dir)
-{
-    std::stringstream lib;
-
-    // Iterate through given directory in search for *.art files. Files with a starting . are ignored
-    for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(dir, std::filesystem::directory_options::skip_permission_denied)) {
-        if (dirEntry.is_regular_file()) {
-            const auto& path = dirEntry.path();
-            if (checkShaderFileName(path) && dirEntry.exists()) {
-                IG_LOG(L_DEBUG) << "Adding " << path << " to standard library" << std::endl;
-
-                lib << std::endl;
-                lib << std::ifstream(path).rdbuf();
+                    included_paths.insert(include_path);
+                    const std::string result = prepare(content, include_path, included_paths);
+                    copy.replace(include_match[0].first, include_match[0].second, result);
+                } else {
+                    IG_LOG(L_ERROR) << "Could not find include " << full_path << " in '" << path << "'" << std::endl;
+                    return {};
+                }
             }
+
+            std::cout << include_match[0] << std::endl;
+            std::cout << include_match[1] << std::endl;
+        } else {
+            break;
         }
     }
-
-    mStdLibOverride = lib.str();
 }
-
 } // namespace IG

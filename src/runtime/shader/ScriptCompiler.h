@@ -9,7 +9,7 @@ class ICompilerDevice;
 
 class IG_LIB ScriptCompiler {
 public:
-    explicit ScriptCompiler(const std::shared_ptr<ICompilerDevice>& compiler);
+    ScriptCompiler(const std::shared_ptr<ICompilerDevice>& compiler, const Path& stdlibDir);
     ~ScriptCompiler();
 
     inline void setOptimizationLevel(size_t l) { mOptimizationLevel = l; }
@@ -20,12 +20,13 @@ public:
 
     std::string prepare(const std::string& script) const;
     void* compile(const std::string& script, const std::string& function) const;
-    void loadStdLibFromDirectory(const Path& dir);
 
 private:
+    std::string prepare(const std::string_view& script, const std::string_view& path, std::unordered_set<std::string>& included_paths) const;
+
     std::shared_ptr<ICompilerDevice> mCompiler;
 
-    std::string mStdLibOverride;
+    const Path mStdLibPath;
     size_t mOptimizationLevel;
     bool mVerbose;
 

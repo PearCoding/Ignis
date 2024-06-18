@@ -4,7 +4,7 @@
 #include <sstream>
 #include <vector>
 
-inline void replace_all(std::string& data, const std::string& from, const std::string& to)
+static inline void replace_all(std::string& data, const std::string& from, const std::string& to)
 {
     size_t pos = data.find(from);
 
@@ -15,10 +15,10 @@ inline void replace_all(std::string& data, const std::string& from, const std::s
     }
 }
 
-inline std::string get_name(const std::filesystem::path& path)
+static inline std::string get_name(const std::filesystem::path& path)
 {
-    std::string filename  = path.stem().generic_u8string();
-    std::string directory = path.parent_path().stem().generic_u8string();
+    const std::string filename  = path.stem().generic_u8string();
+    const std::string directory = path.parent_path().stem().generic_u8string();
     return directory + "_" + filename;
 }
 
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 
     // Read all files
     for (const auto& input : inputs) {
-        std::string name = get_name(input);
+        const std::string name = get_name(input);
 
         stream << "static const char* const s_" << name << " =" << std::endl;
 
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     stream << std::endl
            << "const char* ig_api[] = {" << std::endl;
     for (const auto& input : inputs) {
-        std::string name = get_name(input);
+        const std::string name = get_name(input);
         stream << "  s_" << name << "," << std::endl;
     }
     stream << "  nullptr" << std::endl
@@ -76,8 +76,8 @@ int main(int argc, char** argv)
     stream << std::endl
            << "const char* ig_api_paths[] = {" << std::endl;
     for (const auto& input : inputs) {
-        std::string filename  = input.filename().generic_u8string();
-        std::string directory = input.parent_path().stem().generic_u8string();
+        const std::string filename  = input.filename().generic_u8string();
+        const std::string directory = input.parent_path().stem().generic_u8string();
         stream << "  \"" << directory << "/" << filename << "\"," << std::endl;
     }
     stream << "  nullptr" << std::endl
