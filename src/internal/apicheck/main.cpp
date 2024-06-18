@@ -7,8 +7,8 @@
 #include <fstream>
 
 // Will be populated by api_collector
-extern const char* ig_api[];
-extern const char* ig_api_paths[];
+extern IG_LIB const char* ig_api[];
+extern IG_LIB const char* ig_api_paths[];
 
 using namespace IG;
 

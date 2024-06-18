@@ -41,7 +41,8 @@ int main(int argc, char** argv)
     output = argv[argc - 1];
 
     std::ofstream stream(output);
-    stream << "// ig_api_collector generated API sources" << std::endl;
+    stream << "// ig_api_collector generated API sources" << std::endl
+           << "#include \"IG_Config.h\"" << std::endl;
 
     // Read all files
     for (const auto& input : inputs) {
@@ -65,7 +66,7 @@ int main(int argc, char** argv)
 
     // Construct header
     stream << std::endl
-           << "const char* ig_api[] = {" << std::endl;
+           << "IG_LIB const char* ig_api[] = {" << std::endl;
     for (const auto& input : inputs) {
         const std::string name = get_name(input);
         stream << "  s_" << name << "," << std::endl;
@@ -74,7 +75,7 @@ int main(int argc, char** argv)
            << "};" << std::endl;
 
     stream << std::endl
-           << "const char* ig_api_paths[] = {" << std::endl;
+           << "IG_LIB const char* ig_api_paths[] = {" << std::endl;
     for (const auto& input : inputs) {
         const std::string filename  = input.filename().generic_u8string();
         const std::string directory = input.parent_path().stem().generic_u8string();
