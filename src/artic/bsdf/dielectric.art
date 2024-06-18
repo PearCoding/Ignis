@@ -1,3 +1,7 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="core/microfacet.art">
+
 // Creates a perfect transmission BSDF (only forwarding the ray)
 // Same as tinted passthrough
 fn @make_perfect_refraction_bsdf(_surf: SurfaceElement, kt: Color) = Bsdf {

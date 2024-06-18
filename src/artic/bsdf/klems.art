@@ -1,3 +1,5 @@
+//#<include="bsdf/tensortree.art">
+
 struct KlemsComponentSpecification {
     total:       f32,
     theta_count: [i32*2],

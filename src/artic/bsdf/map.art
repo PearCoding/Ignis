@@ -1,3 +1,9 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="driver/shading_context.art">
+//#<include="core/sampling.art">
+//#<include="core/shading.art">
+
 fn @shading_normal_adjoint(in_dir: Vec3, out_dir: Vec3, ns: Vec3, ng: Vec3) -> f32 {
     let ons = positive_cos(out_dir, ns);
     let ins = positive_cos(in_dir, ns);

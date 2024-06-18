@@ -1,6 +1,9 @@
+//#<include="bsdf/diffuse.art">
+//#<include="bsdf/mix.art">
+//#<include="core/math.art">
+
 // Creates a plastic bsdf based on Fresnel equation (which is just a variadic mix bsdf with extra diffuse term)
 fn @make_plastic_bsdf(surf: SurfaceElement, n1: f32, n2: f32, kd: Color, specularBsdf: Bsdf) -> Bsdf {
-   
     // Layered BSDF
     let diffuse = make_lambertian_bsdf(surf, kd);
 

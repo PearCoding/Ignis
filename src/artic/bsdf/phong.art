@@ -1,3 +1,7 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="core/sampling.art">
+
 // Creates a physically-correct Phong BSDF
 fn @make_phong_bsdf(surf: SurfaceElement, ks: Color, ns: f32) = Bsdf {
     eval = @ |in_dir, out_dir| {

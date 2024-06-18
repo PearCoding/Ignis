@@ -1,3 +1,5 @@
+//#<include="driver/camera.art">
+
 // Special camera to satisfy issues when using tracing mode
 fn @make_null_camera() = Camera {
     generate_ray = @ |_, _| make_zero_ray(),

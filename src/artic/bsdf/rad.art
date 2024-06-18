@@ -1,3 +1,8 @@
+//#<include="bsdf/conductor.art">
+//#<include="bsdf/diffuse.art">
+//#<include="bsdf/dielectric.art">
+//#<include="bsdf/mix.art">
+
 // This file contains some BSDFs for Radiance compliance. Enjoy ;D
 // All BSDFs can be described via PExpr, but this way we can optimize the sampling strategy a bit.
 

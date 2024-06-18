@@ -1,3 +1,6 @@
+//#<include="driver/camera.art">
+//#<include="core/sampling.art">
+
 // Compute scale based on horizontal field of view and aspect ratio (w/h)
 fn @compute_scale_from_hfov(fov: f32, aspect: f32) -> Vec2 {
     let sw = math_builtins::tan(fov / 2);

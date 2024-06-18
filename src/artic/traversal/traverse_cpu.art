@@ -1,0 +1,383 @@
+// Traversal kernels ---------------------------------------------------------------
+
+// Traverses a primitive BVH with a single ray.
+fn @cpu_traverse_single_helper_prim_rv( mut ray: Ray
+                                   , octant: RayOctant
+                                   , min_max: MinMax
+                                   , bvh: PrimBvh
+                                   , any_hit: bool
+                                   , root: i32
+                                   ) -> Hit {
+    let sorting_network = match bvh.arity {
+        8 => batcher_sort,
+        _ => bose_nelson_sort
+    };
+    let branchless = bvh.arity > 4;
+
+    let mut hit = invalid_hit(ray.tmax);
+    let stack = alloc_stack();
+
+    stack.push(root, ray.tmin);
+
+    let extract_hit = @ |hit2: Hit, lane: i32| Hit {
+        ent_id      = InvalidHitId, // Not used here, will be replaced in the top level BVH
+        prim_id     = bitcast[i32](rv_extract(bitcast[f32](hit2.prim_id), lane)),
+        distance    = rv_extract(hit2.distance, lane),
+        prim_coords = make_vec2(rv_extract(hit2.prim_coords.x, lane), rv_extract(hit2.prim_coords.y, lane))
+    };
+
+    // Traversal loop
+    vectorize_safe(bvh.arity, |i| {
+        while true {
+            let restart = continue;
+            let exit    = break;
+
+            if cpu_unlikely(stack.is_empty()) { exit() }
+            // Cull nodes that cannot be intersected by the ray
+            if !any_hit && cpu_unlikely(stack.top().tmin > ray.tmax) {
+                stack.pop();
+                restart()
+            }
+
+            // Intersect inner nodes
+            while cpu_likely(is_inner(stack.top())) {
+                let node = bvh.node(stack.pop().node - 1);
+
+                // Intersect children
+                let (tentry, texit) = intersect_ray_box(min_max, true /*ordered*/, ray, node.ordered_bbox(i, octant));
+                let mask = if min_max.is_integer {
+                    // Special case when integer comparisons are faster than floating point comparisons
+                    !rv_ballot(bitcast[i32](texit) < bitcast[i32](tentry)) & ((1 << bvh.arity) - 1)
+                } else {
+                    rv_ballot(tentry <= texit)
+                };
+                
+                // Restart the loop when no intersection is found to trigger culling
+                if cpu_likely(mask == 0) {
+                    if any_hit { continue() } else { restart() }
+                }
+                
+                // Push intersected nodes on the stack, prefetch those
+                // that are closer than the node currently on top of the stack
+                let mut num_intrs = 0;
+                for lane in cpu_one_bits(mask) {
+                    let child_id = node.child(lane);
+
+                    num_intrs++;
+
+                    let t = rv_extract(tentry, lane);
+                    if any_hit || t < stack.top().tmin {
+                        if !any_hit { bvh.prefetch(child_id); }
+                        stack.push(child_id, t);
+                    } else {
+                        stack.push_after(child_id, t);
+                    }
+                }
+
+                if !any_hit && num_intrs >= 3 {
+                    // Sort them by distance along the ray
+                    for j in unroll(3, bvh.arity + 1) {
+                        if j == bvh.arity || num_intrs == j {
+                            stack.sort_n(j, @ |a, b| a < b, sorting_network, branchless);
+                            break()
+                        }
+                    }
+                }
+            }
+
+            if any_hit && cpu_unlikely(stack.is_empty()) { exit() }
+
+            // Intersect leaves here
+            let mut prim_id    = !stack.pop().node;
+            let mut terminated = false;
+            while true {
+                let prim = bvh.prim(prim_id++);
+                
+                // Intersect primitives
+                vectorize_safe(prim.size, |j| {
+                    if !prim.is_valid(j) { return() }
+                    if let Option[Hit]::Some(prim_hit) = prim.intersect(j, ray) { 
+                        if any_hit {
+                            // Early exit mode
+                            let lane = cpu_ctz32(rv_ballot(true), true);
+                            hit = extract_hit(prim_hit, lane);
+                            terminated = true;
+                        } else {
+                            let hit_distance = select(rv_mask(), prim_hit.distance, flt_max);
+                            let min_distance = cpu_vector_reduce_rv(hit_distance, prim.size, min_max.fminf);
+                            let lane = cpu_index_rv(hit_distance, min_distance);
+                            hit = extract_hit(prim_hit, lane);
+                            ray.tmax = hit.distance;
+                        }
+                    }
+                });
+
+                // Sentinel test
+                if prim.is_last { break() }
+            }
+            
+            // Early exit test delayed until exit primitive intersection loop
+            if any_hit && terminated { exit() }
+        }
+    });
+    hit
+}
+
+// Traverses a BVH with a packet of rays, assuming execution inside a vectorized region.
+fn @cpu_traverse_helper_prim( mut ray: Ray
+                            , vector_width: i32
+                            , min_max: MinMax
+                            , bvh: PrimBvh
+                            , single: bool
+                            , any_hit: bool
+                            , root: i32
+                            ) -> Hit {
+
+    let vec = if vector_width > 1 { make_rv_vectorizer() } else { make_null_vectorizer() };
+    
+    let switch_threshold = match vector_width {
+        4  => 3,
+        8  => if bvh.arity == 4 { 4 } else { 6 },
+        16 => 7,
+        _  => vector_width / 2
+    };
+
+    let mut hit = invalid_hit(ray.tmax);
+    let mut terminated = false;
+    let stack = alloc_stack();
+    stack.push(root, ray.tmin);
+
+    let octant = ray_octant(ray);
+
+    let load_ray = @ |ray_ptr: &Ray, lane: i32| Ray {
+        org     = make_vec3(vec.load(&ray_ptr.org.x, lane), vec.load(&ray_ptr.org.y, lane), vec.load(&ray_ptr.org.z, lane)),
+        dir     = make_vec3(vec.load(&ray_ptr.dir.x, lane), vec.load(&ray_ptr.dir.y, lane), vec.load(&ray_ptr.dir.z, lane)),
+        inv_org = make_vec3(vec.load(&ray_ptr.inv_org.x, lane), vec.load(&ray_ptr.inv_org.y, lane), vec.load(&ray_ptr.inv_org.z, lane)),
+        inv_dir = make_vec3(vec.load(&ray_ptr.inv_dir.x, lane), vec.load(&ray_ptr.inv_dir.y, lane), vec.load(&ray_ptr.inv_dir.z, lane)),
+        tmin    = vec.load(&ray_ptr.tmin, lane),
+        tmax    = vec.load(&ray_ptr.tmax, lane),
+        flags   = bitcast[u32](vec.load(&bitcast[f32](ray_ptr.flags), lane))
+    };
+
+    let store_hit = @ |hit_ptr: &mut Hit, lane: i32, hit2: Hit| {
+        vec.store(&mut hit_ptr.distance, lane, hit2.distance);
+        vec.store(&mut hit_ptr.prim_coords.x, lane, hit2.prim_coords.x);
+        vec.store(&mut hit_ptr.prim_coords.y, lane, hit2.prim_coords.y);
+        vec.store(bitcast[&mut f32](&mut hit_ptr.prim_id), lane, bitcast[f32](hit2.prim_id));
+        // vec.store(bitcast[&mut f32](&mut hit_ptr.ent_id), lane, bitcast[f32](hit2.ent_id)); // Optimization: No need for the ent id in prim BVH
+    };
+
+    while true {
+        let exit = break;
+        let cull = continue;
+
+        // Cull nodes and switch to single ray tracing when SIMD utilization is too low
+        while true {
+            if cpu_unlikely(stack.is_empty()) { exit() }
+            let active = (stack.top().tmin <= ray.tmax) & !terminated;
+            let mask = vec.ballot(active);
+            if cpu_likely(mask != 0) {
+                if vector_width > 1 && single && cpu_popcount32(mask) <= switch_threshold {
+                    for lane in cpu_one_bits(mask) {
+                        let lane_ray = load_ray(&ray, lane);
+                        let lane_octant = bitcast[RayOctant](rv_extract(bitcast[f32](octant), lane));
+                        let lane_hit = cpu_traverse_single_helper_prim_rv(lane_ray, lane_octant, min_max, bvh, any_hit, stack.top().node);
+                        if lane_hit.prim_id >= 0 {
+                            store_hit(&mut hit, lane, lane_hit);
+                            if !any_hit { rv_store(&mut ray.tmax, lane, lane_hit.distance); }
+                        }
+                    }
+                    if any_hit { terminated = hit.prim_id >= 0; }
+                } else {
+                    break()
+                }
+            }
+            stack.pop();
+        }
+
+        // Intersect inner nodes
+        while cpu_likely(is_inner(stack.top())) {
+            let node = bvh.node(stack.pop().node - 1);
+
+            // Intersect children
+            let mut pushed = false;
+            for i in unroll(0, bvh.arity) {
+                let child_id = node.child(i);
+                if cpu_unlikely(child_id == 0) { break() }
+
+                let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
+                // Special case when integer comparisons are faster than floating point comparisons
+                let miss = if min_max.is_integer { bitcast[i32](texit) < bitcast[i32](tentry)        } else { texit < tentry };
+                let push = if min_max.is_integer { !vec.ballot(miss) & ((1 << vector_width) - 1) != 0 } else { !vec.all(miss)  };
+                if push {
+                    // Important: prevent nodes that are not intersected
+                    // from being traversed with the single ray kernel
+                    let thit = select(miss, flt_max, tentry);
+                    if any_hit || vec.any(stack.top().tmin > thit) {
+                        bvh.prefetch(child_id);
+                        stack.push(child_id, thit);
+                    } else {
+                        stack.push_after(child_id, thit);
+                    }
+                    pushed = true;
+                }
+            }
+            if cpu_unlikely(!pushed) { cull() }
+        }
+
+        if cpu_unlikely(is_leaf(stack.top())) {
+            let mut active = (stack.top().tmin <= ray.tmax) & !terminated;
+            let mut prim_id = !stack.pop().node;
+            while true {
+                let prim = bvh.prim(prim_id++);
+                for i in unroll(0, prim.size) {
+                    if cpu_unlikely(!prim.is_valid(i)) { break() }
+
+                    if active {
+                        // Single primitive intersection
+                        if let Option[Hit]::Some(prim_hit) = prim.intersect(i, ray) {
+                            hit = prim_hit;
+                            ray.tmax = prim_hit.distance;
+                            if any_hit {
+                                terminated = true;
+                                active     = false;
+                            }
+                        }
+                    }
+                    if any_hit && cpu_unlikely(vec.all(terminated)) { exit() }
+                }
+
+                // Sentinel test
+                if cpu_unlikely(prim.is_last) { break() }
+            }
+        }
+    }
+
+    hit
+}
+
+fn @make_cpu_scene_local_handler_multiple(prims: BVHTable, vector_width: i32, single: bool, min_max: MinMax) -> SceneTraverseLocalHandler {
+    @|local_ray: Ray, leaf: EntityLeaf, any_hit: bool| -> Hit {
+        let shape_bvh = @prims(join_u32_to_u64(bitcast[u32](leaf.user1), bitcast[u32](leaf.user2)));
+        cpu_traverse_helper_prim(local_ray, vector_width, min_max, shape_bvh, single, any_hit, 1/*root*/)
+    }
+}
+
+fn @cpu_traverse_helper( mut ray: Ray
+                       , vector_width: i32
+                       , min_max: MinMax
+                       , scene: SceneGeometry
+                       , any_hit: bool
+                       , root: i32
+                       , mut hit: Hit
+                       ) -> Hit {
+    let bvh = scene.bvh;
+
+    let mut terminated = false;
+    let stack = alloc_stack();
+    stack.push(root, ray.tmin);
+
+    let vec = if vector_width > 1 { make_rv_vectorizer() } else { make_null_vectorizer() };
+
+    while true {
+        let exit = break;
+        let cull = continue;
+
+        // Cull nodes (in contrary to Primitive BVHs we do not switch to single mode at any time!)
+        while true {
+            if cpu_unlikely(stack.is_empty()) { exit() }
+            let active = (stack.top().tmin <= ray.tmax) & !terminated;
+            let mask = vec.ballot(active);
+            if cpu_likely(mask != 0) { break() }
+            stack.pop();
+        }
+
+        // Intersect inner nodes
+        while cpu_likely(is_inner(stack.top())) {
+            let node = bvh.node(stack.pop().node - 1);
+
+            // Intersect children
+            let mut pushed = false;
+            for i in unroll(0, bvh.arity) {
+                let child_id = node.child(i);
+                if cpu_unlikely(child_id == 0) { break() }
+
+                let (tentry, texit) = intersect_ray_box(min_max, false /*ordered*/, ray, node.bbox(i));
+                // Special case when integer comparisons are faster than floating point comparisons
+                let miss = if min_max.is_integer { bitcast[i32](texit) < bitcast[i32](tentry)        } else { texit < tentry };
+                let push = if min_max.is_integer { !vec.ballot(miss) & ((1 << vector_width) - 1) != 0 } else { !vec.all(miss)  };
+                if push {
+                    // Important: prevent nodes that are not intersected
+                    // from being traversed with the single ray kernel
+                    let thit = select(miss, flt_max, tentry);
+                    if any_hit || vec.any(stack.top().tmin > thit) {
+                        bvh.prefetch(child_id);
+                        stack.push(child_id, thit);
+                    } else {
+                        stack.push_after(child_id, thit);
+                    }
+                    pushed = true;
+                }
+            }
+            if cpu_unlikely(!pushed) { cull() }
+        }
+
+        if cpu_unlikely(is_leaf(stack.top())) {
+            let mut active = (stack.top().tmin <= ray.tmax) & !terminated;
+            let mut ref_id = !stack.pop().node;
+            while true {
+                let leaf = bvh.ent(ref_id++);
+
+                if check_ray_visibility(ray, leaf.flags) {
+                    if let Option[(f32,f32)]::Some((tmin, _tmax)) = intersect_ray_box_single_section(min_max, false, ray, leaf.bbox) {
+                        if tmin <= hit.distance {
+                            let local_ray = transform_ray(ray, leaf.local);
+                            let local_hit = scene.handle_local(local_ray, leaf, any_hit); 
+                            
+                            if active {
+                                if local_hit.prim_id != InvalidHitId {
+                                    if local_hit.distance <= hit.distance {
+                                        hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
+                                        ray.tmax = hit.distance;
+                                        
+                                        if any_hit {
+                                            terminated = true;
+                                            active     = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Early exit mode
+                if any_hit && cpu_unlikely(vec.all(terminated)) { exit() }
+
+                if leaf.entity_id < 0 { break() }
+            }
+        }
+    }
+
+    hit
+}
+
+// Wrapper ------------------------------------------------------------------------
+// TODO: The code for vector_width=1 is not really optimized and lacks performance
+
+fn @cpu_traverse( min_max: MinMax
+                , scene: SceneGeometry
+                , rays: fn (i32, i32) -> Ray
+                , hits: fn (i32, i32, Hit) -> ()
+                , init_hits: fn (i32, i32, Ray) -> Hit
+                , packet_size: i32
+                , num_packets: i32
+                , any_hit: bool
+                ) -> () {
+    for i in range(0, num_packets) {
+        vectorize_safe(packet_size, @|j| {
+            let ray = rays(i, j);
+            hits(i, j, cpu_traverse_helper(ray, packet_size, min_max, scene, any_hit, 1 /*root*/, init_hits(i, j, ray)))
+        });
+    }
+}

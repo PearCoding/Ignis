@@ -1,3 +1,5 @@
+//#<include="driver/bsdf.art">
+
 // TODO: Create layered system with MIS in mind
 
 // Creates a BSDF that joins two other BSDFs based on a joining term function and a function combining the two evaluated bsdfs.

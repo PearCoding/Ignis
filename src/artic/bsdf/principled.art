@@ -1,3 +1,8 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="core/microfacet.art">
+//#<include="core/sampling.art">
+
 /* Based on the paper:
 	BURLEY, Brent; STUDIOS, Walt Disney Animation. Physically-based shading at disney. In: ACM SIGGRAPH. 2012. S. 1-7.
 	and code:

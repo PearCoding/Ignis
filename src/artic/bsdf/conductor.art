@@ -1,3 +1,7 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="core/microfacet.art">
+
 // Creates a perfect mirror BSDF
 fn @make_mirror_bsdf(surf: SurfaceElement, ks: Color) = Bsdf {
     eval   = @ |_, _| color_builtins::black,

@@ -1,3 +1,6 @@
+//#<include="bsdf/dielectric.art">
+//#<include="bsdf/conductor.art">
+
 // Creates a fully absorbing BSDF non scattering bsdf
 fn @make_null_bsdf(_surf: SurfaceElement) = Bsdf {
     eval         = @ |_, _| color_builtins::black,

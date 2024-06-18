@@ -1,3 +1,6 @@
+//#<include="driver/shape.art">
+//#<include="core/sampling.art">
+
 fn @sphere_map_uv(dir: Vec3) -> Vec2 {
     let (theta, phi) = spherical_from_dir(make_vec3(dir.y, -dir.x, dir.z)); // Make sure it is the same coordinate system as the ico & uv sphere variant
     let v = theta / flt_pi;

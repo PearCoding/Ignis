@@ -1,3 +1,7 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="core/sampling.art">
+
 // Creates a purely diffuse BSDF
 fn @make_lambertian_bsdf(surf: SurfaceElement, kd: Color) = Bsdf {
     eval   = @ |in_dir, _| color_mulf(kd, positive_cos(in_dir, surf.local.col(2)) * flt_inv_pi),

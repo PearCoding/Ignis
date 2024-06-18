@@ -1,3 +1,5 @@
+//#<include="driver/camera.art">
+
 // Return pixel coordinate from a point for a orthogonal projection
 fn @orthogonal_pos_to_pixel(v: Vec3, eye: Vec3, view: Mat3x3, scale: Vec2, w: i32, h: i32) -> Option[PixelCoord] {
     let dir = vec3_sub(v, eye); // FROM camera to point

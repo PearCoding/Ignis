@@ -1,3 +1,9 @@
+//#<include="driver/buffer.art">
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="core/sampling.art">
+//#<include="core/shading.art">
+
 struct TensorTreeComponentSpecification {
     ndim:         i32, 
     node_count:   i32,

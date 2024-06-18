@@ -1,3 +1,10 @@
+//#<include="driver/shape.art">
+//#<include="core/sampling.art">
+//#<include="core/triangle.art">
+//#<include="traversal/intersection.art">
+//#<include="traversal/mapping_cpu.art">
+//#<include="traversal/mapping_gpu.art">
+
 // Triangle mesh with per-vertex/per-face attributes
 struct TriMesh {
     vertices:   fn (i32) -> Vec3,

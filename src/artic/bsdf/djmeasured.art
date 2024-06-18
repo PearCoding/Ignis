@@ -1,3 +1,9 @@
+//#<include="driver/bsdf.art">
+//#<include="driver/surface_element.art">
+//#<include="driver/buffer.art">
+//#<include="core/sampling.art">
+//#<include="core/shading.art">
+
 struct Warp {
     size : Vec2i,
     patch_size : Vec2,

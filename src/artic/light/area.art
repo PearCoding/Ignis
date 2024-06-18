@@ -1,3 +1,7 @@
+//#<include="driver/light.art">
+//#<include="core/sampling.art">
+//#<include="core/sphere.art">
+
 // Surface that emits light
 struct AreaEmitter {
     sample_direct:   fn (Vec2, Vec3) -> (SurfaceElement, Pdf, f32),
