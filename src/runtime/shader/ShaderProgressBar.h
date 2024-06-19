@@ -78,18 +78,16 @@ public:
             return;
         }
 
-        constexpr int PERC_OUTPUT_FIELD_SIZE = 6; // Percentage
-        constexpr int ITER_OUTPUT_FIELD_SIZE = 5; // Current Iteration
+        constexpr int PERC_OUTPUT_FIELD_SIZE = 4; // Percentage
+        constexpr int ITER_OUTPUT_FIELD_SIZE = 4; // Current Iteration
         constexpr int TIME_OUTPUT_FIELD_SIZE = 8; // Time spent and left
 
         const auto now          = std::chrono::steady_clock::now();
         const auto duration     = std::chrono::duration_cast<std::chrono::seconds>(now - mLastUpdate);
         const auto fullDuration = std::chrono::duration_cast<std::chrono::seconds>(now - mStart);
 
-        const auto fullDurationAfterFirst = std::chrono::duration_cast<std::chrono::seconds>(now - mStartAfterFirst);
-
         if ((uint64)duration.count() >= mUpdateCycleSeconds) {
-            const double progress  = current / double(mTarget);
+            const double progress  = std::clamp(current / double(mTarget), 0.0, 1.0);
             const float percentage = static_cast<float>(100 * progress);
 
             if (mBeautify) {
@@ -103,12 +101,11 @@ public:
                 drawProgressbar((float)progress);
             }
 
-            std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(4) << std::fixed << percentage << "% | ";
-
-            std::cout << "S: " << std::setw(ITER_OUTPUT_FIELD_SIZE) << current << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
+            std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(2) << std::fixed << percentage << "% | "
+                      << "S: " << std::setw(ITER_OUTPUT_FIELD_SIZE) << current << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
 
             if (percentage > FltEps) {
-                const int64_t fullDur = fullDurationAfterFirst.count() > 0 ? fullDurationAfterFirst.count() : fullDuration.count();
+                const int64_t fullDur = fullDuration.count();
                 const float etaFactor = (100 - percentage) / percentage;
                 std::cout << " ETA: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(static_cast<uint64>(fullDur * etaFactor));
             }
@@ -140,7 +137,6 @@ private:
     const uint64 mUpdateCycleSeconds;
     const uint64 mTarget;
     std::chrono::steady_clock::time_point mStart;
-    std::chrono::steady_clock::time_point mStartAfterFirst;
     std::chrono::steady_clock::time_point mLastUpdate;
     bool mFirstTime;
 };
