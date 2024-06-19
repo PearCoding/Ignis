@@ -60,11 +60,8 @@ std::string ScriptCompiler::prepare(const std::string_view& script, const std::s
         std::smatch include_match;
         if (std::regex_search(copy, include_match, include_statement)) {
             const std::string include_path = std::string(include_match[1].first, include_match[1].second);
-            std::cout << include_match[0] << std::endl;
-            std::cout << include_path << std::endl;
             if (included_paths.contains(include_path)) {
                 // Already included
-                std::cout << "Already included"<<std::endl;
                 copy.replace(include_match[0].first, include_match[0].second, "");
             } else if (mStdLibPath.empty()) {
                 // Use internal API

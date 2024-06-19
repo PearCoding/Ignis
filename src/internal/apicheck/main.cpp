@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     ScriptCompiler compiler(compilerDevice, {});
 
     const auto compile = [&](const std::string& script, const std::string& path) {
-        std::cout << "---------------------------- " << path << " ---------------------------" << std::endl;
+        std::cout << "---------------------------- " << path << std::endl;
         const std::string s = compiler.prepare(script, path);
 
         const bool ret = compilerDevice->compile(
@@ -79,6 +79,7 @@ int main(int argc, char** argv)
     }
 
     // --------------------------------
+    std::cout << "All good" << std::endl;
 
     return EXIT_SUCCESS;
 }
