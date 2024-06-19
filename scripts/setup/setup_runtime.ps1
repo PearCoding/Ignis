@@ -53,14 +53,7 @@ function CompileRuntime {
     }
 
     # Clone or update if necessary
-    If (!(Test-Path -Path $runtime_name)) {
-        & $GIT_BIN clone --depth 1 --branch $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT $runtime_name
-        Set-Location $runtime_name
-    }
-    else {
-        Set-Location $runtime_name
-        & $GIT_BIN pull
-    }
+    HandleGIT $runtime_name $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT
     
     # Setup cmake
     $CMAKE_Args = @()

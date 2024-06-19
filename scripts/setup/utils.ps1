@@ -10,6 +10,30 @@ function GetPD {
     return ($null -ne $object) ? $object : $default
 }
 
+function HandleGIT {
+    param(
+        [Parameter(Mandatory)] [string] $Directory,
+        [Parameter(Mandatory)] [string] $Branch,
+        [Parameter(Mandatory)] [string] $URL
+    )
+
+    If (!(Test-Path -Path $Directory)) {
+        & $GIT_BIN clone --depth 1 --branch $Branch $URL thorin
+        Set-Location $Directory
+    }
+    else {
+        Set-Location $Directory
+        & $GIT_BIN fetch --quiet
+        & $GIT_BIN checkout --quiet $Branch
+    
+        # Check if it is a named ref and can be pulled
+        $ref = (& $GIT_BIN show-ref refs/remotes/origin/$Branch)
+        if (!([string]::IsNullOrEmpty($ref))) {
+            & $GIT_BIN pull origin
+        } 
+    }
+}
+
 function RenameDLL {
     param(
         [Parameter(Mandatory)] [string] $InputDLL,

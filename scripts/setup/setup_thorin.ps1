@@ -1,14 +1,7 @@
 $CURRENT = Get-Location
 
 # Clone or update if necessary
-If (!(Test-Path -Path "thorin")) {
-    & $GIT_BIN clone --depth 1 --branch $Config.THORIN.BRANCH $Config.THORIN.GIT thorin
-    Set-Location "thorin/"
-}
-else {
-    Set-Location "thorin/"
-    & $GIT_BIN pull
-}
+HandleGIT "thorin" $Config.THORIN.BRANCH $Config.THORIN.GIT
 
 $HALF = "$DEPS_ROOT\half".Replace("\", "/").Replace(" ", "` ")
 $LLVM = "$DEPS_ROOT\llvm-install".Replace("\", "/").Replace(" ", "` ")
