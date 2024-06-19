@@ -1,14 +1,7 @@
 $CURRENT = Get-Location
 
 # Clone or update if necessary
-If (!(Test-Path -Path "artic")) {
-    & $GIT_BIN clone --depth 1 --branch $Config.ARTIC.BRANCH $Config.ARTIC.GIT artic
-    Set-Location "artic/"
-}
-else {
-    Set-Location "artic/"
-    & $GIT_BIN pull
-}
+HandleGIT "artic" $Config.ARTIC.BRANCH $Config.ARTIC.GIT
 
 $THORIN = "$DEPS_ROOT\thorin".Replace("\", "/").Replace(" ", "` ")
 
@@ -17,7 +10,6 @@ $THORIN = "$DEPS_ROOT\thorin".Replace("\", "/").Replace(" ", "` ")
 If (!(Test-Path -Path "$THORIN")) {
     throw 'The thorin directory is not valid'
 }
-
 
 $BUILD_TYPE = $Config.ARTIC.BUILD_TYPE
 
