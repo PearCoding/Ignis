@@ -54,12 +54,12 @@ void SkyLight::serialize(const SerializationInput& input) const
     input.Tree.addColor("scale", *mLight, Vector3f::Ones());
 
     const Path path = setup_sky(input.Tree.context(), name(), mLight);
-    const auto cdf                   = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
+    const auto cdf  = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
-    size_t res_img_id          = input.Tree.context().registerExternalResource(path);
-    size_t res_cdf_id          = input.Tree.context().registerExternalResource(std::get<0>(cdf));
+    const size_t res_img_id    = input.Tree.context().registerExternalResource(path);
+    const size_t res_cdf_id    = input.Tree.context().registerExternalResource(std::get<0>(cdf));
     const std::string light_id = input.Tree.currentClosureID();
 
     input.Stream << input.Tree.pullHeader()
