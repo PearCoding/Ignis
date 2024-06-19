@@ -1,3 +1,5 @@
+//#<include="texture/texture.art">
+
 fn @make_constant_texture(color: Color) -> Texture {
     @ |_ctx| { color }
 }

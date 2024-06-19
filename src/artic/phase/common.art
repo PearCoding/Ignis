@@ -1,3 +1,5 @@
+//#<include="driver/phase.art">
+
 fn @make_delta_phase(weight: f32) = PhaseFunction {
     eval   = @ |_, _| weight,
     pdf    = @ |_, _| 0,

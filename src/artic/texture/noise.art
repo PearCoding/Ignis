@@ -1,3 +1,6 @@
+//#<include="texture/texture.art">
+//#<include="core/math.art">
+
 // ---------------------- 1D
 fn @noise1[T](u: T, seed: f32) -> f32 {
     create_random_generator(hash_combine(hash_combine(hash_init(), bitcast[u32](seed)), bitcast[u32](u))).next_f32()

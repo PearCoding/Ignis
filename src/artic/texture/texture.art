@@ -1,0 +1,3 @@
+//#<include="driver/shading_context.art">
+
+type Texture = fn (ShadingContext) -> Color;

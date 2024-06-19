@@ -1,9 +1,11 @@
+//#<include="texture/texture.art">
+//#<include="core/math.art">
+
 struct BorderHandling {
     horz: fn (i32, i32) -> i32,
     vert: fn (i32, i32) -> i32
 }
 
-type Texture     = fn (ShadingContext) -> Color;
 type ImageFilter = fn (Image, BorderHandling, Vec2) -> Color;
 
 fn @make_clamp_border() -> BorderHandling {

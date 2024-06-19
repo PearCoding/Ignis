@@ -1,3 +1,6 @@
+//#<include="texture/texture.art">
+//#<include="core/math.art">
+
 // Based on "Bump Mapping Unparameterized Surfaces on the GPU" by Morten S. Mikkelsen, 2010
 
 fn @node_bump(input: Vec3, Nx: Vec3, Ny: Vec3, distance: f32, sample_dx: f32, sample_dy: f32) -> Vec3 {

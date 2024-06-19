@@ -1,3 +1,6 @@
+//#<include="driver/phase.art">
+//#<include="core/sampling.art">
+
 fn @make_uniform_phase() = PhaseFunction {
     eval   = @ |_, _| flt_inv_pi / 4,
     pdf    = @ |_, _| uniform_sphere_pdf(),

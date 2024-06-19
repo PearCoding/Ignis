@@ -1,3 +1,6 @@
+//#<include="driver/phase.art">
+//#<include="core/sampling.art">
+
 fn @make_henyeygreenstein_phase(g: f32) -> PhaseFunction {
     let is_iso = ?g && math_builtins::fabs(g) <= 1e-3;
 

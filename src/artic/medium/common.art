@@ -1,4 +1,5 @@
 //#<include="driver/medium.art">
+//#<include="phase/common.art">
 
 fn @make_vacuum_medium()-> Medium {
     Medium {

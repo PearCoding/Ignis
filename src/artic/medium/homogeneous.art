@@ -1,3 +1,5 @@
+//#<include="driver/medium.art">
+
 fn @make_homogeneous_medium(sigma_a: Color, sigma_s: Color, phase: PhaseFunction) -> Medium {
     let eps     = 1e-3 : f32;
     let sigma_t = color_add(sigma_a, sigma_s);

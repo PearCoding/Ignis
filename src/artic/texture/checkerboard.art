@@ -1,3 +1,6 @@
+//#<include="texture/texture.art">
+//#<include="core/math.art">
+
 fn @node_checkerboard2(p: Vec2) = select( (math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)                                              , 1:i32, 0:i32);
 fn @node_checkerboard3(p: Vec3) = select(((math::wrap(p.x, 0, 2) as i32 % 2) == (math::wrap(p.y, 0, 2) as i32 % 2)) == ((math::wrap(p.z, 0, 2) as i32 % 2) == 1), 1:i32, 0:i32);
 

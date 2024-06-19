@@ -1,3 +1,6 @@
+//#<include="core/random.art">
+//#<include="driver/device.art">
+
 type PixelSampler = fn (RandomGenerator, i32, i32, i32) -> (f32, f32);
 
 // --------------------------
