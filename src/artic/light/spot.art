@@ -1,3 +1,6 @@
+//#<include="driver/light.art">
+//#<include="core/sampling.art">
+
 fn @spot_from_power(power: Color, cutoff_angle: f32, falloff_angle: f32) -> Color {
     let cosCutoffAngle  = math_builtins::cos(cutoff_angle);
     let cosFalloffAngle = math_builtins::cos(falloff_angle);

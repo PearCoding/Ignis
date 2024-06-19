@@ -1,3 +1,7 @@
+//#<include="traversal/bvh.art">
+//#<include="traversal/intersection.art">
+//#<include="driver/buffer_gpu.art">
+
 // BVH layout ----------------------------------------------------------------------
 
 fn @make_gpu_node(j: i32, nodes: &[Node2], accessor: DeviceBufferAccessor) -> Node {

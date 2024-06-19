@@ -1,8 +1,6 @@
-// Returns the probability to continue given the contribution of a path
-fn @russian_roulette(c: Color, clamp: f32) = clampf(2 * color_luminance(c), 0.05, clamp);
-
-// Russian roulette used in pbrt v4
-fn @russian_roulette_pbrt(c: Color, clamp: f32) = clampf(color_max_component(c), 0.05, clamp);
+//#<include="driver/technique.art">
+//#<include="technique/rr.art">
+//#<include="light/light_selector.art">
 
 struct PTRayPayload {
     inv_pdf: f32,   // Inverse BSDF pdf

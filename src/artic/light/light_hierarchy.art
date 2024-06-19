@@ -1,3 +1,5 @@
+//#<include="driver/light.art">
+
 // Based on:
 // Moreau, P., Clarberg, P. (2019). Importance Sampling of Many Lights on the GPU.
 // In: Haines, E., Akenine-Möller, T. (eds) Ray Tracing Gems.

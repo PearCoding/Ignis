@@ -1,4 +1,5 @@
 //#<include="core/sort.art">
+//#<include="traversal/bvh.art">
 
 struct Stack {
     push:       fn (i32, f32) -> (),

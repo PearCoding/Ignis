@@ -1,4 +1,5 @@
 //#<include="bsdf/tensortree.art">
+//#<include="core/cdf.art">
 
 struct KlemsComponentSpecification {
     total:       f32,

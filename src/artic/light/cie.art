@@ -1,3 +1,5 @@
+//#<include="light/env.art">
+
 fn @cie_wmean(cos_theta: f32, c1: Color, c2: Color) -> Color {
     // This is the same as wmean in Radiance, but with better precision for f32
     let a  = math_builtins::pow[f32](cos_theta + 1.01, 10);

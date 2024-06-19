@@ -1,3 +1,5 @@
+//#<include="driver/device.art">
+
 fn @bake_texture2d(device: Device, func: fn(ShadingContext)->Color, w: i32, h: i32, output: &mut [f32]) -> () {
     let size       = w * h;
     let buffer_out = device.request_buffer("__bake_output", size * 4, 0); 

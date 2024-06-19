@@ -1,3 +1,5 @@
+//#<include="light/env.art">
+
 fn @sun_cos_angle_from_radius(radius: f32)    = 1 / math_builtins::sqrt(radius * radius + 1);               // cos(atan(R))
 fn @sun_radius_from_cos_angle(cos_angle: f32) = math_builtins::sqrt(1 - cos_angle * cos_angle) / cos_angle; // tan(acos(C))
 

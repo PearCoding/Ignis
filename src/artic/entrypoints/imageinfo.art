@@ -1,3 +1,7 @@
+//#<include="driver/device.art">
+//#<include="driver/imageinfo.art">
+//#<include="core/stats.art">
+
 struct ReduceOutputImageInfo {
     min: f32,
     max: f32,

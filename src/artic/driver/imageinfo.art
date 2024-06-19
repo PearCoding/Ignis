@@ -1,0 +1,24 @@
+// Used in the utility section of the runtime
+
+struct ImageInfoSettings {
+    scale:               f32,
+    bins:                i32,
+    histogram_r:         &mut [i32],
+    histogram_g:         &mut [i32],
+    histogram_b:         &mut [i32],
+    histogram_l:         &mut [i32],
+    acquire_error_stats: bool,
+    acquire_histogram:   bool
+}
+
+struct ImageInfoOutput {
+    min:         f32,
+    max:         f32,
+    avg:         f32,
+    soft_min:    f32, //  5% percentile
+    soft_max:    f32, // 95% percentile
+    median:      f32, // 50% percentile
+    inf_counter: i32,
+    nan_counter: i32,
+    neg_counter: i32,
+}

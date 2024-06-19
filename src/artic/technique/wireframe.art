@@ -1,3 +1,5 @@
+//#<include="driver/technique.art">
+
 struct WireframeRayPayload {
     depth:    i32,
     distance: f32

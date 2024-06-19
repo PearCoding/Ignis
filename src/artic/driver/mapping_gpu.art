@@ -1,3 +1,12 @@
+//#<include="driver/device.art">
+//#<include="driver/driver.art">
+//#<include="driver/filter.art">
+//#<include="driver/streams.art">
+//#<include="driver/work.art">
+//#<include="traversal/mapping_gpu.art">
+//#<include="traversal/traverse_gpu.art">
+//#<include="core/stats.art">
+
 fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;

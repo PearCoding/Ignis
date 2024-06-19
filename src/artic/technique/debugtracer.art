@@ -1,28 +1,5 @@
-fn @color_map(i: i32) = [ 
-        make_color(0.450000, 0.376630, 0.112500, 1),
-        make_color(0.112500, 0.450000, 0.405978, 1),
-        make_color(0.112500, 0.450000, 0.229891, 1),
-        make_color(0.450000, 0.112500, 0.376630, 1),
-        make_color(0.435326, 0.450000, 0.112500, 1),
-        make_color(0.112500, 0.141848, 0.450000, 1),
-        make_color(0.435326, 0.112500, 0.450000, 1),
-        make_color(0.112500, 0.450000, 0.141848, 1),
-        make_color(0.347283, 0.450000, 0.112500, 1),
-        make_color(0.450000, 0.112500, 0.200543, 1),
-        make_color(0.112500, 0.229891, 0.450000, 1),
-        make_color(0.450000, 0.288587, 0.112500, 1),
-        make_color(0.347283, 0.112500, 0.450000, 1),
-        make_color(0.450000, 0.112500, 0.288587, 1),
-        make_color(0.450000, 0.112500, 0.112500, 1),
-        make_color(0.450000, 0.200543, 0.112500, 1),
-        make_color(0.171196, 0.450000, 0.112500, 1),
-        make_color(0.112500, 0.450000, 0.317935, 1),
-        make_color(0.259239, 0.450000, 0.112500, 1),
-        make_color(0.259239, 0.112500, 0.450000, 1),
-        make_color(0.112500, 0.405978, 0.450000, 1),
-        make_color(0.171196, 0.112500, 0.450000, 1),
-        make_color(0.112500, 0.317935, 0.450000, 1)
-    ](i%23);
+//#<include="driver/technique.art">
+//#<include="core/colormap.art">
 
 fn @make_debug_renderer(debug_mode: i32) -> Technique {
     Technique {
@@ -84,21 +61,21 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(make_gray_color(v))
                 },
                 16 => { // DEBUG_PRIM_ID
-                    make_option(color_map(ctx.hit.prim_id))
+                    make_option(colormap::palette(ctx.hit.prim_id))
                 },
                 17 => { // DEBUG_ENTITY_ID_RAW
                     let v = ctx.hit.ent_id as f32;
                     make_option(make_gray_color(v))
                 },
                 18 => { // DEBUG_ENTITY_ID
-                    make_option(color_map(ctx.hit.ent_id))
+                    make_option(colormap::palette(ctx.hit.ent_id))
                 },
                 19 => { // DEBUG_MATERIAL_ID_RAW
                     let v = mat.id as f32;
                     make_option(make_gray_color(v))
                 },
                 20 => { // DEBUG_MATERAIL_ID
-                    make_option(color_map(mat.id))
+                    make_option(colormap::palette(mat.id))
                 },
                 21 => { // DEBUG_EMISSIVE
                     make_option(if mat.is_emissive { color_builtins::true_color } else { color_builtins::false_color })
@@ -155,10 +132,10 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(mat.bsdf.albedo(out_dir))
                 },
                 26 => { // DEBUG_MEDIUM_INNER
-                    make_option(if mat.interface.inner < 0 { color_builtins::black } else { color_map(mat.interface.inner) })
+                    make_option(if mat.interface.inner < 0 { color_builtins::black } else { colormap::palette(mat.interface.inner) })
                 },
                 27 => { // DEBUG_MEDIUM_OUTER
-                    make_option(if mat.interface.outer < 0 { color_builtins::black } else { color_map(mat.interface.outer) })
+                    make_option(if mat.interface.outer < 0 { color_builtins::black } else { colormap::palette(mat.interface.outer) })
                 },
                 _ => { // DEBUG_NORMAL 
                     let n = ctx.surf.local.col(2);

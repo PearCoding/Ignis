@@ -1,6 +1,7 @@
 //#<include="driver/light.art">
 //#<include="core/sampling.art">
-//#<include="core/sphere.art">
+//#<include="shapes/sphere.art">
+//#<include="texture/texture.art">
 
 // Surface that emits light
 struct AreaEmitter {

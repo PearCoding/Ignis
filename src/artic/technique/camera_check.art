@@ -1,3 +1,5 @@
+//#<include="driver/technique.art">
+
 fn @make_camera_check_renderer(camera: Camera) -> Technique {
     let offset:f32 = 0.001;
 

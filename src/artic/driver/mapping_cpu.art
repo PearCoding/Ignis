@@ -1,3 +1,11 @@
+//#<include="driver/device.art">
+//#<include="driver/driver.art">
+//#<include="driver/streams.art">
+//#<include="driver/work.art">
+//#<include="traversal/mapping_cpu.art">
+//#<include="traversal/traverse_cpu.art">
+//#<include="core/stats.art">
+
 // Swap functions ------------------------------------------------------------------
 fn @cpu_swap_ray_entry(rays: &RayStream, a: i32, b: i32) -> () {
     swap(&mut rays.id(a),    &mut rays.id(b));

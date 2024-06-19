@@ -1,3 +1,7 @@
+//#<include="driver/technique.art">
+//#<include="light/light_selector.art">
+//#<include="technique/rr.art">
+
 struct LTRayPayload {
     contrib: Color,
     depth:   i32,

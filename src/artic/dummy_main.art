@@ -1,3 +1,10 @@
+//#<include="driver/device.art">
+//#<include="driver/imageinfo.art">
+//#<include="driver/tonemap.art">
+//#<include="driver/glare.art">
+//#<include="driver/streams.art">
+//#<include="driver/work.art">
+
 // Dummy file used to generate a C interface for the renderer
 
 #[export]

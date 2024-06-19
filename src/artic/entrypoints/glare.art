@@ -1,18 +1,8 @@
-struct GlareSettings {
-    max:f32,
-    avg:f32,
-    mul:f32,
-    scale:f32,
-    vertical_illuminance:f32 // Set < 0 to compute it automatically
-}
+//#<include="entrypoints/tonemap.art">
+//#<include="driver/glare.art">
+//#<include="core/colormap.art">
 
-struct GlareOutput {
-    dgp: f32,
-    vertical_illuminance:f32, // If automatically computed
-    avg_lum:    f32,
-    avg_omega:  f32,
-    num_pixels: i32,
-}
+
 
 fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &GlareSettings, output: &mut GlareOutput) {
 

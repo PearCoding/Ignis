@@ -1,3 +1,6 @@
+//#<include="light/light_hierarchy.art">
+//#<include="core/cdf.art">
+
 // Light selection method
 struct LightSelector {
     count:     i32,

@@ -1,3 +1,8 @@
+//#<include="traversal/mapping_cpu.art">
+//#<include="traversal/stack.art">
+//#<include="driver/scene.art">
+//#<include="core/sort.art">
+
 // Traversal kernels ---------------------------------------------------------------
 
 // Traverses a primitive BVH with a single ray.

@@ -1,3 +1,7 @@
+//#<include="traversal/bvh.art">
+//#<include="traversal/intersection.art">
+//#<include="driver/buffer_cpu.art">
+
 // BVH layouts ---------------------------------------------------------------------
 
 fn @make_cpu_node2(j: i32, nodes: &[Node2]) = Node {

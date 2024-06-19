@@ -1,3 +1,5 @@
+//#<include="light/env.art">
+
 fn @make_directional_light(id: i32, dir: Vec3, scene_bbox: BBox, color: Color) -> Light {
     let scene_radius = bbox_radius(scene_bbox) * 1.01;
 

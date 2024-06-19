@@ -1,3 +1,5 @@
+//#<include="driver/device.art">
+
 #[import(cc = "C")] fn ignis_handle_traverse_primary(i32, i32) -> ();
 #[import(cc = "C")] fn ignis_handle_traverse_secondary(i32, i32) -> ();
 #[import(cc = "C")] fn ignis_handle_miss_shader(i32, i32, i32) -> ();

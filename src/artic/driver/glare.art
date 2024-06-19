@@ -1,0 +1,15 @@
+struct GlareSettings {
+    max:f32,
+    avg:f32,
+    mul:f32,
+    scale:f32,
+    vertical_illuminance:f32 // Set < 0 to compute it automatically
+}
+
+struct GlareOutput {
+    dgp: f32,
+    vertical_illuminance:f32, // If automatically computed
+    avg_lum:    f32,
+    avg_omega:  f32,
+    num_pixels: i32,
+}

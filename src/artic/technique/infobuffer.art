@@ -1,3 +1,5 @@
+//#<include="driver/technique.art">
+
 // Special purpose technique to extract information useful for denoising and other post-processing techniques
 // This technique will be injected around an existing technique
 

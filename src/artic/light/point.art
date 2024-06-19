@@ -1,3 +1,6 @@
+//#<include="driver/light.art">
+//#<include="core/sampling.art">
+
 fn @make_point_light(id: i32, pos: Vec3, intensity: Color) = Light {
     id = id,
     sample_direct = @ |_, from_surf| {
