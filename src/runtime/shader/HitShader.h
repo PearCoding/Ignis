@@ -3,7 +3,9 @@
 #include "loader/LoaderContext.h"
 
 namespace IG {
+class ShaderBuilder;
+
 struct HitShader {
-    static std::string setup(size_t mat_id, LoaderContext& ctx);
+    static ShaderBuilder setup(size_t mat_id, LoaderContext& ctx);
 };
 } // namespace IG

@@ -28,7 +28,6 @@ public:
 
     struct SerializationInput {
         size_t ID;
-        std::ostream& Stream;
         ShadingTree& Tree;
     };
     virtual void serialize(const SerializationInput& input) const = 0;

@@ -2,6 +2,7 @@
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
+#include "shader/ShaderBuilder.h"
 #include "skysun/Illuminance.h"
 #include "skysun/PerezModel.h"
 
@@ -81,34 +82,36 @@ void PerezLight::serialize(const SerializationInput& input) const
     }
 
     const std::string light_id = input.Tree.currentClosureID();
-    input.Stream << input.Tree.pullHeader()
-                 << "  let light_" << light_id << " = make_perez_light(" << input.ID
-                 << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
-                 << ", " << LoaderUtils::inlineVector(mSunDirection);
+
+    std::stringstream stream;
+    stream << "let light_" << light_id << " = make_perez_light(" << input.ID
+           << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
+           << ", " << LoaderUtils::inlineVector(mSunDirection);
 
     if (usesLuminance) {
-        input.Stream << ", color_mulf(" << input.Tree.getInline("luminance")
-                     << ", " << diffnorm << ")";
+        stream << ", color_mulf(" << input.Tree.getInline("luminance")
+               << ", " << diffnorm << ")";
     } else {
-        input.Stream << ", color_mulf(" << input.Tree.getInline("zenith")
-                     << ", calc_perez(" << sin_elevation
-                     << ", 1, " << model.a()
-                     << ", " << model.b()
-                     << ", " << model.c()
-                     << ", " << model.d()
-                     << ", " << model.e()
-                     << ") * " << diffnorm << ")";
+        stream << ", color_mulf(" << input.Tree.getInline("zenith")
+               << ", calc_perez(" << sin_elevation
+               << ", 1, " << model.a()
+               << ", " << model.b()
+               << ", " << model.c()
+               << ", " << model.d()
+               << ", " << model.e()
+               << ") * " << diffnorm << ")";
     }
 
-    input.Stream << ", " << input.Tree.getInline("ground")
-                 << ", " << model.a()
-                 << ", " << model.b()
-                 << ", " << model.c()
-                 << ", " << model.d()
-                 << ", " << model.e()
-                 << ", " << (mHasGround ? "true" : "false")
-                 << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+    stream << ", " << input.Tree.getInline("ground")
+           << ", " << model.a()
+           << ", " << model.b()
+           << ", " << model.c()
+           << ", " << model.d()
+           << ", " << model.e()
+           << ", " << (mHasGround ? "true" : "false")
+           << ", " << LoaderUtils::inlineMatrix(trans) << ");";
 
+    input.Tree.shader().addStatement(stream.str());
     input.Tree.endClosure();
 }
 

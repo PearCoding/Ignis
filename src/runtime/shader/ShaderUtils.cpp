@@ -1,4 +1,5 @@
 #include "ShaderUtils.h"
+#include "ShaderBuilder.h"
 #include "loader/LoaderBSDF.h"
 #include "loader/LoaderEntity.h"
 #include "loader/LoaderLight.h"
@@ -10,17 +11,21 @@
 #include <sstream>
 
 namespace IG {
-std::string ShaderUtils::constructDevice(const LoaderContext& ctx)
+ShaderBuilder ShaderUtils::constructDevice(const LoaderContext& ctx)
 {
-    std::stringstream stream;
+    ShaderBuilder builder;
 
-    stream << "let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
-           << "let render_config = make_render_config_from_settings(settings, spi);" << std::endl
-           << "let device = ";
+    builder.addStatement("let spi = " + ShaderUtils::inlineSPI(ctx) + ";")
+        .addStatement("let render_config = make_render_config_from_settings(settings, spi);");
 
     if (ctx.Options.Target.isCPU()) {
+        builder.addInclude("driver/mapping_cpu.art");
+
         const bool compact = false; /*ctx.Options.Target.vectorWidth() >= 8;*/ // FIXME: Maybe something wrong with this flag?
         const bool single  = ctx.Options.Target.vectorWidth() >= 4;
+
+        std::stringstream stream;
+        stream << "let device = ";
 
         // TODO: Better decisions?
         std::string min_max = "make_default_min_max()";
@@ -36,7 +41,13 @@ std::string ShaderUtils::constructDevice(const LoaderContext& ctx)
                << ", settings.thread_count"
                << ", 16"
                << ", true);";
+
+        builder.addStatement(stream.str());
     } else {
+        builder.addInclude("driver/mapping_gpu.art");
+        std::stringstream stream;
+        stream << "let device = ";
+
         // TODO: Customize kernel config for device?
         switch (ctx.Options.Target.gpuArchitecture()) {
         case GPUArchitecture::AMD_HSA:
@@ -47,52 +58,101 @@ std::string ShaderUtils::constructDevice(const LoaderContext& ctx)
             stream << "make_nvvm_device(settings.device, render_config, make_default_gpu_kernel_config());";
             break;
         }
+
+        builder.addStatement(stream.str());
     }
 
-    return stream.str();
+    return builder;
 }
 
-std::string ShaderUtils::generateDatabase(const LoaderContext& ctx)
+ShaderBuilder ShaderUtils::generateDatabase(const LoaderContext& ctx)
 {
-    std::stringstream stream;
-    stream << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl
-           << generateShapeLookup(ctx)
-           << "  maybe_unused(shapes);" << std::endl;
-    return stream.str();
+    ShaderBuilder builder;
+    builder.addStatement("let entities = load_entity_table(device); maybe_unused(entities);")
+        .merge(generateShapeLookup(ctx));
+    return builder;
 }
 
-std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx)
+ShaderBuilder ShaderUtils::generateShapeLookup(const LoaderContext& ctx)
 {
-    if (ctx.Shapes->shapeCount() == 0)
-        return "  let shapes = make_empty_shape_table();\n";
+    ShaderBuilder builder;
+    if (ctx.Shapes->shapeCount() == 0) {
+        builder.addStatement("let shapes = make_empty_shape_table();");
+    } else {
+        std::vector<ShapeProvider*> provs;
+        provs.reserve(ctx.Shapes->providers().size());
+        for (const auto& p : ctx.Shapes->providers())
+            provs.emplace_back(p.second.get());
 
-    std::vector<ShapeProvider*> provs;
-    provs.reserve(ctx.Shapes->providers().size());
-    for (const auto& p : ctx.Shapes->providers())
-        provs.emplace_back(p.second.get());
+        if (provs.size() == 1)
+            return generateShapeLookup("shapes", provs.front(), ctx);
 
-    if (provs.size() == 1)
-        return generateShapeLookup("shapes", provs.front(), ctx);
+        std::stringstream stream;
+        stream << "let shapes = load_shape_table(device, @|type_id, data| { match type_id {" << std::endl;
 
-    std::stringstream stream;
-    stream << "  let shapes = load_shape_table(device, @|type_id, data| { match type_id {" << std::endl;
+        for (size_t i = 0; i < provs.size() - 1; ++i)
+            stream << "  " << provs.at(i)->id() << " => " << provs.at(i)->generateShapeCode(ctx) << "," << std::endl;
 
-    for (size_t i = 0; i < provs.size() - 1; ++i)
-        stream << "    " << provs.at(i)->id() << " => " << provs.at(i)->generateShapeCode(ctx) << "," << std::endl;
+        stream << "   => " << provs.back()->generateShapeCode(ctx) << std::endl
+               << "}});" << std::endl;
+        builder.addStatement(stream.str());
+    }
 
-    stream << "    _ => " << provs.back()->generateShapeCode(ctx) << std::endl
-           << "  }});" << std::endl;
-
-    return stream.str();
+    builder.addStatement("maybe_unused(shapes);");
+    return builder;
 }
 
-std::string ShaderUtils::generateShapeLookup(const std::string& varname, ShapeProvider* provider, const LoaderContext& ctx)
+ShaderBuilder ShaderUtils::generateShapeLookup(const std::string& varname, ShapeProvider* provider, const LoaderContext& ctx)
 {
+    ShaderBuilder builder;
     std::stringstream stream;
-    stream << "  let " << varname << " = load_shape_table(device, @|_, data| { " << std::endl
+    stream << "let " << varname << " = load_shape_table(device, @|_, data| { " << std::endl
            << provider->generateShapeCode(ctx) << std::endl
-           << "  });" << std::endl;
-    return stream.str();
+           << "});" << std::endl;
+
+    builder.addStatement(stream.str());
+    return builder;
+}
+
+ShaderBuilder ShaderUtils::generateSceneBBox(const LoaderContext& ctx)
+{
+    IG_UNUSED(ctx);
+
+    ShaderBuilder builder;
+    builder.addInclude("driver/registry.art");
+
+    std::stringstream stream;
+    stream << "let scene_bbox = make_bbox(registry::get_global_parameter_vec3(\"__scene_bbox_lower\", vec3_expand(0)), registry::get_global_parameter_vec3(\"__scene_bbox_upper\", vec3_expand(0))); maybe_unused(scene_bbox);";
+    builder.addStatement(stream.str());
+
+    return builder;
+}
+
+ShaderBuilder ShaderUtils::generateScene(const LoaderContext& ctx, bool embed)
+{
+    ShaderBuilder builder;
+    if (embed) {
+        std::stringstream stream;
+        stream << "let scene  = Scene {" << std::endl
+               << "    num_entities  = " << ctx.Entities->entityCount() << "," << std::endl
+               << "    num_materials = " << ctx.Materials.size() << "," << std::endl
+               << "    shapes   = shapes," << std::endl
+               << "    entities = entities," << std::endl
+               << "};" << std::endl;
+        builder.addStatement(stream.str());
+    } else {
+        builder.addInclude("driver/registry.art");
+        std::stringstream stream;
+        stream << "let scene  = Scene {" << std::endl
+               << "    num_entities  = registry::get_global_parameter_i32(\"__entity_count\", 0)," << std::endl
+               << "    num_materials = registry::get_global_parameter_i32(\"__material_count\", 0)," << std::endl
+               << "    shapes   = shapes," << std::endl
+               << "    entities = entities," << std::endl
+               << "};" << std::endl;
+        builder.addStatement(stream.str());
+    }
+    builder.addStatement("maybe_unused(scene);");
+    return builder;
 }
 
 std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id, bool requireLights, const std::string_view& output_var)
@@ -124,21 +184,21 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
     return stream.str();
 }
 
-std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
-{
-    std::stringstream stream;
+// std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
+// {
+//     std::stringstream stream;
 
-    stream << "#[export] fn ig_callback_shader(settings: &Settings) -> () {" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
-           << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
+//     stream << "#[export] fn ig_callback_shader(settings: &Settings) -> () {" << std::endl
+//            << "  " << ShaderUtils::constructDevice(ctx) << std::endl
+//            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
 
-    return stream.str();
-}
+//     return stream.str();
+// }
 
-std::string ShaderUtils::endCallback()
-{
-    return "}";
-}
+// std::string ShaderUtils::endCallback()
+// {
+//     return "}";
+// }
 
 std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
 {
@@ -151,38 +211,6 @@ std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
     return stream.str();
-}
-
-std::string ShaderUtils::inlineSceneBBox(const LoaderContext& ctx)
-{
-    IG_UNUSED(ctx);
-
-    std::stringstream stream;
-    stream << "make_bbox(registry::get_global_parameter_vec3(\"__scene_bbox_lower\", vec3_expand(0)), registry::get_global_parameter_vec3(\"__scene_bbox_upper\", vec3_expand(0)))";
-    return stream.str();
-}
-
-std::string ShaderUtils::inlineScene(const LoaderContext& ctx, bool embed)
-{
-    if (embed) {
-        std::stringstream stream;
-        stream << "  let scene  = Scene {" << std::endl
-               << "    num_entities  = " << ctx.Entities->entityCount() << "," << std::endl
-               << "    num_materials = " << ctx.Materials.size() << "," << std::endl
-               << "    shapes   = shapes," << std::endl
-               << "    entities = entities," << std::endl
-               << "  };" << std::endl;
-        return stream.str();
-    } else {
-        std::stringstream stream;
-        stream << "  let scene  = Scene {" << std::endl
-               << "    num_entities  = registry::get_global_parameter_i32(\"__entity_count\", 0)," << std::endl
-               << "    num_materials = registry::get_global_parameter_i32(\"__material_count\", 0)," << std::endl
-               << "    shapes   = shapes," << std::endl
-               << "    entities = entities," << std::endl
-               << "  };" << std::endl;
-        return stream.str();
-    }
 }
 
 std::string ShaderUtils::inlinePayloadInfo(const LoaderContext& ctx)

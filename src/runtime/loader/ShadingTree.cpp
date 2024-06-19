@@ -7,14 +7,16 @@
 #include "device/IRenderDevice.h"
 #include "shader/BakeShader.h"
 #include "shader/ScriptCompiler.h"
+#include "shader/ShaderBuilder.h"
 
 #include <algorithm>
 #include <cctype>
 #include <locale>
 
 namespace IG {
-ShadingTree::ShadingTree(LoaderContext& ctx)
+ShadingTree::ShadingTree(LoaderContext& ctx, ShaderBuilder& builder)
     : mContext(ctx)
+    , mBuilder(builder)
     , mTranspiler(*this)
     , mSpecialization(RuntimeOptions::SpecializationMode::Default)
 {
@@ -39,19 +41,19 @@ void ShadingTree::setupGlobalParameters()
             const auto prop                 = param->property("value");
             reg.FloatParameters[pair.first] = handleGlobalParameterNumber(pair.first, prop);
             const std::string param_name    = "param_f32_" + whitespace_escaped(pair.first);
-            mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_f32(\"" + pair.first + "\", 0); maybe_unused(" + param_name + ");\n");
+            mBuilder.addStatement("let " + param_name + " = registry::get_global_parameter_f32(\"" + pair.first + "\", 0); maybe_unused(" + param_name + ");");
             mTranspiler.registerCustomVariableNumber(pair.first, param_name);
         } else if (type == "vector") {
             const auto prop                  = param->property("value");
             reg.VectorParameters[pair.first] = handleGlobalParameterVector(pair.first, prop);
             const std::string param_name     = "param_vec3_" + whitespace_escaped(pair.first);
-            mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_vec3(\"" + pair.first + "\", vec3_expand(0)); maybe_unused(" + param_name + ");\n");
+            mBuilder.addStatement("let " + param_name + " = registry::get_global_parameter_vec3(\"" + pair.first + "\", vec3_expand(0)); maybe_unused(" + param_name + ");");
             mTranspiler.registerCustomVariableVector(pair.first, param_name);
         } else if (type == "color") {
             const auto prop                 = param->property("value");
             reg.ColorParameters[pair.first] = handleGlobalParameterColor(pair.first, prop);
             const std::string param_name    = "param_color_" + whitespace_escaped(pair.first);
-            mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_color(\"" + pair.first + "\", color_builtins::black); maybe_unused(" + param_name + ");\n");
+            mBuilder.addStatement("let " + param_name + " = registry::get_global_parameter_color(\"" + pair.first + "\", color_builtins::black); maybe_unused(" + param_name + ");");
             mTranspiler.registerCustomVariableColor(pair.first, param_name);
         }
     }
@@ -494,13 +496,12 @@ Image ShadingTree::computeImage(const std::string& name, const Transpiler::Resul
     std::stringstream inner_script;
     for (const auto& tex : result.Textures)
         inner_script << loadTexture(tex);
-    inner_script << pullHeader() << std::endl;
 
     std::string expr_art = result.Expr;
     if (result.ScalarOutput)
         expr_art = "make_gray_color(" + expr_art + ")";
 
-    inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr_art + "};" << std::endl;
+    inner_script << "let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr_art + "};" << std::endl;
 
     // Compute fitting resolution if needed
     size_t width  = std::max(options.MaxWidth, options.MinWidth);
@@ -589,15 +590,6 @@ void ShadingTree::endClosure()
     mClosures.pop_back();
 }
 
-std::string ShadingTree::pullHeader()
-{
-    std::stringstream stream;
-    for (const auto& lines : mHeaderLines)
-        stream << lines;
-    mHeaderLines.clear();
-    return stream.str();
-}
-
 std::string ShadingTree::getInline(const std::string& name)
 {
     if (hasParameter(name))
@@ -610,17 +602,14 @@ std::string ShadingTree::getInline(const std::string& name)
 void ShadingTree::registerTextureUsage(const std::string& name)
 {
     if (mLoadedTextures.count(name) == 0) {
-        const std::string res = loadTexture(name);
-        if (res.empty()) // Due to some error this might happen
-            return;
-        mHeaderLines.push_back(res);
+        loadTexture(name);
         mLoadedTextures.insert(name);
     }
 }
 
-std::string ShadingTree::loadTexture(const std::string& tex_name)
+void ShadingTree::loadTexture(const std::string& tex_name)
 {
-    return mContext.Textures->generate(tex_name, *this);
+    mContext.Textures->generate(tex_name, *this);
 }
 
 std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, bool needColor)
@@ -731,7 +720,7 @@ std::string ShadingTree::acquireNumber(const std::string& prop_name, float numbe
         const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
         mContext.LocalRegistry.FloatParameters[id] = number;
 
-        mHeaderLines.push_back("  let var_num_" + id + " = device.get_local_parameter_f32(\"" + id + "\", 0);\n");
+        mBuilder.addStatement("let var_num_" + id + " = device.get_local_parameter_f32(\"" + id + "\", 0);");
         return "var_num_" + id;
     }
 }
@@ -744,7 +733,7 @@ std::string ShadingTree::acquireColor(const std::string& prop_name, const Vector
         const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
         mContext.LocalRegistry.ColorParameters[id] = Vector4f(color.x(), color.y(), color.z(), 1);
 
-        mHeaderLines.push_back("  let var_color_" + id + " = device.get_local_parameter_color(\"" + id + "\", color_builtins::black);\n");
+        mBuilder.addStatement("let var_color_" + id + " = device.get_local_parameter_color(\"" + id + "\", color_builtins::black);");
         return "var_color_" + id;
     }
 }
@@ -757,7 +746,7 @@ std::string ShadingTree::acquireVector(const std::string& prop_name, const Vecto
         const std::string id                        = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
         mContext.LocalRegistry.VectorParameters[id] = vec;
 
-        mHeaderLines.push_back("  let var_vec_" + id + " = device.get_local_parameter_vec3(\"" + id + "\", vec3_expand(0));\n");
+        mBuilder.addStatement("let var_vec_" + id + " = device.get_local_parameter_vec3(\"" + id + "\", vec3_expand(0));");
         return "var_vec_" + id;
     }
 }

@@ -6,6 +6,7 @@
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
 #include "serialization/VectorSerializer.h"
+#include "shader/ShaderBuilder.h"
 #include "table/SceneDatabase.h"
 
 namespace IG {
@@ -38,7 +39,7 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     : Light(name, light->pluginType())
     , mLight(light)
 {
-    mEntity   = light->property("entity").getString();
+    mEntity     = light->property("entity").getString();
     mUsingPower = light->hasProperty("power");
 
     const auto entity = ctx.Entities->getEmissiveEntity(mEntity);
@@ -128,8 +129,6 @@ void AreaLight::serialize(const SerializationInput& input) const
     }
 
     const std::string light_id = input.Tree.currentClosureID();
-    input.Stream << input.Tree.pullHeader();
-
     switch (mRepresentation) {
     case RepresentationType::Plane: {
         const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity->ShapeID);
@@ -139,38 +138,43 @@ void AreaLight::serialize(const SerializationInput& input) const
         Vector3f normal   = x_axis.cross(y_axis).normalized();
         float area        = x_axis.cross(y_axis).norm();
 
-        input.Stream << "  let ae_" << light_id << " = make_plane_area_emitter(" << LoaderUtils::inlineVector(origin)
-                     << ", " << LoaderUtils::inlineVector(x_axis)
-                     << ", " << LoaderUtils::inlineVector(y_axis)
-                     << ", " << LoaderUtils::inlineVector(normal)
-                     << ", " << area
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[0])
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[1])
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[2])
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[3])
-                     << ");" << std::endl;
+        std::stringstream reprStream;
+        reprStream << "  let ae_" << light_id << " = make_plane_area_emitter(" << LoaderUtils::inlineVector(origin)
+                   << ", " << LoaderUtils::inlineVector(x_axis)
+                   << ", " << LoaderUtils::inlineVector(y_axis)
+                   << ", " << LoaderUtils::inlineVector(normal)
+                   << ", " << area
+                   << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[0])
+                   << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[1])
+                   << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[2])
+                   << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[3])
+                   << ");";
+        input.Tree.shader().addStatement(reprStream.str());
     } break;
     case RepresentationType::Sphere: {
         const auto& shape = input.Tree.context().Shapes->getSphereShape(entity->ShapeID);
 
-        input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter(" << LoaderUtils::inlineEntity(*entity)
-                     << ",  Sphere{ origin = " << LoaderUtils::inlineVector(shape.Origin)
-                     << ", radius = " << shape.Radius
-                     << " });" << std::endl;
+        std::stringstream reprStream;
+        reprStream << "  let ae_" << light_id << " = make_sphere_area_emitter(" << LoaderUtils::inlineEntity(*entity)
+                   << ",  Sphere{ origin = " << LoaderUtils::inlineVector(shape.Origin)
+                   << ", radius = " << shape.Radius
+                   << " });";
+        input.Tree.shader().addStatement(reprStream.str());
     } break;
     default:
     case RepresentationType::None:
         if (input.Tree.context().Shapes->isTriShape(entity->ShapeID)) {
+            std::stringstream reprStream;
             const auto& shape = input.Tree.context().Shapes->getShape(entity->ShapeID);
             const auto& tri   = input.Tree.context().Shapes->getTriShape(entity->ShapeID);
-            input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device, "
-                         << shape.TableOffset
-                         << ", " << tri.FaceCount
-                         << ", " << tri.VertexCount
-                         << ", " << tri.NormalCount
-                         << ", " << tri.TexCount << ");" << std::endl
-                         << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(*entity)
-                         << ", make_trimesh_shape(trimesh_" << light_id << "));" << std::endl;
+            reprStream << "  let trimesh_" << light_id << " = load_trimesh_entry(device, "
+                       << shape.TableOffset
+                       << ", " << tri.FaceCount
+                       << ", " << tri.VertexCount
+                       << ", " << tri.NormalCount
+                       << ", " << tri.TexCount << ");";
+            input.Tree.shader().addStatement(reprStream.str());
+            input.Tree.shader().addStatement("let ae_" + light_id + " = make_shape_area_emitter(" + LoaderUtils::inlineEntity(*entity) + ", make_trimesh_shape(trimesh_" + light_id + "));");
         } else {
             // Error already messaged
             input.Tree.signalError();
@@ -180,14 +184,15 @@ void AreaLight::serialize(const SerializationInput& input) const
         break;
     }
 
-    input.Stream << "  let light_" << light_id << " = make_area_light(" << input.ID
-                 << ", ae_" << light_id;
+    std::stringstream stream;
+    stream << "  let light_" << light_id << " = make_area_light(" << input.ID << ", ae_" << light_id;
 
     if (mUsingPower)
-        input.Stream << ", @|ctx| { maybe_unused(ctx); color_mulf(" << input.Tree.getInline("power") << ", flt_inv_pi / " << mArea << ") });" << std::endl;
+        stream << ", @|ctx| { maybe_unused(ctx); color_mulf(" << input.Tree.getInline("power") << ", flt_inv_pi / " << mArea << ") });";
     else
-        input.Stream << ", @|ctx| { maybe_unused(ctx); " << input.Tree.getInline("radiance") << " });" << std::endl;
+        stream << ", @|ctx| { maybe_unused(ctx); " << input.Tree.getInline("radiance") << " });";
 
+    input.Tree.shader().addStatement(stream.str());
     input.Tree.endClosure();
 }
 

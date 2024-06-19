@@ -1,5 +1,6 @@
 #include "HitShader.h"
 #include "Logger.h"
+#include "ShaderBuilder.h"
 #include "ShaderUtils.h"
 #include "loader/Loader.h"
 #include "loader/LoaderBSDF.h"
@@ -13,43 +14,39 @@
 #include <sstream>
 
 namespace IG {
-std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
+ShaderBuilder HitShader::setup(size_t mat_id, LoaderContext& ctx)
 {
-    std::stringstream stream;
-    
-    stream << "#[export] fn ig_hit_shader(settings: &Settings, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
-           << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
-           << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl
-           << std::endl;
+    ShaderBuilder builder;
 
-    stream << ShaderUtils::generateDatabase(ctx) << std::endl;
-    stream << ShaderUtils::inlineScene(ctx, false);
+    builder.merge(ShaderUtils::constructDevice(ctx))
+        .addStatement("let payload_info = " + ShaderUtils::inlinePayloadInfo(ctx) + ";")
+        .merge(ShaderUtils::generateSceneBBox(ctx))
+        .merge(ShaderUtils::generateDatabase(ctx))
+        .merge(ShaderUtils::generateScene(ctx, false));
 
     ShadingTree tree(ctx);
     const bool requireLights = ctx.CurrentTechniqueVariantInfo().UsesLights;
     if (requireLights)
-        stream << ctx.Lights->generate(tree, false) << std::endl;
+        builder.merge(ctx.Lights->generate(tree, false));
 
     const bool requireMedia = ctx.CurrentTechniqueVariantInfo().UsesMedia;
     if (requireMedia)
-        stream << ctx.Media->generate(tree) << std::endl;
+        builder.merge(ctx.Media->generate(tree));
 
-    stream << ShaderUtils::generateMaterialShader(tree, mat_id, requireLights, "shader") << std::endl;
+    builder.merge(ShaderUtils::generateMaterialShader(tree, mat_id, requireLights, "shader"));
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
-        stream << ctx.Camera->generate(ctx) << std::endl;
+        builder.merge(ctx.Camera->generate(ctx));
 
     // Will define technique
-    stream << ctx.Technique->generate(ctx) << std::endl
-           << std::endl;
+    builder.merge(ctx.Technique->generate(ctx))
+        .addStatement("let use_framebuffer = " + std::string(!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") + ";")
+        .addStatement("device.handle_hit_shader(shader, scene, full_technique, payload_info, first, last, use_framebuffer);");
 
-    stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_hit_shader(shader, scene, full_technique, payload_info, first, last, use_framebuffer);" << std::endl
-           << "}" << std::endl;
-
-    return stream.str();
+    ShaderBuilder topBuild;
+    topBuild.addFunction("#[export] fn ig_hit_shader(settings: &Settings, mat_id: i32, first: i32, last: i32) -> ()", builder);
+    return topBuild;
 }
 
 } // namespace IG

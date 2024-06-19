@@ -62,10 +62,9 @@ void SkyLight::serialize(const SerializationInput& input) const
     size_t res_cdf_id          = input.Tree.context().registerExternalResource(std::get<0>(cdf));
     const std::string light_id = input.Tree.currentClosureID();
 
-    input.Stream << input.Tree.pullHeader()
-                 << "  let sky_tex_" << light_id << " = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image_by_id(" << res_img_id << ", 4), mat3x3_identity());" << std::endl // TODO: Refactor this out
-                 << "  let sky_cdf_" << light_id << " = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
-                 << "  let light_" << light_id << "   = make_environment_light_textured(" << input.ID
+    input.Stream << "let sky_tex_" << light_id << " = make_image_texture(make_repeat_border(), make_bilinear_filter(), device.load_image_by_id(" << res_img_id << ", 4), mat3x3_identity());" << std::endl // TODO: Refactor this out
+                 << "let sky_cdf_" << light_id << " = cdf::make_cdf_2d_from_buffer(device.load_buffer_by_id(" << res_cdf_id << "), " << std::get<1>(cdf) << ", " << std::get<2>(cdf) << ");" << std::endl
+                 << "let light_" << light_id << "   = make_environment_light_textured(" << input.ID
                  << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                  << ", " << input.Tree.getInline("scale")
                  << ", sky_tex_" << light_id << ", sky_cdf_" << light_id

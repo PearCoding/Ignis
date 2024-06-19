@@ -86,6 +86,7 @@ struct TextureBakeOptions { // The bake operation might still return width and h
 } // namespace _details
 
 class LoaderContext;
+class ShaderBuilder;
 class ShadingTree {
 private:
     struct Closure {
@@ -108,7 +109,7 @@ public:
     using GenericBakeOptions = _details::GenericBakeOptions;
     using TextureBakeOptions = _details::TextureBakeOptions;
 
-    explicit ShadingTree(LoaderContext& ctx);
+    ShadingTree(LoaderContext& ctx, ShaderBuilder& builder);
 
     /// Register new closure, can be empty if not a texture
     void beginClosure(const std::string& name);
@@ -133,7 +134,6 @@ public:
     std::string getClosureID(const std::string& name);
 
     void registerTextureUsage(const std::string& name);
-    std::string pullHeader();
     std::string getInline(const std::string& name);
     inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
 
@@ -145,6 +145,8 @@ public:
 
     /// Use this function to mark the loading process as failed if it can not be saved with other means
     void signalError();
+
+    inline ShaderBuilder& shader() { return mBuilder; }
 
 private:
     inline const Closure& currentClosure() const { return mClosures.back(); }
@@ -170,11 +172,11 @@ private:
     BakeOutputColor bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def, const GenericBakeOptions& options);
     Vector3f computeConstantColor(const std::string& name, const Transpiler::Result& result);
     Image computeImage(const std::string& name, const Transpiler::Result& result, const TextureBakeOptions& options);
-    std::string loadTexture(const std::string& tex_name);
+    void loadTexture(const std::string& tex_name);
 
     LoaderContext& mContext;
+    ShaderBuilder& mBuilder;
 
-    std::vector<std::string> mHeaderLines; // The order matters
     std::unordered_set<std::string> mLoadedTextures;
 
     std::vector<Closure> mClosures;

@@ -5,6 +5,7 @@
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
+#include "shader/ShaderBuilder.h"
 
 #include <string_view>
 
@@ -57,8 +58,8 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
     const std::string light_id = input.Tree.currentClosureID();
+
     if (mCDFMethod != CDFMethod::None && baked.has_value() && baked.value()->width > 1 && baked.value()->height > 1) {
-        input.Stream << input.Tree.pullHeader();
         switch (mCDFMethod) {
         default:
         case CDFMethod::Conditional: {
@@ -87,8 +88,7 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
                      << ", cdf_" << light_id
                      << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
     } else {
-        input.Stream << input.Tree.pullHeader()
-                     << "  let light_" << light_id << " = make_environment_light(" << input.ID
+        input.Stream << "  let light_" << light_id << " = make_environment_light(" << input.ID
                      << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                      << ", " << input.Tree.getInline("scale")
                      << ", " << input.Tree.getInline("radiance")

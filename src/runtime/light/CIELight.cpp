@@ -3,6 +3,7 @@
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
+#include "shader/ShaderBuilder.h"
 #include "skysun/SunLocation.h"
 
 namespace IG {
@@ -52,15 +53,17 @@ void CIELight::serialize(const SerializationInput& input) const
         bool cloudy = mClassification == CIEType::Cloudy;
 
         const std::string light_id = input.Tree.currentClosureID();
-        input.Stream << input.Tree.pullHeader()
-                     << "  let light_" << light_id << " = make_cie_sky_light(" << input.ID
-                     << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
-                     << ", " << input.Tree.getInline("zenith")
-                     << ", " << input.Tree.getInline("ground")
-                     << ", " << input.Tree.getInline("ground_brightness")
-                     << ", " << (cloudy ? "true" : "false")
-                     << ", " << (mHasGround ? "true" : "false")
-                     << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+    
+        std::stringstream stream;
+        stream << "let light_" << light_id << " = make_cie_sky_light(" << input.ID
+               << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
+               << ", " << input.Tree.getInline("zenith")
+               << ", " << input.Tree.getInline("ground")
+               << ", " << input.Tree.getInline("ground_brightness")
+               << ", " << (cloudy ? "true" : "false")
+               << ", " << (mHasGround ? "true" : "false")
+               << ", " << LoaderUtils::inlineMatrix(trans) << ");";
+        input.Tree.shader().addStatement(stream.str());
     } else {
         auto ea = LoaderUtils::getEA(*mLight);
         if (ea.Elevation > 87 * Deg2Rad) {
@@ -92,19 +95,21 @@ void CIELight::serialize(const SerializationInput& input) const
         const float c2 = zenithbrightness * norm_factor + additive_factor;
 
         const std::string light_id = input.Tree.currentClosureID();
-        input.Stream << input.Tree.pullHeader()
-                     << "  let light_" << light_id << " = make_cie_sunny_light(" << input.ID
-                     << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
-                     << ", " << input.Tree.getInline("scale")
-                     << ", " << input.Tree.getInline("zenith")
-                     << ", " << zenithbrightness / factor
-                     << ", " << input.Tree.getInline("ground")
-                     << ", " << input.Tree.getInline("ground_brightness")
-                     << ", " << (mClassification == CIEType::Clear ? "true" : "false")
-                     << ", " << (mHasGround ? "true" : "false")
-                     << ", " << LoaderUtils::inlineVector(mSunDirection)
-                     << ", " << c2
-                     << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+
+        std::stringstream stream;
+        stream << "let light_" << light_id << " = make_cie_sunny_light(" << input.ID
+               << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
+               << ", " << input.Tree.getInline("scale")
+               << ", " << input.Tree.getInline("zenith")
+               << ", " << zenithbrightness / factor
+               << ", " << input.Tree.getInline("ground")
+               << ", " << input.Tree.getInline("ground_brightness")
+               << ", " << (mClassification == CIEType::Clear ? "true" : "false")
+               << ", " << (mHasGround ? "true" : "false")
+               << ", " << LoaderUtils::inlineVector(mSunDirection)
+               << ", " << c2
+               << ", " << LoaderUtils::inlineMatrix(trans) << ");";
+        input.Tree.shader().addStatement(stream.str());
     }
 
     input.Tree.endClosure();

@@ -3,6 +3,7 @@
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
 #include "serialization/VectorSerializer.h"
+#include "shader/ShaderBuilder.h"
 
 namespace IG {
 PointLight::PointLight(const std::string& name, const std::shared_ptr<SceneObject>& light)
@@ -39,15 +40,16 @@ void PointLight::serialize(const SerializationInput& input) const
         input.Tree.addColor("intensity", *mLight, Vector3f::Ones());
 
     const std::string light_id = input.Tree.currentClosureID();
-    input.Stream << input.Tree.pullHeader()
-                 << "  let light_" << light_id << " = make_point_light(" << input.ID
-                 << ", " << LoaderUtils::inlineVector(mPosition);
+    std::stringstream stream;
+    stream << "let light_" << light_id << " = make_point_light(" << input.ID
+           << ", " << LoaderUtils::inlineVector(mPosition);
 
     if (mUsingPower)
-        input.Stream << ", color_mulf(" << input.Tree.getInline("power") << ", 1 / (4*flt_pi)));" << std::endl;
+        stream << ", color_mulf(" << input.Tree.getInline("power") << ", 1 / (4*flt_pi)));";
     else
-        input.Stream << ", " << input.Tree.getInline("intensity") << ");" << std::endl;
+        stream << ", " << input.Tree.getInline("intensity") << ");";
 
+    input.Tree.shader().addStatement(stream.str());
     input.Tree.endClosure();
 }
 
