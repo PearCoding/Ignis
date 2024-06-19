@@ -23,16 +23,20 @@ function HandleGIT {
     }
     else {
         Set-Location $Directory
+        & $GIT_BIN pull origin
 
         # Check if it is a named ref and can be pulled
         $ref = (& $GIT_BIN show-ref refs/remotes/origin/$Branch)
-        if (!([string]::IsNullOrEmpty($ref))) {
-            & $GIT_BIN checkout --quiet $Branch
-            & $GIT_BIN pull origin
-        } else {
-            & $GIT_BIN fetch --unshallow --quiet
-            & $GIT_BIN checkout --quiet $Branch
+        if ([string]::IsNullOrEmpty($ref)) {
+            $is_shallow = (& $GIT_BIN rev-parse --is-shallow-repository)
+            if ($is_shallow -eq "true") {
+                & $GIT_BIN fetch --unshallow --quiet
+            }
+            else {
+                & $GIT_BIN fetch --quiet
+            }
         }
+        & $GIT_BIN checkout --quiet $Branch
     }
 }
 
