@@ -11,7 +11,6 @@ If (!(Test-Path -Path "$THORIN")) {
     throw 'The thorin directory is not valid'
 }
 
-
 $BUILD_TYPE = $Config.ARTIC.BUILD_TYPE
 
 # Setup cmake
