@@ -64,14 +64,14 @@ public:
                 ImGui::Text("Do you want to close the previous scene?");
                 ImGui::Separator();
 
-                if (ImGui::Button("Yes", ImVec2(120, 0))) {
+                if (ImGui::Button("Yes", ImVec2(100, 0))) {
                     setupRuntime = true;
                     ImGui::CloseCurrentPopup();
                 }
 
                 ImGui::SetItemDefaultFocus();
                 ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                if (ImGui::Button("Cancel", ImVec2(100, 0))) {
                     mRequestedPath.clear();
                     ImGui::CloseCurrentPopup();
                 }
