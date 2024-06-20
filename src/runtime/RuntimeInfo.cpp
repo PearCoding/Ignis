@@ -76,6 +76,21 @@ Path RuntimeInfo::igcPath()
         return {};
 }
 
+Path RuntimeInfo::libdevicePath()
+{
+    // Should reside in the same directory!
+    const Path exePath = executablePath();
+    if (exePath.empty())
+        return {};
+
+    const Path libPath = exePath.parent_path() / "libdevice.10.bc";
+
+    if (std::filesystem::exists(libPath))
+        return libPath;
+    else
+        return {};
+}
+
 Path RuntimeInfo::modulePath(void* func)
 {
     if (func == nullptr)
