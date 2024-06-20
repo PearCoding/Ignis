@@ -19,6 +19,9 @@
 #endif
 
 namespace IG {
+SDL_Window* sWindow     = nullptr;
+SDL_Renderer* sRenderer = nullptr;
+
 class MainWindowInternal {
 private:
     std::shared_ptr<Runtime> mCurrentRuntime;
@@ -66,6 +69,8 @@ public:
 #else
         ImGuiSDL::Initialize(mRenderer, (int)mWidth, (int)mHeight);
 #endif
+        sWindow   = mWindow;
+        sRenderer = mRenderer;
     }
 
     ~MainWindowInternal()
@@ -94,6 +99,14 @@ public:
 
     bool exec()
     {
+        // Initialize via resize
+        int w, h;
+        SDL_GetWindowSize(mWindow, &w, &h);
+
+        for (const auto& child : mChildren)
+            child->onResize(nullptr, (size_t)w, (size_t)h);
+
+        // Run the loop
         while (true) {
             const bool shouldQuit = handleEvents();
             if (shouldQuit)

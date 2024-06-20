@@ -1,11 +1,16 @@
+#include "ExplorerOptions.h"
 #include "Logger.h"
 #include "MainWindow.h"
 #include "Menu.h"
 #include "MenuItem.h"
+#include "RenderWidget.h"
+
+#include "imgui.h"
 
 #include "portable-file-dialogs.h"
 
 using namespace IG;
+static RenderWidget* sRenderWidget;
 
 static void openFileCallback()
 {
@@ -18,7 +23,7 @@ static void openFileCallback()
     if (files.empty()) // Canceled
         return;
 
-    std::cout << "Selected file: " << files[0] << std::endl;
+    sRenderWidget->openFile(files[0]);
 }
 
 static std::shared_ptr<Menu> setupMainMenu()
@@ -45,9 +50,19 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    try {
-        MainWindow window(800, 600);
+    ExplorerOptions args(argc, argv, "Ignis Scene Explorer");
+    if (args.ShouldExit)
+        return EXIT_SUCCESS;
 
+    try {
+        MainWindow window(args.WindowWidth, args.WindowHeight);
+        auto renderWidget = std::make_shared<RenderWidget>();
+        sRenderWidget     = renderWidget.get();
+
+        if (!args.InputFile.empty())
+            renderWidget->openFile(args.InputFile);
+
+        window.addChild(renderWidget);
         window.addChild(setupMainMenu());
 
         return window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;

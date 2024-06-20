@@ -1,3 +1,5 @@
+#pragma once
+
 #include "IG_Config.h"
 
 #include <functional>

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Widget.h"
 
 #include <variant>
@@ -7,7 +9,7 @@ class MenuItem;
 class Menu : public Widget {
 public:
     Menu(const std::string& name);
-    ~Menu();
+    virtual ~Menu();
 
     void onResize(Widget* parent, size_t width, size_t height) override;
     void onRender(Widget* parent) override;

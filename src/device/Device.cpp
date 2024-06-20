@@ -341,18 +341,14 @@ public:
     {
         tlThreadData = nullptr;
         thread_data.clear();
-        if (is_gpu) {
-            tlThreadData            = thread_data.emplace_back(std::make_unique<CPUData>()).get(); // Just one single data available...
-            tlThreadData->ref_count = 1;
-        } else {
-            const size_t req_threads = setup.target.threadCount() == 0 ? std::thread::hardware_concurrency() : setup.target.threadCount();
-            const size_t max_threads = req_threads + 1 /* Host */;
 
-            available_thread_data.clear();
-            for (size_t t = 0; t < max_threads; ++t) {
-                CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
-                available_thread_data.push(ptr);
-            }
+        const size_t req_threads = is_gpu ? (setup.target.threadCount() == 0 ? std::thread::hardware_concurrency() : setup.target.threadCount()) : 0;
+        const size_t max_threads = req_threads + 2 /* Host */;
+
+        available_thread_data.clear();
+        for (size_t t = 0; t < max_threads; ++t) {
+            CPUData* ptr = thread_data.emplace_back(std::make_unique<CPUData>()).get();
+            available_thread_data.push(ptr);
         }
     }
 
@@ -398,9 +394,6 @@ public:
 
     inline void registerThread()
     {
-        if (is_gpu)
-            return;
-
         if (tlThreadData == nullptr) {
             CPUData* ptr = nullptr;
             while (!available_thread_data.try_pop(ptr))
@@ -419,9 +412,6 @@ public:
 
     inline void unregisterThread()
     {
-        if (is_gpu)
-            return;
-
         IG_ASSERT(tlThreadData != nullptr, "Expected registerThread together with a unregisterThread");
 
         if (tlThreadData->ref_count <= 1) {
