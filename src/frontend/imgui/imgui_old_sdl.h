@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include <SDL.h>
+
+#if !SDL_VERSION_ATLEAST(2, 0, 17)
 struct ImDrawData;
 struct SDL_Renderer;
 
@@ -14,3 +17,4 @@ void Deinitialize();
 // to draw the contents of the draw data to the screen.
 void Render(ImDrawData* drawData);
 } // namespace ImGuiSDL
+#endif

@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+#if !SDL_VERSION_ATLEAST(2, 0, 17)
 namespace {
 struct Device* CurrentDevice = nullptr;
 
@@ -672,3 +673,5 @@ void Render(ImDrawData* drawData)
     SDL_SetRenderDrawBlendMode(CurrentDevice->Renderer, blendMode);
 }
 } // namespace ImGuiSDL
+
+#endif

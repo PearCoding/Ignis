@@ -1,8 +1,6 @@
-SET(SRC_FILES 
-    main.cpp
-    StatusObserver.h )
+file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "*.cpp")
 
-add_executable(igcli ${SRC_FILES})
+add_executable(igcli ${SRC})
 target_link_libraries(igcli PRIVATE ig_lib_common)
 add_lto(igcli)
 add_checks(igcli)
