@@ -1,7 +1,6 @@
-SET(SRC_FILES 
-    main.cpp )
+file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "*.cpp")
 
-add_executable(igtrace ${SRC_FILES})
+add_executable(igtrace ${SRC})
 target_link_libraries(igtrace PRIVATE ig_lib_common)
 add_lto(igtrace)
 add_checks(igtrace)
