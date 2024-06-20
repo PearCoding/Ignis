@@ -33,9 +33,8 @@ public:
 
     void openFile(const Path& path)
     {
-        mRequestedPath = path;
-        if (mRuntime)
-            ImGui::OpenPopup("Close previous scene?");
+        if (!mLoading)
+            mRequestedPath = path;
     }
 
     void onResize(size_t width, size_t height)
@@ -56,14 +55,19 @@ public:
         // Some modal stuff for io
         const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 
-        if (!mRequestedPath.empty()) {
+        if (!mLoading && !mRequestedPath.empty()) {
+            bool setupRuntime = !mRuntime;
+            if (mRuntime)
+                ImGui::OpenPopup("Close previous scene?");
             ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
             if (ImGui::BeginPopupModal("Close previous scene?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Do you want to close the previous scene?");
                 ImGui::Separator();
 
-                if (ImGui::Button("Yes", ImVec2(120, 0)))
+                if (ImGui::Button("Yes", ImVec2(120, 0))) {
+                    setupRuntime = true;
                     ImGui::CloseCurrentPopup();
+                }
 
                 ImGui::SetItemDefaultFocus();
                 ImGui::SameLine();
@@ -74,15 +78,17 @@ public:
                 ImGui::EndPopup();
             }
 
-            if (!mRequestedPath.empty()) {
+            if (!mRequestedPath.empty() && setupRuntime) {
                 const Path scene_file = mRequestedPath;
                 mRequestedPath.clear();
 
                 mRuntime.reset();
 
-                auto options             = RuntimeOptions::makeDefault();
-                options.IsInteractive    = true;
-                options.OverrideFilmSize = { (uint32)mWidth, (uint32)mHeight };
+                auto options              = RuntimeOptions::makeDefault();
+                options.IsInteractive     = true;
+                options.EnableTonemapping = true;
+                options.OverrideCamera    = "fishlens";
+                options.OverrideFilmSize  = { (uint32)mWidth, (uint32)mHeight };
 
                 mLoading       = true;
                 mLoadingThread = std::make_unique<std::thread>(loaderThread, this, scene_file, options);

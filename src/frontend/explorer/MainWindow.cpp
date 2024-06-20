@@ -31,6 +31,8 @@ private:
 
     std::vector<std::shared_ptr<Widget>> mChildren;
 
+    std::function<void(const Path&)> mDropCallback;
+
 public:
     MainWindowInternal(size_t width, size_t height)
     {
@@ -53,6 +55,8 @@ public:
             IG_LOG(L_FATAL) << "Cannot create SDL renderer: " << SDL_GetError() << std::endl;
             throw std::runtime_error("Could not setup UI");
         }
+
+        SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -92,9 +96,14 @@ public:
         SDL_Quit();
     }
 
-    void setTitle(const char* str)
+    inline void setTitle(const char* str)
     {
         SDL_SetWindowTitle(mWindow, str);
+    }
+
+    inline void setDropCallback(const std::function<void(const Path&)>& callback)
+    {
+        mDropCallback = callback;
     }
 
     bool exec()
@@ -220,6 +229,13 @@ private:
             switch (event.type) {
             case SDL_QUIT:
                 return true;
+            case SDL_DROPFILE: {
+                Path path = event.drop.file;
+                SDL_free(event.drop.file);
+
+                if (mDropCallback)
+                    mDropCallback(path);
+            } break;
             case SDL_WINDOWEVENT: {
                 switch (event.window.event) {
                 case SDL_WINDOWEVENT_RESIZED:
@@ -228,7 +244,7 @@ private:
                 default:
                     break;
                 }
-            }
+            } break;
             default:
                 break;
             }
@@ -262,5 +278,10 @@ bool MainWindow::exec()
 void MainWindow::addChild(const std::shared_ptr<Widget>& widget)
 {
     mInternal->addChild(widget);
+}
+
+void MainWindow::setDropCallback(const std::function<void(const Path&)>& callback)
+{
+    mInternal->setDropCallback(callback);
 }
 } // namespace IG

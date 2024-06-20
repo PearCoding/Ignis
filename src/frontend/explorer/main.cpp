@@ -10,9 +10,15 @@
 #include "portable-file-dialogs.h"
 
 using namespace IG;
-static RenderWidget* sRenderWidget;
+static RenderWidget* sRenderWidget = nullptr;
 
-static void openFileCallback()
+static void openFileCallback(const Path& path)
+{
+    if (sRenderWidget)
+        sRenderWidget->openFile(path);
+}
+
+static void openFileDialogCallback()
 {
     auto f = pfd::open_file("Choose scene", pfd::path::home(),
                             { "Scene Files (.json)", "*.json",
@@ -23,7 +29,7 @@ static void openFileCallback()
     if (files.empty()) // Canceled
         return;
 
-    sRenderWidget->openFile(files[0]);
+    openFileCallback(files[0]);
 }
 
 static std::shared_ptr<Menu> setupMainMenu()
@@ -34,7 +40,7 @@ static std::shared_ptr<Menu> setupMainMenu()
     auto helpMenu = std::make_shared<Menu>("Help");
     mainMenu->add(helpMenu);
 
-    auto openFile = std::make_shared<MenuItem>("Open", openFileCallback);
+    auto openFile = std::make_shared<MenuItem>("Open", openFileDialogCallback);
     fileMenu->add(openFile);
 
     auto openWebsite = std::make_shared<MenuItem>("Website", []() {});
@@ -56,6 +62,7 @@ int main(int argc, char** argv)
 
     try {
         MainWindow window(args.WindowWidth, args.WindowHeight);
+
         auto renderWidget = std::make_shared<RenderWidget>();
         sRenderWidget     = renderWidget.get();
 
@@ -65,6 +72,7 @@ int main(int argc, char** argv)
         window.addChild(renderWidget);
         window.addChild(setupMainMenu());
 
+        window.setDropCallback(openFileCallback);
         return window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
     } catch (const std::exception& e) {
         IG_LOG(L_FATAL) << e.what() << std::endl;
