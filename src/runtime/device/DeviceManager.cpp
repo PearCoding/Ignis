@@ -4,11 +4,15 @@
 #include "RuntimeInfo.h"
 #include "StringUtils.h"
 
+#include <cstdlib>
+
 #include <unordered_set>
 
 #define _IG_DEVICE_ENV_PATH_NAME "IG_DEVICE_PATH"
 #define _IG_DEVICE_ENV_SKIP_SYSTEM_PATH "IG_DEVICE_SKIP_SYSTEM_PATH"
 #define _IG_DEVICE_LIB_PREFIX "ig_device_"
+
+#define ANYDSL_CUDA_LIBDEVICE_PATH_ENV "ANYDSL_CUDA_LIBDEVICE_PATH"
 
 namespace IG {
 
@@ -63,6 +67,16 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
     // Check if an initialization is required
     if (!force && !mAvailableDevices.empty())
         return true;
+
+    const auto libdevicePath = RuntimeInfo::libdevicePath();
+    if (!libdevicePath.empty()) {
+        IG_LOG(L_DEBUG) << "Setting libdevice path " << libdevicePath << " to environment variable " << ANYDSL_CUDA_LIBDEVICE_PATH_ENV << std::endl;
+#ifdef IG_OS_WINDOWS
+        _putenv_s(ANYDSL_CUDA_LIBDEVICE_PATH_ENV, libdevicePath.generic_string().c_str());
+#else
+        setenv(ANYDSL_CUDA_LIBDEVICE_PATH_ENV, libdevicePath.generic_string().c_str(), 1);
+#endif
+    }
 
     path_set paths;
 

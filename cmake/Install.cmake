@@ -53,7 +53,6 @@ if(IG_INSTALL_RUNTIME_DEPENDENCIES)
     else()
         set(exclude_regexes 
             "libX.*" "libxkb.*" "libwayland.*" "libvorbis.*" "libexpat.*" "libFLAC.*" "libpulse.*" "libasound.*" # Skip media related libraries
-            "libcuda.*" "libOpenCL.*" "libnvvm.*" "libnvrtc.*" # Ignore CUDA related stuff, as the system should be providing it!
             )
     endif()
 
@@ -62,6 +61,8 @@ if(IG_INSTALL_RUNTIME_DEPENDENCIES)
         list(APPEND search_dirs "${Python_RUNTIME_LIBRARY_DIRS}")
         list(APPEND search_dirs "${Python_RUNTIME_SABI_LIBRARY_DIRS}")
     endif()
+
+    find_package(CUDAToolkit)
     if(CUDAToolkit_FOUND)
         list(APPEND search_dirs "${CUDAToolkit_BIN_DIR}")
     endif()

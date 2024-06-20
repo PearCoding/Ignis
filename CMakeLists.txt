@@ -110,14 +110,6 @@ find_package(TBB REQUIRED)
 # ZLib is used in the generator
 find_package(ZLIB REQUIRED)
 
-# Locate stuff for windows
-# On Linux this is properly propagated
-# So it needs a fixing in AnyDSL
-if(WIN32)
-	find_package(CUDAToolkit)
-	find_package(OpenCL)
-endif()
-
 # Locate AnyDSL runtime (general purpose)
 find_package(AnyDSL_runtime REQUIRED)
 
