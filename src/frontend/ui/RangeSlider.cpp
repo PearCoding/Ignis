@@ -2,6 +2,8 @@
 
 #include "RangeSlider.h"
 
+#include <limits>
+
 #include "imgui_internal.h"
 
 // Based on: https://github.com/ocornut/imgui/issues/76

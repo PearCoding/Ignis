@@ -121,7 +121,7 @@ public:
                     mRuntime->tonemap(buf, TonemapSettings{ "", (size_t)0, false, 1.0f, 1.0f, 0.0f });
 
                     SDL_UpdateTexture(mTexture, nullptr, buf, static_cast<int>(mWidth * sizeof(uint32_t)));
-                    ImGui::Image((void*)mTexture, ImVec2(mRuntime->framebufferWidth(), mRuntime->framebufferHeight()));
+                    ImGui::Image((void*)mTexture, ImVec2((float)mRuntime->framebufferWidth(), (float)mRuntime->framebufferHeight()));
                 }
             }
             ImGui::End();
