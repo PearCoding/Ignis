@@ -33,6 +33,8 @@ if ($IsWindows) {
     $OIDN_DIR = Get-ChildItem -Path "$DEPS_ROOT/oidn/lib/cmake" -Directory | Sort-Object -Descending | Select-Object -First 1
 }
 
+$BUILD_TYPE = $Config.Ignis.BUILD_TYPE
+
 $CMAKE_Args = @()
 $CMAKE_Args += $Config.CMAKE.EXTRA_ARGS
 $CMAKE_Args += $Config.IGNIS.EXTRA_ARGS
