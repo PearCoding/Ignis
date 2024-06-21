@@ -5,7 +5,7 @@ if(IG_WITH_CLI)
 endif()
 
 if(IG_HAS_UI)
-    add_subdirectory(imgui)
+    add_subdirectory(ui)
     add_subdirectory(view)
     add_subdirectory(explorer)
 endif()
