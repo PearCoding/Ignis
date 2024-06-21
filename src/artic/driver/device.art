@@ -112,10 +112,4 @@ struct Device {
 
     // Special structure to allow print functions within devices. Should only be used for debug purposes
     request_debug_output: fn () -> DebugOutput,
-
-    //------------------------------------- Local registry
-    get_local_parameter_i32:   fn (&[u8] /* name */, i32 /* default */)   -> i32,
-    get_local_parameter_f32:   fn (&[u8] /* name */, f32 /* default */)   -> f32,
-    get_local_parameter_vec3:  fn (&[u8] /* name */, Vec3 /* default */)  -> Vec3,
-    get_local_parameter_color: fn (&[u8] /* name */, Color /* default */) -> Color
 }

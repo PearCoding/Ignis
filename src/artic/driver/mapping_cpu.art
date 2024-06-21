@@ -1,6 +1,6 @@
 fn @cpu_request_buffer(name: &[u8], size: i32) -> DeviceBuffer {
     let mut ptr : &[u8];
-    ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, 0);
+    ignis_request_buffer(name, &mut ptr, size * sizeof[i32]() as i32, 0);
     make_cpu_buffer(ptr as &[f32], size)
 }
 
@@ -364,14 +364,14 @@ fn @cpu_generate_rays_handler(capacity: i32
     let work_info = get_work_info();
 
     let mut primary : PrimaryStream;
-    ignis_get_primary_stream(0, 0, &mut primary, capacity);
+    ignis_get_primary_stream(0, &mut primary, capacity);
     cpu_generate_rays(primary, capacity, emitter, gen_info, config, work_info.width, work_info.height, payload_info, vector_width, is_payload_soa)
 }
 
 // Traverse functions ------------------------------------------------------------------
 fn @cpu_traverse_primary(scene: SceneTracer, size: i32, min_max: MinMax, vector_width: i32) -> () {
     let mut primary : PrimaryStream;
-    ignis_get_primary_stream_const(0, 0, &mut primary);
+    ignis_get_primary_stream_const(0, &mut primary);
 
     let rays  = make_ray_stream_reader(primary.rays, vector_width);
     let hits  = make_primary_stream_hit_reader(primary, vector_width);
@@ -400,7 +400,7 @@ fn @cpu_traverse_primary(scene: SceneTracer, size: i32, min_max: MinMax, vector_
 
 fn @cpu_traverse_secondary(scene: SceneTracer, size: i32, min_max: MinMax, vector_width: i32) -> () {
     let mut secondary : SecondaryStream;
-    ignis_get_secondary_stream_const(0, 0, &mut secondary);
+    ignis_get_secondary_stream_const(0, &mut secondary);
     
     let rays  = make_ray_stream_reader(secondary.rays, vector_width);
     let hits  = make_secondary_stream_hit_reader(secondary, vector_width);
@@ -565,9 +565,9 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
     , vector_width: i32
     , is_payload_soa: bool) -> () {
     let mut primary : PrimaryStream;
-    ignis_get_primary_stream_const(0, 0, &mut primary);
+    ignis_get_primary_stream_const(0, &mut primary);
     let mut secondary : SecondaryStream;
-    ignis_get_secondary_stream_const(0, 0, &mut secondary);
+    ignis_get_secondary_stream_const(0, &mut secondary);
 
     let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
     cpu_hit_shade(primary, secondary, shader, scene, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
@@ -621,7 +621,7 @@ fn @cpu_miss_shade_handler(technique: Technique
     , vector_width: i32
     , is_payload_soa: bool) -> () {
     let mut primary : PrimaryStream;
-    ignis_get_primary_stream_const(0, 0, &mut primary);
+    ignis_get_primary_stream_const(0, &mut primary);
 
     let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
     cpu_miss_shade(primary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
@@ -682,7 +682,7 @@ fn @cpu_advanced_shadow_handler(shader: MaterialShader
     , vector_width: i32
     , is_payload_soa: bool) -> () {
     let mut secondary : SecondaryStream;
-    ignis_get_secondary_stream_const(0, 0, &mut secondary);
+    ignis_get_secondary_stream_const(0, &mut secondary);
 
     let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
     cpu_advanced_shadow(is_hit, shader, secondary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
@@ -693,14 +693,14 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
     let mut film_height : i32;
-    ignis_get_film_data(0, &mut film_pixels, &mut film_width, &mut film_height);
+    ignis_get_film_data(&mut film_pixels, &mut film_width, &mut film_height);
     (film_pixels, film_width, film_height)
 }
 
 fn @cpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, vector_width: i32) -> AOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
-    ignis_get_aov_image(0, id, &mut ptr);
+    ignis_get_aov_image(id, &mut ptr);
     if vector_width > 1 {
         make_rv_aov_image(id, ptr, w, h, spi)
     } else {
@@ -730,13 +730,13 @@ fn @cpu_trace( scene: Scene
         let mut primary   : PrimaryStream;
         let mut secondary : SecondaryStream;
         let capacity = cpu_get_stream_capacity(spi, tile_size);
-        ignis_get_primary_stream(  0, 0, &mut primary,   capacity);
-        ignis_get_secondary_stream(0, 0, &mut secondary, capacity);
+        ignis_get_primary_stream(  0, &mut primary,   capacity);
+        ignis_get_secondary_stream(0, &mut secondary, capacity);
 
         let framebuffer = cpu_get_framebuffer(spi, true/*!work_info.framebuffer_locked*/, vector_width); // Will only be used if framebuffer is not locked down the line
 
         let mut temp_host : TemporaryStorageHost;
-        ignis_get_temporary_storage_host(0, &mut temp_host);
+        ignis_get_temporary_storage_host(&mut temp_host);
 
         let mut id = 0;
         let mut current_size = 0;
@@ -918,31 +918,31 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
         if vector_width >= 8 {
             let mut nodes: &[Node8];
             let mut objs: &[EntityLeaf1];
-            ignis_load_bvh8_ent(0, prim_type, &mut nodes, &mut objs);
+            ignis_load_bvh8_ent(prim_type, &mut nodes, &mut objs);
             make_cpu_bvh8_ent(nodes, objs)
         } else {
             let mut nodes: &[Node4];
             let mut objs: &[EntityLeaf1];
-            ignis_load_bvh4_ent(0, prim_type, &mut nodes, &mut objs);
+            ignis_load_bvh4_ent(prim_type, &mut nodes, &mut objs);
             make_cpu_bvh4_ent(nodes, objs)
         }
     },
     load_dyntable = @ |name| -> DynTable {
         let mut table: DynTableData;
-        ignis_load_dyntable(0, name, &mut table);
+        ignis_load_dyntable(name, &mut table);
         make_dyntable(table, make_cpu_shallow_buffer)
     },
     load_fixtable = @ |name| -> ShallowBuffer {
         let mut ptr      : &[u8];
         let mut bytesize : i32;
-        ignis_load_fixtable(0, name, &mut ptr, &mut bytesize);
+        ignis_load_fixtable(name, &mut ptr, &mut bytesize);
         make_cpu_shallow_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
     },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_image(0, filename, &mut pixel_data, &mut width, &mut height, channel_count);
+        ignis_load_image(filename, &mut pixel_data, &mut width, &mut height, channel_count);
         if channel_count == 1 {
             make_image_mono(@ |x, y| pixel_data(y * width + x), width, height)
         } else {
@@ -953,7 +953,7 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
         let mut pixel_data : &[f32];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, channel_count);
+        ignis_load_image_by_id(id, &mut pixel_data, &mut width, &mut height, channel_count);
         if channel_count == 1 {
             make_image_mono(@ |x, y| pixel_data(y * width + x), width, height)
         } else {
@@ -964,7 +964,7 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
         let mut pixel_data : &[u8];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image(0, filename, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+        ignis_load_packed_image(filename, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
         if channel_count == 1 {
             make_image_mono(@ |x, y| image_mono_unpack(pixel_data(y * width + x)), width, height)
         } else {
@@ -976,7 +976,7 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
         let mut pixel_data : &[u8];
         let mut width      : i32;
         let mut height     : i32;
-        ignis_load_packed_image_by_id(0, id, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
+        ignis_load_packed_image_by_id(id, &mut pixel_data, &mut width, &mut height, channel_count, is_linear);
         if channel_count == 1 {
             make_image_mono(@ |x, y| image_mono_unpack(pixel_data(y * width + x)), width, height)
         } else {
@@ -990,7 +990,7 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
     },
     load_rays = @ || {
         let mut rays: &[StreamRay];
-        ignis_load_rays(0, &mut rays);
+        ignis_load_rays(&mut rays);
         rays
     },
     load_host_buffer       = load_cpu_buffer,
@@ -999,11 +999,11 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
     load_buffer_by_id = load_cpu_buffer_by_id,
     request_buffer = @ |name, size, flags| {
         let mut ptr : &[u8];
-        ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
+        ignis_request_buffer(name, &mut ptr, size * sizeof[i32]() as i32, flags);
         make_cpu_buffer(ptr as &[f32], size)
     },
     make_buffer_view = make_cpu_shallow_buffer,
-    dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
+    dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(id, filename),
     request_debug_output = @|| {
         if vector_width != 1 {
             // FIXME: Fix this for vectorized systems!
@@ -1013,8 +1013,4 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
             make_debug_output(buffer)
         }
     },
-    get_local_parameter_i32   = @|name, def| registry::get_local_parameter_i32(  0, name, def),
-    get_local_parameter_f32   = @|name, def| registry::get_local_parameter_f32(  0, name, def),
-    get_local_parameter_vec3  = @|name, def| registry::get_local_parameter_vec3( 0, name, def),
-    get_local_parameter_color = @|name, def| registry::get_local_parameter_color(0, name, def)
 };

@@ -731,7 +731,7 @@ std::string ShadingTree::acquireNumber(const std::string& prop_name, float numbe
         const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
         mContext.LocalRegistry.FloatParameters[id] = number;
 
-        mHeaderLines.push_back("  let var_num_" + id + " = device.get_local_parameter_f32(\"" + id + "\", 0);\n");
+        mHeaderLines.push_back("  let var_num_" + id + " = registry::get_local_parameter_f32(\"" + id + "\", 0);\n");
         return "var_num_" + id;
     }
 }
@@ -744,7 +744,7 @@ std::string ShadingTree::acquireColor(const std::string& prop_name, const Vector
         const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
         mContext.LocalRegistry.ColorParameters[id] = Vector4f(color.x(), color.y(), color.z(), 1);
 
-        mHeaderLines.push_back("  let var_color_" + id + " = device.get_local_parameter_color(\"" + id + "\", color_builtins::black);\n");
+        mHeaderLines.push_back("  let var_color_" + id + " = registry::get_local_parameter_color(\"" + id + "\", color_builtins::black);\n");
         return "var_color_" + id;
     }
 }
@@ -757,7 +757,7 @@ std::string ShadingTree::acquireVector(const std::string& prop_name, const Vecto
         const std::string id                        = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
         mContext.LocalRegistry.VectorParameters[id] = vec;
 
-        mHeaderLines.push_back("  let var_vec_" + id + " = device.get_local_parameter_vec3(\"" + id + "\", vec3_expand(0));\n");
+        mHeaderLines.push_back("  let var_vec_" + id + " = registry::get_local_parameter_vec3(\"" + id + "\", vec3_expand(0));\n");
         return "var_vec_" + id;
     }
 }
