@@ -142,6 +142,9 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         app.add_option("-o,--output", Output, "Writes the output image to a file");
     }
 
+    if (type == ApplicationType::View)
+        app.add_option("--dpi", DPI, "Optional scaling factor for the UI. If not set, it will be acquired automatically");
+
     // Add user entries
     app.add_option(
            "--Pi,--parameter-int", [&](const CLI::results_t& r) -> bool {

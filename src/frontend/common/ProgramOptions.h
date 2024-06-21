@@ -81,7 +81,7 @@ public:
     Path CacheDir;
 
     size_t ShaderOptimizationLevel = 3;
-    size_t ShaderCompileThreads = 0;
+    size_t ShaderCompileThreads    = 0;
 
     Path Output;
     Path InputScene;
@@ -90,6 +90,8 @@ public:
     Path ScriptDir;
 
     ParameterSet UserEntries;
+    
+    std::optional<float> DPI; // Only used for UI
 
     void populate(RuntimeOptions& options) const;
 };

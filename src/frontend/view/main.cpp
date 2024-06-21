@@ -1,10 +1,10 @@
 #include "CameraProxy.h"
+#include "Context.h"
 #include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"
 #include "Runtime.h"
 #include "Timer.h"
-#include "UI.h"
 #include "config/Build.h"
 
 using namespace IG;
@@ -104,9 +104,9 @@ int main(int argc, char** argv)
     if (cmd.SPP.has_value() && (cmd.SPP.value() % SPI) != 0)
         IG_LOG(L_WARNING) << "Given spp " << cmd.SPP.value() << " is not a multiple of the spi " << SPI << ". Using spp " << desired_iter * SPI << " instead" << std::endl;
 
-    std::unique_ptr<UI> ui;
+    std::unique_ptr<Context> ui;
     try {
-        ui = std::make_unique<UI>(cmd.SPPMode, runtime.get(), runtime->technique() == "debug");
+        ui = std::make_unique<Context>(cmd.SPPMode, runtime.get(), runtime->technique() == "debug", cmd.DPI.value_or(-1));
     } catch (...) {
         return EXIT_FAILURE;
     }
@@ -134,16 +134,16 @@ int main(int argc, char** argv)
         timer_input.start();
         const auto input_result = ui->handleInput(camera);
         switch (input_result) {
-        case UI::InputResult::Quit:
+        case Context::InputResult::Quit:
             done = true;
             break;
-        case UI::InputResult::Resume:
+        case Context::InputResult::Resume:
             running = true;
             break;
-        case UI::InputResult::Pause:
+        case Context::InputResult::Pause:
             running = false;
             break;
-        case UI::InputResult::Reset:
+        case Context::InputResult::Reset:
             runtime->setCameraOrientationParameter(camera.asOrientation());
             runtime->reset();
             break;
@@ -206,7 +206,7 @@ int main(int argc, char** argv)
         } else {
             frames++;
 
-            if (input_result == UI::InputResult::Pause || frames > 100) {
+            if (input_result == Context::InputResult::Pause || frames > 100) {
                 std::ostringstream os;
                 os << "Ignis [Paused, "
                    << runtime->currentSampleCount() << " "
@@ -219,7 +219,7 @@ int main(int argc, char** argv)
 
         timer_ui.start();
         switch (ui->update()) {
-        case UI::UpdateResult::Reset:
+        case Context::UpdateResult::Reset:
             runtime->reset();
             break;
         default:

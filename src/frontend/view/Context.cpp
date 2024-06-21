@@ -1,25 +1,11 @@
-#include "UI.h"
+#include "Context.h"
 #include "IO.h"
 #include "Pose.h"
 #include "Runtime.h"
 
-#include <SDL.h>
-
-#include "imgui.h"
-#include "imgui_markdown.h"
-#include "implot.h"
-
-#if SDL_VERSION_ATLEAST(2, 0, 17)
-#include "backends/imgui_impl_sdl2.h"
-#include "backends/imgui_impl_sdlrenderer2.h"
-#else
-#define USE_OLD_SDL
-// The following implementation is deprecated and only available for old SDL versions
-#include "imgui_old_sdl.h"
-#endif
-
 #include "Inspector.h"
 #include "PropertyView.h"
+#include "UI.h"
 
 #include "Color.h"
 #include "Logger.h"
@@ -27,6 +13,8 @@
 #include <algorithm>
 
 namespace IG {
+
+using namespace ui;
 
 constexpr size_t HISTOGRAM_SIZE                     = 50;
 static const char* const ToneMappingMethodOptions[] = {
@@ -57,10 +45,10 @@ enum class ScreenshotRequestMode {
     Full
 };
 
-class UIInternal {
+class ContextInternal {
 public:
     IG::Runtime* Runtime   = nullptr;
-    UI* Parent             = nullptr;
+    Context* Parent        = nullptr;
     SDL_Window* Window     = nullptr;
     SDL_Renderer* Renderer = nullptr;
     SDL_Texture* Texture   = nullptr;
@@ -150,10 +138,7 @@ public:
         Height = height;
         setupTextureBuffer((size_t)width, (size_t)height);
 
-#ifdef USE_OLD_SDL
-        ImGuiSDL::Deinitialize();
-        ImGuiSDL::Initialize(Renderer, width, height);
-#endif
+        ui::notifyResize(Window, Renderer);
     }
 
     [[nodiscard]] inline std::string currentAOVName() const
@@ -181,61 +166,8 @@ public:
         MM_Pan
     };
 
-#ifdef USE_OLD_SDL
-    void handleOldSDL(const SDL_Event& event)
-    {
-        ImGuiIO& io = ImGui::GetIO();
-
-        switch (event.type) {
-        case SDL_TEXTINPUT:
-            io.AddInputCharactersUTF8(event.text.text);
-            break;
-        case SDL_KEYUP:
-        case SDL_KEYDOWN: {
-            int key = event.key.keysym.scancode;
-            IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
-            io.KeysDown[key] = (event.type == SDL_KEYDOWN);
-            io.KeyShift      = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-            io.KeyCtrl       = ((SDL_GetModState() & KMOD_CTRL) != 0);
-            io.KeyAlt        = ((SDL_GetModState() & KMOD_ALT) != 0);
-#ifdef _WIN32
-            io.KeySuper = false;
-#else
-            io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
-#endif
-        } break;
-        case SDL_MOUSEWHEEL:
-            if (event.wheel.x > 0)
-                io.MouseWheelH += 1;
-            if (event.wheel.x < 0)
-                io.MouseWheelH -= 1;
-            if (event.wheel.y > 0)
-                io.MouseWheel += 1;
-            if (event.wheel.y < 0)
-                io.MouseWheel -= 1;
-            break;
-        default:
-            break;
-        }
-    }
-
-    void handleOldSDLMouse()
-    {
-        ImGuiIO& io = ImGui::GetIO();
-
-        int mouseX, mouseY;
-        const int buttons = SDL_GetMouseState(&mouseX, &mouseY);
-
-        // Setup low-level inputs (e.g. on Win32, GetKeyboardState(), or write to those fields from your Windows message loop handlers, etc.)
-        io.DeltaTime    = 1.0f / 60.0f;
-        io.MousePos     = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
-        io.MouseDown[0] = buttons & SDL_BUTTON(SDL_BUTTON_LEFT);
-        io.MouseDown[1] = buttons & SDL_BUTTON(SDL_BUTTON_RIGHT);
-    }
-#endif
-
     // Events
-    UI::InputResult handleEvents(CameraProxy& cam)
+    Context::InputResult handleEvents(CameraProxy& cam)
     {
         const Vector3f sceneCenter = Runtime->sceneBoundingBox().center();
 
@@ -271,11 +203,7 @@ public:
         SDL_Event event;
         const bool hover = isAnyWindowShown() && (ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
         while (SDL_PollEvent(&event)) {
-#ifndef USE_OLD_SDL
-            ImGui_ImplSDL2_ProcessEvent(&event);
-#else
-            handleOldSDL(event);
-#endif
+            ui::processSDLEvent(event);
 
             // First handle ImGui stuff
             bool key_down = event.type == SDL_KEYDOWN;
@@ -283,7 +211,7 @@ public:
             case SDL_KEYUP:
                 switch (event.key.keysym.sym) {
                 case SDLK_ESCAPE:
-                    return UI::InputResult::Quit;
+                    return Context::InputResult::Quit;
                 case SDLK_t:
                     if (!io.WantTextInput)
                         ToneMapping_Automatic = !ToneMapping_Automatic;
@@ -310,10 +238,10 @@ public:
                     if (!io.WantTextInput) {
                         if (Running) {
                             Running = false;
-                            return UI::InputResult::Pause;
+                            return Context::InputResult::Pause;
                         } else {
                             Running = true;
-                            return UI::InputResult::Resume;
+                            return Context::InputResult::Resume;
                         }
                     }
                     break;
@@ -352,7 +280,7 @@ public:
                 }
                 break;
             case SDL_QUIT:
-                return UI::InputResult::Quit;
+                return Context::InputResult::Quit;
             case SDL_WINDOWEVENT: {
                 switch (event.window.event) {
                 case SDL_WINDOWEVENT_RESIZED:
@@ -554,10 +482,6 @@ public:
             }
         }
 
-#ifdef USE_OLD_SDL
-        handleOldSDLMouse();
-#endif
-
         if (canInteract) {
             if (std::any_of(arrows.begin(), arrows.end(), [](bool b) { return b; }))
                 reset = true;
@@ -608,7 +532,7 @@ public:
         if (Running && ZoomIsScale)
             Runtime->setParameter("__camera_scale", DefaultCameraScale * CurrentZoom);
 
-        return reset ? UI::InputResult::Reset : UI::InputResult::Continue;
+        return reset ? Context::InputResult::Reset : Context::InputResult::Continue;
     }
 
     void analyzeLuminance()
@@ -889,7 +813,7 @@ public:
                 if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
                     ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
                     ImGui::Text("Avg. Luminance: %1.4f Lux", 179 * LastLum.Avg);
-                    if(Glare.NumPixels > 0) {
+                    if (Glare.NumPixels > 0) {
                         ImGui::Text("Avg. GS Luminance: %1.4f Lux", Glare.AvgLum);
                         ImGui::Text("Avg. GS Omega: %1.4f", Glare.AvgOmega);
                         ImGui::Text("GS Pixel No: %i", Glare.NumPixels);
@@ -938,28 +862,28 @@ public:
         }
     }
 
-    UI::UpdateResult handlePropertyWindow()
+    Context::UpdateResult handlePropertyWindow()
     {
-        constexpr size_t PROP_W = 350;
-        constexpr size_t PROP_H = 400;
-        UI::UpdateResult result = UI::UpdateResult::Continue;
+        constexpr size_t PROP_W      = 350;
+        constexpr size_t PROP_H      = 400;
+        Context::UpdateResult result = Context::UpdateResult::Continue;
         ImGui::SetNextWindowPos(ImVec2((float)(Width - 5 - PROP_W), 5.0f), ImGuiCond_Once);
         ImGui::SetNextWindowSize(ImVec2((float)PROP_W, (float)PROP_H), ImGuiCond_Once);
         if (ImGui::Begin("Properties", &ShowProperties, WindowFlags)) {
             const bool changed = ui_property_view(Runtime);
             if (changed)
-                result = UI::UpdateResult::Reset;
+                result = Context::UpdateResult::Reset;
         }
         ImGui::End();
         return result;
     }
 
-    UI::UpdateResult handleImgui()
+    Context::UpdateResult handleImgui()
     {
         if (ShowControl)
             handleControlWindow();
 
-        UI::UpdateResult result = UI::UpdateResult::Continue;
+        Context::UpdateResult result = Context::UpdateResult::Continue;
         if (ShowProperties)
             result = handlePropertyWindow();
 
@@ -976,10 +900,10 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
+Context::Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi)
     : mSPPMode(sppmode)
     , mDebugMode(DebugMode::Normal)
-    , mInternal(std::make_unique<UIInternal>())
+    , mInternal(std::make_unique<ContextInternal>())
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
         IG_LOG(L_FATAL) << "Cannot initialize SDL: " << SDL_GetError() << std::endl;
@@ -1019,44 +943,23 @@ UI::UI(SPPMode sppmode, Runtime* runtime, bool showDebug)
     if (!mInternal->setupTextureBuffer(mInternal->Width, mInternal->Height))
         throw std::runtime_error("Could not setup UI");
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-    ImPlot::CreateContext();
-
-    ImGuiIO& io = ImGui::GetIO();
-    (void)io;
-#ifndef USE_OLD_SDL
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-    ImGui_ImplSDL2_InitForSDLRenderer(mInternal->Window, mInternal->Renderer);
-    ImGui_ImplSDLRenderer2_Init(mInternal->Renderer);
-#else
-    ImGuiSDL::Initialize(mInternal->Renderer, (int)mInternal->Width, (int)mInternal->Height);
-#endif
+    ui::setup(mInternal->Window, mInternal->Renderer, false, dpi);
 
     mInternal->PoseManager.load(POSE_FILE);
 
     mInternal->ShowProperties = runtime->hasSceneParameters();
 
-    if (mInternal->Width < 350 || mInternal->Height < 500) {
+    const float dpi_scale = ui::getFontScale(mInternal->Window, mInternal->Renderer);
+    if ((float)mInternal->Width < 450 * dpi_scale || (float)mInternal->Height < 600 * dpi_scale) {
         IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 or F4 to show it" << std::endl;
         mInternal->ShowControl    = false;
         mInternal->ShowProperties = false;
     }
 }
 
-UI::~UI()
+Context::~Context()
 {
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-#else
-    ImGuiSDL::Deinitialize();
-#endif
-
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
+    ui::shutdown();
 
     if (mInternal->Texture)
         SDL_DestroyTexture(mInternal->Texture);
@@ -1069,7 +972,7 @@ UI::~UI()
     mInternal->Buffer.clear();
 }
 
-void UI::setTitle(const char* str)
+void Context::setTitle(const char* str)
 {
     std::stringstream sstream;
 
@@ -1091,24 +994,9 @@ void UI::setTitle(const char* str)
     SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
 }
 
-UI::InputResult UI::handleInput(CameraProxy& cam)
+Context::InputResult Context::handleInput(CameraProxy& cam)
 {
     return mInternal->handleEvents(cam);
-}
-
-inline static void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_, bool start_)
-{
-    switch (markdownFormatInfo_.type) {
-    default:
-        ImGui::defaultMarkdownFormatCallback(markdownFormatInfo_, start_);
-        break;
-    case ImGui::MarkdownFormatType::EMPHASIS:
-        if (start_)
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.16f, 0.57f, 0.94f, 1));
-        else
-            ImGui::PopStyleColor();
-        break;
-    }
 }
 
 static void handleHelp()
@@ -1154,7 +1042,7 @@ static void handleHelp()
 )";
 
     ImGui::MarkdownConfig config;
-    config.formatCallback = markdownFormatCallback;
+    config.formatCallback = ui::markdownFormatCallback;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Once);
@@ -1163,7 +1051,7 @@ static void handleHelp()
     ImGui::End();
 }
 
-UI::UpdateResult UI::update()
+Context::UpdateResult Context::update()
 {
     mInternal->updateSurface();
     switch (mInternal->ScreenshotRequest) {
@@ -1181,11 +1069,7 @@ UI::UpdateResult UI::update()
     SDL_RenderClear(mInternal->Renderer);
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-#endif
-    ImGui::NewFrame();
+    ui::newFrame();
 
     UpdateResult result = UpdateResult::Continue;
     if (mInternal->isAnyWindowShown()) {
@@ -1194,18 +1078,13 @@ UI::UpdateResult UI::update()
             handleHelp();
     }
 
-    ImGui::Render();
-#ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
-#else
-    ImGuiSDL::Render(ImGui::GetDrawData());
-#endif
+    ui::renderFrame();
 
     SDL_RenderPresent(mInternal->Renderer);
     return result;
 }
 
-void UI::setTravelSpeed(float v)
+void Context::setTravelSpeed(float v)
 {
     mInternal->CurrentTravelSpeed = std::max(1e-5f, v);
 }

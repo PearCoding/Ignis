@@ -10,7 +10,7 @@
 // ImGUI based image inspector inspired by
 // https://github.com/CedricGuillemet/imgInspect
 
-namespace IG {
+namespace IG::ui {
 
 static inline ImVec2 operator+(const ImVec2& a, const ImVec2& b)
 {
@@ -124,4 +124,4 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, 
     ImGui::EndGroup();
     ImGui::EndTooltip();
 }
-} // namespace IG
+} // namespace IG::ui

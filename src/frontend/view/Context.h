@@ -16,10 +16,10 @@ enum class ToneMappingMethod {
 };
 
 class Runtime;
-class UI {
+class Context {
 public:
-    UI(SPPMode sppmode, Runtime* runtime, bool showDebug);
-    ~UI();
+    Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi);
+    ~Context();
 
     void setTitle(const char* str);
 
@@ -46,7 +46,7 @@ private:
     const SPPMode mSPPMode;
     DebugMode mDebugMode;
 
-    friend class UIInternal;
-    std::unique_ptr<class UIInternal> mInternal;
+    friend class ContextInternal;
+    std::unique_ptr<class ContextInternal> mInternal;
 };
 } // namespace IG

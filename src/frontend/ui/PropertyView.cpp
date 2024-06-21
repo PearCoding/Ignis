@@ -4,7 +4,7 @@
 
 #include "imgui.h"
 
-namespace IG {
+namespace IG::ui {
 
 static inline void draw_header()
 {
