@@ -46,9 +46,9 @@ public:
 
     virtual ~IRenderDevice() = default;
 
-    virtual void assignScene(const SceneSettings& settings)                                                                             = 0;
-    virtual void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, const ParameterSet* parameter_set) = 0;
-    virtual void resize(size_t width, size_t height)                                                                                    = 0;
+    virtual void assignScene(const SceneSettings& settings)                                                                       = 0;
+    virtual void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, ParameterSet* parameter_set) = 0;
+    virtual void resize(size_t width, size_t height)                                                                              = 0;
 
     virtual void releaseAll() = 0;
 
@@ -64,9 +64,11 @@ public:
 
     [[nodiscard]] virtual const Statistics* getStatistics() = 0;
 
-    virtual void tonemap(uint32_t*, const TonemapSettings&) = 0;
-    [[nodiscard]] virtual GlareOutput evaluateGlare(uint32_t*, const GlareSettings&) = 0;
-    [[nodiscard]] virtual ImageInfoOutput imageinfo(const ImageInfoSettings&) = 0;
+    virtual void tonemap(uint32_t*, const TonemapSettings&)                                                           = 0;
+    [[nodiscard]] virtual GlareOutput evaluateGlare(uint32_t*, const GlareSettings&)                                  = 0;
+    [[nodiscard]] virtual ImageInfoOutput imageinfo(const ImageInfoSettings&)                                         = 0;
     virtual void bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output) = 0;
+
+    
 };
 } // namespace IG

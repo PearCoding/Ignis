@@ -9,7 +9,7 @@ public:
     virtual ~Device();
 
     void assignScene(const SceneSettings& settings) override;
-    void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, const ParameterSet* parameter_set) override;
+    void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, ParameterSet* parameter_set) override;
     void resize(size_t width, size_t height) override;
 
     void releaseAll() override;

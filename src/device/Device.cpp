@@ -219,7 +219,7 @@ private:
     const Device::SetupSettings mSetupSettings;
     Device::SceneSettings mSceneSettings;
     Device::RenderSettings mCurrentRenderSettings;
-    const ParameterSet* mCurrentParameters = nullptr;
+    ParameterSet* mCurrentParameters = nullptr;
     TechniqueVariantShaderSet mCurrentShaderSet;
     Settings mCurrentDriverSettings;
 
@@ -275,7 +275,7 @@ public:
         mEntityCount   = mSceneSettings.database->FixTables.count("entities") > 0 ? mSceneSettings.database->FixTables.at("entities").entryCount() : 0;
     }
 
-    inline void updateForRender(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
+    inline void updateForRender(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, ParameterSet* parameterSet)
     {
         setupShaderSet(shaderSet);
         updateSettings(settings);
@@ -1569,6 +1569,30 @@ public:
             outA = defA;
         }
     }
+
+    void setParameterInt(const char* name, int value)
+    {
+        if (mCurrentParameters)
+            mCurrentParameters->IntParameters[name] = value;
+    }
+
+    void setParameterFloat(const char* name, float value)
+    {
+        if (mCurrentParameters)
+            mCurrentParameters->FloatParameters[name] = value;
+    }
+
+    void setParameterVector(const char* name, float valueX, float valueY, float valueZ)
+    {
+        if (mCurrentParameters)
+            mCurrentParameters->VectorParameters[name] = Vector3f(valueX, valueY, valueZ);
+    }
+
+    void setParameterColor(const char* name, float valueR, float valueG, float valueB, float valueA)
+    {
+        if (mCurrentParameters)
+            mCurrentParameters->ColorParameters[name] = Vector4f(valueR, valueG, valueB, valueA);
+    }
 };
 
 const Image Interface::MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
@@ -1636,7 +1660,7 @@ static inline void leaveDevice()
     disableMathMode();
 }
 
-void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, const ParameterSet* parameterSet)
+void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, ParameterSet* parameterSet)
 {
     enterDevice();
 
@@ -2063,6 +2087,26 @@ IG_EXPORT void ignis_get_parameter_vector(const char* name, float defX, float de
 IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a, bool global)
 {
     sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a, global);
+}
+
+IG_EXPORT void ignis_set_parameter_i32(const char* name, int value)
+{
+    sInterface->setParameterInt(name, value);
+}
+
+IG_EXPORT void ignis_set_parameter_f32(const char* name, float value)
+{
+    sInterface->setParameterFloat(name, value);
+}
+
+IG_EXPORT void ignis_set_parameter_vector(const char* name, float valueX, float valueY, float valueZ)
+{
+    sInterface->setParameterVector(name, valueX, valueY, valueZ);
+}
+
+IG_EXPORT void ignis_set_parameter_color(const char* name, float valueR, float valueG, float valueB, float valueA)
+{
+    sInterface->setParameterColor(name, valueR, valueG, valueB, valueA);
 }
 
 // Stats
