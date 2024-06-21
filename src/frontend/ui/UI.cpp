@@ -240,6 +240,7 @@ void renderFrame(SDL_Renderer* renderer)
 #ifndef USE_OLD_SDL
     ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
 #else
+    IG_UNUSED(renderer);
     ImGuiSDL::Render(ImGui::GetDrawData());
 #endif
 }
