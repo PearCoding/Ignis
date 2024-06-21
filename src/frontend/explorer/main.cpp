@@ -61,7 +61,7 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
 
     try {
-        MainWindow window(args.WindowWidth, args.WindowHeight);
+        MainWindow window(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
 
         auto renderWidget = std::make_shared<RenderWidget>();
         sRenderWidget     = renderWidget.get();

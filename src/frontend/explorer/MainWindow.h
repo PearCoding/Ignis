@@ -8,7 +8,7 @@ namespace IG {
 class Widget;
 class MainWindow {
 public:
-    MainWindow(size_t width, size_t height);
+    MainWindow(size_t width, size_t height, float dpi);
     ~MainWindow();
 
     bool exec();

@@ -18,5 +18,7 @@ public:
 
     size_t WindowWidth  = 1280;
     size_t WindowHeight = 720;
+
+    std::optional<float> DPI; // Only used for UI
 };
 } // namespace IG

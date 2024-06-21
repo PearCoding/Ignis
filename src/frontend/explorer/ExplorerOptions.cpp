@@ -40,6 +40,7 @@ ExplorerOptions::ExplorerOptions(int argc, char** argv, const std::string& desc)
 
     app.add_option("--width", WindowWidth, "Set initial window width");
     app.add_option("--height", WindowHeight, "Set initial window height");
+    app.add_option("--dpi", DPI, "Optional scaling factor for the UI. If not set, it will be acquired automatically");
 
     // Add some hidden commandline parameters
     bool listCLI = false;
