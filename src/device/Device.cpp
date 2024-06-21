@@ -38,6 +38,8 @@
     IG_UNUSED(sectionClosure)
 
 namespace IG {
+static const std::string_view DefaultFramebufferName = "Color";
+
 static inline size_t roundUp(size_t num, size_t multiple)
 {
     if (multiple == 0)
@@ -116,7 +118,7 @@ using DeviceBuffer = DeviceBufferBase<uint8_t>;
 using DeviceStream = DeviceBufferBase<float>;
 
 struct CPUData {
-    size_t ref_count = 0;
+    std::atomic<size_t> ref_count = 0;
     DeviceStream cpu_primary;
     DeviceStream cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
@@ -342,7 +344,7 @@ public:
         tlThreadData = nullptr;
         thread_data.clear();
 
-        const size_t req_threads = is_gpu ? (setup.target.threadCount() == 0 ? std::thread::hardware_concurrency() : setup.target.threadCount()) : 0;
+        const size_t req_threads = is_gpu ? 0 : (setup.target.threadCount() == 0 ? std::thread::hardware_concurrency() : setup.target.threadCount());
         const size_t max_threads = req_threads + 2 /* Host */;
 
         available_thread_data.clear();
@@ -403,23 +405,18 @@ public:
                 IG_LOG(L_FATAL) << "Registering thread 0x" << std::hex << std::this_thread::get_id() << " failed!" << std::endl;
             else
                 tlThreadData = ptr;
-
-            tlThreadData->ref_count = 0;
         }
 
-        tlThreadData->ref_count += 1;
+        tlThreadData->ref_count++;
     }
 
     inline void unregisterThread()
     {
         IG_ASSERT(tlThreadData != nullptr, "Expected registerThread together with a unregisterThread");
 
-        if (tlThreadData->ref_count <= 1) {
-            tlThreadData->ref_count = 0;
+        if (tlThreadData->ref_count.fetch_sub(1) == 1) {
             available_thread_data.push(tlThreadData);
             tlThreadData = nullptr;
-        } else {
-            tlThreadData->ref_count -= 1;
         }
     }
 
@@ -1311,7 +1308,7 @@ public:
     {
         IG_ASSERT(!is_gpu, "Should only be called if not GPU");
 
-        if (aov_name.empty() || aov_name == "Color")
+        if (aov_name.empty() || aov_name == DefaultFramebufferName)
             return Device::AOVAccessor{ getFilmImage(0), host_pixels.IterationCount };
 
         const auto it = aovs.find(aov_name);
@@ -1352,7 +1349,7 @@ public:
 
         if (is_gpu) {
             const int32_t dev = getDevID();
-            if (aov_name.empty() || aov_name == "Color") {
+            if (aov_name.empty() || aov_name == DefaultFramebufferName) {
                 if (!host_pixels.Mapped && devices[dev].film_pixels.data() != nullptr) {
                     _SECTION(SectionType::FramebufferHostUpdate);
                     anydsl::copy(devices[dev].film_pixels, host_pixels.Data);
@@ -1387,7 +1384,7 @@ public:
 
         if (is_gpu) {
             const int32_t dev = getDevID();
-            if (aov_name.empty() || aov_name == "Color") {
+            if (aov_name.empty() || aov_name == DefaultFramebufferName) {
                 return Device::AOVAccessor{ devices[dev].film_pixels.data(), host_pixels.IterationCount };
             } else {
                 const auto it = aovs.find(aov_name);
@@ -1408,7 +1405,7 @@ public:
         const std::lock_guard<std::mutex> guard(thread_mutex);
 
         const std::string aov_name = name ? std::string(name) : std::string{};
-        if (aov_name.empty() || aov_name == "Color") {
+        if (aov_name.empty() || aov_name == DefaultFramebufferName) {
             host_pixels.IterDiff = iter;
         } else {
             const auto it = aovs.find(aov_name);
@@ -1433,7 +1430,7 @@ public:
         if (!host_pixels.Data.data())
             return;
 
-        if (aov_name.empty() || aov_name == "Color") {
+        if (aov_name.empty() || aov_name == DefaultFramebufferName) {
             host_pixels.IterationCount = 0;
             host_pixels.IterDiff       = 0;
             std::memset(host_pixels.Data.data(), 0, sizeof(float) * host_pixels.Data.size());
@@ -1642,12 +1639,18 @@ void Device::releaseAll()
 
 Device::AOVAccessor Device::getFramebufferForHost(const std::string& name)
 {
-    return sInterface->getAOVImageForHost(name);
+    sInterface->registerThread();
+    const auto acc = sInterface->getAOVImageForHost(name);
+    sInterface->unregisterThread();
+    return acc;
 }
 
 Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name)
 {
-    return sInterface->getAOVImageForDevice(name);
+    sInterface->registerThread();
+    const auto acc = sInterface->getAOVImageForDevice(name);
+    sInterface->unregisterThread();
+    return acc;
 }
 
 void Device::clearAllFramebuffer()
