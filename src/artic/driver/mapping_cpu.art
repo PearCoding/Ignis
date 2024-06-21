@@ -1,3 +1,9 @@
+fn @cpu_request_buffer(name: &[u8], size: i32) -> DeviceBuffer {
+    let mut ptr : &[u8];
+    ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, 0);
+    make_cpu_buffer(ptr as &[f32], size)
+}
+
 // Swap functions ------------------------------------------------------------------
 fn @cpu_swap_ray_entry(rays: &RayStream, a: i32, b: i32) -> () {
     swap(&mut rays.id(a),    &mut rays.id(b));
@@ -907,6 +913,7 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
     parallel_reduce_f32     = @|n, elem, op| reduce[f32](make_cpu_parallel_reduce_handler(), n, elem, op),
     parallel_reduce_handler = make_cpu_parallel_reduce_handler(),
     get_device_buffer_accessor = @|| make_cpu_buffer,
+    get_shallow_buffer_accessor = @|| make_cpu_shallow_buffer,
     load_scene_bvh = @ |prim_type| {
         if vector_width >= 8 {
             let mut nodes: &[Node8];
@@ -923,13 +930,13 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
     load_dyntable = @ |name| -> DynTable {
         let mut table: DynTableData;
         ignis_load_dyntable(0, name, &mut table);
-        make_dyntable(table, make_cpu_buffer)
+        make_dyntable(table, make_cpu_shallow_buffer)
     },
-    load_fixtable = @ |name| -> DeviceBuffer {
+    load_fixtable = @ |name| -> ShallowBuffer {
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_fixtable(0, name, &mut ptr, &mut bytesize);
-        make_cpu_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
+        make_cpu_shallow_buffer(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32)
     },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
@@ -995,17 +1002,14 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
         ignis_request_buffer(0, name, &mut ptr, size * sizeof[i32]() as i32, flags);
         make_cpu_buffer(ptr as &[f32], size)
     },
-    make_buffer = make_cpu_buffer,
+    make_buffer_view = make_cpu_shallow_buffer,
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(0, id, filename),
     request_debug_output = @|| {
         if vector_width != 1 {
             // FIXME: Fix this for vectorized systems!
             make_fallback_debug_output()
         } else {
-            let mut ptr : &[u8];
-            let size = 4096;
-            ignis_request_buffer(0, "__dbg_output", &mut ptr, size * sizeof[i32]() as i32, 0);
-            let buffer = make_cpu_buffer(ptr as &[f32], size);
+            let buffer = cpu_request_buffer("__dbg_output", 4096);
             make_debug_output(buffer)
         }
     },

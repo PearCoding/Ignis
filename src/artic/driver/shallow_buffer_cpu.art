@@ -1,0 +1,38 @@
+fn @make_cpu_shallow_buffer(p: &[f32], count: i32) = ShallowBuffer {
+    load_f32    = @ |i| p(i),
+    load_i32    = @ |i| (p as &[i32])(i),
+    load_vec2   = @ |i| { make_vec2(p(i + 0), p(i + 1)) },
+    load_vec3   = @ |i| { make_vec3(p(i + 0), p(i + 1), p(i + 2)) },
+    load_vec4   = @ |i| { let v = (&p(i) as &[simd[f32 * 4]])(0); make_vec4(v(0), v(1), v(2), v(3)) },
+    load_int2   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1)) },
+    load_int3   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2)) },
+    //load_int4   = @ |i| { let q = p as &[i32]; (q(i + 0), q(i + 1), q(i + 2), q(i + 3)) },
+    load_int4   = @ |i| { let v = ((&p(i)) as &[simd[i32 * 4]])(0); (v(0), v(1), v(2), v(3)) },
+    load_mat3x3 = @ |i| {  
+        make_mat3x3(make_vec3(p(i + 0), p(i + 1), p(i + 2)),
+                    make_vec3(p(i + 3), p(i + 4), p(i + 5)),
+                    make_vec3(p(i + 6), p(i + 7), p(i + 8))) },
+    load_mat3x4 = @ |i| {
+        let q  = &p(i) as &[simd[f32 * 4]];
+        let v0 = q(0);
+        let v1 = q(1);
+        let v2 = q(2);
+        make_mat3x4(make_vec3(v0(0), v0(1), v0(2)),
+                    make_vec3(v0(3), v1(0), v1(1)),
+                    make_vec3(v1(2), v1(3), v2(0)),
+                    make_vec3(v2(1), v2(2), v2(3)))
+    },
+    load_mat4x4 = @ |i| {
+        let q  = &p(i) as &[simd[f32 * 4]];
+        let v0 = q(0);
+        let v1 = q(1);
+        let v2 = q(2);
+        let v3 = q(3);
+        make_mat4x4(make_vec4(v0(0), v0(1), v0(2), v0(3)),
+                    make_vec4(v1(0), v1(1), v1(2), v1(3)),
+                    make_vec4(v2(0), v2(1), v2(2), v2(3)),
+                    make_vec4(v3(0), v3(1), v3(2), v3(3)))
+    },
+    pointer  = @ |i| &p(i) as &[f32],
+    count    = count
+};

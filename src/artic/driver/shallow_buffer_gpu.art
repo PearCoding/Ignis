@@ -1,0 +1,57 @@
+fn @make_gpu_shallow_buffer(p: &addrspace(1)[f32], count: i32, access: DeviceBufferGlobalElementAccessor) = ShallowBuffer {
+    load_f32  = @ |i| access.load_f32(p, i),
+    load_i32  = @ |i| access.load_i32(p as &addrspace(1)[i32], i),
+    load_vec2 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec2(v.0, v.1)
+    },
+    load_vec3 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec3(v.0, v.1, v.2)
+    },
+    load_vec4 = @ |i| {
+        let v = access.load_vf32(p, i);
+        make_vec4(v.0, v.1, v.2, v.3)
+    },
+    load_int2 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1)
+    },
+    load_int3 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1, v.2)
+    },
+    load_int4 = @ |i| {
+        let v = access.load_vi32(p as &addrspace(1)[i32], i);
+        (v.0, v.1, v.2, v.3)
+    },
+    load_mat3x3 = @ |i| {
+        let v0 = access.load_vf32(p, i + 0);
+        let v1 = access.load_vf32(p, i + 4);
+        let v2 = access.load_vf32(p, i + 8);
+        make_mat3x3(make_vec3(v0.0, v0.1, v0.2),
+                    make_vec3(v0.3, v1.0, v1.1), 
+                    make_vec3(v1.2, v1.3, v2.0))
+    },
+    load_mat3x4 = @ |i| {
+        let v0 = access.load_vf32(p, i + 0);
+        let v1 = access.load_vf32(p, i + 4);
+        let v2 = access.load_vf32(p, i + 8);
+        make_mat3x4(make_vec3(v0.0, v0.1, v0.2),
+                    make_vec3(v0.3, v1.0, v1.1),
+                    make_vec3(v1.2, v1.3, v2.0),
+                    make_vec3(v2.1, v2.2, v2.3))
+    },
+    load_mat4x4 = @ |i| {
+        let v0 = access.load_vf32(p, i +  0);
+        let v1 = access.load_vf32(p, i +  4);
+        let v2 = access.load_vf32(p, i +  8);
+        let v3 = access.load_vf32(p, i + 12);
+        make_mat4x4(make_vec4(v0.0, v0.1, v0.2, v0.3),
+                    make_vec4(v1.0, v1.1, v1.2, v1.3),
+                    make_vec4(v2.0, v2.1, v2.2, v2.3), 
+                    make_vec4(v3.0, v3.1, v3.2, v3.3))
+    },
+    pointer   = @ |i| &p(i) as &[f32],
+    count     = count
+};

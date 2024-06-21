@@ -7,8 +7,7 @@ fn @make_byte_color(c : Color) = make_packed_color(
 );
 
 fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &TonemapSettings) -> () {
-    let buffer_in  = device.make_buffer(in_pixels           , width * height * 3);
-    let buffer_out = device.make_buffer(out_pixels as &[f32], width * height);
+    let buffer_in  = device.make_buffer_view(in_pixels, width * height * 3);
 
     let scale           = settings.scale;
     let exposure_factor = settings.exposure_factor;
@@ -21,11 +20,11 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
             let xyY = srgb_to_xyY(rgb);
     
             if math_builtins::isnan(xyY.b) {
-                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(0, 255, 255, 255))); // Cyan
+                out_pixels(ind) = bitcast[u32](make_packed_color(0, 255, 255, 255)); // Cyan
             } else if !math_builtins::isfinite(xyY.b) {
-                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 0, 150, 255))); // Pink
+                out_pixels(ind) = bitcast[u32](make_packed_color(255, 0, 150, 255)); // Pink
             } else if xyY.r < 0.0 || xyY.g < 0.0 || xyY.b < 0.0 {
-                buffer_out.store_i32(ind, bitcast[i32](make_packed_color(255, 255, 0, 255))); // Orange
+                out_pixels(ind) = bitcast[u32](make_packed_color(255, 255, 0, 255)); // Orange
             } else {
                 let L = exposure_factor * xyY.b + exposure_offset;
     
@@ -47,7 +46,7 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
                     color
                 };
     
-                buffer_out.store_i32(ind, bitcast[i32](make_byte_color(out_color)));
+                out_pixels(ind) = bitcast[u32](make_byte_color(out_color));
             }
         }
     }

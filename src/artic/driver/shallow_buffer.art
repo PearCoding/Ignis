@@ -1,0 +1,34 @@
+// Shallow buffer. Granularity is 4 byte per index. Might be on the host or the device. Read only.
+struct ShallowBuffer {
+    load_i32:    fn (i32) -> i32,
+    load_f32:    fn (i32) -> f32,
+    load_vec2:   fn (i32) -> Vec2,
+    load_vec3:   fn (i32) -> Vec3,
+    load_vec4:   fn (i32) -> Vec4,
+    load_int2:   fn (i32) -> (i32, i32),
+    load_int3:   fn (i32) -> (i32, i32, i32),
+    load_int4:   fn (i32) -> (i32, i32, i32, i32),
+    load_mat3x3: fn (i32) -> Mat3x3,
+    load_mat3x4: fn (i32) -> Mat3x4,
+    load_mat4x4: fn (i32) -> Mat4x4,
+    pointer:     fn (i32) -> &[f32],
+    count:       i32, // Given in units of i32, not bytes! Zero if unknown.
+}
+
+fn @shift_shallow_buffer(off: i32, count: i32, buffer: ShallowBuffer) = ShallowBuffer {
+    load_i32    = @|id| buffer.load_i32(id + off),
+    load_f32    = @|id| buffer.load_f32(id + off),
+    load_vec2   = @|id| buffer.load_vec2(id + off),
+    load_vec3   = @|id| buffer.load_vec3(id + off),
+    load_vec4   = @|id| buffer.load_vec4(id + off),
+    load_int2   = @|id| buffer.load_int2(id + off),
+    load_int3   = @|id| buffer.load_int3(id + off),
+    load_int4   = @|id| buffer.load_int4(id + off),
+    load_mat3x3 = @|id| buffer.load_mat3x3(id + off),
+    load_mat3x4 = @|id| buffer.load_mat3x4(id + off),
+    load_mat4x4 = @|id| buffer.load_mat4x4(id + off),
+    pointer     = @|id| buffer.pointer(id + off),
+    count       = count
+};
+
+type ShallowBufferAccessor = fn (&[f32], i32) -> ShallowBuffer;

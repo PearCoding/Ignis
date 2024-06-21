@@ -9,7 +9,7 @@ struct Shape {
 
 type ShapeTable  = fn (i32) -> Shape;
 
-fn @make_shape_table(dtb: DynTable, gen: fn (u32, DeviceBuffer) -> Shape) -> ShapeTable {
+fn @make_shape_table(dtb: DynTable, gen: fn (u32, ShallowBuffer) -> Shape) -> ShapeTable {
     @ |id| {
         let entry = dtb.lookup(id);
         let data  = dtb.data(entry.offset);
@@ -17,7 +17,7 @@ fn @make_shape_table(dtb: DynTable, gen: fn (u32, DeviceBuffer) -> Shape) -> Sha
     } 
 }
 
-fn @load_shape_table(device: Device, gen: fn (u32, DeviceBuffer) -> Shape) -> ShapeTable {
+fn @load_shape_table(device: Device, gen: fn (u32, ShallowBuffer) -> Shape) -> ShapeTable {
     let dtb = device.load_dyntable("shapes");
     make_shape_table(dtb, gen)
 }

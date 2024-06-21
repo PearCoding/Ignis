@@ -17,6 +17,12 @@ struct GPUKernelConfiguration {
     stream_capacity:                     i32,
 }
 
+fn @gpu_request_buffer(name: &[u8], dev_id: i32, size: i32, accb: DeviceBufferAccessor) -> DeviceBuffer {
+    let mut ptr : &[u8];
+    ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, 0);
+    accb(ptr as &[f32], size)
+}
+
 fn @gpu_get_film_data(dev_id: i32) -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
@@ -877,6 +883,7 @@ fn @make_gpu_device( dev_id: i32
                    , gpu_config: GPUKernelConfiguration
                    , min_max: MinMax
                    , accb: DeviceBufferAccessor
+                   , accs: ShallowBufferAccessor
                    , atomics: Atomics
                    , is_nvvm: bool
                    ) = Device {
@@ -969,23 +976,24 @@ fn @make_gpu_device( dev_id: i32
     parallel_reduce_i32     = @|n, elem, op| reduce[i32](make_gpu_parallel_reduce_handler(dev_id, acc, gpu_config), n, elem, op),
     parallel_reduce_f32     = @|n, elem, op| reduce[f32](make_gpu_parallel_reduce_handler(dev_id, acc, gpu_config), n, elem, op),
     parallel_reduce_handler = make_gpu_parallel_reduce_handler(dev_id, acc, gpu_config),
-    get_device_buffer_accessor = @|| accb,
+    get_device_buffer_accessor  = @|| accb,
+    get_shallow_buffer_accessor = @|| accs,
     load_scene_bvh = @|prim_type| {
         let mut nodes: &[Node2];
         let mut objs:  &[EntityLeaf1];
         ignis_load_bvh2_ent(dev_id, prim_type, &mut nodes, &mut objs);
-        make_gpu_bvh2_ent(nodes, objs, accb)
+        make_gpu_bvh2_ent(nodes, objs, accs)
     },
     load_dyntable = @ |name| -> DynTable {
         let mut table: DynTableData;
         ignis_load_dyntable(dev_id, name, &mut table);
-        make_dyntable(table, accb)
+        make_dyntable(table, accs)
     },
-    load_fixtable = @ |name| -> DeviceBuffer {
+    load_fixtable = @ |name| -> ShallowBuffer {
         let mut ptr      : &[u8];
         let mut bytesize : i32;
         ignis_load_fixtable(dev_id, name, &mut ptr, &mut bytesize);
-        accb(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */)
+        accs(ptr as &[f32], (bytesize as i64 / sizeof[i32]()) as i32 /* Byte to unit */)
     },
     load_image = @ |filename, channel_count| {
         let mut pixel_data : &[f32];
@@ -1091,7 +1099,7 @@ fn @make_gpu_device( dev_id: i32
         ignis_request_buffer(dev_id, name, &mut ptr, size * sizeof[i32]() as i32, flags);
         accb(ptr as &[f32], size)
     },
-    make_buffer = accb,
+    make_buffer_view = accs,
     dump_buffer = @ |id, filename| ignis_dbg_dump_buffer(dev_id, id, filename),
     request_debug_output = @|| {
         let mut ptr : &[u8];
@@ -1155,6 +1163,7 @@ fn @make_nvvm_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConfig
         gpu_config,
         make_default_min_max(), //make_nvvm_min_max(), // The NVVM min_max stuff seems to be slow compared to the default one
         @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
+        @ |ptr, size| make_gpu_shallow_buffer(ptr as &addrspace(1)[f32], size, accessor),
         atomics,
         true
     )
@@ -1190,6 +1199,7 @@ fn @make_amdgpu_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConf
         gpu_config,
         make_default_min_max(), //make_amdgpu_min_max(),
         @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
+        @ |ptr, size| make_gpu_shallow_buffer(ptr as &addrspace(1)[f32], size, accessor),
         atomics,
         false
     )

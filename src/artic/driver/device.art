@@ -60,6 +60,9 @@ struct Device {
     // Returns a callback function to create a virtual device buffer by providing a pointer on device memory
     get_device_buffer_accessor: fn () -> DeviceBufferAccessor,
 
+    // Returns a callback function to create a shallow buffer by providing a pointer
+    get_shallow_buffer_accessor: fn () -> ShallowBufferAccessor,
+
     //------------------------------------- Geometry
     // [Internal] Load the full scene bvh for a specific prim type
     load_scene_bvh: fn (&[u8]) -> SceneBvh,
@@ -68,7 +71,7 @@ struct Device {
     load_dyntable: fn (&[u8] /* Internal name */) -> DynTable,
 
     // [Internal] Load a specific fixtable constructed in the loading process. The fixtable is accessed via a device buffer
-    load_fixtable: fn (&[u8] /* Internal name */) -> DeviceBuffer,
+    load_fixtable: fn (&[u8] /* Internal name */) -> ShallowBuffer,
 
     // [Internal] Will load the rays given in 'tracing' mode
     load_rays: fn () -> &[StreamRay],
@@ -100,9 +103,9 @@ struct Device {
     // Keep in mind that size is given in units of i32. This means the actual byte size is size * 4 on most machines
     request_buffer: fn (&[u8] /* String identifier */, i32 /* Size in units!! */, i32 /* Reserved for future use */) -> DeviceBuffer,
 
-    // Handle given pointer as a device buffer.
+    // Handle given pointer as a shallow buffer.
     // This should only be used in very specific cases. No memory management is done from the runtime
-    make_buffer: fn (&[f32] /* Pointer to data! */, i32 /* Size in units!! */) -> DeviceBuffer,
+    make_buffer_view: fn (&[f32] /* Pointer to data! */, i32 /* Size in units!! */) -> ShallowBuffer,
 
     // Dump buffer given by the string identifier to a file. Should only be used for debug purposes
     dump_buffer: fn (&[u8] /* String identifier */, &[u8] /* Filename */) -> (),

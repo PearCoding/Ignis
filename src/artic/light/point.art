@@ -24,7 +24,7 @@ fn @load_simple_point_lights(count: i32, id_off: i32, device: Device) -> LightTa
     LightTable {
         count = count,
         get   = @|id| {
-            let data = shift_device_buffer(elem_s * id, elem_s, tbl);
+            let data = shift_shallow_buffer(elem_s * id, elem_s, tbl);
 
             let position  = data.load_vec4(0);
             let intensity = data.load_vec4(4);
