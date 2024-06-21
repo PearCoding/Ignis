@@ -114,15 +114,17 @@ public:
         if (!mLoading && mRuntime) {
             mRuntime->step();
 
-            if (mRuntime->currentIterationCount() > 0) {
-                // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
-                uint32* buf = mBuffer.data();
-                mRuntime->tonemap(buf, TonemapSettings{ "", (size_t)0, false, 1.0f, 1.0f, 0.0f });
+            if (ImGui::Begin("Render")) {
+                if (mRuntime->currentIterationCount() > 0) {
+                    // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
+                    uint32* buf = mBuffer.data();
+                    mRuntime->tonemap(buf, TonemapSettings{ "", (size_t)0, false, 1.0f, 1.0f, 0.0f });
 
-                SDL_UpdateTexture(mTexture, nullptr, buf, static_cast<int>(mWidth * sizeof(uint32_t)));
-
-                SDL_RenderCopy(sRenderer, mTexture, nullptr, nullptr);
+                    SDL_UpdateTexture(mTexture, nullptr, buf, static_cast<int>(mWidth * sizeof(uint32_t)));
+                    ImGui::Image((void*)mTexture, ImVec2(mRuntime->framebufferWidth(), mRuntime->framebufferHeight()));
+                }
             }
+            ImGui::End();
         }
     }
 
