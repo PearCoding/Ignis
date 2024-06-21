@@ -11,7 +11,7 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
 void shutdown();
 void notifyResize(SDL_Window* window, SDL_Renderer* renderer);
 void newFrame();
-void renderFrame();
+void renderFrame(SDL_Renderer* renderer);
 
 void processSDLEvent(const SDL_Event& event);
 void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_, bool start_);

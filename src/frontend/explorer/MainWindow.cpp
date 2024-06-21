@@ -94,7 +94,7 @@ public:
             for (const auto& child : mChildren)
                 child->onRender(nullptr);
 
-            ui::renderFrame();
+            ui::renderFrame(mRenderer);
 
             SDL_RenderPresent(mRenderer);
         }

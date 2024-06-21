@@ -1078,7 +1078,7 @@ Context::UpdateResult Context::update()
             handleHelp();
     }
 
-    ui::renderFrame();
+    ui::renderFrame(mInternal->Renderer);
 
     SDL_RenderPresent(mInternal->Renderer);
     return result;

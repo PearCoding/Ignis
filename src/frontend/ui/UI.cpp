@@ -12,8 +12,6 @@
 #include "imgui_old_sdl.h"
 #endif
 
-// #define _HAS_DOCKING
-
 namespace IG::ui {
 #ifdef USE_OLD_SDL
 static void handleOldSDL(const SDL_Event& event)
@@ -176,8 +174,8 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-#ifdef _HAS_DOCKING
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#ifdef IMGUI_HAS_DOCK
+    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     if (useDocking)
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -230,17 +228,17 @@ void newFrame()
 #endif
     ImGui::NewFrame();
 
-#ifdef _HAS_DOCKING
+#ifdef IMGUI_HAS_DOCK
     if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable)
         ImGui::DockSpaceOverViewport();
 #endif
 }
 
-void renderFrame()
+void renderFrame(SDL_Renderer* renderer)
 {
     ImGui::Render();
 #ifndef USE_OLD_SDL
-    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
 #else
     ImGuiSDL::Render(ImGui::GetDrawData());
 #endif

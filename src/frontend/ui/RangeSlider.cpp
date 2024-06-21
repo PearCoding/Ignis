@@ -171,7 +171,7 @@ bool RangeSliderFloat(const char* label, float* v1, float* v2, float v_min, floa
         single_display_format = DataTypeGetInfo(ImGuiDataType_Float)->PrintFmt;
 
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
-    const bool clicked = hovered && IsMouseClicked(0, id);
+    const bool clicked = hovered && IsMouseClicked(ImGuiMouseButton_Left, 0, id);
 
     const bool make_active = (clicked || g.NavActivateId == id);
     if (make_active && clicked)
