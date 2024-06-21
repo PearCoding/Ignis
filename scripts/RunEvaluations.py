@@ -41,6 +41,10 @@ def evaluate_target(ignis, scene_file, out_dir, spp, target):
     opts = ignis.RuntimeOptions.makeDefault()
     opts.Target = ignis.Target.pickCPU() if target == "cpu" else ignis.Target.pickGPU(0)
 
+    if not opts.Target.IsValid:
+        print(f"Can not setup a target for device type {target}")
+        return
+
     out_file = get_output_path(scene_file, out_dir, spp, target)
     with ignis.loadFromFile(str(scene_file), opts) as runtime:
         if runtime is None:
@@ -80,9 +84,10 @@ def error_image(img, ref):
     mask = ref != 0
     err = np.zeros_like(ref)
     err[mask] = np.square((img[mask] - ref[mask]) / ref[mask])       # RelSE
-    err[np.logical_not(mask)] = np.square(img[np.logical_not(mask)]) # AbsSE
+    err[np.logical_not(mask)] = np.square(img[np.logical_not(mask)])  # AbsSE
     max = np.percentile(err, 99)
-    avg = np.average(np.clip(err, 0, max)) # This is a questionable mixture, but allows some corner-cases with zero reference pixels
+    # This is a questionable mixture, but allows some corner-cases with zero reference pixels
+    avg = np.average(np.clip(err, 0, max))
     return (avg, np.clip(err / max, 0, 1) if max != 0 else np.zeros_like(ref))
 
 

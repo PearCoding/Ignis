@@ -13,16 +13,21 @@ def get_root_dir():
 
 def load_api():
     # Load the api and return a module object
+    
+    config = os.environ.get("IG_API_CONFIG", "Release")
 
     root_dir = get_root_dir()
     build_dir = root_dir.joinpath("build")
     if not build_dir.exists():
         raise RuntimeError("Could not find the build directory!")
 
-    # Some setups have an additional "Release" folder
-    build_dir2 = build_dir.joinpath("Release")
+    # Some setups have an additional "config" folder
+    build_dir2 = build_dir.joinpath(config)
     if build_dir2.exists():
         build_dir = build_dir2
+
+    if not build_dir.exists():
+        raise RuntimeError("Could not find the build directory!")
 
     api_dir = build_dir.joinpath("api")
     if not api_dir.exists():
