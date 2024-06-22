@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ParameterSet.h"
+#include "RenderPass.h"
 #include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
 #include "Statistics.h"
@@ -163,6 +165,9 @@ public:
 
     /// Get options used while creating the runtime
     [[nodiscard]] const RuntimeOptions& options() const { return mOptions; }
+
+    [[nodiscard]] std::shared_ptr<RenderPass> createPass(const std::string& src);
+    bool runPass(const RenderPass& pass);
 
 private:
     void checkCacheDirectory();

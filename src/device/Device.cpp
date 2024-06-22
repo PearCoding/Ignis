@@ -123,8 +123,8 @@ struct CPUData {
     DeviceStream cpu_secondary;
     TemporaryStorageHostProxy temporary_storage_host;
     Statistics stats;
-    const ParameterSet* current_local_registry = nullptr;
-    ShaderKey current_shader_key               = ShaderKey(0, ShaderType::Device, 0);
+    ParameterSet* current_local_registry = nullptr;
+    ShaderKey current_shader_key         = ShaderKey(0, ShaderType::Device, 0);
     std::unordered_map<ShaderKey, ShaderStats, ShaderKeyHash> shader_stats;
 };
 thread_local CPUData* tlThreadData = nullptr;
@@ -175,7 +175,7 @@ private:
 
         anydsl::Array<uint32_t> tonemap_pixels;
 
-        const ParameterSet* current_local_registry = nullptr;
+        ParameterSet* current_local_registry = nullptr;
         ShaderKey current_shader_key;
 
         inline DeviceData()
@@ -463,20 +463,20 @@ public:
     {
         if (isGPU()) {
             auto data                          = getThreadData();
-            mDeviceData.current_local_registry = &shader.LocalRegistry;
+            mDeviceData.current_local_registry = shader.LocalRegistry.get();
             mDeviceData.current_shader_key     = key;
             data->shader_stats[key].call_count++;
             data->shader_stats[key].workload_count += (size_t)workload;
         } else {
             auto data                    = getThreadData();
-            data->current_local_registry = &shader.LocalRegistry;
+            data->current_local_registry = shader.LocalRegistry.get();
             data->current_shader_key     = key;
             data->shader_stats[key].call_count++;
             data->shader_stats[key].workload_count += (size_t)workload;
         }
     }
 
-    inline const ParameterSet* getCurrentLocalRegistry()
+    inline ParameterSet* getCurrentLocalRegistry()
     {
         if (isGPU())
             return mDeviceData.current_local_registry;
@@ -1285,6 +1285,28 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::Bake, {});
     }
 
+    inline void runPassShader(const ShaderOutput<void*>& shader)
+    {
+        IG_ASSERT(shader.Exec != nullptr, "Expected pass shader to be valid");
+
+        if (mSetupSettings.DebugTrace)
+            IG_LOG(L_DEBUG) << "TRACE> Pass Shader" << std::endl;
+
+        if (mSetupSettings.AcquireStats)
+            getThreadData()->stats.beginShaderLaunch(ShaderType::Pass, 1, {});
+
+        using Callback = decltype(ig_pass_main);
+        auto callback  = reinterpret_cast<Callback*>(shader.Exec);
+
+        setCurrentShader(1, ShaderKey(0, ShaderType::Pass, 0), shader);
+        callback(&mCurrentDriverSettings);
+
+        checkDebugOutput();
+
+        if (mSetupSettings.AcquireStats)
+            getThreadData()->stats.endShaderLaunch(ShaderType::Pass, {});
+    }
+
     // ---------------------------------------------------- Framebuffer/AOV stuff
 
     inline anydsl::Array<float> createFramebuffer(int dev) const
@@ -1570,28 +1592,32 @@ public:
         }
     }
 
-    void setParameterInt(const char* name, int value)
+    void setParameterInt(const char* name, int value, bool global)
     {
-        if (mCurrentParameters)
-            mCurrentParameters->IntParameters[name] = value;
+        ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
+        if (registry)
+            registry->IntParameters[name] = value;
     }
 
-    void setParameterFloat(const char* name, float value)
+    void setParameterFloat(const char* name, float value, bool global)
     {
-        if (mCurrentParameters)
-            mCurrentParameters->FloatParameters[name] = value;
+        ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
+        if (registry)
+            registry->FloatParameters[name] = value;
     }
 
-    void setParameterVector(const char* name, float valueX, float valueY, float valueZ)
+    void setParameterVector(const char* name, float valueX, float valueY, float valueZ, bool global)
     {
-        if (mCurrentParameters)
-            mCurrentParameters->VectorParameters[name] = Vector3f(valueX, valueY, valueZ);
+        ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
+        if (registry)
+            registry->VectorParameters[name] = Vector3f(valueX, valueY, valueZ);
     }
 
-    void setParameterColor(const char* name, float valueR, float valueG, float valueB, float valueA)
+    void setParameterColor(const char* name, float valueR, float valueG, float valueB, float valueA, bool global)
     {
-        if (mCurrentParameters)
-            mCurrentParameters->ColorParameters[name] = Vector4f(valueR, valueG, valueB, valueA);
+        ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
+        if (registry)
+            registry->ColorParameters[name] = Vector4f(valueR, valueG, valueB, valueA);
     }
 };
 
@@ -1823,6 +1849,15 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
     enterDevice();
 
     sInterface->runBakeShader(shader, resource_map, output);
+
+    leaveDevice();
+}
+
+void Device::runPass(const ShaderOutput<void*>& shader)
+{
+    enterDevice();
+
+    sInterface->runPassShader(shader);
 
     leaveDevice();
 }
@@ -2089,24 +2124,24 @@ IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float def
     sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a, global);
 }
 
-IG_EXPORT void ignis_set_parameter_i32(const char* name, int value)
+IG_EXPORT void ignis_set_parameter_i32(const char* name, int value, bool global)
 {
-    sInterface->setParameterInt(name, value);
+    sInterface->setParameterInt(name, value, global);
 }
 
-IG_EXPORT void ignis_set_parameter_f32(const char* name, float value)
+IG_EXPORT void ignis_set_parameter_f32(const char* name, float value, bool global)
 {
-    sInterface->setParameterFloat(name, value);
+    sInterface->setParameterFloat(name, value, global);
 }
 
-IG_EXPORT void ignis_set_parameter_vector(const char* name, float valueX, float valueY, float valueZ)
+IG_EXPORT void ignis_set_parameter_vector(const char* name, float valueX, float valueY, float valueZ, bool global)
 {
-    sInterface->setParameterVector(name, valueX, valueY, valueZ);
+    sInterface->setParameterVector(name, valueX, valueY, valueZ, global);
 }
 
-IG_EXPORT void ignis_set_parameter_color(const char* name, float valueR, float valueG, float valueB, float valueA)
+IG_EXPORT void ignis_set_parameter_color(const char* name, float valueR, float valueG, float valueB, float valueA, bool global)
 {
-    sInterface->setParameterColor(name, valueR, valueG, valueB, valueA);
+    sInterface->setParameterColor(name, valueR, valueG, valueB, valueA, global);
 }
 
 // Stats

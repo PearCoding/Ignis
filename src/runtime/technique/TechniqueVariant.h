@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RuntimeStructs.h"
+#include "ParameterSet.h"
 
 namespace IG {
 enum class CallbackType {
@@ -12,7 +12,7 @@ enum class CallbackType {
 template <typename T>
 struct ShaderOutput {
     T Exec;
-    ParameterSet LocalRegistry;
+    std::shared_ptr<ParameterSet> LocalRegistry;
 };
 
 template <typename T>

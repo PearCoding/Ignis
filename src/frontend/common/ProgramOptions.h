@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Logger.h"
+#include "ParameterSet.h"
 #include "RuntimeSettings.h"
 #include "RuntimeStructs.h"
 #include "SPPMode.h"
@@ -90,7 +91,7 @@ public:
     Path ScriptDir;
 
     ParameterSet UserEntries;
-    
+
     std::optional<float> DPI; // Only used for UI
 
     void populate(RuntimeOptions& options) const;

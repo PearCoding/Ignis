@@ -476,11 +476,11 @@ const Statistics* Runtime::statistics() const
 
 static void dumpRegistries(std::ostream& stream, const std::string& name, const ShaderOutput<void*>& shader)
 {
-    if (shader.Exec == nullptr || shader.LocalRegistry.empty())
+    if (shader.Exec == nullptr || shader.LocalRegistry == nullptr || shader.LocalRegistry->empty())
         return;
 
     stream << "Registry '" << name << "' at setup:" << std::endl
-           << shader.LocalRegistry.dump();
+           << shader.LocalRegistry->dump();
 }
 
 static void dumpRegistries(std::ostream& stream, const TechniqueVariantBase<void*>& variant)
@@ -742,5 +742,20 @@ void Runtime::handleTime()
         const auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - mStartTime);
         setParameter("__time", (float)dur.count() / 1000.0f);
     }
+}
+
+std::shared_ptr<RenderPass> Runtime::createPass(const std::string& shaderCode)
+{
+    void* callback = mCompiler->compile(shaderCode, "ig_pass_main");
+    if (!callback)
+        return nullptr;
+
+    return std::make_shared<RenderPass>(this, callback);
+}
+
+bool Runtime::runPass(const RenderPass& pass)
+{
+    // TODO:
+    return false;
 }
 } // namespace IG

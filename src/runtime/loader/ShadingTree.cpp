@@ -526,7 +526,7 @@ Image ShadingTree::computeImage(const std::string& name, const Transpiler::Resul
 
     Image image          = Image::createSolidImage(Vector4f::Zero(), width, height);
     const auto resources = mContext.generateResourceMap();
-    mContext.Options.Device->bake(ShaderOutput<void*>{ shader, mContext.LocalRegistry }, &resources, image.pixels.get());
+    mContext.Options.Device->bake(ShaderOutput<void*>{ shader, std::make_shared<ParameterSet>(mContext.LocalRegistry) }, &resources, image.pixels.get());
     return image;
 }
 

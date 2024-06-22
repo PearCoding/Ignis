@@ -108,7 +108,7 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
                 output.Exec = func();
                 if (output.Exec.empty())
                     throw std::runtime_error("Constructed empty " + name + " shader.");
-                output.LocalRegistry = std::move(ctx.LocalRegistry);
+                output.LocalRegistry = std::make_shared<ParameterSet>(std::move(ctx.LocalRegistry));
             } catch (const std::exception& e) {
                 IG_LOG(L_ERROR) << "Exception in " << name << " shader for variant " << i << ": " << e.what() << std::endl;
                 ctx.signalError();

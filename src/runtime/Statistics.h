@@ -20,6 +20,7 @@ enum class ShaderType {
     Glare,
     ImageInfo,
     Bake,
+    Pass,
 
     _COUNT
 };

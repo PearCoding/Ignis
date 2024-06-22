@@ -27,6 +27,22 @@ mod registry {
         super::make_color(r, g, b, a)
     }
 
+    fn @set_global_parameter_i32(name: &[u8], value: i32) -> () {
+        super::ignis_set_parameter_i32(name, value, true)
+    }
+
+    fn @set_global_parameter_f32(name: &[u8], value: f32) -> () {
+        super::ignis_set_parameter_f32(name, value, true)
+    }
+
+    fn @set_global_parameter_vec3(name: &[u8], value: all::Vec3) -> () {
+        super::ignis_set_parameter_vector(name, value.x, value.y, value.z, true)
+    }
+
+    fn @set_global_parameter_color(name: &[u8], value: all::Color) -> () {
+        super::ignis_set_parameter_color(name, value.r, value.g, value.b, value.a, true)
+    }
+
     fn @get_local_parameter_i32(name: &[u8], def: i32) -> i32 {
         super::ignis_get_parameter_i32(name, def, false)
     }
@@ -52,19 +68,19 @@ mod registry {
         super::make_color(r, g, b, a)
     }
 
-    fn @set_global_parameter_i32(name: &[u8], value: i32) -> () {
-        super::ignis_set_parameter_i32(name, value)
+    fn @set_local_parameter_i32(name: &[u8], value: i32) -> () {
+        super::ignis_set_parameter_i32(name, value, false)
     }
 
-    fn @set_global_parameter_f32(name: &[u8], value: f32) -> () {
-        super::ignis_set_parameter_f32(name, value)
+    fn @set_local_parameter_f32(name: &[u8], value: f32) -> () {
+        super::ignis_set_parameter_f32(name, value, false)
     }
 
-    fn @set_global_parameter_vec3(name: &[u8], value: all::Vec3) -> () {
-        super::ignis_set_parameter_vector(name, value.x, value.y, value.z)
+    fn @set_local_parameter_vec3(name: &[u8], value: all::Vec3) -> () {
+        super::ignis_set_parameter_vector(name, value.x, value.y, value.z, false)
     }
 
-    fn @set_global_parameter_color(name: &[u8], value: all::Color) -> () {
-        super::ignis_set_parameter_color(name, value.r, value.g, value.b, value.a)
+    fn @set_local_parameter_color(name: &[u8], value: all::Color) -> () {
+        super::ignis_set_parameter_color(name, value.r, value.g, value.b, value.a, false)
     }
 }
