@@ -24,6 +24,10 @@ public:
     void clearFramebuffer(const std::string& name) override;
     void clearAllFramebuffer() override;
 
+    [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name) override;
+    [[nodiscard]] bool copyBufferToHost(const std::string& name, void* buffer, size_t maxSizeByte) override;
+    [[nodiscard]] BufferAccessor getBufferForDevice(const std::string& name) override;
+
     [[nodiscard]] const Statistics* getStatistics() override;
 
     void tonemap(uint32_t*, const TonemapSettings&) override;

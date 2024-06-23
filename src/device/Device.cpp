@@ -883,6 +883,36 @@ public:
         }
     }
 
+    inline size_t getBufferSize(const std::string& buffer_name)
+    {
+        return getBufferForDevice(buffer_name).SizeInBytes;
+    }
+
+    inline bool copyBufferToHost(const std::string& buffer_name, void* dst, size_t maxSizeByte)
+    {
+        const auto acc = getBufferForDevice(buffer_name);
+        if (!acc.Data)
+            return false;
+
+        if (acc.SizeInBytes > maxSizeByte)
+            return false;
+
+        anydsl_copy(mDeviceID, acc.Data, 0, 0 /* Host */, dst, 0, acc.SizeInBytes);
+
+        return true;
+    }
+
+    inline Device::BufferAccessor getBufferForDevice(const std::string& buffer_name)
+    {
+        auto& buffers = mDeviceData.buffers;
+        if (auto it = buffers.find(buffer_name); it != buffers.end()) {
+            const size_t size = (size_t)it->second.Data.size();
+
+            return Device::BufferAccessor{ .Data = it->second.Data.data(), .SizeInBytes = size };
+        }
+        return Device::BufferAccessor{ .Data = nullptr, .SizeInBytes = 0 };
+    }
+
     inline void dumpBuffer(const std::string& name, const std::string& filename)
     {
         std::lock_guard<std::mutex> _guard(mThreadMutex);
@@ -1498,7 +1528,6 @@ public:
             }
         }
     }
-
 #ifdef IG_HAS_DENOISER
     inline void denoise()
     {
@@ -1738,6 +1767,30 @@ void Device::clearAllFramebuffer()
 void Device::clearFramebuffer(const std::string& name)
 {
     sInterface->clearAOV(name);
+}
+
+size_t Device::getBufferSizeInBytes(const std::string& name)
+{
+    sInterface->registerThread();
+    const size_t size = sInterface->getBufferSize(name);
+    sInterface->unregisterThread();
+    return size;
+}
+
+bool Device::copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte)
+{
+    sInterface->registerThread();
+    const auto successful = sInterface->copyBufferToHost(name, dst, maxSizeByte);
+    sInterface->unregisterThread();
+    return successful;
+}
+
+Device::BufferAccessor Device::getBufferForDevice(const std::string& name)
+{
+    sInterface->registerThread();
+    const auto acc = sInterface->getBufferForDevice(name);
+    sInterface->unregisterThread();
+    return acc;
 }
 
 const Statistics* Device::getStatistics()

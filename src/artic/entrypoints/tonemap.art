@@ -63,3 +63,62 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
     
     device.sync();
 }
+
+
+fn @ig_tonemap_pipeline2(device: Device, in_pixels: AOVImage, out_pixels: DeviceBuffer, settings: &TonemapSettings) -> () {
+    let scale           = settings.scale;
+    let exposure_factor = settings.exposure_factor;
+    let exposure_offset = settings.exposure_offset;
+
+    fn @tonemap(method: i32, use_gamma: bool) -> () {
+        for x,y in device.parallel_range_2d(0, in_pixels.width, 0, in_pixels.height) {
+            // TODO: It would be more load friendly if the image buffer was actually 4 units per component, instead of 3
+            let pixel = make_pixelcoord_from_xy(x,y, in_pixels.width, in_pixels.height, 0, 0);
+
+            let rgb = color_mulf(in_pixels.get(pixel), scale);
+            let xyY = srgb_to_xyY(rgb);
+    
+            if math_builtins::isnan(xyY.b) {
+                out_pixels.store_i32(pixel.linear, bitcast[i32](make_packed_color(0, 255, 255, 255))); // Cyan
+            } else if !math_builtins::isfinite(xyY.b) {
+                out_pixels.store_i32(pixel.linear, bitcast[i32](make_packed_color(255, 0, 150, 255))); // Pink
+            } else if xyY.r < 0.0 || xyY.g < 0.0 || xyY.b < 0.0 {
+                out_pixels.store_i32(pixel.linear, bitcast[i32](make_packed_color(255, 255, 0, 255))); // Orange
+            } else {
+                let L = exposure_factor * xyY.b + exposure_offset;
+    
+                let nL = match method {
+                    0 => L,
+                    1 => tonemapping::reinhard(L),
+                    2 => tonemapping::reinhard_modified(L),
+                    3 => tonemapping::aces(L),
+                    _ => tonemapping::uncharted2(L)
+                };
+    
+                let color = xyY_to_srgb(make_color(xyY.r, xyY.g, nL, 1));
+                let out_color = if use_gamma {
+                    make_color(srgb_gamma(color.r),
+                               srgb_gamma(color.g),
+                               srgb_gamma(color.b),
+                               color.a)
+                } else { 
+                    color
+                };
+    
+                out_pixels.store_i32(pixel.linear, bitcast[i32](make_byte_color(out_color)));
+            }
+        }
+    }
+
+    // Force expansion of the actual methods
+    fn @tonemap2(method: i32) = if settings.use_gamma { tonemap(method, true) } else { tonemap(method, false) };
+    match settings.method {
+        0 => tonemap2(0),
+        1 => tonemap2(1),
+        2 => tonemap2(2),
+        3 => tonemap2(3),
+        _ => tonemap2(4)
+    };
+    
+    device.sync();
+}

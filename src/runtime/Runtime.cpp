@@ -461,6 +461,21 @@ void Runtime::clearFramebuffer(const std::string& name)
     mDevice->clearFramebuffer(name);
 }
 
+size_t Runtime::getBufferSizeInBytes(const std::string& name) const
+{
+    return mDevice->getBufferSizeInBytes(name);
+}
+
+BufferAccessor Runtime::getBufferForDevice(const std::string& name) const
+{
+    return mDevice->getBufferForDevice(name);
+}
+
+bool Runtime::copyBufferToHost(const std::string& name, void* dst, size_t maxSizeInBytes)
+{
+    return mDevice->copyBufferToHost(name, dst, maxSizeInBytes);
+}
+
 void Runtime::reset()
 {
     clearFramebuffer();

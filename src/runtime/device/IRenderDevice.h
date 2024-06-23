@@ -44,6 +44,11 @@ public:
         size_t IterationCount;
     };
 
+    struct BufferAccessor {
+        void* Data;
+        size_t SizeInBytes;
+    };
+
     virtual ~IRenderDevice() = default;
 
     virtual void assignScene(const SceneSettings& settings)                                                                       = 0;
@@ -61,6 +66,10 @@ public:
     [[nodiscard]] virtual AOVAccessor getFramebufferForDevice(const std::string& name) = 0;
     virtual void clearFramebuffer(const std::string& name)                             = 0;
     virtual void clearAllFramebuffer()                                                 = 0;
+
+    [[nodiscard]] virtual size_t getBufferSizeInBytes(const std::string& name)                             = 0;
+    [[nodiscard]] virtual bool copyBufferToHost(const std::string& name, void* buffer, size_t maxSizeByte) = 0;
+    [[nodiscard]] virtual BufferAccessor getBufferForDevice(const std::string& name)                       = 0;
 
     [[nodiscard]] virtual const Statistics* getStatistics() = 0;
 

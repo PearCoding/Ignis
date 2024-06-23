@@ -17,7 +17,8 @@ namespace IG {
 struct LoaderOptions;
 class Scene;
 
-using AOVAccessor = IRenderDevice::AOVAccessor;
+using AOVAccessor    = IRenderDevice::AOVAccessor;
+using BufferAccessor = IRenderDevice::BufferAccessor;
 
 class IG_LIB Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
@@ -72,6 +73,10 @@ public:
     void clearFramebuffer();
     /// Will clear specific framebuffer
     void clearFramebuffer(const std::string& name);
+
+    [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name) const;
+    [[nodiscard]] BufferAccessor getBufferForDevice(const std::string& name) const;
+    bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeInBytes);
 
     /// Return all names of the enabled AOVs
     [[nodiscard]] inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
