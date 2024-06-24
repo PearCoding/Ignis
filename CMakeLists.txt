@@ -125,7 +125,7 @@ include(cmake/ExtraUtils.cmake)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Make sure we use march native
-option(IG_OPTIMIZE_FOR_NATIVE "Build with -march=native if possible" ON)
+option(IG_OPTIMIZE_FOR_NATIVE "Build with -march=native if possible. Not recommended for deployment" OFF)
 include(CheckCXXCompilerFlag)
 if(IG_OPTIMIZE_FOR_NATIVE)
 	set(NATIVE_FLAG "-march=native")
