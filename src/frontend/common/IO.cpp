@@ -12,8 +12,9 @@ namespace IG {
 bool saveImageRGB(const Path& path, const float* rgb, size_t width, size_t height, float scale)
 {
     Image img;
-    img.width  = width;
-    img.height = height;
+    img.width    = width;
+    img.height   = height;
+    img.channels = 4;
     img.pixels.reset(new float[width * height * 4]);
 
     const auto pixelF = [&](size_t ind) {
@@ -39,8 +40,9 @@ bool saveImageRGB(const Path& path, const float* rgb, size_t width, size_t heigh
 bool saveImageRGBA(const Path& path, const float* rgb, size_t width, size_t height, float scale)
 {
     Image img;
-    img.width  = width;
-    img.height = height;
+    img.width    = width;
+    img.height   = height;
+    img.channels = 4;
     img.pixels.reset(new float[width * height * 4]);
 
     const auto pixelF = [&](size_t ind) {
