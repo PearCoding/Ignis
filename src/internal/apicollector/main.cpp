@@ -1,3 +1,4 @@
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -29,14 +30,20 @@ int main(int argc, char** argv)
     std::vector<std::filesystem::path> inputs;
     std::filesystem::path output;
 
-    if (argc < 3) {
+    if (argc < 2) {
         std::cerr << "Not enough arguments given..." << std::endl;
         return EXIT_FAILURE;
     }
 
     // Get parameters
-    for (int i = 1; i < argc - 1; ++i)
-        inputs.emplace_back(argv[i]);
+    std::string prefix = "ig_api";
+    for (int i = 1; i < argc - 1; ++i) {
+        if (std::strcmp("--prefix", argv[i]) == 0) {
+            prefix = argv[++i];
+        } else {
+            inputs.emplace_back(argv[i]);
+        }
+    }
 
     output = argv[argc - 1];
 
@@ -65,7 +72,7 @@ int main(int argc, char** argv)
 
     // Construct header
     stream << std::endl
-           << "const char* ig_api[] = {" << std::endl;
+           << "const char* " << prefix << "[] = {" << std::endl;
     for (const auto& input : inputs) {
         std::string name = get_name(input);
         stream << "  s_" << name << "," << std::endl;
@@ -74,7 +81,7 @@ int main(int argc, char** argv)
            << "};" << std::endl;
 
     stream << std::endl
-           << "const char* ig_api_paths[] = {" << std::endl;
+           << "const char* " << prefix << "_paths[] = {" << std::endl;
     for (const auto& input : inputs) {
         std::string filename  = input.filename().generic_u8string();
         std::string directory = input.parent_path().stem().generic_u8string();
