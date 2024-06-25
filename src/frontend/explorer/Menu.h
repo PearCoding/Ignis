@@ -11,7 +11,7 @@ public:
     Menu(const std::string& name);
     virtual ~Menu();
 
-    void onResize(Widget* parent, size_t width, size_t height) override;
+    void onWindowResize(Widget* parent, size_t width, size_t height) override;
     void onRender(Widget* parent) override;
     void onInput(Widget* parent) override;
 

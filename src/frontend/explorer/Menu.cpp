@@ -14,13 +14,13 @@ Menu::~Menu()
 {
 }
 
-void Menu::onResize(Widget* parent, size_t width, size_t height)
+void Menu::onWindowResize(Widget* parent, size_t width, size_t height)
 {
     IG_UNUSED(parent);
 
     for (const auto& p : mItems) {
         if (std::holds_alternative<std::shared_ptr<Menu>>(p))
-            std::get<std::shared_ptr<Menu>>(p)->onResize(this, width, height);
+            std::get<std::shared_ptr<Menu>>(p)->onWindowResize(this, width, height);
     }
 }
 

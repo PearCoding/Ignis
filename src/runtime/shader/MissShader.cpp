@@ -17,7 +17,7 @@ std::string MissShader::setup(LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_miss_shader(settings: &Settings, first: i32, last: i32) -> () {" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Options) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl
            << std::endl;

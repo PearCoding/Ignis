@@ -226,15 +226,15 @@ bool Runtime::loadFromScene(const Scene* scene)
     }
 }
 
-bool Runtime::load(const Path& path, const Scene* scene)
+LoaderOptions Runtime::loaderOptions() const
 {
     LoaderOptions lopts;
-    lopts.FilePath          = path;
+    lopts.FilePath          = Path{};
     lopts.EnableCache       = mOptions.EnableCache;
-    lopts.CachePath         = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_string())) : mOptions.CacheDir;
+    lopts.CachePath         = mOptions.CacheDir;
     lopts.Target            = mOptions.Target;
     lopts.IsTracer          = mOptions.IsTracer;
-    lopts.Scene             = scene;
+    lopts.Scene             = nullptr;
     lopts.Specialization    = mOptions.Specialization;
     lopts.EnableTonemapping = mOptions.EnableTonemapping;
     lopts.Denoiser          = mOptions.Denoiser;
@@ -242,6 +242,15 @@ bool Runtime::load(const Path& path, const Scene* scene)
     lopts.Glare             = mOptions.Glare;
     lopts.Compiler          = mCompiler.get();
     lopts.Device            = mDevice.get();
+    return lopts;
+}
+
+bool Runtime::load(const Path& path, const Scene* scene)
+{
+    LoaderOptions lopts = loaderOptions();
+    lopts.FilePath      = path;
+    lopts.Scene         = scene;
+    lopts.CachePath     = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_string())) : mOptions.CacheDir;
 
     mHasSceneParameters = !scene->parameters().empty();
 
@@ -746,7 +755,9 @@ void Runtime::handleTime()
 
 std::shared_ptr<RenderPass> Runtime::createPass(const std::string& shaderCode)
 {
-    void* callback = mCompiler->compile(shaderCode, "ig_pass_main");
+    IG_ASSERT(mCompiler, "Expected a valid compiler");
+    const std::string fullShader = mCompiler->prepare(shaderCode);
+    void* callback               = mCompiler->compile(fullShader, "ig_pass_main");
     if (!callback)
         return nullptr;
 
@@ -755,7 +766,9 @@ std::shared_ptr<RenderPass> Runtime::createPass(const std::string& shaderCode)
 
 bool Runtime::runPass(const RenderPass& pass)
 {
-    // TODO:
-    return false;
+    mDevice->runPass(ShaderOutput<void*>{
+        .Exec          = pass.internalCallback(),
+        .LocalRegistry = pass.parameter() });
+    return true;
 }
 } // namespace IG

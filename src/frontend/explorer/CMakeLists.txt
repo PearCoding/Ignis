@@ -5,9 +5,17 @@ CPMAddPackage(
     DOWNLOAD_ONLY YES
 )
 
+set(SHADER ${CMAKE_CURRENT_SOURCE_DIR}/shader.art)
+set(SHADER_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/shader.cpp)
+add_custom_command(
+  OUTPUT ${SHADER_SRC_FILE}
+  COMMAND $<TARGET_FILE:ig_api_collector> --prefix ig_shader ${SHADER} ${SHADER_SRC_FILE}
+  DEPENDS ${SHADER}
+  VERBATIM)
+
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "*.cpp")
 
-add_executable(igexplorer ${SRC})
+add_executable(igexplorer ${SRC} ${SHADER_SRC_FILE})
 target_include_directories(igexplorer SYSTEM PUBLIC ${portable_file_dialogs_SOURCE_DIR})
 target_link_libraries(igexplorer PRIVATE ig_lib_ui ig_lib_common)
 add_lto(igexplorer)

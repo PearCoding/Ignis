@@ -16,7 +16,7 @@ std::string TraversalShader::begin(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_traversal_shader(settings: &Settings, size: i32) -> () {" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Options) << std::endl
            << "  let entities = load_entity_table(device); maybe_unused(entities);" << std::endl;
 
     return stream.str();
