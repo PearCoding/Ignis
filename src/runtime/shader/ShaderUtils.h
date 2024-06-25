@@ -4,10 +4,11 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
+struct LoaderOptions;
 class ShapeProvider;
 class ShaderUtils {
 public:
-    static std::string constructDevice(const LoaderContext& ctx);
+    static std::string constructDevice(const LoaderOptions& opts);
     static std::string generateDatabase(const LoaderContext& ctx);
     static std::string generateShapeLookup(const LoaderContext& ctx);
     static std::string generateShapeLookup(const std::string& varname, ShapeProvider* provider, const LoaderContext& ctx);
@@ -17,7 +18,7 @@ public:
     static std::string beginCallback(const LoaderContext& ctx);
     static std::string endCallback();
 
-    static std::string inlineSPI(const LoaderContext& ctx);
+    static std::string inlineSPI(const LoaderOptions& opts);
     static std::string inlineSceneBBox(const LoaderContext& ctx);
     static std::string inlineScene(const LoaderContext& ctx, bool embed);
     static std::string inlinePayloadInfo(const LoaderContext& ctx);

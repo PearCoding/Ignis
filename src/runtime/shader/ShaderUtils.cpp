@@ -10,21 +10,21 @@
 #include <sstream>
 
 namespace IG {
-std::string ShaderUtils::constructDevice(const LoaderContext& ctx)
+std::string ShaderUtils::constructDevice(const LoaderOptions& opts)
 {
     std::stringstream stream;
 
-    stream << "let spi = " << ShaderUtils::inlineSPI(ctx) << ";" << std::endl
+    stream << "let spi = " << ShaderUtils::inlineSPI(opts) << ";" << std::endl
            << "let render_config = make_render_config_from_settings(settings, spi);" << std::endl
            << "let device = ";
 
-    if (ctx.Options.Target.isCPU()) {
-        const bool compact = false; /*ctx.Options.Target.vectorWidth() >= 8;*/ // FIXME: Maybe something wrong with this flag?
-        const bool single  = ctx.Options.Target.vectorWidth() >= 4;
+    if (opts.Target.isCPU()) {
+        const bool compact = false; /*opts.Target.vectorWidth() >= 8;*/ // FIXME: Maybe something wrong with this flag?
+        const bool single  = opts.Target.vectorWidth() >= 4;
 
         // TODO: Better decisions?
         std::string min_max = "make_default_min_max()";
-        if (ctx.Options.Target.vectorWidth() >= 4)
+        if (opts.Target.vectorWidth() >= 4)
             min_max = "make_cpu_int_min_max()";
 
         stream << "make_cpu_device("
@@ -32,13 +32,13 @@ std::string ShaderUtils::constructDevice(const LoaderContext& ctx)
                << (compact ? "true" : "false") << ", "
                << (single ? "true" : "false") << ", "
                << min_max << ", "
-               << ctx.Options.Target.vectorWidth()
+               << opts.Target.vectorWidth()
                << ", settings.thread_count"
                << ", 16"
                << ", true);";
     } else {
         // TODO: Customize kernel config for device?
-        switch (ctx.Options.Target.gpuArchitecture()) {
+        switch (opts.Target.gpuArchitecture()) {
         case GPUArchitecture::AMD_HSA:
             stream << "make_amdgpu_hsa_device(settings.device, render_config, make_default_gpu_kernel_config());";
             break;
@@ -129,7 +129,7 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_callback_shader(settings: &Settings) -> () {" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx) << std::endl
+           << "  " << ShaderUtils::constructDevice(ctx.Options) << std::endl
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
 
     return stream.str();
@@ -140,12 +140,12 @@ std::string ShaderUtils::endCallback()
     return "}";
 }
 
-std::string ShaderUtils::inlineSPI(const LoaderContext& ctx)
+std::string ShaderUtils::inlineSPI(const LoaderOptions& opts)
 {
     std::stringstream stream;
 
-    if (ctx.Options.SamplesPerIteration == 1 && ctx.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // Hardcode this case as some optimizations might apply
-        stream << ctx.Options.SamplesPerIteration << " : i32";
+    if (opts.SamplesPerIteration == 1 && opts.Specialization != RuntimeOptions::SpecializationMode::Disable) // Hardcode this case as some optimizations might apply
+        stream << opts.SamplesPerIteration << " : i32";
     else // Fallback to dynamic spi
         stream << "settings.spi";
 

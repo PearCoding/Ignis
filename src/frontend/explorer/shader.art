@@ -1,0 +1,33 @@
+fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> () {
+    let input_width   = settings.width;
+    let input_height  = settings.height;
+    let output_width  = registry::get_local_parameter_i32("_output_width",  128);
+    let output_height = registry::get_local_parameter_i32("_output_height", 128);
+
+    let framebuffer = device.load_aov_image("", spi);
+    let output      = device.request_buffer("_perspective_output", output_width * output_height, 0);
+
+    let eye = make_vec3(0,0,0);
+    let dir = make_vec3(0,0,1);
+    let up  = make_vec3(0,1,0);
+
+    let cam_perspective = make_perspective_camera(eye, dir, up, make_vec2(1,1)/*TODO*/, output_width, output_height, 0, 1);
+    let cam_fisheye     = make_fishlens_camera(eye, dir, up, input_width as f32, input_height as f32, FisheyeAspectMode::Full/*TODO*/, 0, 1);
+
+    for x, y in device.parallel_range_2d(0, output_width, 0, output_height) {
+        let dstCoord = make_pixelcoord_from_xy(x, y, output_width, output_height, 0, 0);
+
+        let rnd = create_random_generator(0xdeadbeef);
+        let ray = cam_perspective.generate_ray(rnd, dstCoord);
+
+        let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
+            framebuffer.get(srcCoord)
+        } else {
+            color_builtins::pink
+        };
+
+        output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(color)));
+    }
+
+    device.sync();
+}

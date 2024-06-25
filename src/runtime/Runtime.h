@@ -169,7 +169,8 @@ public:
     [[nodiscard]] static std::vector<std::string> getAvailableCameraTypes();
 
     /// Get options used while creating the runtime
-    [[nodiscard]] const RuntimeOptions& options() const { return mOptions; }
+    [[nodiscard]] inline const RuntimeOptions& options() const { return mOptions; }
+    [[nodiscard]] LoaderOptions loaderOptions() const;
 
     [[nodiscard]] std::shared_ptr<RenderPass> createPass(const std::string& src);
     bool runPass(const RenderPass& pass);

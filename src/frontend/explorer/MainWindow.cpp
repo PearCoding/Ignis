@@ -78,7 +78,7 @@ public:
         SDL_GetWindowSize(mWindow, &w, &h);
 
         for (const auto& child : mChildren)
-            child->onResize(nullptr, (size_t)w, (size_t)h);
+            child->onWindowResize(nullptr, (size_t)w, (size_t)h);
 
         // Run the loop
         while (true) {
@@ -110,7 +110,7 @@ private:
     void handleResize(size_t width, size_t height)
     {
         for (const auto& child : mChildren)
-            child->onResize(nullptr, width, height);
+            child->onWindowResize(nullptr, width, height);
 
         ui::notifyResize(mWindow, mRenderer);
     }
