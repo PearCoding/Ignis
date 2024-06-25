@@ -59,6 +59,7 @@ public:
         setupTextureBuffer(width, height);
 
         if (mPerspectivePass) {
+            // std::cout << width << "x" << height << std::endl;
             mPerspectivePass->setParameter("_output_width", (int)mWidth);
             mPerspectivePass->setParameter("_output_height", (int)mHeight);
         }
@@ -128,7 +129,6 @@ public:
         if (!mLoading && mRuntime) {
             mRuntime->step();
 
-            ImGui::SetNextWindowContentSize(ImVec2(128, 128));
             if (ImGui::Begin("Render")) {
                 if (mRuntime->currentIterationCount() > 0) {
                     if (mTexture) {
@@ -136,18 +136,22 @@ public:
                             IG_LOG(L_FATAL) << "Failed to run perspective pass" << std::endl;
                         } else {
                             // TODO
-                            uint32* buf = mBuffer.data();
+                            IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
+                            mPerspectivePass->copyOutputToHost("_perspective_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
                             // mRuntime->tonemap(buf, TonemapSettings{ "", (size_t)0, false, 1.0f, 1.0f, 0.0f });
 
-                            SDL_UpdateTexture(mTexture, nullptr, buf, static_cast<int>(mWidth * sizeof(uint32_t)));
-                            ImGui::Image((void*)mTexture, ImVec2((float)mRuntime->framebufferWidth(), (float)mRuntime->framebufferHeight()));
+                            SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32)));
+                            ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
                         }
                     }
                 }
+
+                const ImVec2 contentMin  = ImGui::GetWindowContentRegionMin();
+                const ImVec2 contentMax  = ImGui::GetWindowContentRegionMax();
+                const ImVec2 contentSize = ImVec2(contentMax.x - contentMin.x, contentMax.y - contentMin.y);
+                if (!mTexture || mWidth != contentSize.x || mHeight != contentSize.y)
+                    onContentResize((size_t)contentSize.x, (size_t)contentSize.y);
             }
-            const ImVec2 windowSize = ImGui::GetWindowSize();
-            if (!mTexture || mWidth != windowSize.x || mHeight != windowSize.y)
-                onContentResize(windowSize.x, windowSize.y);
             ImGui::End();
         }
     }
@@ -181,7 +185,7 @@ private:
     }
 
     SDL_Texture* mTexture = nullptr;
-    std::vector<uint32_t> mBuffer;
+    std::vector<uint32> mBuffer;
     size_t mWidth, mHeight;
 
     std::unique_ptr<Runtime> mRuntime;

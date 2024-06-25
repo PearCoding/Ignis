@@ -894,10 +894,11 @@ public:
         if (!acc.Data)
             return false;
 
-        if (acc.SizeInBytes > maxSizeByte)
+        size_t size = std::min(acc.SizeInBytes, maxSizeByte);
+        if (size == 0)
             return false;
 
-        anydsl_copy(mDeviceID, acc.Data, 0, 0 /* Host */, dst, 0, acc.SizeInBytes);
+        anydsl_copy(mDeviceID, acc.Data, 0, 0 /* Host */, dst, 0, size);
 
         return true;
     }

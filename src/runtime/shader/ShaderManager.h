@@ -3,7 +3,7 @@
 #include "technique/TechniqueVariant.h"
 
 namespace IG {
-    class ScriptCompiler;
+class ScriptCompiler;
 
 class ShaderManager {
 public:

@@ -6,7 +6,7 @@
 namespace IG {
 struct LoaderOptions;
 class ShapeProvider;
-class ShaderUtils {
+class IG_LIB ShaderUtils {
 public:
     static std::string constructDevice(const LoaderOptions& opts);
     static std::string generateDatabase(const LoaderContext& ctx);
