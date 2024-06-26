@@ -17,7 +17,8 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
     }
 
     const size_t numberOfUniqueEntries = reducer.computeNumberOfUniqueEntries();
-    IG_LOG(L_DEBUG) << "Reduced number of shaders from " << reducer.numberOfEntries() << " to " << numberOfUniqueEntries << " (" << (numberOfUniqueEntries / (float)reducer.numberOfEntries()) << "x)" << std::endl;
+    if (numberOfUniqueEntries != reducer.numberOfEntries())
+        IG_LOG(L_DEBUG) << "Reduced number of shaders from " << reducer.numberOfEntries() << " to " << numberOfUniqueEntries << " (" << (numberOfUniqueEntries / (float)reducer.numberOfEntries()) << "x)" << std::endl;
 
     // Start compilation of groups
     const auto& groups = reducer.groups();
