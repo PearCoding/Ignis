@@ -125,12 +125,21 @@ private:
         constexpr size_t LENGTH = 20;
         const size_t full_count = (size_t)std::floor(LENGTH * perc);
 
+#ifdef IG_CC_MSC
+        std::cout << "{";
+        for (size_t i = 0; i < full_count; ++i)
+            std::cout << "#";
+        for (size_t i = full_count; i < LENGTH; ++i)
+            std::cout << " ";
+        std::cout << "}  ";
+#else
         std::cout << "\u2563";
         for (size_t i = 0; i < full_count; ++i)
             std::cout << "\u2588";
         for (size_t i = full_count; i < LENGTH; ++i)
             std::cout << "\u2591";
         std::cout << "\u2560 ";
+#endif
     }
 
     const bool mBeautify;
