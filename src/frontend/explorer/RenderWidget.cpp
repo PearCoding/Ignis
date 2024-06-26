@@ -13,10 +13,10 @@ extern const char* ig_shader[];
 namespace IG {
 extern SDL_Renderer* sRenderer;
 
-void loaderThread(RenderWidgetInternal* internal, Path scene_file, RuntimeOptions options);
+void loaderThread(RenderWidgetInternal* internal, Path scene_file);
 
-constexpr uint32 FisheyeWidth  = 256;
-constexpr uint32 FisheyeHeight = 128;
+constexpr uint32 FisheyeWidth  = 512;
+constexpr uint32 FisheyeHeight = 512;
 
 class RenderWidgetInternal {
 public:
@@ -24,6 +24,7 @@ public:
         : mTexture(nullptr)
         , mWidth(0)
         , mHeight(0)
+        , mFOV(60)
         , mLoading(false)
     {
     }
@@ -99,14 +100,8 @@ public:
 
                 mRuntime.reset();
 
-                auto options              = RuntimeOptions::makeDefault();
-                options.IsInteractive     = true;
-                options.EnableTonemapping = true;
-                options.OverrideCamera    = "fishlens";
-                options.OverrideFilmSize  = { FisheyeWidth, FisheyeHeight };
-
                 mLoading       = true;
-                mLoadingThread = std::make_unique<std::thread>(loaderThread, this, scene_file, options);
+                mLoadingThread = std::make_unique<std::thread>(loaderThread, this, scene_file);
             }
         }
 
@@ -160,11 +155,46 @@ public:
     {
     }
 
-    inline void assignRuntime(std::shared_ptr<RenderPass>&& perspectivePass, std::unique_ptr<Runtime>&& runtime)
+    inline void loadFromFile(const Path& path)
     {
-        mRuntime         = std::move(runtime);
-        mPerspectivePass = std::move(perspectivePass);
-        mLoading         = false;
+        auto options              = RuntimeOptions::makeDefault();
+        options.IsInteractive     = true;
+        options.EnableTonemapping = true;
+        options.OverrideFilmSize  = { FisheyeWidth, FisheyeHeight };
+
+        SceneParser parser;
+        auto scene = parser.loadFromFile(path);
+
+        auto prevCamera = scene->camera();
+
+        auto cameraObject = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "fisheye", Path{});
+        cameraObject->setProperty("mode", SceneProperty::fromString("circular"));
+        if (prevCamera && prevCamera->hasProperty("transform"))
+            cameraObject->setProperty("transform", prevCamera->property("transform"));
+        if (prevCamera && prevCamera->hasProperty("fov")) // TODO: Other types?
+            mFOV = prevCamera->property("fov").getNumber(mFOV);
+
+        scene->setCamera(cameraObject);
+
+        mRuntime = std::make_unique<Runtime>(options);
+        if (mRuntime->loadFromScene(scene.get())) {
+            std::stringstream shader;
+            for (int i = 0; ig_shader[i]; ++i)
+                shader << ig_shader[i] << std::endl;
+
+            auto loaderOptions     = mRuntime->loaderOptions();
+            loaderOptions.FilePath = path;
+            loaderOptions.Scene    = scene.get();
+            shader << PerspectiveShader::generate(loaderOptions);
+
+            mPerspectivePass = mRuntime->createPass(shader.str());
+            if (!mPerspectivePass)
+                IG_LOG(L_ERROR) << "Could not compile the shader code" << std::endl;
+
+            mPerspectivePass->setParameter("_perspective_fov", mFOV);
+        }
+
+        mLoading = false;
     }
 
 private:
@@ -187,6 +217,7 @@ private:
     SDL_Texture* mTexture = nullptr;
     std::vector<uint32> mBuffer;
     size_t mWidth, mHeight;
+    float mFOV;
 
     std::unique_ptr<Runtime> mRuntime;
     std::shared_ptr<RenderPass> mPerspectivePass;
@@ -196,26 +227,9 @@ private:
     std::atomic<bool> mLoading;
 };
 
-void loaderThread(RenderWidgetInternal* internal, Path scene_file, RuntimeOptions options)
+void loaderThread(RenderWidgetInternal* internal, Path scene_file)
 {
-    auto runtime = std::make_unique<Runtime>(options);
-    if (!runtime->loadFromFile(scene_file)) {
-        internal->assignRuntime(nullptr, nullptr);
-    } else {
-        std::stringstream shader;
-        for (int i = 0; ig_shader[i]; ++i)
-            shader << ig_shader[i] << std::endl;
-
-        shader << PerspectiveShader::generate(runtime->loaderOptions());
-
-        auto pass = runtime->createPass(shader.str());
-        if (!pass) {
-            IG_LOG(L_ERROR) << "Could not compile the shader code" << std::endl;
-            internal->assignRuntime(nullptr, nullptr);
-        } else {
-            internal->assignRuntime(std::move(pass), std::move(runtime));
-        }
-    }
+    internal->loadFromFile(scene_file);
 }
 
 RenderWidget::RenderWidget()

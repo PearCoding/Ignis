@@ -1,9 +1,11 @@
 fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let input_width   = settings.width;
     let input_height  = settings.height;
-    let output_width  = registry::get_local_parameter_i32("_output_width",  128);
-    let output_height = registry::get_local_parameter_i32("_output_height", 128);
+    let output_width  = registry::get_local_parameter_i32("_output_width",    128);
+    let output_height = registry::get_local_parameter_i32("_output_height",   128);
+    let pers_fov      = registry::get_local_parameter_f32("_perspective_fov", 60);
 
+    // let framebuffer = attach_mitchell_filter(device.load_aov_image("", spi), 2);
     let framebuffer = device.load_aov_image("", spi);
     let output      = device.request_buffer("_perspective_output", output_width * output_height, 0);
 
@@ -11,9 +13,12 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let dir = make_vec3(0,0,1);
     let up  = make_vec3(0,1,0);
 
-    let pers_scale = compute_scale_from_hfov(30/*TODO*/, output_width as f32 / output_height as f32);
+    let scale = if settings.iter > 0 { 1 / settings.iter as f32 } else { 0 }; // TODO: This is a job for tonemapping
+
+    let pers_scale = compute_scale_from_hfov(pers_fov, output_width as f32 / output_height as f32);
+
     let cam_perspective = make_perspective_camera(eye, dir, up, pers_scale, output_width, output_height, 0, 100);
-    let cam_fisheye     = make_fishlens_camera(eye, dir, up, input_width as f32, input_height as f32, FisheyeAspectMode::Full/*TODO*/, 0, 100);
+    let cam_fisheye     = make_fishlens_camera(eye, dir, up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
 
     for x, y in device.parallel_range_2d(0, output_width, 0, output_height) {
         let dstCoord = make_pixelcoord_from_xy(x, y, output_width, output_height, 0, 0);
@@ -23,7 +28,9 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
 
         // let color = make_color((dstCoord.nx+1)/2, 0, (dstCoord.ny+1)/2, 1);
         let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
-            framebuffer.get(srcCoord)
+            // make_color((srcCoord.nx+1)/2, 0, (srcCoord.ny+1)/2, 1)
+            color_mulf(framebuffer.get(srcCoord), scale)
+            // color_mulf(framebuffer.get(make_pixelcoord_from_normalized(dstCoord.nx, dstCoord.ny, input_width, input_height)), scale)
         } else {
             color_builtins::pink
         };
