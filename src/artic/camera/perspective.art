@@ -14,7 +14,7 @@ fn @compute_scale_from_vfov(fov: f32, aspect: f32) -> Vec2 {
 
 // Return pixel coordinate from a point for a perspective projection
 fn @perspective_pos_to_pixel(v: Vec3, eye: Vec3, view: Mat3x3, scale: Vec2, w: i32, h: i32) -> Option[PixelCoord] {
-    let dir = (vec3_sub(v, eye)); // FROM camera to point
+    let dir = vec3_sub(v, eye); // FROM camera to point
     let un  = mat3x3_left_mul(view, dir);
     let d   = un.z;
     let n   = make_vec2(un.x / (d * scale.x), un.y / (d * scale.y));
@@ -85,11 +85,11 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
         generate_ray = gen_ray,
         sample_pixel = @ |rnd, pos| {
             if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, w, h) {
-                let ray = gen_ray(rnd, coord);
+                let ray   = gen_ray(rnd, coord);
                 let s_dir = vec3_sub(ray.org, pos);
                 // let inv_area = if aperture_radius > flt_eps { 1 / (flt_pi * aperture_radius * aperture_radius) } else { 1:f32 };
 
-                let cos = vec3_dot(dir, ray.dir);
+                let cos      = vec3_dot(dir, ray.dir);
                 let jacobian = 1 / math_builtins::fabs(cos * cos * cos);
 
                 make_option(CameraSample{

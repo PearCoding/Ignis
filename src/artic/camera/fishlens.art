@@ -5,11 +5,11 @@ enum FisheyeAspectMode {
 }
 
 // Creates a fishlens camera
-fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: FisheyeAspectMode, tmin: f32, tmax: f32) -> Camera {
+fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: FisheyeAspectMode, tmin: f32, tmax: f32) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
     let fov   = flt_pi;
-    let asp   = w / h;
+    let asp   = w as f32 / h as f32;
 
     // Select aspect ratio mode
     let (xasp, yasp) = match(mode) {
@@ -24,16 +24,16 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: F
             (xasp, yasp)
         },
         FisheyeAspectMode::Full => {
-            let diameter = math_builtins::sqrt(asp * asp + 1) * h;
-            let min_s	 = math_builtins::fmin(w, h);
-            let f        = diameter / min_s;
+            let diameter = math_builtins::sqrt(asp * asp + 1) * h as f32;
+            let min_s	 = min(w, h);
+            let f        = diameter / min_s as f32;
             let xasp = if asp < 1 { f } else { f / asp };
             let yasp = if asp > 1 { f } else { f * asp };
             (xasp, yasp)
         }
     };
 
-    fn compute_d(x:f32,y:f32) -> Vec3 {
+    fn @compute_d(x:f32, y:f32) -> Vec3 {
         let nx    = x * xasp;
         let ny    = y * yasp;
         let r	  = math_builtins::sqrt(nx * nx + ny * ny);
@@ -44,23 +44,62 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: f32, h: f32, mode: F
         let sP = if r < flt_eps { 0 } else { ny / r };
         let cP = if r < flt_eps { 0 } else { nx / r };
         let nd = make_vec3(sT*cP, sT*sP, cT);
-        vec3_normalize(mat3x3_mul(view, nd))
+        mat3x3_mul(view, nd)
+    }
+    
+    fn @pos_to_pixel(pos: Vec3) -> Option[PixelCoord] {
+        let dir = vec3_normalize(vec3_sub(pos, eye)); // FROM camera to point
+        let un  = mat3x3_left_mul(view, dir);
+
+        let theta    = math_builtins::acos(un.z);
+        let sinTheta = math_builtins::sqrt(1 - un.z * un.z);
+
+        let r = 2 * theta / fov;
+
+        let sx = safe_div(un.x * r, sinTheta);
+        let sy = safe_div(un.y * r, sinTheta);
+
+        let nx = sx / xasp;
+        let ny = sy / yasp;
+
+        if nx >= -1 && nx <= 1 && ny >= -1 && ny <= 1 {
+            make_option(make_pixelcoord_from_normalized(nx, ny, w, h))
+        } else {
+            Option[PixelCoord]::None
+        }
     }
 
     Camera {
         generate_ray = @ |_, coord| {
             make_ray(eye, compute_d(coord.nx, coord.ny), tmin, tmax, ray_flag_camera)
         },
-        sample_pixel = @ |_, _| Option[CameraSample]::None, // TODO
-        pos_to_pixel = @ |_| Option[PixelCoord]::None,      // TODO
+        sample_pixel = @ |_rnd, pos| {
+            if let Option[PixelCoord]::Some(coord) = pos_to_pixel(pos) {
+                let ray   = make_ray(eye, compute_d(coord.nx, coord.ny), tmin, tmax, ray_flag_camera);
+                let s_dir = vec3_sub(ray.org, pos);
+
+                let cos = vec3_dot(dir, ray.dir);
+                let jacobian = 1 / math_builtins::fabs(cos * cos * cos); // TODO: Check this
+
+                make_option(CameraSample{
+                    coord  = coord,
+                    dir    = s_dir, // From pos to camera
+                    weight = make_gray_color(jacobian),
+                    pdf    = 1,
+                })
+            } else {
+                Option[CameraSample]::None
+            }
+        },
+        pos_to_pixel = pos_to_pixel,
         differential = @ |coord| {
             let d0  = compute_d(coord.nx, coord.ny);
-            let d1x = compute_d(coord.nx + 1 / w, coord.ny);
-            let d1y = compute_d(coord.nx, coord.ny + 1 / h);
+            let d1x = compute_d(coord.nx + 1 / w as f32, coord.ny);
+            let d1y = compute_d(coord.nx, coord.ny + 1 / h as f32);
             
             (
-                vec3_mulf(vec3_sub(d1x, d0), w),
-                vec3_mulf(vec3_sub(d1y, d0), h)
+                vec3_mulf(vec3_sub(d1x, d0), w as f32),
+                vec3_mulf(vec3_sub(d1y, d0), h as f32)
             )
         }
     }
