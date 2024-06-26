@@ -2,6 +2,7 @@
 #include "loader/LoaderContext.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
+#include "StringUtils.h"
 
 namespace IG {
 FishLensCamera::FishLensCamera(SceneObject& camera)
@@ -16,7 +17,7 @@ FishLensCamera::FishLensCamera(SceneObject& camera)
     if (mFarClip < mNearClip)
         std::swap(mNearClip, mFarClip);
 
-    const std::string mode = camera.property("mode").getString("circular");
+    const std::string mode = to_lowercase(camera.property("mode").getString("circular"));
     if (mode == "cropped")
         mMode = Mode::Cropped;
     else if (mode == "full")
@@ -54,8 +55,8 @@ void FishLensCamera::serialize(const SerializationInput& input) const
                  << "  let camera = make_fishlens_camera(camera_eye, " << std::endl
                  << "    camera_dir, " << std::endl
                  << "    camera_up, " << std::endl
-                 << "    settings.width as f32, " << std::endl
-                 << "    settings.height as f32, " << std::endl
+                 << "    settings.width, " << std::endl
+                 << "    settings.height, " << std::endl
                  << "    " << mode << ", " << std::endl
                  << "    " << mNearClip << ", " << std::endl
                  << "    " << mFarClip << ");" << std::endl;
