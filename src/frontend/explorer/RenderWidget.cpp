@@ -191,6 +191,8 @@ public:
             if (!mPerspectivePass)
                 IG_LOG(L_ERROR) << "Could not compile the shader code" << std::endl;
 
+            mPerspectivePass->setParameter("_output_width", (int)mWidth);
+            mPerspectivePass->setParameter("_output_height", (int)mHeight);
             mPerspectivePass->setParameter("_perspective_fov", mFOV);
         }
 
