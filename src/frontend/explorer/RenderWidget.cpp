@@ -4,6 +4,7 @@
 #include "Runtime.h"
 #include "ShaderGenerator.h"
 
+#define IMGUI_DISABLE_OBSOLETE_KEYIO
 #include "imgui.h"
 #include <SDL.h>
 
@@ -18,6 +19,9 @@ void loaderThread(RenderWidgetInternal* internal, Path scene_file);
 
 constexpr uint32 FisheyeWidth  = 1024;
 constexpr uint32 FisheyeHeight = 1024;
+
+constexpr float RSPEED  = 0.005f;
+constexpr float KRSPEED = 10 * RSPEED;
 
 class RenderWidgetInternal {
 public:
@@ -41,6 +45,7 @@ public:
         , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())
         , mCurrentTravelSpeed(1)
         , mCurrrentMouseMode(MM_None)
+        , mMouseOnWidget(false)
     {
     }
 
@@ -126,7 +131,7 @@ public:
             const auto start = std::chrono::high_resolution_clock::now();
             mRuntime->step();
 
-            if (ImGui::Begin("Render")) {
+            if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
                 if (mTexture && mRuntime->currentIterationCount() > 0)
                     runPipeline();
 
@@ -135,8 +140,11 @@ public:
                 const ImVec2 contentSize = ImVec2(contentMax.x - contentMin.x, contentMax.y - contentMin.y);
                 if (!mTexture || mWidth != contentSize.x || mHeight != contentSize.y)
                     onContentResize((size_t)contentSize.x, (size_t)contentSize.y);
+
+                mMouseOnWidget = ImGui::IsItemHovered(ImGuiHoveredFlags_RootAndChildWindows);
             }
             ImGui::End();
+
             const auto end = std::chrono::high_resolution_clock::now();
             mCurrentFPS    = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
             if (!std::isfinite(mCurrentFPS))
@@ -158,61 +166,64 @@ public:
             return;
 
         const ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureKeyboard || io.WantCaptureMouse || io.WantTextInput)
-            return;
 
-        const auto handleRotation = [&](float xmotion, float ymotion) {
-            if (io.KeyCtrl && io.KeyAlt) {
-                mCurrentCamera.rotate_around(mSceneCenter, xmotion, ymotion);
+        if (!io.WantTextInput) {
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad1, false))
+                mCurrentCamera.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad3, false))
+                mCurrentCamera.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad7, false))
+                mCurrentCamera.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad9, false))
+                mCurrentCamera.update_dir(-mCurrentCamera.Direction, mCurrentCamera.Up);
+            if (ImGui::IsKeyPressed(ImGuiKey_O, false))
                 mCurrentCamera.snap_up();
-            } else if (io.KeyAlt) {
-                mCurrentCamera.rotate_fixroll(xmotion, ymotion);
-            } else if (io.KeyCtrl) {
-                mCurrentCamera.rotate_around(mSceneCenter, xmotion, ymotion);
-            } else {
-                mCurrentCamera.rotate(xmotion, ymotion);
+            if (ImGui::IsKeyPressed(ImGuiKey_R, false))
+                mCurrentCamera = CameraProxy(mRuntime->initialCameraOrientation());
+
+            if (ImGui::IsKeyDown(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_W))
+                mCurrentCamera.move(0, 0, mCurrentTravelSpeed);
+            if (ImGui::IsKeyDown(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_S))
+                mCurrentCamera.move(0, 0, -mCurrentTravelSpeed);
+            if (ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_A))
+                mCurrentCamera.move(-mCurrentTravelSpeed, 0, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_RightArrow) || ImGui::IsKeyDown(ImGuiKey_D))
+                mCurrentCamera.move(mCurrentTravelSpeed, 0, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_E))
+                mCurrentCamera.roll(KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_Q))
+                mCurrentCamera.roll(-KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_PageUp))
+                mCurrentCamera.move(0, mCurrentTravelSpeed, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_PageDown))
+                mCurrentCamera.move(0, -mCurrentTravelSpeed, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad2))
+                handleRotation(0, KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad8))
+                handleRotation(0, -KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad4))
+                handleRotation(-KRSPEED, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad6))
+                handleRotation(KRSPEED, 0);
+        }
+
+        // Note: Not sure why io.WantMouseCapture does not work as intended... or I misunderstood something
+        if (mMouseOnWidget) {
+            if (io.MouseWheel != 0)
+                mCurrentCamera.move(0, 0, io.MouseWheel * mCurrentTravelSpeed);
+
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0)) {
+                const ImVec2 lookDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0);
+                const float aspeed     = RSPEED / 10;
+                handleRotation(lookDelta.x * aspeed, lookDelta.y * aspeed);
             }
-        };
 
-        if (ImGui::IsKeyPressed(ImGuiKey_Keypad1, false))
-            mCurrentCamera.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
-        if (ImGui::IsKeyPressed(ImGuiKey_Keypad3, false))
-            mCurrentCamera.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
-        if (ImGui::IsKeyPressed(ImGuiKey_Keypad7, false))
-            mCurrentCamera.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
-        if (ImGui::IsKeyPressed(ImGuiKey_Keypad9, false))
-            mCurrentCamera.update_dir(-mCurrentCamera.Direction, mCurrentCamera.Up);
-        if (ImGui::IsKeyPressed(ImGuiKey_O, false))
-            mCurrentCamera.snap_up();
-        if (ImGui::IsKeyPressed(ImGuiKey_R, false))
-            mCurrentCamera = CameraProxy(mRuntime->initialCameraOrientation());
-
-        constexpr float RSPEED  = 0.005f;
-        constexpr float KRSPEED = 10 * RSPEED;
-        if (ImGui::IsKeyDown(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_W))
-            mCurrentCamera.move(0, 0, mCurrentTravelSpeed);
-        if (ImGui::IsKeyDown(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_S))
-            mCurrentCamera.move(0, 0, -mCurrentTravelSpeed);
-        if (ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_A))
-            mCurrentCamera.move(-mCurrentTravelSpeed, 0, 0);
-        if (ImGui::IsKeyDown(ImGuiKey_RightArrow) || ImGui::IsKeyDown(ImGuiKey_D))
-            mCurrentCamera.move(mCurrentTravelSpeed, 0, 0);
-        if (ImGui::IsKeyDown(ImGuiKey_E))
-            mCurrentCamera.roll(KRSPEED);
-        if (ImGui::IsKeyDown(ImGuiKey_Q))
-            mCurrentCamera.roll(-KRSPEED);
-        if (ImGui::IsKeyDown(ImGuiKey_PageUp))
-            mCurrentCamera.move(0, mCurrentTravelSpeed, 0);
-        if (ImGui::IsKeyDown(ImGuiKey_PageDown))
-            mCurrentCamera.move(0, -mCurrentTravelSpeed, 0);
-        if (ImGui::IsKeyDown(ImGuiKey_Keypad2))
-            handleRotation(0, KRSPEED);
-        if (ImGui::IsKeyDown(ImGuiKey_Keypad8))
-            handleRotation(0, -KRSPEED);
-        if (ImGui::IsKeyDown(ImGuiKey_Keypad4))
-            handleRotation(-KRSPEED, 0);
-        if (ImGui::IsKeyDown(ImGuiKey_Keypad6))
-            handleRotation(KRSPEED, 0);
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0)) {
+                const ImVec2 panDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right, 0);
+                const float aspeed    = mCurrentTravelSpeed / 100;
+                mCurrentCamera.move(panDelta.x * aspeed, -panDelta.y * aspeed, 0);
+            }
+        }
     }
 
     inline void loadFromFile(const Path& path)
@@ -274,6 +285,21 @@ public:
     inline float currentFPS() const { return mCurrentFPS; }
 
 private:
+    inline void handleRotation(float xmotion, float ymotion)
+    {
+        const ImGuiIO& io = ImGui::GetIO();
+        if (io.KeyCtrl && io.KeyAlt) {
+            mCurrentCamera.rotate_around(mSceneCenter, xmotion, ymotion);
+            mCurrentCamera.snap_up();
+        } else if (io.KeyAlt) {
+            mCurrentCamera.rotate_fixroll(xmotion, ymotion);
+        } else if (io.KeyCtrl) {
+            mCurrentCamera.rotate_around(mSceneCenter, xmotion, ymotion);
+        } else {
+            mCurrentCamera.rotate(xmotion, ymotion);
+        }
+    }
+
     inline void updateSize(size_t width, size_t height)
     {
         mWidth  = width;
@@ -384,6 +410,7 @@ private:
     Vector3f mSceneCenter;
     float mCurrentTravelSpeed;
     MouseMode mCurrrentMouseMode;
+    bool mMouseOnWidget;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
