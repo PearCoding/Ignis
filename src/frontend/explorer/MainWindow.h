@@ -17,6 +17,8 @@ public:
 
     void setDropCallback(const std::function<void(const Path&)>& callback);
 
+    void signalQuit();
+
 private:
     std::unique_ptr<class MainWindowInternal> mInternal;
 };

@@ -12,6 +12,7 @@
 
 using namespace IG;
 static RenderWidget* sRenderWidget = nullptr;
+static MainWindow* sMainWindow     = nullptr;
 
 static void openFileCallback(const Path& path)
 {
@@ -43,6 +44,7 @@ static std::shared_ptr<Menu> setupMainMenu()
 
     auto openFile = std::make_shared<MenuItem>("Open", openFileDialogCallback);
     fileMenu->add(openFile);
+    fileMenu->add(std::make_shared<MenuItem>("Quit", []() { sMainWindow->signalQuit(); }));
 
     auto openWebsite = std::make_shared<MenuItem>("Website", []() {});
     helpMenu->add(openWebsite);
@@ -63,6 +65,7 @@ int main(int argc, char** argv)
 
     try {
         MainWindow window(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
+        sMainWindow = &window;
 
         auto renderWidget = std::make_shared<RenderWidget>();
         sRenderWidget     = renderWidget.get();

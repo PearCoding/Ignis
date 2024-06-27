@@ -19,6 +19,8 @@ private:
 
     std::function<void(const Path&)> mDropCallback;
 
+    bool mQuit = false;
+
 public:
     MainWindowInternal(size_t width, size_t height, float dpi)
     {
@@ -73,6 +75,8 @@ public:
 
     bool exec()
     {
+        mQuit = false;
+
         // Initialize via resize
         int w, h;
         SDL_GetWindowSize(mWindow, &w, &h);
@@ -81,7 +85,7 @@ public:
             child->onWindowResize(nullptr, (size_t)w, (size_t)h);
 
         // Run the loop
-        while (true) {
+        while (!mQuit) {
             const bool shouldQuit = handleEvents();
             if (shouldQuit)
                 break;
@@ -104,6 +108,11 @@ public:
     void addChild(const std::shared_ptr<Widget>& widget)
     {
         mChildren.emplace_back(widget);
+    }
+
+    void signalQuit()
+    {
+        mQuit = true;
     }
 
 private:
@@ -174,5 +183,10 @@ void MainWindow::addChild(const std::shared_ptr<Widget>& widget)
 void MainWindow::setDropCallback(const std::function<void(const Path&)>& callback)
 {
     mInternal->setDropCallback(callback);
+}
+
+void MainWindow::signalQuit()
+{
+    mInternal->signalQuit();
 }
 } // namespace IG
