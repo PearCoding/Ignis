@@ -21,6 +21,12 @@ constexpr uint32 FisheyeHeight = 1024;
 
 class RenderWidgetInternal {
 public:
+    enum MouseMode {
+        MM_None,
+        MM_Look,
+        MM_Pan
+    };
+
     inline RenderWidgetInternal()
         : mTexture(nullptr)
         , mWidth(0)
@@ -34,6 +40,7 @@ public:
         , mLoading(false)
         , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())
         , mCurrentTravelSpeed(1)
+        , mCurrrentMouseMode(MM_None)
     {
     }
 
@@ -132,6 +139,8 @@ public:
             ImGui::End();
             const auto end = std::chrono::high_resolution_clock::now();
             mCurrentFPS    = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+            if (!std::isfinite(mCurrentFPS))
+                mCurrentFPS = 0;
 
             const auto previousCamera = mRuntime->getCameraOrientation();
             if (previousCamera.Eye != mCurrentCamera.Eye
@@ -148,8 +157,11 @@ public:
         if (!mRuntime)
             return;
 
+        const ImGuiIO& io = ImGui::GetIO();
+        if (io.WantCaptureKeyboard || io.WantCaptureMouse || io.WantTextInput)
+            return;
+
         const auto handleRotation = [&](float xmotion, float ymotion) {
-            ImGuiIO& io = ImGui::GetIO();
             if (io.KeyCtrl && io.KeyAlt) {
                 mCurrentCamera.rotate_around(mSceneCenter, xmotion, ymotion);
                 mCurrentCamera.snap_up();
@@ -193,14 +205,14 @@ public:
             mCurrentCamera.move(0, mCurrentTravelSpeed, 0);
         if (ImGui::IsKeyDown(ImGuiKey_PageDown))
             mCurrentCamera.move(0, -mCurrentTravelSpeed, 0);
-        // if (arrows[8])
-        //     handleRotation(0, KRSPEED);
-        // if (arrows[9])
-        //     handleRotation(0, -KRSPEED);
-        // if (arrows[10])
-        //     handleRotation(-KRSPEED, 0);
-        // if (arrows[11])
-        //     handleRotation(KRSPEED, 0);
+        if (ImGui::IsKeyDown(ImGuiKey_Keypad2))
+            handleRotation(0, KRSPEED);
+        if (ImGui::IsKeyDown(ImGuiKey_Keypad8))
+            handleRotation(0, -KRSPEED);
+        if (ImGui::IsKeyDown(ImGuiKey_Keypad4))
+            handleRotation(-KRSPEED, 0);
+        if (ImGui::IsKeyDown(ImGuiKey_Keypad6))
+            handleRotation(KRSPEED, 0);
     }
 
     inline void loadFromFile(const Path& path)
@@ -371,6 +383,7 @@ private:
 
     Vector3f mSceneCenter;
     float mCurrentTravelSpeed;
+    MouseMode mCurrrentMouseMode;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)

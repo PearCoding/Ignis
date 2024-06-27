@@ -5,7 +5,7 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let output_height = registry::get_local_parameter_i32("_output_height",   128);
     let pers_fov      = rad(registry::get_local_parameter_f32("_perspective_fov", 60));
 
-    let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 7, 7);
+    let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
     // let framebuffer = device.load_aov_image("", spi);
     let output      = device.request_buffer("_perspective_output", output_width * output_height * 3, 0);
 
