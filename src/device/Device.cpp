@@ -1943,7 +1943,7 @@ IG_EXPORT void ignis_get_film_data(float** pixels, int* width, int* height)
 
 IG_EXPORT void ignis_get_aov_image(const char* name, float** aov_pixels)
 {
-    *aov_pixels = IG::sInterface->getAOVImageForDevice(name).Data;
+    *aov_pixels = sInterface->getAOVImageForDevice(name).Data;
 }
 
 IG_EXPORT void ignis_mark_aov_as_used(const char* name, int iter)

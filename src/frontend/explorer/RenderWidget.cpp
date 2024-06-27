@@ -1,7 +1,7 @@
 #include "RenderWidget.h"
 #include "Logger.h"
-#include "PerspectiveShader.h"
 #include "Runtime.h"
+#include "ShaderGenerator.h"
 
 #include "imgui.h"
 #include <SDL.h>
@@ -54,16 +54,8 @@ public:
 
     void onContentResize(size_t width, size_t height)
     {
-        mWidth  = width;
-        mHeight = height;
-
+        updateSize(width, height);
         setupTextureBuffer(width, height);
-
-        if (mPerspectivePass) {
-            // std::cout << width << "x" << height << std::endl;
-            mPerspectivePass->setParameter("_output_width", (int)mWidth);
-            mPerspectivePass->setParameter("_output_height", (int)mHeight);
-        }
     }
 
     void onRender()
@@ -125,21 +117,8 @@ public:
             mRuntime->step();
 
             if (ImGui::Begin("Render")) {
-                if (mRuntime->currentIterationCount() > 0) {
-                    if (mTexture) {
-                        if (!mPerspectivePass->run()) {
-                            IG_LOG(L_FATAL) << "Failed to run perspective pass" << std::endl;
-                        } else {
-                            // TODO
-                            IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
-                            mPerspectivePass->copyOutputToHost("_perspective_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
-                            // mRuntime->tonemap(buf, TonemapSettings{ "", (size_t)0, false, 1.0f, 1.0f, 0.0f });
-
-                            SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32)));
-                            ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
-                        }
-                    }
-                }
+                if (mTexture && mRuntime->currentIterationCount() > 0)
+                    runPipeline();
 
                 const ImVec2 contentMin  = ImGui::GetWindowContentRegionMin();
                 const ImVec2 contentMax  = ImGui::GetWindowContentRegionMax();
@@ -178,30 +157,101 @@ public:
 
         mRuntime = std::make_unique<Runtime>(options);
         if (mRuntime->loadFromScene(scene.get())) {
-            std::stringstream shader;
-            for (int i = 0; ig_shader[i]; ++i)
-                shader << ig_shader[i] << std::endl;
+            setupPerspectivePass(path, scene.get());
+            setupTonemapPass(path, scene.get());
 
-            auto loaderOptions     = mRuntime->loaderOptions();
-            loaderOptions.FilePath = path;
-            loaderOptions.Scene    = scene.get();
-            shader << PerspectiveShader::generate(loaderOptions);
-
-            mPerspectivePass = mRuntime->createPass(shader.str());
-            if (!mPerspectivePass)
-                IG_LOG(L_ERROR) << "Could not compile the shader code" << std::endl;
-
-            mPerspectivePass->setParameter("_output_width", (int)mWidth);
-            mPerspectivePass->setParameter("_output_height", (int)mHeight);
-            mPerspectivePass->setParameter("_perspective_fov", mFOV);
+            updateSize(mWidth, mHeight);
+            updateFOV(mFOV);
         }
 
         mLoading = false;
     }
 
+    inline void updateFOV(float fov)
+    {
+        mFOV = fov;
+        if (mPerspectivePass)
+            mPerspectivePass->setParameter("_perspective_fov", mFOV);
+    }
+
 private:
+    inline void updateSize(size_t width, size_t height)
+    {
+        mWidth  = width;
+        mHeight = height;
+        if (mPerspectivePass) {
+            mPerspectivePass->setParameter("_output_width", (int)mWidth);
+            mPerspectivePass->setParameter("_output_height", (int)mHeight);
+        }
+        if (mTonemapPass) {
+            mTonemapPass->setParameter("_input_width", (int)mWidth);
+            mTonemapPass->setParameter("_input_height", (int)mHeight);
+        }
+    }
+
+    inline bool runPipeline()
+    {
+        if (!mPerspectivePass->run()) {
+            IG_LOG(L_FATAL) << "Failed to run perspective pass" << std::endl;
+            return false;
+        }
+
+        if (!mTonemapPass->run()) {
+            IG_LOG(L_FATAL) << "Failed to run tonemap pass" << std::endl;
+            return false;
+        }
+
+        IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
+        mTonemapPass->copyOutputToHost("_tonemap_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+
+        SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32)));
+        ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
+
+        return true;
+    }
+
+    inline bool setupPerspectivePass(const Path& path, Scene* scene)
+    {
+        std::stringstream shader;
+        for (int i = 0; ig_shader[i]; ++i)
+            shader << ig_shader[i] << std::endl;
+
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+        shader << ShaderGenerator::generatePerspective(loaderOptions);
+
+        mPerspectivePass = mRuntime->createPass(shader.str());
+        if (!mPerspectivePass) {
+            IG_LOG(L_ERROR) << "Could not setup perspective pass" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    inline bool setupTonemapPass(const Path& path, Scene* scene)
+    {
+        std::stringstream shader;
+        for (int i = 0; ig_shader[i]; ++i)
+            shader << ig_shader[i] << std::endl;
+
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+        shader << ShaderGenerator::generateTonemap(loaderOptions);
+
+        mTonemapPass = mRuntime->createPass(shader.str());
+        if (!mTonemapPass) {
+            IG_LOG(L_ERROR) << "Could not setup tonemap pass" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
     // Buffer stuff
-    bool setupTextureBuffer(size_t width, size_t height)
+    inline bool setupTextureBuffer(size_t width, size_t height)
     {
         if (mTexture)
             SDL_DestroyTexture(mTexture);
@@ -223,6 +273,7 @@ private:
 
     std::unique_ptr<Runtime> mRuntime;
     std::shared_ptr<RenderPass> mPerspectivePass;
+    std::shared_ptr<RenderPass> mTonemapPass;
     Path mRequestedPath;
 
     std::unique_ptr<std::thread> mLoadingThread;

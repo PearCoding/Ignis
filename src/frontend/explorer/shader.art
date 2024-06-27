@@ -7,7 +7,7 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
 
     // let framebuffer = attach_mitchell_filter(device.load_aov_image("", spi), 2);
     let framebuffer = device.load_aov_image("", spi);
-    let output      = device.request_buffer("_perspective_output", output_width * output_height, 0);
+    let output      = device.request_buffer("_perspective_output", output_width * output_height * 3, 0);
 
     // let camera_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
     // let camera_dir = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
@@ -17,7 +17,6 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let camera_dir = make_vec3(0,0,1);
     let camera_up  = make_vec3(0,1,0);
 
-    let scale = if settings.iter > 0 { 1 / settings.iter as f32 } else { 0 }; // TODO: This is a job for tonemapping
 
     let pers_scale = compute_scale_from_hfov(pers_fov, output_width as f32 / output_height as f32);
 
@@ -33,14 +32,31 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
         // let color = make_color((dstCoord.nx+1)/2, 0, (dstCoord.ny+1)/2, 1);
         let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
             // make_color((srcCoord.nx+1)/2, 0, (srcCoord.ny+1)/2, 1)
-            color_mulf(framebuffer.get(srcCoord), scale)
-            // color_mulf(framebuffer.get(make_pixelcoord_from_normalized(dstCoord.nx, dstCoord.ny, input_width, input_height)), scale)
+            framebuffer.get(srcCoord)
+            // framebuffer.get(make_pixelcoord_from_normalized(dstCoord.nx, dstCoord.ny, input_width, input_height))
         } else {
             color_builtins::pink
         };
 
-        output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(color)));
+        output.store_vec3(dstCoord.linear * 3, color_to_vec3(color));
     }
 
     device.sync();
+}
+
+fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () {
+    let width  = registry::get_local_parameter_i32("_input_width",  128);
+    let height = registry::get_local_parameter_i32("_input_height", 128);
+    let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
+    let output = device.request_buffer("_tonemap_output", width * height, 0);
+
+    let tonemapSettings = TonemapSettings{
+        scale           = if settings.iter > 0 { 1 / settings.iter as f32 } else { 0 },
+        use_gamma       = true,
+        method          = 0,
+        exposure_factor = 1,
+        exposure_offset = 0
+    };
+
+    ig_tonemap_pipeline2(device, input, output, &tonemapSettings);
 }

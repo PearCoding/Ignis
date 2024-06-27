@@ -85,3 +85,28 @@ fn @make_rv_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -
         }
     }
 }
+
+// Note: The following access is unaligned!
+fn @shallow_buffer_load_vec3_unaligned(buffer: ShallowBuffer, index: i32) = make_vec3(buffer.load_f32(index + 0), buffer.load_f32(index + 1), buffer.load_f32(index + 2));
+fn @device_buffer_load_vec3_unaligned(buffer: DeviceBuffer,   index: i32) = make_vec3(buffer.load_f32(index + 0), buffer.load_f32(index + 1), buffer.load_f32(index + 2));
+fn @device_buffer_store_vec3_unaligned(buffer: DeviceBuffer,  index: i32, value: Vec3) -> () {
+    buffer.store_f32(index + 0, value.x);
+    buffer.store_f32(index + 1, value.y);
+    buffer.store_f32(index + 2, value.z);
+}
+
+fn @make_aov_image_from_buffer(buffer: DeviceBuffer, width: i32, height: i32) = AOVImage {
+    width  = width,
+    height = height,
+    splat  = @|coord, color| -> () { device_buffer_store_vec3_unaligned(buffer, coord.linear*3, vec3_add(device_buffer_load_vec3_unaligned(buffer, coord.linear * 3), color_to_vec3(color))); },
+    get    = @|coord| vec3_to_color(device_buffer_load_vec3_unaligned(buffer, coord.linear * 3)),
+    mark_as_used = @|| -> () {}
+};
+
+fn @make_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, height: i32) = AOVImage {
+    width  = width,
+    height = height,
+    splat  = @|_, _| -> () { /* Nothing */ },
+    get    = @|coord| vec3_to_color(shallow_buffer_load_vec3_unaligned(buffer, coord.linear * 3)),
+    mark_as_used = @|| -> () {}
+};
