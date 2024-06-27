@@ -46,6 +46,7 @@ public:
         , mCurrentTravelSpeed(1)
         , mCurrrentMouseMode(MM_None)
         , mMouseOnWidget(false)
+        , mRequestReset(false)
     {
     }
 
@@ -128,11 +129,17 @@ public:
         }
 
         if (!mLoading && mRuntime) {
-            const auto start = std::chrono::high_resolution_clock::now();
+            const auto start          = std::chrono::high_resolution_clock::now();
+            const auto previousCamera = mRuntime->getCameraOrientation();
+            if (mRequestReset) {
+                mRuntime->setCameraOrientation(mCurrentCamera.asOrientation());
+                mRuntime->reset();
+                mRequestReset = false;
+            }
             mRuntime->step();
 
             if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-                if (mTexture && mRuntime->currentIterationCount() > 0)
+                if (mTexture)
                     runPipeline();
 
                 const ImVec2 contentMin  = ImGui::GetWindowContentRegionMin();
@@ -149,14 +156,6 @@ public:
             mCurrentFPS    = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
             if (!std::isfinite(mCurrentFPS))
                 mCurrentFPS = 0;
-
-            const auto previousCamera = mRuntime->getCameraOrientation();
-            if (previousCamera.Eye != mCurrentCamera.Eye
-                || previousCamera.Up != mCurrentCamera.Up
-                || previousCamera.Dir != mCurrentCamera.Direction) {
-                mRuntime->setCameraOrientation(mCurrentCamera.asOrientation());
-                mRuntime->reset();
-            }
         }
     }
 
@@ -214,16 +213,24 @@ public:
 
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0)) {
                 const ImVec2 lookDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0);
-                const float aspeed     = RSPEED / 10;
+                const float aspeed     = RSPEED;
                 handleRotation(lookDelta.x * aspeed, lookDelta.y * aspeed);
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
             }
 
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0)) {
                 const ImVec2 panDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right, 0);
-                const float aspeed    = mCurrentTravelSpeed / 100;
+                const float aspeed    = mCurrentTravelSpeed / 10;
                 mCurrentCamera.move(panDelta.x * aspeed, -panDelta.y * aspeed, 0);
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
             }
         }
+
+        const auto previousCamera = mRuntime->getCameraOrientation();
+
+        mRequestReset = previousCamera.Eye != mCurrentCamera.Eye
+                        || previousCamera.Up != mCurrentCamera.Up
+                        || previousCamera.Dir != mCurrentCamera.Direction;
     }
 
     inline void loadFromFile(const Path& path)
@@ -262,7 +269,10 @@ public:
 
             bbox.extend(mCurrentCamera.Eye);
             mCurrentTravelSpeed = std::max(1e-4f, bbox.diameter().maxCoeff() / 50);
+        } else {
+            mRuntime.reset();
         }
+        mRequestReset = false;
 
         mLoading = false;
     }
@@ -411,6 +421,7 @@ private:
     float mCurrentTravelSpeed;
     MouseMode mCurrrentMouseMode;
     bool mMouseOnWidget;
+    bool mRequestReset;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)

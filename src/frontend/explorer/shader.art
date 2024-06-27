@@ -50,7 +50,7 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
     let output = device.request_buffer("_tonemap_output", width * height, 0);
 
     let tonemapSettings = TonemapSettings{
-        scale           = if settings.iter > 0 { 1 / settings.iter as f32 } else { 0 },
+        scale           = 1 / (settings.iter + 1) as f32,
         use_gamma       = true,
         method          = registry::get_local_parameter_i32("_tonemap_method", 0),
         exposure_factor = registry::get_local_parameter_f32("_tonemap_exposure_factor", 1),
