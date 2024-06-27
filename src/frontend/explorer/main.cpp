@@ -3,6 +3,7 @@
 #include "MainWindow.h"
 #include "Menu.h"
 #include "MenuItem.h"
+#include "OverviewWidget.h"
 #include "ParameterWidget.h"
 #include "RenderWidget.h"
 
@@ -18,6 +19,9 @@ static void openFileCallback(const Path& path)
 {
     if (sRenderWidget)
         sRenderWidget->openFile(path);
+
+    if (sMainWindow)
+        sMainWindow->setTitle("Ignis | " + std::filesystem::weakly_canonical(path).generic_string());
 }
 
 static void openFileDialogCallback()
@@ -70,14 +74,16 @@ int main(int argc, char** argv)
         auto renderWidget = std::make_shared<RenderWidget>();
         sRenderWidget     = renderWidget.get();
 
-        if (!args.InputFile.empty())
-            renderWidget->openFile(args.InputFile);
-
         window.addChild(renderWidget);
         window.addChild(setupMainMenu());
         window.addChild(std::make_shared<ParameterWidget>(sRenderWidget));
+        window.addChild(std::make_shared<OverviewWidget>(sRenderWidget));
 
         window.setDropCallback(openFileCallback);
+
+        if (!args.InputFile.empty())
+            openFileCallback(args.InputFile);
+
         return window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
     } catch (const std::exception& e) {
         IG_LOG(L_FATAL) << e.what() << std::endl;

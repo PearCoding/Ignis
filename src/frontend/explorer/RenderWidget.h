@@ -3,6 +3,8 @@
 #include "Widget.h"
 
 namespace IG {
+class Runtime;
+
 class RenderWidget : public Widget {
 public:
     RenderWidget();
@@ -30,6 +32,9 @@ public:
 
     void updateParameters(const Parameters& params);
     const Parameters& currentParameters() const;
+
+    Runtime* currentRuntime();
+
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;
 };

@@ -179,7 +179,8 @@ public:
         }
     }
 
-    inline const RenderWidget::Parameters& parameters() const { return mCurrentParameters; }
+    inline const RenderWidget::Parameters& currentParameters() const { return mCurrentParameters; }
+    inline Runtime* currentRuntime() { return mRuntime.get(); }
 
 private:
     inline void updateSize(size_t width, size_t height)
@@ -323,7 +324,11 @@ void RenderWidget::updateParameters(const Parameters& params)
 
 const RenderWidget::Parameters& RenderWidget::currentParameters() const
 {
-    return mInternal->parameters();
+    return mInternal->currentParameters();
 }
 
+Runtime* RenderWidget::currentRuntime()
+{
+    return mInternal->currentRuntime();
+}
 }; // namespace IG

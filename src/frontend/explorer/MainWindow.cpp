@@ -170,6 +170,11 @@ MainWindow::~MainWindow()
 {
 }
 
+void MainWindow::setTitle(const std::string& str)
+{
+    mInternal->setTitle(str.c_str());
+}
+
 bool MainWindow::exec()
 {
     return mInternal->exec();

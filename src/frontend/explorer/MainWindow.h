@@ -11,6 +11,8 @@ public:
     MainWindow(size_t width, size_t height, float dpi);
     ~MainWindow();
 
+    void setTitle(const std::string& str);
+
     bool exec();
 
     void addChild(const std::shared_ptr<Widget>& widget);
