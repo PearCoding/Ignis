@@ -210,7 +210,7 @@ private:
     }
 };
 
-ShaderTaskManager::ShaderTaskManager(ScriptCompiler* compiler, size_t threads, DumpLevel dumpLevel)
+ShaderTaskManager::ShaderTaskManager(ScriptCompiler* compiler, size_t threads, ShaderDumpVerbosity dumpLevel)
     : mInternal(new ShaderTaskManagerInternal(compiler, threads))
     , mThreadCount(threads)
     , mDumpLevel(dumpLevel)
@@ -224,12 +224,12 @@ ShaderTaskManager::~ShaderTaskManager()
 
 void ShaderTaskManager::add(const std::string& id, const std::string& name, const std::string& script, const std::string& function)
 {
-    if (mDumpLevel == DumpLevel::Light)
+    if (mDumpLevel == ShaderDumpVerbosity::Light)
         dumpShader(whitespace_escaped(name) + ".art", script);
 
     const std::string full_script = mInternal->mInternalCompiler->prepare(script);
 
-    if (mDumpLevel == DumpLevel::Full)
+    if (mDumpLevel == ShaderDumpVerbosity::Full)
         dumpShader(whitespace_escaped(name) + ".art", full_script);
 
     if (mThreadCount == 1) {

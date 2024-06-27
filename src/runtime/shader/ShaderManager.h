@@ -1,9 +1,11 @@
 #pragma once
 
 #include "technique/TechniqueVariant.h"
+#include "ShaderDumpVerbosity.h"
 
 namespace IG {
 class ScriptCompiler;
+
 
 class ShaderManager {
 public:
@@ -18,7 +20,7 @@ public:
         mEntries[id] = entry;
     }
 
-    [[nodiscard]] bool compile(ScriptCompiler* compiler, size_t threads);
+    [[nodiscard]] bool compile(ScriptCompiler* compiler, size_t threads, ShaderDumpVerbosity verbosity = ShaderDumpVerbosity::None);
 
 private:
     std::unordered_map<std::string, ShaderEntry> mEntries;

@@ -656,7 +656,7 @@ bool Runtime::compileShaders()
     }
 
     const auto startJIT = std::chrono::high_resolution_clock::now();
-    const bool result   = manager.compile(mCompiler.get(), threads);
+    const bool result   = manager.compile(mCompiler.get(), threads, mOptions.DumpRegistryFull ? ShaderDumpVerbosity::Full : (mOptions.DumpShader ? ShaderDumpVerbosity::Light : ShaderDumpVerbosity::None));
 
     IG_LOG(L_DEBUG) << "Compiling shaders took " << (std::chrono::high_resolution_clock::now() - startJIT) << std::endl;
 

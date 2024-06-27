@@ -5,9 +5,9 @@
 #include "ShaderTaskManager.h"
 
 namespace IG {
-bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads)
+bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads, ShaderDumpVerbosity verbosity )
 {
-    ShaderTaskManager manager(compiler, threads);
+    ShaderTaskManager manager(compiler, threads, verbosity);
     ShaderReducer reducer;
 
     // Reduce the number of shaders
