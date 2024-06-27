@@ -3,6 +3,7 @@
 #include "MainWindow.h"
 #include "Menu.h"
 #include "MenuItem.h"
+#include "ParameterWidget.h"
 #include "RenderWidget.h"
 
 #include "imgui.h"
@@ -71,6 +72,7 @@ int main(int argc, char** argv)
 
         window.addChild(renderWidget);
         window.addChild(setupMainMenu());
+        window.addChild(std::make_shared<ParameterWidget>(sRenderWidget));
 
         window.setDropCallback(openFileCallback);
         return window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;

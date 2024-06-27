@@ -24,7 +24,12 @@ public:
         : mTexture(nullptr)
         , mWidth(0)
         , mHeight(0)
-        , mFOV(60)
+        , mCurrentParameters(RenderWidget::Parameters{
+              .FOV               = 60,
+              .ExposureFactor    = 0,
+              .ExposureOffset    = 0,
+              .ToneMappingMethod = RenderWidget::ToneMappingMethod::ModifiedReinhard,
+          })
         , mLoading(false)
     {
     }
@@ -44,12 +49,6 @@ public:
     {
         if (!mLoading)
             mRequestedPath = path;
-    }
-
-    void onWindowResize(size_t width, size_t height)
-    {
-        // Nothing
-        IG_UNUSED(width, height);
     }
 
     void onContentResize(size_t width, size_t height)
@@ -151,7 +150,7 @@ public:
         if (prevCamera && prevCamera->hasProperty("transform"))
             cameraObject->setProperty("transform", prevCamera->property("transform"));
         if (prevCamera && prevCamera->hasProperty("fov")) // TODO: Other types?
-            mFOV = prevCamera->property("fov").getNumber(mFOV);
+            mCurrentParameters.FOV = prevCamera->property("fov").getNumber(mCurrentParameters.FOV);
 
         scene->setCamera(cameraObject);
 
@@ -161,18 +160,26 @@ public:
             setupTonemapPass(path, scene.get());
 
             updateSize(mWidth, mHeight);
-            updateFOV(mFOV);
+            updateParameters(mCurrentParameters);
         }
 
         mLoading = false;
     }
 
-    inline void updateFOV(float fov)
+    inline void updateParameters(const RenderWidget::Parameters& params)
     {
-        mFOV = fov;
+        mCurrentParameters = params;
         if (mPerspectivePass)
-            mPerspectivePass->setParameter("_perspective_fov", mFOV);
+            mPerspectivePass->setParameter("_perspective_fov", mCurrentParameters.FOV);
+
+        if (mTonemapPass) {
+            mTonemapPass->setParameter("_tonemap_method", (int)mCurrentParameters.ToneMappingMethod);
+            mTonemapPass->setParameter("_tonemap_exposure_factor", std::pow(2.0f, mCurrentParameters.ExposureFactor));
+            mTonemapPass->setParameter("_tonemap_exposure_offset", mCurrentParameters.ExposureOffset);
+        }
     }
+
+    inline const RenderWidget::Parameters& parameters() const { return mCurrentParameters; }
 
 private:
     inline void updateSize(size_t width, size_t height)
@@ -269,7 +276,7 @@ private:
     SDL_Texture* mTexture = nullptr;
     std::vector<uint32> mBuffer;
     size_t mWidth, mHeight;
-    float mFOV;
+    RenderWidget::Parameters mCurrentParameters;
 
     std::unique_ptr<Runtime> mRuntime;
     std::shared_ptr<RenderPass> mPerspectivePass;
@@ -299,11 +306,6 @@ void RenderWidget::openFile(const Path& path)
     mInternal->openFile(path);
 }
 
-void RenderWidget::onWindowResize(Widget*, size_t width, size_t height)
-{
-    mInternal->onWindowResize(width, height);
-}
-
 void RenderWidget::onRender(Widget*)
 {
     mInternal->onRender();
@@ -312,6 +314,16 @@ void RenderWidget::onRender(Widget*)
 void RenderWidget::onInput(Widget*)
 {
     mInternal->onInput();
+}
+
+void RenderWidget::updateParameters(const Parameters& params)
+{
+    mInternal->updateParameters(params);
+}
+
+const RenderWidget::Parameters& RenderWidget::currentParameters() const
+{
+    return mInternal->parameters();
 }
 
 }; // namespace IG

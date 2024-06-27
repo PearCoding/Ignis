@@ -71,7 +71,7 @@ public:
     std::array<int, HISTOGRAM_SIZE * 4> Histogram;
 
     bool ToneMapping_Automatic              = false;
-    float ToneMapping_Exposure              = 1.0f;
+    float ToneMapping_Exposure              = 0.0f;
     float ToneMapping_Offset                = 0.0f;
     bool ToneMappingGamma                   = true;
     IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::ACES;
@@ -218,7 +218,7 @@ public:
                     break;
                 case SDLK_g:
                     if (!ToneMapping_Automatic && !io.WantTextInput) {
-                        ToneMapping_Exposure = 1.0f;
+                        ToneMapping_Exposure = 0.0f;
                         ToneMapping_Offset   = 0.0f;
                     }
                     break;
