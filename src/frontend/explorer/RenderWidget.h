@@ -34,6 +34,7 @@ public:
     const Parameters& currentParameters() const;
 
     Runtime* currentRuntime();
+    float currentFPS() const;
 
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;

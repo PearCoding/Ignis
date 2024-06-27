@@ -113,6 +113,7 @@ public:
         }
 
         if (!mLoading && mRuntime) {
+            const auto start = std::chrono::high_resolution_clock::now();
             mRuntime->step();
 
             if (ImGui::Begin("Render")) {
@@ -126,6 +127,8 @@ public:
                     onContentResize((size_t)contentSize.x, (size_t)contentSize.y);
             }
             ImGui::End();
+            const auto end = std::chrono::high_resolution_clock::now();
+            mCurrentFPS    = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         }
     }
 
@@ -181,6 +184,7 @@ public:
 
     inline const RenderWidget::Parameters& currentParameters() const { return mCurrentParameters; }
     inline Runtime* currentRuntime() { return mRuntime.get(); }
+    inline float currentFPS() const { return mCurrentFPS; }
 
 private:
     inline void updateSize(size_t width, size_t height)
@@ -286,6 +290,8 @@ private:
 
     std::unique_ptr<std::thread> mLoadingThread;
     std::atomic<bool> mLoading;
+
+    float mCurrentFPS;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
@@ -330,5 +336,10 @@ const RenderWidget::Parameters& RenderWidget::currentParameters() const
 Runtime* RenderWidget::currentRuntime()
 {
     return mInternal->currentRuntime();
+}
+
+float RenderWidget::currentFPS() const
+{
+    return mInternal->currentFPS();
 }
 }; // namespace IG

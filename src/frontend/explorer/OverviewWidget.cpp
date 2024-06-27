@@ -21,6 +21,7 @@ void OverviewWidget::onRender(Widget*)
         if (!runtime) {
             ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "No scene loaded...");
         } else {
+            ImGui::Text("FPS  %.2f", mRenderWidget->currentFPS());
             ImGui::Text("Iter %zu", runtime->currentIterationCount());
             ImGui::Text("SPP  %zu", runtime->currentSampleCount());
         }
