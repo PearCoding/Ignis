@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     orientation.Eye  = cmd.EyeVector().value_or(orientation.Eye);
     orientation.Dir  = cmd.DirVector().value_or(orientation.Dir);
     orientation.Up   = cmd.UpVector().value_or(orientation.Up);
-    runtime->setCameraOrientationParameter(orientation);
+    runtime->setCameraOrientation(orientation);
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));

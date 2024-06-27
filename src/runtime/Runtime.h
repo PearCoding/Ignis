@@ -154,7 +154,9 @@ public:
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
     [[nodiscard]] inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
     /// Set internal parameters for the camera orientation. This is only a convenient wrapper around multiple setParameter calls
-    void setCameraOrientationParameter(const CameraOrientation& orientation);
+    void setCameraOrientation(const CameraOrientation& orientation);
+    /// Get camera orientation from internal parameters. This is only a convenient wrapper around multiple getParameter calls
+    CameraOrientation getCameraOrientation() const;
 
     /// True if denoising can be applied
     [[nodiscard]] bool hasDenoiser() const;

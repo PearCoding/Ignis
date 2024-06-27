@@ -9,6 +9,11 @@ struct CameraProxy {
     Vector3f Right;
     Vector3f Up;
 
+    inline CameraProxy(const CameraOrientation& orientation)
+        : CameraProxy(orientation.Eye, orientation.Dir, orientation.Up)
+    {
+    }
+
     inline CameraProxy(const Vector3f& e, const Vector3f& d, const Vector3f& u)
         : Eye(e)
     {

@@ -314,7 +314,7 @@ bool Runtime::load(const Path& path, const Scene* scene)
     ctx.reset();
 
     // Preload camera orientation
-    setCameraOrientationParameter(mInitialCameraOrientation);
+    setCameraOrientation(mInitialCameraOrientation);
     bool res = setupScene();
 
     if (!res)
@@ -738,11 +738,24 @@ std::vector<std::string> Runtime::getAvailableCameraTypes()
     return Loader::getAvailableCameraTypes();
 }
 
-void Runtime::setCameraOrientationParameter(const CameraOrientation& orientation)
+void Runtime::setCameraOrientation(const CameraOrientation& orientation)
 {
     setParameter("__camera_eye", orientation.Eye);
     setParameter("__camera_dir", orientation.Dir);
     setParameter("__camera_up", orientation.Up);
+}
+
+CameraOrientation Runtime::getCameraOrientation() const
+{
+    const Vector3f eye = mGlobalRegistry.VectorParameters.contains("__camera_eye") ? mGlobalRegistry.VectorParameters.at("__camera_eye") : Vector3f::Zero();
+    const Vector3f dir = mGlobalRegistry.VectorParameters.contains("__camera_dir") ? mGlobalRegistry.VectorParameters.at("__camera_dir") : Vector3f::UnitZ();
+    const Vector3f up  = mGlobalRegistry.VectorParameters.contains("__camera_up") ? mGlobalRegistry.VectorParameters.at("__camera_up") : Vector3f::UnitY();
+
+    return CameraOrientation{
+        .Eye = eye,
+        .Dir = dir,
+        .Up  = up
+    };
 }
 
 bool Runtime::hasDenoiser() const

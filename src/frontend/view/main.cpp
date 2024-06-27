@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 
     const auto def = runtime->initialCameraOrientation();
     CameraProxy camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
-    runtime->setCameraOrientationParameter(camera.asOrientation());
+    runtime->setCameraOrientation(camera.asOrientation());
 
     const size_t SPI          = runtime->samplesPerIteration();
     const size_t desired_iter = static_cast<size_t>(std::ceil(cmd.SPP.value_or(0) / (float)SPI));
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
             running = false;
             break;
         case Context::InputResult::Reset:
-            runtime->setCameraOrientationParameter(camera.asOrientation());
+            runtime->setCameraOrientation(camera.asOrientation());
             runtime->reset();
             break;
         default:

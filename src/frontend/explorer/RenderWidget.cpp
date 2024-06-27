@@ -1,4 +1,5 @@
 #include "RenderWidget.h"
+#include "CameraProxy.h"
 #include "Logger.h"
 #include "Runtime.h"
 #include "ShaderGenerator.h"
@@ -31,6 +32,8 @@ public:
               .ToneMappingMethod = RenderWidget::ToneMappingMethod::ModifiedReinhard,
           })
         , mLoading(false)
+        , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())
+        , mCurrentTravelSpeed(1)
     {
     }
 
@@ -129,11 +132,75 @@ public:
             ImGui::End();
             const auto end = std::chrono::high_resolution_clock::now();
             mCurrentFPS    = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+            const auto previousCamera = mRuntime->getCameraOrientation();
+            if (previousCamera.Eye != mCurrentCamera.Eye
+                || previousCamera.Up != mCurrentCamera.Up
+                || previousCamera.Dir != mCurrentCamera.Direction) {
+                mRuntime->setCameraOrientation(mCurrentCamera.asOrientation());
+                mRuntime->reset();
+            }
         }
     }
 
     void onInput()
     {
+        if (!mRuntime)
+            return;
+
+        const auto handleRotation = [&](float xmotion, float ymotion) {
+            ImGuiIO& io = ImGui::GetIO();
+            if (io.KeyCtrl && io.KeyAlt) {
+                mCurrentCamera.rotate_around(mSceneCenter, xmotion, ymotion);
+                mCurrentCamera.snap_up();
+            } else if (io.KeyAlt) {
+                mCurrentCamera.rotate_fixroll(xmotion, ymotion);
+            } else if (io.KeyCtrl) {
+                mCurrentCamera.rotate_around(mSceneCenter, xmotion, ymotion);
+            } else {
+                mCurrentCamera.rotate(xmotion, ymotion);
+            }
+        };
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Keypad1, false))
+            mCurrentCamera.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
+        if (ImGui::IsKeyPressed(ImGuiKey_Keypad3, false))
+            mCurrentCamera.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
+        if (ImGui::IsKeyPressed(ImGuiKey_Keypad7, false))
+            mCurrentCamera.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
+        if (ImGui::IsKeyPressed(ImGuiKey_Keypad9, false))
+            mCurrentCamera.update_dir(-mCurrentCamera.Direction, mCurrentCamera.Up);
+        if (ImGui::IsKeyPressed(ImGuiKey_O, false))
+            mCurrentCamera.snap_up();
+        if (ImGui::IsKeyPressed(ImGuiKey_R, false))
+            mCurrentCamera = CameraProxy(mRuntime->initialCameraOrientation());
+
+        constexpr float RSPEED  = 0.005f;
+        constexpr float KRSPEED = 10 * RSPEED;
+        if (ImGui::IsKeyDown(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_W))
+            mCurrentCamera.move(0, 0, mCurrentTravelSpeed);
+        if (ImGui::IsKeyDown(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_S))
+            mCurrentCamera.move(0, 0, -mCurrentTravelSpeed);
+        if (ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_A))
+            mCurrentCamera.move(-mCurrentTravelSpeed, 0, 0);
+        if (ImGui::IsKeyDown(ImGuiKey_RightArrow) || ImGui::IsKeyDown(ImGuiKey_D))
+            mCurrentCamera.move(mCurrentTravelSpeed, 0, 0);
+        if (ImGui::IsKeyDown(ImGuiKey_E))
+            mCurrentCamera.roll(KRSPEED);
+        if (ImGui::IsKeyDown(ImGuiKey_Q))
+            mCurrentCamera.roll(-KRSPEED);
+        if (ImGui::IsKeyDown(ImGuiKey_PageUp))
+            mCurrentCamera.move(0, mCurrentTravelSpeed, 0);
+        if (ImGui::IsKeyDown(ImGuiKey_PageDown))
+            mCurrentCamera.move(0, -mCurrentTravelSpeed, 0);
+        // if (arrows[8])
+        //     handleRotation(0, KRSPEED);
+        // if (arrows[9])
+        //     handleRotation(0, -KRSPEED);
+        // if (arrows[10])
+        //     handleRotation(-KRSPEED, 0);
+        // if (arrows[11])
+        //     handleRotation(KRSPEED, 0);
     }
 
     inline void loadFromFile(const Path& path)
@@ -164,6 +231,14 @@ public:
 
             updateSize(mWidth, mHeight);
             updateParameters(mCurrentParameters);
+
+            mCurrentCamera = CameraProxy(mRuntime->initialCameraOrientation());
+
+            auto bbox    = mRuntime->sceneBoundingBox();
+            mSceneCenter = bbox.center();
+
+            bbox.extend(mCurrentCamera.Eye);
+            mCurrentTravelSpeed = std::max(1e-4f, bbox.diameter().maxCoeff() / 50);
         }
 
         mLoading = false;
@@ -292,6 +367,10 @@ private:
     std::atomic<bool> mLoading;
 
     float mCurrentFPS;
+    CameraProxy mCurrentCamera;
+
+    Vector3f mSceneCenter;
+    float mCurrentTravelSpeed;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
