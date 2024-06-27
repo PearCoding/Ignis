@@ -43,8 +43,6 @@ fn @gpu_get_framebuffer(spi: i32, use_framebuffer: bool, atomics: Atomics) -> AO
     let (film_pixels, film_width, film_height) = gpu_get_film_data();
     let framebuffer = if !use_framebuffer { make_empty_aov_image() } else { make_atomic_aov_image("", film_pixels, film_width, film_height, spi, atomics) };
     // TODO: Make this configurable!
-    // attach_mitchell_filter(framebuffer, 3)
-    // attach_triangle_filter(framebuffer, 3)
     attach_no_filter(framebuffer)
 }
 

@@ -29,7 +29,7 @@ fn @attach_block_filter(image: AOVImage, radius: i32) -> AOVImage {
     let norm  = 1 / (width * width) as f32;
 
     fn @new_splat(pixel: PixelCoord, color: Color) {
-        for ix, iy in filter_square_kernel(pixel.x, pixel.y, 2*radius+1, 2*radius+1, image.width, image.height) {
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, width, width, image.width, image.height) {
             let new_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
             let new_color = color_mulf(color, norm);
             image.splat(new_pixel, new_color);
@@ -38,7 +38,7 @@ fn @attach_block_filter(image: AOVImage, radius: i32) -> AOVImage {
 
     fn @new_get(pixel: PixelCoord) -> Color {
         let mut color = color_builtins::black;
-        for ix, iy in filter_square_kernel(pixel.x, pixel.y, 2*radius+1, 2*radius+1, image.width, image.height) {
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, width, width, image.width, image.height) {
             let orig_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
             color = color_add(color, color_mulf(image.get(orig_pixel), norm));
         }
@@ -48,18 +48,25 @@ fn @attach_block_filter(image: AOVImage, radius: i32) -> AOVImage {
     image.{ splat = new_splat, get = new_get }
 } 
 
-fn @attach_radial_filter(image: AOVImage, radius: i32, filter: fn (f32) -> f32) -> AOVImage {
-    if ?radius && radius == 0 {
+fn @attach_conv_filter(image: AOVImage, width: i32, height: i32, kernel: fn(i32, i32) -> f32) -> AOVImage {
+    if ?width && width == 0 {
         return(image)
     }
 
+    if ?height && height == 0 {
+        return(image)
+    }
+
+    let mut sum = 0:f32;
+    for ix, iy in filter_square_kernel(0, 0, width, height, image.width, image.height) {
+        sum += kernel(ix + width / 2, iy + height / 2);
+    }
+    let norm = 1 / sum;
+
     fn @new_splat(pixel: PixelCoord, color: Color) {
-        for ix, iy in filter_square_kernel(pixel.x, pixel.y, 2*radius+1, 2*radius+1, image.width, image.height) {
-            let i = ix - pixel.x;
-            let j = iy - pixel.y;
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, width, height, image.width, image.height) {
             let new_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
-            let r = math_builtins::sqrt( (i*i + j*j) as f32 );
-            let factor = filter(r);
+            let factor    = kernel(ix - pixel.x + width / 2, iy - pixel.y + height / 2) * norm;
             let new_color = color_mulf(color, factor);
             image.splat(new_pixel, new_color);
         }
@@ -67,12 +74,55 @@ fn @attach_radial_filter(image: AOVImage, radius: i32, filter: fn (f32) -> f32) 
 
     fn @new_get(pixel: PixelCoord) -> Color {
         let mut color = color_builtins::black;
-        for ix, iy in filter_square_kernel(pixel.x, pixel.y, 2*radius+1, 2*radius+1, image.width, image.height) {
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, width, height, image.width, image.height) {
+            let orig_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
+            let factor     = kernel(ix - pixel.x + width / 2, iy - pixel.y + height / 2) * norm;
+            color = color_add(color, color_mulf(image.get(orig_pixel), factor));
+        }
+        color
+    }
+
+    image.{ splat = new_splat, get = new_get }
+} 
+
+fn @attach_conv3x3_filter(image: AOVImage, mat: Mat3x3) = attach_conv_filter(image, 3, 3, @|x, y| mat3x3_at(mat, y, x));
+fn @attach_sharpen3x3_filter(image: AOVImage)           = attach_conv3x3_filter(image, make_mat3x3(make_vec3( 0,-1, 0), make_vec3(-1, 5,-1), make_vec3( 0,-1, 0)));
+fn @attach_gaussian3x3_filter(image: AOVImage)          = attach_conv3x3_filter(image, make_mat3x3(make_vec3( 1, 2, 1), make_vec3( 2, 4, 2), make_vec3( 1, 2, 1)));
+
+fn @attach_radial_filter(image: AOVImage, radius: i32, filter: fn (f32) -> f32) -> AOVImage {
+    if ?radius && radius == 0 {
+        return(image)
+    }
+
+    let width = 2 * radius + 1;
+
+    let mut sum = 0:f32;
+    for ix, iy in filter_square_kernel(0, 0, width, width, image.width, image.height) {
+        let r = math_builtins::sqrt( (ix*ix + iy*iy) as f32 );
+        sum += filter(r);
+    }
+    let norm = 1 / sum;
+
+    fn @new_splat(pixel: PixelCoord, color: Color) {
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, width, width, image.width, image.height) {
+            let i = ix - pixel.x;
+            let j = iy - pixel.y;
+            let new_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
+            let r = math_builtins::sqrt( (i*i + j*j) as f32 );
+            let factor = filter(r) * norm;
+            let new_color = color_mulf(color, factor);
+            image.splat(new_pixel, new_color);
+        }
+    }
+
+    fn @new_get(pixel: PixelCoord) -> Color {
+        let mut color = color_builtins::black;
+        for ix, iy in filter_square_kernel(pixel.x, pixel.y, width, width, image.width, image.height) {
             let i = ix - pixel.x;
             let j = iy - pixel.y;
             let orig_pixel = make_pixelcoord_from_xy(ix, iy, image.width, image.height, 0/* TODO */, 0/* TODO */);
             let r = math_builtins::sqrt( (i*i + j*j) as f32 );
-            let factor = filter(r);
+            let factor = filter(r) * norm;
             color = color_add(color, color_mulf(image.get(orig_pixel), factor));
         }
         color
@@ -82,23 +132,15 @@ fn @attach_radial_filter(image: AOVImage, radius: i32, filter: fn (f32) -> f32) 
 }
 
 fn @attach_triangle_filter(image: AOVImage, radius: i32) -> AOVImage {
-    let norm = flt_inv_pi / ( radius * radius ) as f32; // TODO: Really?
-
     fn @triangle(x: f32) -> f32 {
         math_builtins::fmax[f32](0, 1 - math_builtins::fabs(x))
 	}
 
-    attach_radial_filter(image, radius, @|r| norm * triangle(r / radius as f32))
-} 
+    attach_radial_filter(image, radius, @|r| triangle(r / radius as f32))
+}
 
-fn @attach_mitchell_filter(image: AOVImage, radius: i32) -> AOVImage {
-    let nwidth = radius + 1; // radius divided by 2 to match definition
-    let norm = 1 / ( 3 * nwidth * nwidth ) as f32; // TODO: Really?
-
+fn @attach_cubic_advanced_mitchell_filter(image: AOVImage, B: f32, C: f32) -> AOVImage {
     fn @mitchell(mut x: f32) -> f32 {
-        let B : f32 = 1 / 3.0;
-        let C : f32 = 1 / 3.0;
-
 		x = math_builtins::fabs(x);
 		if x < 1 {
 			((12 - 9 * B - 6 * C) * x * x * x + (-18 + 12 * B + 6 * C) * x * x + (6 - 2 * B)) / 6
@@ -109,5 +151,9 @@ fn @attach_mitchell_filter(image: AOVImage, radius: i32) -> AOVImage {
         }
 	}
 
-    attach_radial_filter(image, radius, @|r| norm * mitchell(r / radius as f32))
+    attach_radial_filter(image, 3, mitchell)
 } 
+
+fn @attach_cubic_mitchell_filter(image: AOVImage)    = attach_cubic_advanced_mitchell_filter(image, 1 / 3.0, 1 / 3.0);
+fn @attach_cubic_bspline_filter(image: AOVImage)     = attach_cubic_advanced_mitchell_filter(image, 1, 0);
+fn @attach_cubic_catmull_rom_filter(image: AOVImage) = attach_cubic_advanced_mitchell_filter(image, 0, 0.5);

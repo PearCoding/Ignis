@@ -15,8 +15,8 @@ extern SDL_Renderer* sRenderer;
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file);
 
-constexpr uint32 FisheyeWidth  = 512;
-constexpr uint32 FisheyeHeight = 512;
+constexpr uint32 FisheyeWidth  = 1024;
+constexpr uint32 FisheyeHeight = 1024;
 
 class RenderWidgetInternal {
 public:

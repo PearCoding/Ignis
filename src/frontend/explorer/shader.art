@@ -5,8 +5,8 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let output_height = registry::get_local_parameter_i32("_output_height",   128);
     let pers_fov      = rad(registry::get_local_parameter_f32("_perspective_fov", 60));
 
-    // let framebuffer = attach_mitchell_filter(device.load_aov_image("", spi), 2);
-    let framebuffer = device.load_aov_image("", spi);
+    let framebuffer = attach_cubic_mitchell_filter(device.load_aov_image("", spi));
+    // let framebuffer = device.load_aov_image("", spi);
     let output      = device.request_buffer("_perspective_output", output_width * output_height * 3, 0);
 
     // let camera_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
@@ -16,7 +16,6 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let camera_eye = make_vec3(0,0,0);
     let camera_dir = make_vec3(0,0,1);
     let camera_up  = make_vec3(0,1,0);
-
 
     let pers_scale = compute_scale_from_hfov(pers_fov, output_width as f32 / output_height as f32);
 
