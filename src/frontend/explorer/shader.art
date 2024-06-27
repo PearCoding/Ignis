@@ -5,7 +5,7 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let output_height = registry::get_local_parameter_i32("_output_height",   128);
     let pers_fov      = rad(registry::get_local_parameter_f32("_perspective_fov", 60));
 
-    let framebuffer = attach_cubic_mitchell_filter(device.load_aov_image("", spi));
+    let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 7, 7);
     // let framebuffer = device.load_aov_image("", spi);
     let output      = device.request_buffer("_perspective_output", output_width * output_height * 3, 0);
 
@@ -52,9 +52,9 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
     let tonemapSettings = TonemapSettings{
         scale           = if settings.iter > 0 { 1 / settings.iter as f32 } else { 0 },
         use_gamma       = true,
-        method          = 0,
-        exposure_factor = 1,
-        exposure_offset = 0
+        method          = registry::get_local_parameter_i32("_tonemap_method", 0),
+        exposure_factor = registry::get_local_parameter_f32("_tonemap_exposure_factor", 1),
+        exposure_offset = registry::get_local_parameter_f32("_tonemap_exposure_offset", 0)
     };
 
     ig_tonemap_pipeline2(device, input, output, &tonemapSettings);

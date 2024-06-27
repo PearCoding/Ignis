@@ -36,6 +36,9 @@ fn @color_max_index(c: Color)     = vec3_max_index(color_to_vec3(c));
 fn @color_min_component(c: Color) = vec3_min_value(color_to_vec3(c));
 fn @color_min_index(c: Color)     = vec3_min_index(color_to_vec3(c));
 
+fn @color_max(a: Color, b: Color) = vec4_to_color(vec4_max(color_to_vec4(a), color_to_vec4(b)));
+fn @color_min(a: Color, b: Color) = vec4_to_color(vec4_min(color_to_vec4(a), color_to_vec4(b)));
+
 fn @is_black(c: Color) = (c.r == 0 && c.g == 0 && c.b == 0);
 fn @is_white(c: Color) = (c.r == 1 && c.g == 1 && c.b == 1);
 fn @color_is_equal_eps(a: Color, b: Color, eps: f32) -> bool {

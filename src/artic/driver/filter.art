@@ -79,7 +79,7 @@ fn @attach_conv_filter(image: AOVImage, width: i32, height: i32, kernel: fn(i32,
             let factor     = kernel(ix - pixel.x + width / 2, iy - pixel.y + height / 2) * norm;
             color = color_add(color, color_mulf(image.get(orig_pixel), factor));
         }
-        color
+        color_max(color, color_builtins::black)
     }
 
     image.{ splat = new_splat, get = new_get }
@@ -88,6 +88,23 @@ fn @attach_conv_filter(image: AOVImage, width: i32, height: i32, kernel: fn(i32,
 fn @attach_conv3x3_filter(image: AOVImage, mat: Mat3x3) = attach_conv_filter(image, 3, 3, @|x, y| mat3x3_at(mat, y, x));
 fn @attach_sharpen3x3_filter(image: AOVImage)           = attach_conv3x3_filter(image, make_mat3x3(make_vec3( 0,-1, 0), make_vec3(-1, 5,-1), make_vec3( 0,-1, 0)));
 fn @attach_gaussian3x3_filter(image: AOVImage)          = attach_conv3x3_filter(image, make_mat3x3(make_vec3( 1, 2, 1), make_vec3( 2, 4, 2), make_vec3( 1, 2, 1)));
+fn @attach_highpass3x3_filter(image: AOVImage)          = attach_conv3x3_filter(image, make_mat3x3(make_vec3( 0,0.25, 0), make_vec3(0.25, -1, 0.25), make_vec3( 0, 0.25, 0)));
+
+fn @attach_lanczos_filter(image: AOVImage, width: i32, height: i32) -> AOVImage {
+    fn @sinc(x: f32) = math_builtins::sin(flt_pi * x) / (flt_pi * x);
+
+    fn @lanczos(x: i32, s: i32) -> f32 {
+        if x == 0 {
+            1
+        } else if x < s {
+            sinc(x as f32) * sinc(x as f32 / s as f32)
+        } else {
+            0
+        }
+    }
+
+    attach_conv_filter(image, width, height, @|kx, ky| lanczos(kx - width / 2, width) * lanczos(ky - height / 2, height))
+}
 
 fn @attach_radial_filter(image: AOVImage, radius: i32, filter: fn (f32) -> f32) -> AOVImage {
     if ?radius && radius == 0 {
