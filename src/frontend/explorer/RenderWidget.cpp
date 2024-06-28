@@ -25,12 +25,6 @@ constexpr float KRSPEED = 10 * RSPEED;
 
 class RenderWidgetInternal {
 public:
-    enum MouseMode {
-        MM_None,
-        MM_Look,
-        MM_Pan
-    };
-
     inline RenderWidgetInternal()
         : mTexture(nullptr)
         , mWidth(0)
@@ -44,7 +38,6 @@ public:
         , mLoading(false)
         , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())
         , mCurrentTravelSpeed(1)
-        , mCurrrentMouseMode(MM_None)
         , mMouseOnWidget(false)
         , mRequestReset(false)
     {
@@ -423,7 +416,6 @@ private:
 
     Vector3f mSceneCenter;
     float mCurrentTravelSpeed;
-    MouseMode mCurrrentMouseMode;
     bool mMouseOnWidget;
     bool mRequestReset;
 };
