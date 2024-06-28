@@ -233,7 +233,7 @@ public:
     {
         auto options              = RuntimeOptions::makeDefault();
         options.IsInteractive     = true;
-        options.EnableTonemapping = true;
+        options.EnableTonemapping = false; // We do our own stuff
         options.OverrideFilmSize  = { FisheyeWidth, FisheyeHeight };
 
         SceneParser parser;
