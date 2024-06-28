@@ -16,6 +16,7 @@ public:
         ModifiedReinhard,
         ACES,
         Uncharted2,
+        AGX,
         PbrNeutral
     };
 

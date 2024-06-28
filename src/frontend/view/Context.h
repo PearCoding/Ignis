@@ -13,6 +13,7 @@ enum class ToneMappingMethod {
     ModifiedReinhard,
     ACES,
     Uncharted2,
+    AGX,
     PbrNeutral
 };
 

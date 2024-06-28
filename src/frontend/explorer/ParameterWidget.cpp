@@ -13,7 +13,7 @@ ParameterWidget::ParameterWidget(RenderWidget* renderWidget)
 }
 
 static const char* const ToneMappingMethodOptions[] = {
-    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2", "PbrNeutral"
+    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2", "AGX", "PbrNeutral"
 };
 
 void ParameterWidget::onRender(Widget*)

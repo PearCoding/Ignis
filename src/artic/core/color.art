@@ -137,23 +137,67 @@ mod tonemapping {
 
     // Based on https://modelviewer.dev/examples/tone-mapping
     fn @pbr_neutral(mut c: super::Color, desaturation: f32, compression: f32) -> super::Color {
+        let a = c.a;
         let x = super::color_min_component(c);
         c = super::color_sub(c, super::color_mulf(super::color_builtins::white, super::select(x < 0.08, x - 6.25 * x * x, 0.04:f32)));
 
         let  p = super::color_max_component(c);
         if p < compression {
-            c
+            c.{ a = a /* Keep alpha */}
         } else {
             let d  = 1 - compression;
             let np = 1 - d * d / (p + d - compression);
             c = super::color_mulf(c, np / p);
 
             let t = 1 - 1 / (desaturation * (p - np) + 1);
-            super::color_lerp(c, super::color_mulf(super::color_builtins::white, np), t)
+            super::color_lerp(c, super::color_mulf(super::color_builtins::white, np), t).{ a = a /* Keep alpha */}
         }
     }
 
     fn @pbr_neutral_std(c: super::Color) = pbr_neutral(c, 0.15, 0.8 - 0.04);
+
+    // Based on https://www.shadertoy.com/view/cd3XWr
+    fn @agx(c: super::Color) -> super::Color {
+        let a = c.a;
+        let mut v = super::color_to_vec3(c);
+
+        let M  = super::make_mat3x3(super::make_vec3(0.842479062253094, 0.0784335999999992, 0.0792237451477643),  super::make_vec3(0.0423282422610123, 0.878468636469772, 0.0791661274605434),  super::make_vec3(0.0423756549057051, 0.0784336, 0.879142973793104));
+        let IM = super::make_mat3x3(super::make_vec3(1.19687900512017, -0.0980208811401368, -0.0990297440797205), super::make_vec3(-0.0528968517574562, 1.15190312990417, -0.0989611768448433), super::make_vec3(-0.0529716355144438, -0.0980434501171241, 1.15107367264116));
+
+        let min_ev = -12.47393:f32;
+        let max_ev =  4.026069:f32;
+
+        // Input transform
+        v = super::mat3x3_mul(M, v);
+
+        // Log2 space encoding
+        v = super::vec3_map(v, @|x| (super::clampf(super::math_builtins::log2(x), min_ev, max_ev) - min_ev) / (max_ev - min_ev));
+
+        // Mean error^2: 3.6705141e-06
+        fn @defaultContrastApprox(x: f32) -> f32 {
+            let x2 = x * x;
+            let x4 = x2 * x2;
+            
+            + 15.5    * x4 * x2
+            - 40.14   * x4 * x
+            + 31.96   * x4
+            - 6.868   * x2 * x
+            + 0.4298  * x2
+            + 0.1191  * x
+            - 0.00232
+        }
+
+        // Apply sigmoid function approximation
+        v = super::vec3_map(v, defaultContrastApprox);
+
+        // Undo input transform
+        v = super::mat3x3_mul(IM, v);
+
+        // sRGB IEC 61966-2-1 2.2 Exponent Reference EOTF Display (aka. linearizing the stuff again)
+        v = super::vec3_map(v, @|x| super::math_builtins::pow(x, 2.2:f32));
+
+        super::vec3_to_color(v).{ a = a /* Keep alpha */}
+    }
 }
 
 fn @srgb_gamma(x : f32) -> f32 {

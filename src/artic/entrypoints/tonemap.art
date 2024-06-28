@@ -40,6 +40,7 @@ fn @ig_tonemap_pipeline2(device: Device, in_pixels: AOVImage, out_pixels: Device
             } else {
                 let L = exposure_factor * xyY.b + exposure_offset;
     
+                // Apply methods who work on luminance only
                 let nL = match method {
                     1 => tonemapping::reinhard(L),
                     2 => tonemapping::reinhard_modified(L),
@@ -50,10 +51,11 @@ fn @ig_tonemap_pipeline2(device: Device, in_pixels: AOVImage, out_pixels: Device
     
                 let color = xyY_to_srgb(make_color(xyY.r, xyY.g, nL, 1));
                 
-                let color2 = if method == 5 {
-                    tonemapping::pbr_neutral_std(color)
-                } else {
-                    color
+                // Apply methods who work on (linear) sRGB directly
+                let color2 = match method {
+                    5 => tonemapping::agx(color),
+                    6 => tonemapping::pbr_neutral_std(color),
+                    _ => color
                 };
 
                 let out_color = if use_gamma {
@@ -78,6 +80,7 @@ fn @ig_tonemap_pipeline2(device: Device, in_pixels: AOVImage, out_pixels: Device
         3 => tonemap2(3),
         4 => tonemap2(4),
         5 => tonemap2(5),
+        6 => tonemap2(6),
         _ => tonemap2(0),
     };
     

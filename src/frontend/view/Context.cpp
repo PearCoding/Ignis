@@ -18,7 +18,7 @@ using namespace ui;
 
 constexpr size_t HISTOGRAM_SIZE                     = 50;
 static const char* const ToneMappingMethodOptions[] = {
-    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2", "PbrNeutral"
+    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2", "AGX", "PbrNeutral"
 };
 
 // Pose IO
