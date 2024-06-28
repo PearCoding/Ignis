@@ -129,8 +129,7 @@ public:
         }
 
         if (!mLoading && mRuntime) {
-            const auto start          = std::chrono::high_resolution_clock::now();
-            const auto previousCamera = mRuntime->getCameraOrientation();
+            const auto start = std::chrono::high_resolution_clock::now();
             if (mRequestReset) {
                 mRuntime->setCameraOrientation(mCurrentCamera.asOrientation());
                 mRuntime->reset();
