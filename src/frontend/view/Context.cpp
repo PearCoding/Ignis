@@ -18,7 +18,7 @@ using namespace ui;
 
 constexpr size_t HISTOGRAM_SIZE                     = 50;
 static const char* const ToneMappingMethodOptions[] = {
-    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2"
+    "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2", "PbrNeutral"
 };
 
 // Pose IO
@@ -74,7 +74,7 @@ public:
     float ToneMapping_Exposure              = 0.0f;
     float ToneMapping_Offset                = 0.0f;
     bool ToneMappingGamma                   = true;
-    IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::ACES;
+    IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::PbrNeutral;
 
     // Visualization
     bool VisualizeGlare             = true;

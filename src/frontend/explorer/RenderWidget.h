@@ -15,7 +15,8 @@ public:
         Reinhard,
         ModifiedReinhard,
         ACES,
-        Uncharted2
+        Uncharted2,
+        PbrNeutral
     };
 
     struct Parameters {

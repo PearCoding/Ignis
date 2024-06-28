@@ -32,7 +32,7 @@ public:
               .FOV               = 60,
               .ExposureFactor    = 0,
               .ExposureOffset    = 0,
-              .ToneMappingMethod = RenderWidget::ToneMappingMethod::ModifiedReinhard,
+              .ToneMappingMethod = RenderWidget::ToneMappingMethod::PbrNeutral,
           })
         , mLoading(false)
         , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())

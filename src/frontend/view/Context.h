@@ -12,7 +12,8 @@ enum class ToneMappingMethod {
     Reinhard,
     ModifiedReinhard,
     ACES,
-    Uncharted2
+    Uncharted2,
+    PbrNeutral
 };
 
 class Runtime;

@@ -134,6 +134,26 @@ mod tonemapping {
         }
         func(L) / func(11.2)
     }
+
+    // Based on https://modelviewer.dev/examples/tone-mapping
+    fn @pbr_neutral(mut c: super::Color, desaturation: f32, compression: f32) -> super::Color {
+        let x = super::color_min_component(c);
+        c = super::color_sub(c, super::color_mulf(super::color_builtins::white, super::select(x < 0.08, x - 6.25 * x * x, 0.04:f32)));
+
+        let  p = super::color_max_component(c);
+        if p < compression {
+            c
+        } else {
+            let d  = 1 - compression;
+            let np = 1 - d * d / (p + d - compression);
+            c = super::color_mulf(c, np / p);
+
+            let t = 1 - 1 / (desaturation * (p - np) + 1);
+            super::color_lerp(c, super::color_mulf(super::color_builtins::white, np), t)
+        }
+    }
+
+    fn @pbr_neutral_std(c: super::Color) = pbr_neutral(c, 0.15, 0.8 - 0.04);
 }
 
 fn @srgb_gamma(x : f32) -> f32 {
