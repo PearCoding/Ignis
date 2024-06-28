@@ -175,7 +175,7 @@ public:
                 mCurrentCamera.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
             if (ImGui::IsKeyPressed(ImGuiKey_Keypad9, false))
                 mCurrentCamera.update_dir(-mCurrentCamera.Direction, mCurrentCamera.Up);
-            if (ImGui::IsKeyPressed(ImGuiKey_O, false))
+            if (ImGui::IsKeyPressed(ImGuiKey_O, true))
                 mCurrentCamera.snap_up();
             if (ImGui::IsKeyPressed(ImGuiKey_R, false))
                 mCurrentCamera = CameraProxy(mRuntime->initialCameraOrientation());
@@ -204,6 +204,11 @@ public:
                 handleRotation(-KRSPEED, 0);
             if (ImGui::IsKeyDown(ImGuiKey_Keypad6))
                 handleRotation(KRSPEED, 0);
+
+            if (ImGui::IsKeyDown(ImGuiKey_KeypadAdd))
+                mCurrentTravelSpeed *= 1.1f;
+            if (ImGui::IsKeyDown(ImGuiKey_KeypadSubtract))
+                mCurrentTravelSpeed *= 0.9f;
         }
 
         // Note: Not sure why io.WantMouseCapture does not work as intended... or I misunderstood something
