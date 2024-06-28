@@ -4,9 +4,8 @@
 #include "Runtime.h"
 #include "ShaderGenerator.h"
 
-#define IMGUI_DISABLE_OBSOLETE_KEYIO
-#include "imgui.h"
 #include <SDL.h>
+#include "imgui.h"
 
 #include <thread>
 

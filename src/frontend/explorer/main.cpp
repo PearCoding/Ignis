@@ -1,4 +1,5 @@
 #include "ExplorerOptions.h"
+#include "HelpControlWidget.h"
 #include "Logger.h"
 #include "MainWindow.h"
 #include "Menu.h"
@@ -12,8 +13,9 @@
 #include "portable-file-dialogs.h"
 
 using namespace IG;
-static RenderWidget* sRenderWidget = nullptr;
-static MainWindow* sMainWindow     = nullptr;
+static RenderWidget* sRenderWidget           = nullptr;
+static MainWindow* sMainWindow               = nullptr;
+static HelpControlWidget* sHelpControlWidget = nullptr;
 
 static void openFileCallback(const Path& path)
 {
@@ -50,7 +52,9 @@ static std::shared_ptr<Menu> setupMainMenu()
     fileMenu->add(openFile);
     fileMenu->add(std::make_shared<MenuItem>("Quit", []() { sMainWindow->signalQuit(); }));
 
-    auto openWebsite = std::make_shared<MenuItem>("Website", []() {});
+    auto helpControls = std::make_shared<MenuItem>("Controls", []() { sHelpControlWidget->show(); });
+    auto openWebsite  = std::make_shared<MenuItem>("Website", []() {});
+    helpMenu->add(helpControls);
     helpMenu->add(openWebsite);
 
     return mainMenu;
@@ -74,10 +78,14 @@ int main(int argc, char** argv)
         auto renderWidget = std::make_shared<RenderWidget>();
         sRenderWidget     = renderWidget.get();
 
+        auto helpControlWidget = std::make_shared<HelpControlWidget>();
+        sHelpControlWidget     = helpControlWidget.get();
+
         window.addChild(renderWidget);
         window.addChild(setupMainMenu());
         window.addChild(std::make_shared<ParameterWidget>(sRenderWidget));
         window.addChild(std::make_shared<OverviewWidget>(sRenderWidget));
+        window.addChild(helpControlWidget);
 
         window.setDropCallback(openFileCallback);
 
