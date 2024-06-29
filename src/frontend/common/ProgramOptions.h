@@ -76,8 +76,6 @@ public:
 
     bool Denoise = false;
 
-    bool Glare = false;
-
     bool NoCache = false;
     Path CacheDir;
 

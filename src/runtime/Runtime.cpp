@@ -239,7 +239,6 @@ LoaderOptions Runtime::loaderOptions() const
     lopts.EnableTonemapping = mOptions.EnableTonemapping;
     lopts.Denoiser          = mOptions.Denoiser;
     lopts.Denoiser.Enabled  = !mOptions.IsTracer && mOptions.Denoiser.Enabled && hasDenoiser();
-    lopts.Glare             = mOptions.Glare;
     lopts.Compiler          = mCompiler.get();
     lopts.Device            = mDevice.get();
     return lopts;
@@ -260,8 +259,6 @@ bool Runtime::load(const Path& path, const Scene* scene)
 
     if (lopts.Denoiser.Enabled)
         IG_LOG(L_INFO) << "Using denoiser" << std::endl;
-    if (lopts.Glare.Enabled)
-        IG_LOG(L_INFO) << "Glare overlay enabled" << std::endl;
 
     // Extract technique
     setup_technique(lopts, mOptions);
@@ -625,8 +622,6 @@ bool Runtime::compileShaders()
             registerShader(i, "tonemap", "ig_tonemap_shader", &variant.TonemapShader, &shaders.TonemapShader);
             registerShader(i, "imageinfo", "ig_imageinfo_shader", &variant.ImageinfoShader, &shaders.ImageinfoShader);
         }
-        if (mOptions.Glare.Enabled)
-            registerShader(i, "glare", "ig_glare_shader", &variant.GlareShader, &shaders.GlareShader);
         registerShader(i, "primary traversal", "ig_traversal_shader", &variant.PrimaryTraversalShader, &shaders.PrimaryTraversalShader);
         registerShader(i, "secondary traversal", "ig_traversal_shader", &variant.SecondaryTraversalShader, &shaders.SecondaryTraversalShader);
         registerShader(i, "ray generation", "ig_ray_generation_shader", &variant.RayGenerationShader, &shaders.RayGenerationShader);
@@ -673,20 +668,6 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
     IG_ASSERT(mDevice, "Expected device to be available");
     if (mDevice)
         mDevice->tonemap(out_pixels, settings);
-}
-
-GlareOutput Runtime::evaluateGlare(uint32* out_pixels, const GlareSettings& settings)
-{
-    if (mTechniqueVariants.empty()) {
-        IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return GlareOutput{};
-    }
-
-    IG_ASSERT(mDevice, "Expected device to be available");
-    if (mDevice)
-        return mDevice->evaluateGlare(out_pixels, settings);
-    else
-        return GlareOutput{};
 }
 
 ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)

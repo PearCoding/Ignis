@@ -74,7 +74,6 @@ public:
     [[nodiscard]] virtual const Statistics* getStatistics() = 0;
 
     virtual void tonemap(uint32_t*, const TonemapSettings&)                                                           = 0;
-    [[nodiscard]] virtual GlareOutput evaluateGlare(uint32_t*, const GlareSettings&)                                  = 0;
     [[nodiscard]] virtual ImageInfoOutput imageinfo(const ImageInfoSettings&)                                         = 0;
     virtual void bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output) = 0;
 

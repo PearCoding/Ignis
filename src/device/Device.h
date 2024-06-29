@@ -31,7 +31,6 @@ public:
     [[nodiscard]] const Statistics* getStatistics() override;
 
     void tonemap(uint32_t*, const TonemapSettings&) override;
-    [[nodiscard]] GlareOutput evaluateGlare(uint32_t*, const GlareSettings&) override;
     [[nodiscard]] ImageInfoOutput imageinfo(const ImageInfoSettings&) override;
     void bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output) override;
 

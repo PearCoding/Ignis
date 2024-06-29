@@ -76,14 +76,6 @@ public:
     bool ToneMappingGamma                   = true;
     IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::PbrNeutral;
 
-    // Visualization
-    bool VisualizeGlare             = true;
-    float VisualizeGlare_Multiplier = 5.0f;
-
-    bool VisualizeGlare_AutoEV = true;
-    float VerticalIlluminance  = 5.0f;
-    GlareOutput Glare;
-
     size_t CurrentAOV = 0;
 
     bool Running       = true;
@@ -571,9 +563,6 @@ public:
                                                ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                                                ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
-        if (Runtime->options().Glare.Enabled && VisualizeGlare)
-            Glare = Runtime->evaluateGlare(buf, GlareSettings{ aov_name.c_str(), 1.0f, LastLum.SoftMax, LastLum.Avg, VisualizeGlare_Multiplier, VisualizeGlare_AutoEV ? -1.0f : VerticalIlluminance });
-
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }
 
@@ -807,27 +796,6 @@ public:
                     ImGui::EndCombo();
                 }
                 ImGui::Checkbox("Gamma", &ToneMappingGamma);
-            }
-
-            if (Runtime->options().Glare.Enabled) {
-                if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    ImGui::Checkbox("Visualize Glare", &VisualizeGlare);
-                    ImGui::Text("Avg. Luminance: %1.4f Lux", 179 * LastLum.Avg);
-                    if (Glare.NumPixels > 0) {
-                        ImGui::Text("Avg. GS Luminance: %1.4f Lux", Glare.AvgLum);
-                        ImGui::Text("Avg. GS Omega: %1.4f", Glare.AvgOmega);
-                        ImGui::Text("GS Pixel No: %i", Glare.NumPixels);
-                    } else {
-                        ImGui::TextColored(ImVec4(1, 0, 0, 1), "No glare source detected!");
-                    }
-                    ImGui::SliderFloat("Multiplier", &VisualizeGlare_Multiplier, 0.0, 20.0);
-                    ImGui::Checkbox("Automatic EV", &VisualizeGlare_AutoEV);
-                    if (!VisualizeGlare_AutoEV)
-                        ImGui::SliderFloat("EV", &VerticalIlluminance, 0.0, 500.0);
-                    else
-                        ImGui::Text("EV: %1.3f", Glare.VerticalIlluminance);
-                    ImGui::Text("DGP: %1.3f", Glare.DGP);
-                }
             }
 
             if (ImGui::CollapsingHeader("Poses")) {

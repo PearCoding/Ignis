@@ -130,10 +130,8 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
         "--disable-specialization", [&]() { this->Specialization = RuntimeOptions::SpecializationMode::Disable; },
         "Disables specialization for parameters in shading tree. This might decrease compile time drastically for worse runtime optimization");
 
-    if (type != ApplicationType::Trace) {
+    if (type != ApplicationType::Trace)
         app.add_flag("--denoise", Denoise, "Apply denoiser if available");
-        app.add_flag("--glare", Glare, "Enable glare overlay");
-    }
 
     if (type == ApplicationType::Trace) {
         app.add_option("-i,--input", InputRay, "Read list of rays from file instead of the standard input");
@@ -338,8 +336,6 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.Specialization   = Specialization;
 
     options.Denoiser.Enabled = Denoise;
-
-    options.Glare.Enabled = Glare;
 
     options.EnableCache = !NoCache;
     options.CacheDir    = CacheDir;

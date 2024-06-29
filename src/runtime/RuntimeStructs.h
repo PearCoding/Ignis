@@ -12,23 +12,6 @@ struct TonemapSettings {
     float ExposureOffset;
 };
 
-struct GlareSettings {
-    const char* AOV;
-    float Scale;
-    float LuminanceMax;
-    float LuminanceAverage;
-    float LuminanceMultiplier;
-    float VerticalIlluminance;
-};
-
-struct GlareOutput {
-    float DGP;
-    float VerticalIlluminance; // Automatically computed vertical illuminance
-    int NumPixels;             // Number of pixels of the glare source
-    float AvgLum;              // Average luminance of the glare source
-    float AvgOmega;            // Average omega of the glare source
-};
-
 struct ImageInfoSettings {
     const char* AOV;
     float Scale;

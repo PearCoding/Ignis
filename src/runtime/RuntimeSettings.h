@@ -7,10 +7,6 @@ struct DenoiserSettings {
     bool Enabled = false; // Enables the denoiser
 };
 
-struct GlareOptions {
-    bool Enabled = false;
-};
-
 struct RuntimeOptions {
     bool IsTracer          = false;
     bool IsInteractive     = false;
@@ -49,7 +45,6 @@ struct RuntimeOptions {
     bool WarnUnused = true; // Warn about unused properties. They might indicate a typo or similar.
 
     DenoiserSettings Denoiser;
-    GlareOptions Glare;
 
     inline static RuntimeOptions makeDefault(bool trace = false)
     {

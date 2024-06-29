@@ -1826,42 +1826,6 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
     leaveDevice();
 }
 
-GlareOutput Device::evaluateGlare(uint32_t* out_pixels, const GlareSettings& driver_settings)
-{
-    enterDevice();
-
-    const auto acc       = sInterface->getAOVImageForDevice(driver_settings.AOV);
-    float* in_pixels     = acc.Data;
-    const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
-
-    uint32_t* device_out_pixels = sInterface->isGPU() ? sInterface->getTonemapImageGPU() : out_pixels;
-
-    ::GlareSettings settings;
-    settings.scale                = driver_settings.Scale * inv_iter;
-    settings.max                  = driver_settings.LuminanceMax;
-    settings.avg                  = driver_settings.LuminanceAverage;
-    settings.mul                  = driver_settings.LuminanceMultiplier;
-    settings.vertical_illuminance = driver_settings.VerticalIlluminance;
-
-    ::GlareOutput output = sInterface->runGlareShader(in_pixels, device_out_pixels, settings);
-
-    GlareOutput driver_output;
-    driver_output.DGP                 = output.dgp;
-    driver_output.VerticalIlluminance = output.vertical_illuminance;
-    driver_output.AvgLum              = output.avg_lum;
-    driver_output.AvgOmega            = output.avg_omega;
-    driver_output.NumPixels           = output.num_pixels;
-
-    if (sInterface->isGPU()) {
-        size_t size = sInterface->framebufferSize();
-        anydsl_copy(sInterface->deviceID(), device_out_pixels, 0, 0 /* Host */, out_pixels, 0, sizeof(uint32_t) * size);
-    }
-
-    leaveDevice();
-
-    return driver_output;
-}
-
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
     enterDevice();
