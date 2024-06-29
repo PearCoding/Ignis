@@ -1063,30 +1063,6 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::Tonemap, {});
     }
 
-    inline ::GlareOutput runGlareShader(float* in_pixels, uint32_t* device_out_pixels, ::GlareSettings& settings)
-    {
-#ifdef IG_DEBUG_LOG_TRACE
-        IG_LOG(L_DEBUG) << "TRACE> Glare Shader" << std::endl;
-#endif
-
-        if (mSetupSettings.AcquireStats)
-            getThreadData()->stats.beginShaderLaunch(ShaderType::Glare, 1, {});
-
-        using Callback = decltype(ig_glare_shader);
-        auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.GlareShader.Exec);
-        IG_ASSERT(callback != nullptr, "Expected Glare shader to be valid");
-        setCurrentShader(1, ShaderKey(mCurrentShaderSet.ID, ShaderType::Glare, 0), mCurrentShaderSet.GlareShader);
-        ::GlareOutput output;
-        callback(&mCurrentDriverSettings, in_pixels, device_out_pixels, (int)mFramebufferWidth, (int)mFramebufferHeight, &settings, &output);
-
-        checkDebugOutput();
-
-        if (mSetupSettings.AcquireStats)
-            getThreadData()->stats.endShaderLaunch(ShaderType::Glare, {});
-
-        return output;
-    }
-
     inline ::ImageInfoOutput runImageinfoShader(float* in_pixels, ::ImageInfoSettings& settings)
     {
         if (mSetupSettings.DebugTrace)

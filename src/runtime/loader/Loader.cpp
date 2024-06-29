@@ -126,8 +126,6 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
         setup(
             "tonemap", [&]() { return UtilityShader::setupTonemap(ctx); }, variant.TonemapShader);
         setup(
-            "glare", [&]() { return UtilityShader::setupGlare(ctx); }, variant.GlareShader);
-        setup(
             "imageinfo", [&]() { return UtilityShader::setupImageinfo(ctx); }, variant.ImageinfoShader);
         setup(
             "primary traversal", [&]() { return TraversalShader::setupPrimary(ctx); }, variant.PrimaryTraversalShader);
