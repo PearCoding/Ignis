@@ -1,5 +1,6 @@
 #include "Menu.h"
 #include "MenuItem.h"
+#include "MenuSeparator.h"
 
 #include "imgui.h"
 
@@ -37,8 +38,10 @@ void Menu::onRender(Widget* parent)
     for (const auto& p : mItems) {
         if (std::holds_alternative<std::shared_ptr<Menu>>(p))
             std::get<std::shared_ptr<Menu>>(p)->onRender(this);
-        else
+        else if (std::holds_alternative<std::shared_ptr<MenuItem>>(p))
             std::get<std::shared_ptr<MenuItem>>(p)->onRender();
+        else
+            std::get<std::shared_ptr<MenuSeparator>>(p)->onRender();
     }
 
     if (parent == nullptr)
@@ -63,6 +66,11 @@ void Menu::add(const std::shared_ptr<Menu>& child)
 }
 
 void Menu::add(const std::shared_ptr<MenuItem>& child)
+{
+    mItems.emplace_back(child);
+}
+
+void Menu::add(const std::shared_ptr<MenuSeparator>& child)
 {
     mItems.emplace_back(child);
 }

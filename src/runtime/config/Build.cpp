@@ -50,6 +50,7 @@ Version getVersion()
 }
 std::string getVersionString() { return IG_VERSION_STRING; }
 std::string getGitRevision() { return IG_GIT_REVISION; }
+std::string getGitBranch() { return IG_GIT_BRANCH; }
 std::string getGitString() { return IG_GIT_BRANCH " " IG_GIT_REVISION; }
 std::string getCopyrightString() { return "(C) " IG_VENDOR_STRING; }
 

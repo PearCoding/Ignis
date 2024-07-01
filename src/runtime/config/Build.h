@@ -31,6 +31,12 @@ inline bool operator!=(const Version& a, const Version& b) { return !(a == b); }
  */
 [[nodiscard]] IG_LIB std::string getGitRevision();
 /**
+ * @brief Returns git branch of the build as a string
+ *
+ * @return std::string getGitRevision
+ */
+[[nodiscard]] IG_LIB std::string getGitBranch();
+/**
  * @brief Returns git branch and revision of the build as a string
  *
  * @return std::string getGitString

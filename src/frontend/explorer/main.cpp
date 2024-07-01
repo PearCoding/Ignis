@@ -1,20 +1,23 @@
 #include "ExplorerOptions.h"
+#include "HelpAboutWidget.h"
 #include "HelpControlWidget.h"
 #include "Logger.h"
 #include "MainWindow.h"
 #include "Menu.h"
 #include "MenuItem.h"
+#include "MenuSeparator.h"
 #include "OverviewWidget.h"
 #include "ParameterWidget.h"
 #include "RenderWidget.h"
 
-#include "imgui.h"
+#include "UI.h"
 
 #include "portable-file-dialogs.h"
 
 using namespace IG;
 static RenderWidget* sRenderWidget           = nullptr;
 static MainWindow* sMainWindow               = nullptr;
+static HelpAboutWidget* sHelpAboutWidget     = nullptr;
 static HelpControlWidget* sHelpControlWidget = nullptr;
 
 static void openFileCallback(const Path& path)
@@ -48,14 +51,15 @@ static std::shared_ptr<Menu> setupMainMenu()
     auto helpMenu = std::make_shared<Menu>("Help");
     mainMenu->add(helpMenu);
 
-    auto openFile = std::make_shared<MenuItem>("Open", openFileDialogCallback);
-    fileMenu->add(openFile);
+    fileMenu->add(std::make_shared<MenuItem>("Open", openFileDialogCallback));
+    fileMenu->add(std::make_shared<MenuSeparator>());
     fileMenu->add(std::make_shared<MenuItem>("Quit", []() { sMainWindow->signalQuit(); }));
 
-    auto helpControls = std::make_shared<MenuItem>("Controls", []() { sHelpControlWidget->show(); });
-    auto openWebsite  = std::make_shared<MenuItem>("Website", []() {});
-    helpMenu->add(helpControls);
-    helpMenu->add(openWebsite);
+    helpMenu->add(std::make_shared<MenuItem>("Controls", []() { sHelpControlWidget->show(); }));
+    helpMenu->add(std::make_shared<MenuSeparator>());
+    helpMenu->add(std::make_shared<MenuItem>("Website", []() { SDL_OpenURL("https://github.com/PearCoding/Ignis"); }));
+    helpMenu->add(std::make_shared<MenuSeparator>());
+    helpMenu->add(std::make_shared<MenuItem>("About", []() { sHelpAboutWidget->show(); }));
 
     return mainMenu;
 }
@@ -81,11 +85,15 @@ int main(int argc, char** argv)
         auto helpControlWidget = std::make_shared<HelpControlWidget>();
         sHelpControlWidget     = helpControlWidget.get();
 
+        auto helpAboutWidget = std::make_shared<HelpAboutWidget>();
+        sHelpAboutWidget     = helpAboutWidget.get();
+
         window.addChild(renderWidget);
         window.addChild(setupMainMenu());
         window.addChild(std::make_shared<ParameterWidget>(sRenderWidget));
         window.addChild(std::make_shared<OverviewWidget>(sRenderWidget));
         window.addChild(helpControlWidget);
+        window.addChild(helpAboutWidget);
 
         window.setDropCallback(openFileCallback);
 
