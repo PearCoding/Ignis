@@ -49,6 +49,12 @@ inline bool operator!=(const Version& a, const Version& b) { return !(a == b); }
  */
 [[nodiscard]] IG_LIB bool isGitDirty();
 /**
+ * @brief Returns string with all modified files during build
+ *
+ * @return std::string getGitModifiedFiles
+ */
+[[nodiscard]] IG_LIB std::string getGitModifiedFiles();
+/**
  * @brief Returns git branch and revision of the build as a string
  *
  * @return std::string getGitString

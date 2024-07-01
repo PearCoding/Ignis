@@ -10,13 +10,25 @@ static std::string prepareText()
 
     stream << "Version:     " << Build::getVersionString() << std::endl
            << "Build:       " << Build::getBuildVariant() << std::endl
+           << "Build Time:  " << Build::getBuildTime() << std::endl
            << "Git Rev:     " << Build::getGitRevision() << std::endl
            << "Git Branch:  " << Build::getGitBranch() << std::endl
+           << "Git Time:    " << Build::getGitTimeOfCommit() << std::endl
            << "Git Dirty:   " << (Build::isGitDirty() ? "true" : "false") << std::endl
            << "Compiler:    " << Build::getCompilerName() << std::endl
            << "OS:          " << Build::getOSName() << std::endl
            << "Definitions: " << Build::getBuildDefinitions() << std::endl
            << "Options:     " << Build::getBuildOptions() << std::endl;
+
+    if (Build::isGitDirty()) {
+        stream << std::endl
+               << "Modified files:" << std::endl;
+
+        std::stringstream files(Build::getGitModifiedFiles());
+        std::string line;
+        while (std::getline(files, line, ';'))
+            stream << "- " << line << std::endl;
+    }
 
     return stream.str();
 }
