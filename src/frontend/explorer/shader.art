@@ -1,13 +1,13 @@
 fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let input_width   = settings.width;
     let input_height  = settings.height;
-    let output_width  = registry::get_local_parameter_i32("_output_width",    128);
-    let output_height = registry::get_local_parameter_i32("_output_height",   128);
-    let pers_fov      = rad(registry::get_local_parameter_f32("_perspective_fov", 60));
+    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
+    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
+    let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
 
     let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
     // let framebuffer = device.load_aov_image("", spi);
-    let output      = device.request_buffer("_perspective_output", output_width * output_height * 3, 0);
+    let output      = device.request_buffer("_perspective_output", canvas_width * canvas_height * 3, 0);
 
     // let camera_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
     // let camera_dir = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
@@ -17,13 +17,13 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let camera_dir = make_vec3(0,0,1);
     let camera_up  = make_vec3(0,1,0);
 
-    let pers_scale = compute_scale_from_hfov(pers_fov, output_width as f32 / output_height as f32);
+    let pers_scale = compute_scale_from_hfov(pers_fov, canvas_width as f32 / canvas_height as f32);
 
-    let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, output_width, output_height, 0, 100);
+    let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
     let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
 
-    for x, y in device.parallel_range_2d(0, output_width, 0, output_height) {
-        let dstCoord = make_pixelcoord_from_xy(x, y, output_width, output_height, 0, 0);
+    for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
+        let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
 
         let rnd = create_random_generator(0xdeadbeef);
         let ray = cam_perspective.generate_ray(rnd, dstCoord);
@@ -44,8 +44,8 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
 }
 
 fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () {
-    let width  = registry::get_local_parameter_i32("_input_width",  128);
-    let height = registry::get_local_parameter_i32("_input_height", 128);
+    let width  = registry::get_global_parameter_i32("_canvas_width",  128);
+    let height = registry::get_global_parameter_i32("_canvas_height", 128);
     let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
     let output = device.request_buffer("_tonemap_output", width * height, 0);
 
@@ -58,4 +58,95 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
     };
 
     ig_tonemap_pipeline2(device, input, output, &tonemapSettings);
+}
+
+fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
+    let width  = settings.width;
+    let height = settings.height;
+    let input  = device.load_aov_image("", spi);
+    let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
+
+    let camera_eye  = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
+    let camera_dir  = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
+    let camera_up   = registry::get_global_parameter_vec3("__camera_up" , vec3_expand(0));
+    let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
+
+    let glareSettings = GlareSettings{
+        scale = 1 / (settings.iter + 1) as f32,
+        max   = registry::get_global_parameter_f32("_luminance_max", 1),
+        avg   = registry::get_global_parameter_f32("_luminance_avg", 1),
+        mul   = registry::get_global_parameter_f32("_glare_multiplier", 1),
+        vertical_illuminance = registry::get_global_parameter_f32("_glare_vertical_illuminance", -1)
+    };
+
+    compute_glare(device, cam_fisheye, input, source_luminance, &glareSettings);
+}
+
+fn @handle_overlay_shader(device: Device, _spi: i32, settings: &Settings) {
+    let input_width   = settings.width;
+    let input_height  = settings.height;
+    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
+    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
+    let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
+    
+    let source_lum = device.request_buffer("_glare_source_luminance", input_width * input_width, 0);
+    let tonemapped = device.request_buffer("_tonemap_output", canvas_width * canvas_height, 0);
+    let output     = device.request_buffer("_overlay_output", canvas_width * canvas_height, 0);
+
+    let camera_eye = make_vec3(0,0,0);
+    let camera_dir = make_vec3(0,0,1);
+    let camera_up  = make_vec3(0,1,0);
+
+    let pers_scale = compute_scale_from_hfov(pers_fov, canvas_width as f32 / canvas_height as f32);
+
+    let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
+    let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
+
+    for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
+        let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
+
+        let rnd = create_random_generator(0xdeadbeef);
+        let ray = cam_perspective.generate_ray(rnd, dstCoord);
+
+        let lum = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
+            source_lum.load_f32(srcCoord.linear)
+        } else {
+            -1
+        };
+
+        if lum < 0 {
+            output.store_i32(dstCoord.linear, tonemapped.load_i32(dstCoord.linear));
+        } else {
+            let color = colormap::inferno(lum * lum);
+            output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(color)));
+        }
+    }
+
+    device.sync();
+}
+
+fn @handle_imageinfo_shader(device: Device, _spi: i32, settings: &Settings) {
+    let width  = registry::get_global_parameter_i32("_canvas_width",  128);
+    let height = registry::get_global_parameter_i32("_canvas_height", 128);
+    let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
+
+    let imageinfoSettings = ImageInfoSettings{
+        scale           = 1 / (settings.iter + 1) as f32,
+        bins            = 0,
+        histogram_r     = undef[&mut [i32]](),
+        histogram_g     = undef[&mut [i32]](),
+        histogram_b     = undef[&mut [i32]](),
+        histogram_l     = undef[&mut [i32]](),
+        acquire_error_stats = false,
+        acquire_histogram   = false
+    };
+
+    let output = ig_imageinfo_pipeline2(device, input, &imageinfoSettings);
+
+    registry::set_global_parameter_f32("_luminance_max",     output.max);
+    registry::set_global_parameter_f32("_luminance_min",     output.min);
+    registry::set_global_parameter_f32("_luminance_avg",     output.avg);
+    registry::set_global_parameter_f32("_luminance_softmax", output.soft_max);
+    registry::set_global_parameter_f32("_luminance_softmin", output.soft_min);
+    registry::set_global_parameter_f32("_luminance_med",     output.median);
 }

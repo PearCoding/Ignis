@@ -1,31 +1,19 @@
 struct GlareSettings {
-    max:f32,
-    avg:f32,
-    mul:f32,
-    scale:f32,
-    vertical_illuminance:f32 // Set < 0 to compute it automatically
+    max:                  f32,
+    avg:                  f32,
+    mul:                  f32,
+    scale:                f32,
+    vertical_illuminance: f32 // Set < 0 to compute it automatically
 }
 
-struct GlareOutput {
-    dgp: f32,
-    vertical_illuminance:f32, // If automatically computed
-    avg_lum:    f32,
-    avg_omega:  f32,
-    num_pixels: i32,
-}
-
-fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &GlareSettings, output: &mut GlareOutput) {
-
-    let buffer_in  = device.make_buffer_view(in_pixels,  width * height * 3);
+fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_luminance: DeviceBuffer, settings: &GlareSettings) {
+    let width  = input.width;
+    let height = input.height;
 
     //let cam_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
     let cam_up = registry::get_global_parameter_vec3("__camera_up", vec3_expand(0));
     let cam_dir = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
     let cam_right = vec3_cross(cam_dir, cam_up);
-
-    fn @store_pixel(index: i32, color: Color) {
-        out_pixels(index) = bitcast[u32](make_byte_color(color));
-    }
 
     fn @calc_posindex(pixel: PixelCoord) -> f32 {
         let pseudo_rng = create_random_generator(42);
@@ -116,8 +104,6 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
     }
 
     let scale = settings.scale;
-    let check_get = @|i:i32| { let a = buffer_in.load_f32(i); select(math_builtins::isfinite(a), a, 0:f32) };
-    let get_pixel = @|i:i32| make_color(check_get(i * 3 + 0), check_get(i * 3 + 1), check_get(i * 3 + 2), 1);
     let luminance = @|col:Color| color_builtins::white_efficiency * srgb_to_xyY(color_mulf(col, scale)).b; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
 
     let lum_max    = color_builtins::white_efficiency * settings.max;
@@ -137,7 +123,7 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
         device.parallel_reduce_f32(width * height,
             @|idx| -> f32 {
                 let pixel = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let current_color = get_pixel(idx);
+                let current_color = input.get(pixel);
                 let act_lum = luminance(current_color);
 
                 let pseudo_rng = create_random_generator(42);
@@ -152,11 +138,11 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
         settings.vertical_illuminance
     };
 
-    let glare_pixels = device.parallel_reduce_i32(width * height, @|i:i32| {let v = luminance(get_pixel(i)); if (v > lum_source){ 1 } else { 0 }}, @|a,b| a + b);
+    let glare_pixels = device.parallel_reduce_i32(width * height, @|idx:i32| {let v = luminance(input.get(make_pixelcoord_from_linear(idx, width, height, 0, 0))); if (v > lum_source){ 1 } else { 0 }}, @|a,b| a + b);
     let glare_omega  = device.parallel_reduce_f32(width * height,
         @|idx| -> f32 {
             let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-            let act_lum = luminance(get_pixel(idx));
+            let act_lum = luminance(input.get(pixel));
             if (act_lum > lum_source) {
                 calc_omega(pixel)
             } else { 
@@ -167,7 +153,7 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
     let glare_lum = device.parallel_reduce_f32(width * height,
         @|idx| -> f32 {
             let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-            let act_lum = luminance(get_pixel(idx));
+            let act_lum = luminance(input.get(pixel));
             if (act_lum > lum_source) {
                 let omega = calc_omega(pixel);
                 act_lum * omega
@@ -180,7 +166,7 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
     let glare_x = device.parallel_reduce_f32(width * height,
             @|idx| -> f32 {
                 let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let act_lum = luminance(get_pixel(idx));
+                let act_lum = luminance(input.get(pixel));
                 if (act_lum > lum_source) {
                     let omega = calc_omega(pixel);
                     pixel.x as f32 * omega
@@ -193,7 +179,7 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
     let glare_y = device.parallel_reduce_f32(width * height,
             @|idx| -> f32 {
                 let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let act_lum = luminance(get_pixel(idx));
+                let act_lum = luminance(input.get(pixel));
                 if (act_lum > lum_source) {
                     let omega = calc_omega(pixel);
                     pixel.y as f32 * omega
@@ -204,17 +190,19 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
             @|a,b| a + b) / glare_omega;
 
     // primary glare source scan
-    for ind in device.parallel_range(0, width * height) {
-        let current_color = get_pixel(ind);
+    for idx in device.parallel_range(0, width * height) {
+        let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
+        let current_color = input.get(pixel);
         let act_lum = luminance(current_color);
 
         if (act_lum > lum_source) {
             // compute heatmap color
             let max_diff = math_builtins::fmax(flt_eps, lum_max - lum_source);
             let lum_diff = act_lum - lum_source;
-            let lerp_factor = lum_diff / max_diff;
-            let col = colormap::inferno(clampf(lerp_factor * lerp_factor, 0, 1));
-            store_pixel(ind, col);
+            let rel_luminance = lum_diff / max_diff;
+            source_luminance.store_f32(pixel.linear, rel_luminance);
+        } else {
+            source_luminance.store_f32(pixel.linear, -1);
         }
     }
 
@@ -223,20 +211,21 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, in_pixels: &[f32], out_pix
     let dgp_acc    = math_builtins::pow(glare_lum, a1) / math_builtins::pow(glare_posi, a4) * math_builtins::pow(glare_omega, a2) / math_builtins::pow(E_v, a3);
     let source_dgp = math_builtins::log10(1 + dgp_acc);
 
-    if glare_omega > 0 {
-        output.dgp = c1 * math_builtins::pow(E_v, a5) + c2 * source_dgp + c3;
+    let dgp = if glare_omega > 0 {
+        c1 * math_builtins::pow(E_v, a5) + c2 * source_dgp + c3
     } else {
         // No glare sources
-        output.dgp = c1 * math_builtins::pow(E_v, a5) + c3;
-    }
+        c1 * math_builtins::pow(E_v, a5) + c3
+    };
 
     // TODO: Add low-light correction
     // TODO: Add age correction
 
-    output.vertical_illuminance = E_v;
-    output.avg_lum    = glare_lum;
-    output.avg_omega  = glare_omega;
-    output.num_pixels = glare_pixels;
+    registry::set_global_parameter_f32("glare_dgp", dgp);
+    registry::set_global_parameter_f32("glare_vertical_illuminance", E_v);
+    registry::set_global_parameter_f32("glare_luminance", glare_lum);
+    registry::set_global_parameter_f32("glare_omega", glare_omega);
+    registry::set_global_parameter_i32("num_glare_pixels", glare_pixels);
 
     device.sync();
 }

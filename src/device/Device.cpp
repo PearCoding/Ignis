@@ -1062,7 +1062,7 @@ public:
         if (mSetupSettings.AcquireStats)
             getThreadData()->stats.endShaderLaunch(ShaderType::Tonemap, {});
     }
-
+    
     inline ::ImageInfoOutput runImageinfoShader(float* in_pixels, ::ImageInfoSettings& settings)
     {
         if (mSetupSettings.DebugTrace)

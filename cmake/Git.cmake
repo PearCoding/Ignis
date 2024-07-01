@@ -109,6 +109,7 @@ set(_state_variable_names
     GIT_RETRIEVED_STATE
     GIT_HEAD_SHA1
     GIT_IS_DIRTY
+    GIT_MODIFIED_FILES
     GIT_AUTHOR_NAME
     GIT_AUTHOR_EMAIL
     GIT_COMMIT_DATE_ISO8601
@@ -178,6 +179,15 @@ function(GetGitState _working_dir)
             set(ENV{GIT_IS_DIRTY} "true")
         else()
             set(ENV{GIT_IS_DIRTY} "false")
+        endif()
+    endif()
+
+    if ("$ENV{GIT_IS_DIRTY}" STREQUAL "true")
+        RunGitCommand(status -s)
+        if(exit_code EQUAL 0)
+            string(REPLACE "\n" ";" output_2 "${output}")
+            string(REGEX REPLACE " *(M|\\?) *" "" output_2 "${output_2}")
+            set(ENV{GIT_MODIFIED_FILES} "${output_2}")
         endif()
     endif()
 

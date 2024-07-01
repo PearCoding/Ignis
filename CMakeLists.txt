@@ -167,8 +167,6 @@ if(IG_WITH_PYTHON_API)
 	endif()
 endif()
 
-configure_file(src/runtime/config/Version.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/Version.h)
-
 # Add warnings per default
 set(WARNING_FLAGS -Wall -Wextra -pedantic)
 check_cxx_compiler_flag("${WARNING_FLAGS}" COMPILER_SUPPORTS_WARNINGS_GNU)

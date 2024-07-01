@@ -4,8 +4,8 @@
 #include "Runtime.h"
 #include "ShaderGenerator.h"
 
-#include <SDL.h>
 #include "imgui.h"
+#include <SDL.h>
 
 #include <thread>
 
@@ -39,6 +39,7 @@ public:
         , mCurrentTravelSpeed(1)
         , mMouseOnWidget(false)
         , mRequestReset(false)
+        , mShowOverlay(true)
     {
     }
 
@@ -253,7 +254,10 @@ public:
         mRuntime = std::make_unique<Runtime>(options);
         if (mRuntime->loadFromScene(scene.get())) {
             setupPerspectivePass(path, scene.get());
+            setupImageInfoPass(path, scene.get());
             setupTonemapPass(path, scene.get());
+            setupGlarePass(path, scene.get());
+            setupOverlayPass(path, scene.get());
 
             updateSize(mWidth, mHeight);
             updateParameters(mCurrentParameters);
@@ -276,8 +280,8 @@ public:
     inline void updateParameters(const RenderWidget::Parameters& params)
     {
         mCurrentParameters = params;
-        if (mPerspectivePass)
-            mPerspectivePass->setParameter("_perspective_fov", mCurrentParameters.FOV);
+        if (mRuntime)
+            mRuntime->setParameter("_canvas_fov", mCurrentParameters.FOV);
 
         if (mTonemapPass) {
             mTonemapPass->setParameter("_tonemap_method", (int)mCurrentParameters.ToneMappingMethod);
@@ -289,6 +293,19 @@ public:
     inline const RenderWidget::Parameters& currentParameters() const { return mCurrentParameters; }
     inline Runtime* currentRuntime() { return mRuntime.get(); }
     inline float currentFPS() const { return mCurrentFPS; }
+
+    inline bool isOverlayVisible() const { return mShowOverlay; }
+    inline void showOverlay(bool b) { mShowOverlay = b; }
+
+    inline void cleanup()
+    {
+        mPerspectivePass.reset();
+        mImageInfoPass.reset();
+        mTonemapPass.reset();
+        mGlarePass.reset();
+        mOverlayPass.reset();
+        mRuntime.reset();
+    }
 
 private:
     inline void handleRotation(float xmotion, float ymotion)
@@ -310,20 +327,26 @@ private:
     {
         mWidth  = width;
         mHeight = height;
-        if (mPerspectivePass) {
-            mPerspectivePass->setParameter("_output_width", (int)mWidth);
-            mPerspectivePass->setParameter("_output_height", (int)mHeight);
-        }
-        if (mTonemapPass) {
-            mTonemapPass->setParameter("_input_width", (int)mWidth);
-            mTonemapPass->setParameter("_input_height", (int)mHeight);
+        if (mRuntime) {
+            mRuntime->setParameter("_canvas_width", (int)mWidth);
+            mRuntime->setParameter("_canvas_height", (int)mWidth);
         }
     }
 
     inline bool runPipeline()
     {
+        if (!mGlarePass->run()) {
+            IG_LOG(L_FATAL) << "Failed to run glare pass" << std::endl;
+            return false;
+        }
+
         if (!mPerspectivePass->run()) {
             IG_LOG(L_FATAL) << "Failed to run perspective pass" << std::endl;
+            return false;
+        }
+
+        if (!mImageInfoPass->run()) {
+            IG_LOG(L_FATAL) << "Failed to run imageinfo pass" << std::endl;
             return false;
         }
 
@@ -332,8 +355,17 @@ private:
             return false;
         }
 
-        IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
-        mTonemapPass->copyOutputToHost("_tonemap_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+        if (mShowOverlay) {
+            if (!mOverlayPass->run()) {
+                IG_LOG(L_FATAL) << "Failed to run overlay pass" << std::endl;
+                return false;
+            }
+            IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
+            mOverlayPass->copyOutputToHost("_overlay_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+        } else {
+            IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
+            mTonemapPass->copyOutputToHost("_tonemap_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+        }
 
         SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32)));
         ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
@@ -361,6 +393,26 @@ private:
         return true;
     }
 
+    inline bool setupImageInfoPass(const Path& path, Scene* scene)
+    {
+        std::stringstream shader;
+        for (int i = 0; ig_shader[i]; ++i)
+            shader << ig_shader[i] << std::endl;
+
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+        shader << ShaderGenerator::generateImageInfo(loaderOptions);
+
+        mImageInfoPass = mRuntime->createPass(shader.str());
+        if (!mImageInfoPass) {
+            IG_LOG(L_ERROR) << "Could not setup imageinfo pass" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
     inline bool setupTonemapPass(const Path& path, Scene* scene)
     {
         std::stringstream shader;
@@ -377,6 +429,49 @@ private:
             IG_LOG(L_ERROR) << "Could not setup tonemap pass" << std::endl;
             return false;
         }
+
+        return true;
+    }
+
+    inline bool setupGlarePass(const Path& path, Scene* scene)
+    {
+        std::stringstream shader;
+        for (int i = 0; ig_shader[i]; ++i)
+            shader << ig_shader[i] << std::endl;
+
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+        shader << ShaderGenerator::generateGlare(loaderOptions);
+
+        mGlarePass = mRuntime->createPass(shader.str());
+        if (!mGlarePass) {
+            IG_LOG(L_ERROR) << "Could not setup glare pass" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    inline bool setupOverlayPass(const Path& path, Scene* scene)
+    {
+        std::stringstream shader;
+        for (int i = 0; ig_shader[i]; ++i)
+            shader << ig_shader[i] << std::endl;
+
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+        shader << ShaderGenerator::generateOverlay(loaderOptions);
+
+        mOverlayPass = mRuntime->createPass(shader.str());
+        if (!mOverlayPass) {
+            IG_LOG(L_ERROR) << "Could not setup overlay pass" << std::endl;
+            return false;
+        }
+
+        mRuntime->setParameter("_glare_multiplier", 1.0f);
+        mRuntime->setParameter("_glare_vertical_illuminance", -1.0f /* Automatic */);
 
         return true;
     }
@@ -404,7 +499,10 @@ private:
 
     std::unique_ptr<Runtime> mRuntime;
     std::shared_ptr<RenderPass> mPerspectivePass;
+    std::shared_ptr<RenderPass> mImageInfoPass;
     std::shared_ptr<RenderPass> mTonemapPass;
+    std::shared_ptr<RenderPass> mGlarePass;
+    std::shared_ptr<RenderPass> mOverlayPass;
     Path mRequestedPath;
 
     std::unique_ptr<std::thread> mLoadingThread;
@@ -417,6 +515,8 @@ private:
     float mCurrentTravelSpeed;
     bool mMouseOnWidget;
     bool mRequestReset;
+
+    bool mShowOverlay;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
@@ -431,6 +531,11 @@ RenderWidget::RenderWidget()
 
 RenderWidget::~RenderWidget()
 {
+}
+
+void RenderWidget::cleanup()
+{
+    mInternal->cleanup();
 }
 
 void RenderWidget::openFile(const Path& path)
@@ -466,5 +571,15 @@ Runtime* RenderWidget::currentRuntime()
 float RenderWidget::currentFPS() const
 {
     return mInternal->currentFPS();
+}
+
+bool RenderWidget::isOverlayVisible() const
+{
+    return mInternal->isOverlayVisible();
+}
+
+void RenderWidget::showOverlay(bool b)
+{
+    mInternal->showOverlay(b);
 }
 }; // namespace IG

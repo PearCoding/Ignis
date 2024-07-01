@@ -1,5 +1,7 @@
 #include "ParameterWidget.h"
+#include "MenuItem.h"
 #include "RenderWidget.h"
+#include "Runtime.h"
 
 #include "imgui.h"
 
@@ -7,6 +9,7 @@ namespace IG {
 
 ParameterWidget::ParameterWidget(RenderWidget* renderWidget)
     : Widget()
+    , mVisibleItem(nullptr)
     , mRenderWidget(renderWidget)
 {
     IG_ASSERT(renderWidget, "Expected a valid render widget");
@@ -18,10 +21,16 @@ static const char* const ToneMappingMethodOptions[] = {
 
 void ParameterWidget::onRender(Widget*)
 {
+    if (mVisibleItem && !mVisibleItem->isSelected())
+        return;
+
     bool changed                        = false;
     RenderWidget::Parameters parameters = mRenderWidget->currentParameters();
 
-    if (ImGui::Begin("Parameters")) {
+    Runtime* runtime = mRenderWidget->currentRuntime();
+
+    bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
+    if (ImGui::Begin("Parameters", mVisibleItem ? &visibility : nullptr)) {
         if (ImGui::BeginTabBar("#parameter_tab", 0)) {
             if (ImGui::BeginTabItem("View")) {
                 if (ImGui::SliderFloat("Exposure", &parameters.ExposureFactor, -10.0f, 10.0f))
@@ -47,10 +56,26 @@ void ParameterWidget::onRender(Widget*)
                 }
                 ImGui::EndTabItem();
             }
+
+            if (ImGui::BeginTabItem("Glare")) {
+                bool showOverlay = mRenderWidget->isOverlayVisible();
+                if (ImGui::Checkbox("Overlay", &showOverlay))
+                    mRenderWidget->showOverlay(showOverlay);
+
+                float multiplier = runtime->parameters().getFloat("_glare_multiplier");
+                if (ImGui::SliderFloat("Multiplier", &multiplier, 0.0f, 10.0f))
+                    runtime->setParameter("_glare_multiplier", multiplier);
+
+                ImGui::EndTabItem();
+            }
+
             ImGui::EndTabBar();
         }
     }
     ImGui::End();
+
+    if (mVisibleItem)
+        mVisibleItem->setSelected(visibility);
 
     if (changed)
         mRenderWidget->updateParameters(parameters);

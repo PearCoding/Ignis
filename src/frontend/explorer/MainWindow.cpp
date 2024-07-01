@@ -93,7 +93,7 @@ public:
             SDL_RenderClear(mRenderer);
             ui::newFrame();
 
-            ImGui::ShowDemoWindow();
+            // ImGui::ShowDemoWindow();
 
             for (const auto& child : mChildren)
                 child->onRender(nullptr);

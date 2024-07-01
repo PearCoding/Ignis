@@ -1,4 +1,5 @@
 #include "Build.h"
+#include "config/Flags.h"
 #include "config/Git.h"
 #include "config/Version.h"
 
@@ -48,14 +49,21 @@ Version getVersion()
 {
     return Version{ IG_VERSION_MAJOR, IG_VERSION_MINOR };
 }
+
 std::string getVersionString() { return IG_VERSION_STRING; }
 std::string getGitRevision() { return IG_GIT_REVISION; }
+std::string getGitBranch() { return IG_GIT_BRANCH; }
+bool isGitDirty() { return IG_GIT_DIRTY; }
+std::string getGitModifiedFiles() { return IG_GIT_MODIFIED_FILES; }
 std::string getGitString() { return IG_GIT_BRANCH " " IG_GIT_REVISION; }
 std::string getCopyrightString() { return "(C) " IG_VENDOR_STRING; }
 
 std::string getCompilerName() { return IG_CC_NAME; }
 std::string getOSName() { return IG_OS_NAME; }
 std::string getBuildVariant() { return IG_BUILDVARIANT_NAME; }
+
+std::string getBuildDefinitions() { return IG_BUILD_DEFS; }
+std::string getBuildOptions() { return IG_BUILD_FLAGS; }
 
 static inline time_t parse_preprocessor(char const* date, char const* time)
 {
@@ -114,6 +122,18 @@ static inline std::string build_time_str(const time_t time)
     return std::string(buffer);
 }
 
+std::string getGitTimeOfCommit()
+{
+    const auto git_time = parse_iso8601utc(IG_GIT_DATE);
+    return build_time_str(git_time);
+}
+
+std::string getBuildTime()
+{
+    const auto compile_time = parse_preprocessor(__DATE__, __TIME__);
+    return build_time_str(compile_time);
+}
+
 std::string getBuildString()
 {
 #ifdef IG_NO_ASSERTS
@@ -122,25 +142,22 @@ std::string getBuildString()
     constexpr bool hasAsserts = true;
 #endif
 
-    const auto compile_time = parse_preprocessor(__DATE__, __TIME__);
-    const auto commit_time  = parse_iso8601utc(IG_GIT_DATE);
-
     std::stringstream stream;
     stream << std::boolalpha
            << IG_NAME_STRING << " " << IG_VERSION_STRING
            << " (" << getBuildVariant()
-           << ") built " << build_time_str(compile_time)
+           << ") built " << getBuildTime()
            << " with " << getCompilerName()
            << " { OS: " << getOSName()
            << "; Author: " IG_GIT_AUTHOR
            << "; Branch: " IG_GIT_BRANCH
            << "; Rev: " IG_GIT_REVISION
-           << "; Date: " << build_time_str(commit_time)
+           << "; Date: " << getGitTimeOfCommit()
            << "; Subject: \"" IG_GIT_SUBJECT "\""
            << "} [Asserts: " << hasAsserts
            << "]";
 
-    if (IG_GIT_DIRTY)
+    if (isGitDirty())
         stream << " [Dirty]";
 
     return stream.str();

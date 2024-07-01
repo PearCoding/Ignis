@@ -29,7 +29,7 @@ static inline size_t getPropertyCount(const std::unordered_map<std::string, _Tp,
     }
 }
 
-bool ui_property_view(Runtime* runtime)
+bool ui_property_view(Runtime* runtime, bool readonly)
 {
     constexpr int TableFlags  = ImGuiTableFlags_PadOuterX;
     constexpr int InputFlags  = ImGuiInputTextFlags_EnterReturnsTrue;
@@ -57,7 +57,7 @@ bool ui_property_view(Runtime* runtime)
                         ImGui::TextUnformatted(param.first.c_str());
                         ImGui::TableNextColumn();
 
-                        if (is_public) {
+                        if (!readonly && is_public) {
                             const std::string id = "##" + param.first;
                             if (ImGui::InputInt(id.c_str(), &param.second, 1, 100, InputFlags))
                                 updated = true;
@@ -86,7 +86,7 @@ bool ui_property_view(Runtime* runtime)
                         ImGui::TextUnformatted(param.first.c_str());
                         ImGui::TableNextColumn();
 
-                        if (is_public) {
+                        if (!readonly && is_public) {
                             const float min      = std::min(0.0f, std::floor(param.second));
                             const float max      = std::max(1.0f, std::ceil(param.second));
                             const std::string id = "##" + param.first;
@@ -118,7 +118,7 @@ bool ui_property_view(Runtime* runtime)
                         ImGui::TextUnformatted(param.first.c_str());
                         ImGui::TableNextColumn();
 
-                        if (is_public) {
+                        if (!readonly && is_public) {
                             const std::string id = "##" + param.first;
                             if (ImGui::InputFloat3(id.c_str(), param.second.data(), "%.3f", InputFlags))
                                 updated = true;
@@ -147,7 +147,7 @@ bool ui_property_view(Runtime* runtime)
                         ImGui::TextUnformatted(param.first.c_str());
                         ImGui::TableNextColumn();
 
-                        if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (is_public ? ImGuiColorEditFlags_NoInputs : 0)))
+                        if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (!readonly && is_public ? ImGuiColorEditFlags_NoInputs : 0)))
                             updated = true;
                     }
                 }
@@ -159,4 +159,4 @@ bool ui_property_view(Runtime* runtime)
 
     return updated;
 }
-} // namespace IG
+} // namespace IG::ui

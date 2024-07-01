@@ -27,6 +27,8 @@ public:
         RenderWidget::ToneMappingMethod ToneMappingMethod;
     };
 
+    void cleanup();
+
     void openFile(const Path& path);
 
     void onRender(Widget* parent) override;
@@ -37,6 +39,9 @@ public:
 
     Runtime* currentRuntime();
     float currentFPS() const;
+
+    bool isOverlayVisible() const;
+    void showOverlay(bool b = true);
 
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;

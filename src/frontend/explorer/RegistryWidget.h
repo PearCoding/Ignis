@@ -5,9 +5,9 @@
 namespace IG {
 class MenuItem;
 class RenderWidget;
-class ParameterWidget : public Widget {
+class RegistryWidget : public Widget {
 public:
-    ParameterWidget(RenderWidget* renderWidget);
+    RegistryWidget(RenderWidget* renderWidget);
 
     void onRender(Widget* parent) override;
 
