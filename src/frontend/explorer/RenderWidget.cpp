@@ -329,7 +329,7 @@ private:
         mHeight = height;
         if (mRuntime) {
             mRuntime->setParameter("_canvas_width", (int)mWidth);
-            mRuntime->setParameter("_canvas_height", (int)mWidth);
+            mRuntime->setParameter("_canvas_height", (int)mHeight);
         }
     }
 
@@ -373,18 +373,24 @@ private:
         return true;
     }
 
-    inline bool setupPerspectivePass(const Path& path, Scene* scene)
+    inline std::shared_ptr<RenderPass> createPass(const std::string& suffixSrc) const
     {
         std::stringstream shader;
         for (int i = 0; ig_shader[i]; ++i)
             shader << ig_shader[i] << std::endl;
 
+        shader << suffixSrc;
+        return mRuntime->createPass(shader.str());
+    }
+
+    inline bool setupPerspectivePass(const Path& path, Scene* scene)
+    {
+        IG_LOG(L_DEBUG) << "Compiling perspective pass" << std::endl;
         auto loaderOptions     = mRuntime->loaderOptions();
         loaderOptions.FilePath = path;
         loaderOptions.Scene    = scene;
-        shader << ShaderGenerator::generatePerspective(loaderOptions);
 
-        mPerspectivePass = mRuntime->createPass(shader.str());
+        mPerspectivePass = createPass(ShaderGenerator::generatePerspective(loaderOptions));
         if (!mPerspectivePass) {
             IG_LOG(L_ERROR) << "Could not setup perspective pass" << std::endl;
             return false;
@@ -395,16 +401,12 @@ private:
 
     inline bool setupImageInfoPass(const Path& path, Scene* scene)
     {
-        std::stringstream shader;
-        for (int i = 0; ig_shader[i]; ++i)
-            shader << ig_shader[i] << std::endl;
-
+        IG_LOG(L_DEBUG) << "Compiling imageinfo pass" << std::endl;
         auto loaderOptions     = mRuntime->loaderOptions();
         loaderOptions.FilePath = path;
         loaderOptions.Scene    = scene;
-        shader << ShaderGenerator::generateImageInfo(loaderOptions);
 
-        mImageInfoPass = mRuntime->createPass(shader.str());
+        mImageInfoPass = createPass(ShaderGenerator::generateImageInfo(loaderOptions));
         if (!mImageInfoPass) {
             IG_LOG(L_ERROR) << "Could not setup imageinfo pass" << std::endl;
             return false;
@@ -415,16 +417,12 @@ private:
 
     inline bool setupTonemapPass(const Path& path, Scene* scene)
     {
-        std::stringstream shader;
-        for (int i = 0; ig_shader[i]; ++i)
-            shader << ig_shader[i] << std::endl;
-
+        IG_LOG(L_DEBUG) << "Compiling tonemap pass" << std::endl;
         auto loaderOptions     = mRuntime->loaderOptions();
         loaderOptions.FilePath = path;
         loaderOptions.Scene    = scene;
-        shader << ShaderGenerator::generateTonemap(loaderOptions);
 
-        mTonemapPass = mRuntime->createPass(shader.str());
+        mTonemapPass = createPass(ShaderGenerator::generateTonemap(loaderOptions));
         if (!mTonemapPass) {
             IG_LOG(L_ERROR) << "Could not setup tonemap pass" << std::endl;
             return false;
@@ -435,16 +433,12 @@ private:
 
     inline bool setupGlarePass(const Path& path, Scene* scene)
     {
-        std::stringstream shader;
-        for (int i = 0; ig_shader[i]; ++i)
-            shader << ig_shader[i] << std::endl;
-
+        IG_LOG(L_DEBUG) << "Compiling glare pass" << std::endl;
         auto loaderOptions     = mRuntime->loaderOptions();
         loaderOptions.FilePath = path;
         loaderOptions.Scene    = scene;
-        shader << ShaderGenerator::generateGlare(loaderOptions);
 
-        mGlarePass = mRuntime->createPass(shader.str());
+        mGlarePass = createPass(ShaderGenerator::generateGlare(loaderOptions));
         if (!mGlarePass) {
             IG_LOG(L_ERROR) << "Could not setup glare pass" << std::endl;
             return false;
@@ -455,16 +449,12 @@ private:
 
     inline bool setupOverlayPass(const Path& path, Scene* scene)
     {
-        std::stringstream shader;
-        for (int i = 0; ig_shader[i]; ++i)
-            shader << ig_shader[i] << std::endl;
-
+        IG_LOG(L_DEBUG) << "Compiling overlay pass" << std::endl;
         auto loaderOptions     = mRuntime->loaderOptions();
         loaderOptions.FilePath = path;
         loaderOptions.Scene    = scene;
-        shader << ShaderGenerator::generateOverlay(loaderOptions);
 
-        mOverlayPass = mRuntime->createPass(shader.str());
+        mOverlayPass = createPass(ShaderGenerator::generateOverlay(loaderOptions));
         if (!mOverlayPass) {
             IG_LOG(L_ERROR) << "Could not setup overlay pass" << std::endl;
             return false;

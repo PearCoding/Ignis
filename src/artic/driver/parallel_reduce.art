@@ -7,7 +7,7 @@ struct ParallelReduceHandler {
 
 fn @make_cpu_parallel_reduce_handler() = ParallelReduceHandler { 
     is_gpu = false,
-    acc    = undef[Accelerator](),            // TODO: This is quite dangerous as it might trigger a bug in Thorin if this is not removed during code generator
+    acc    = undef[Accelerator](),             // TODO: This is quite dangerous as it might trigger a bug in Thorin if this is not removed during code generator
     config = make_default_gpu_kernel_config(), // Not used
     accb   = make_cpu_buffer
 };
@@ -35,7 +35,7 @@ fn @gpu_handle_device_reduce[T]( handler: ParallelReduceHandler
                                , op: fn (T, T) -> T) -> T {
     fn @reducer(block_size: i32) -> T {
         // TODO: This forces us to only use one reduce call at a single time (which is fair tbh)
-        let tmp_buffer = gpu_request_buffer("__dev_tmp_reduce", sizeof[T]() as i32, handler.accb);
+        let tmp_buffer = gpu_request_buffer("__dev_tmp_reduce", (sizeof[T]() / sizeof[f32]()) as i32 + 1, handler.accb);
 
         let kernel_ptr = tmp_buffer.pointer(0) as &mut addrspace(1)[T];
         gpu_reduce[T](handler.acc, n, block_size,
