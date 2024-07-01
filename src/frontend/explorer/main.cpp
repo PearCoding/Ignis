@@ -145,7 +145,10 @@ int main(int argc, char** argv)
         if (!args.InputFile.empty())
             openFileCallback(args.InputFile);
 
-        return window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
+        const int exitcode = window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
+        Context::instance().renderWidget()->cleanup();
+
+        return exitcode;
     } catch (const std::exception& e) {
         IG_LOG(L_FATAL) << e.what() << std::endl;
         return EXIT_FAILURE;

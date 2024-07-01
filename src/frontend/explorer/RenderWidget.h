@@ -27,6 +27,8 @@ public:
         RenderWidget::ToneMappingMethod ToneMappingMethod;
     };
 
+    void cleanup();
+
     void openFile(const Path& path);
 
     void onRender(Widget* parent) override;

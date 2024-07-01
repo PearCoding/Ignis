@@ -254,6 +254,7 @@ public:
         mRuntime = std::make_unique<Runtime>(options);
         if (mRuntime->loadFromScene(scene.get())) {
             setupPerspectivePass(path, scene.get());
+            setupImageInfoPass(path, scene.get());
             setupTonemapPass(path, scene.get());
             setupGlarePass(path, scene.get());
             setupOverlayPass(path, scene.get());
@@ -296,6 +297,16 @@ public:
     inline bool isOverlayVisible() const { return mShowOverlay; }
     inline void showOverlay(bool b) { mShowOverlay = b; }
 
+    inline void cleanup()
+    {
+        mPerspectivePass.reset();
+        mImageInfoPass.reset();
+        mTonemapPass.reset();
+        mGlarePass.reset();
+        mOverlayPass.reset();
+        mRuntime.reset();
+    }
+
 private:
     inline void handleRotation(float xmotion, float ymotion)
     {
@@ -331,6 +342,11 @@ private:
 
         if (!mPerspectivePass->run()) {
             IG_LOG(L_FATAL) << "Failed to run perspective pass" << std::endl;
+            return false;
+        }
+
+        if (!mImageInfoPass->run()) {
+            IG_LOG(L_FATAL) << "Failed to run imageinfo pass" << std::endl;
             return false;
         }
 
@@ -371,6 +387,26 @@ private:
         mPerspectivePass = mRuntime->createPass(shader.str());
         if (!mPerspectivePass) {
             IG_LOG(L_ERROR) << "Could not setup perspective pass" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    inline bool setupImageInfoPass(const Path& path, Scene* scene)
+    {
+        std::stringstream shader;
+        for (int i = 0; ig_shader[i]; ++i)
+            shader << ig_shader[i] << std::endl;
+
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+        shader << ShaderGenerator::generateImageInfo(loaderOptions);
+
+        mImageInfoPass = mRuntime->createPass(shader.str());
+        if (!mImageInfoPass) {
+            IG_LOG(L_ERROR) << "Could not setup imageinfo pass" << std::endl;
             return false;
         }
 
@@ -435,7 +471,7 @@ private:
         }
 
         mRuntime->setParameter("_glare_multiplier", 1.0f);
-        mRuntime->setParameter("_glare_vertical_illuminance", -1.0f/* Automatic */);
+        mRuntime->setParameter("_glare_vertical_illuminance", -1.0f /* Automatic */);
 
         return true;
     }
@@ -463,6 +499,7 @@ private:
 
     std::unique_ptr<Runtime> mRuntime;
     std::shared_ptr<RenderPass> mPerspectivePass;
+    std::shared_ptr<RenderPass> mImageInfoPass;
     std::shared_ptr<RenderPass> mTonemapPass;
     std::shared_ptr<RenderPass> mGlarePass;
     std::shared_ptr<RenderPass> mOverlayPass;
@@ -494,6 +531,11 @@ RenderWidget::RenderWidget()
 
 RenderWidget::~RenderWidget()
 {
+}
+
+void RenderWidget::cleanup()
+{
+    mInternal->cleanup();
 }
 
 void RenderWidget::openFile(const Path& path)

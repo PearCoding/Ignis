@@ -124,3 +124,29 @@ fn @handle_overlay_shader(device: Device, _spi: i32, settings: &Settings) {
 
     device.sync();
 }
+
+fn @handle_imageinfo_shader(device: Device, _spi: i32, settings: &Settings) {
+    let width  = registry::get_global_parameter_i32("_canvas_width",  128);
+    let height = registry::get_global_parameter_i32("_canvas_height", 128);
+    let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
+
+    let imageinfoSettings = ImageInfoSettings{
+        scale           = 1 / (settings.iter + 1) as f32,
+        bins            = 0,
+        histogram_r     = undef[&mut [i32]](),
+        histogram_g     = undef[&mut [i32]](),
+        histogram_b     = undef[&mut [i32]](),
+        histogram_l     = undef[&mut [i32]](),
+        acquire_error_stats = false,
+        acquire_histogram   = false
+    };
+
+    let output = ig_imageinfo_pipeline2(device, input, &imageinfoSettings);
+
+    registry::set_global_parameter_f32("_luminance_max",     output.max);
+    registry::set_global_parameter_f32("_luminance_min",     output.min);
+    registry::set_global_parameter_f32("_luminance_avg",     output.avg);
+    registry::set_global_parameter_f32("_luminance_softmax", output.soft_max);
+    registry::set_global_parameter_f32("_luminance_softmin", output.soft_min);
+    registry::set_global_parameter_f32("_luminance_med",     output.median);
+}
