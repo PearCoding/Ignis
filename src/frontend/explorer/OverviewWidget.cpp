@@ -1,4 +1,5 @@
 #include "OverviewWidget.h"
+#include "MenuItem.h"
 #include "RenderWidget.h"
 #include "Runtime.h"
 
@@ -8,6 +9,7 @@ namespace IG {
 
 OverviewWidget::OverviewWidget(RenderWidget* renderWidget)
     : Widget()
+    , mVisibleItem(nullptr)
     , mRenderWidget(renderWidget)
 {
     IG_ASSERT(renderWidget, "Expected a valid render widget");
@@ -16,8 +18,11 @@ OverviewWidget::OverviewWidget(RenderWidget* renderWidget)
 void OverviewWidget::onRender(Widget*)
 {
     Runtime* runtime = mRenderWidget->currentRuntime();
+    if (mVisibleItem && !mVisibleItem->isSelected())
+        return;
 
-    if (ImGui::Begin("Overview")) {
+    bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
+    if (ImGui::Begin("Overview", mVisibleItem ? &visibility : nullptr)) {
         if (!runtime) {
             ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "No scene loaded...");
         } else {
@@ -33,6 +38,9 @@ void OverviewWidget::onRender(Widget*)
         }
     }
     ImGui::End();
+
+    if (mVisibleItem)
+        mVisibleItem->setSelected(visibility);
 }
 
 }; // namespace IG

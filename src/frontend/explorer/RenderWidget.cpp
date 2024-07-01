@@ -254,6 +254,7 @@ public:
         if (mRuntime->loadFromScene(scene.get())) {
             setupPerspectivePass(path, scene.get());
             setupTonemapPass(path, scene.get());
+            setupGlarePass(path, scene.get());
 
             updateSize(mWidth, mHeight);
             updateParameters(mCurrentParameters);
@@ -322,6 +323,11 @@ private:
 
     inline bool runPipeline()
     {
+        if (!mGlarePass->run()) {
+            IG_LOG(L_FATAL) << "Failed to run glare pass" << std::endl;
+            return false;
+        }
+
         if (!mPerspectivePass->run()) {
             IG_LOG(L_FATAL) << "Failed to run perspective pass" << std::endl;
             return false;
@@ -381,6 +387,26 @@ private:
         return true;
     }
 
+    inline bool setupGlarePass(const Path& path, Scene* scene)
+    {
+        std::stringstream shader;
+        for (int i = 0; ig_shader[i]; ++i)
+            shader << ig_shader[i] << std::endl;
+
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+        shader << ShaderGenerator::generateGlare(loaderOptions);
+
+        mGlarePass = mRuntime->createPass(shader.str());
+        if (!mGlarePass) {
+            IG_LOG(L_ERROR) << "Could not setup glare pass" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
     // Buffer stuff
     inline bool setupTextureBuffer(size_t width, size_t height)
     {
@@ -405,6 +431,7 @@ private:
     std::unique_ptr<Runtime> mRuntime;
     std::shared_ptr<RenderPass> mPerspectivePass;
     std::shared_ptr<RenderPass> mTonemapPass;
+    std::shared_ptr<RenderPass> mGlarePass;
     Path mRequestedPath;
 
     std::unique_ptr<std::thread> mLoadingThread;

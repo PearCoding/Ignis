@@ -59,3 +59,25 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
 
     ig_tonemap_pipeline2(device, input, output, &tonemapSettings);
 }
+
+fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
+    let width  = settings.width;
+    let height = settings.height;
+    let input  = device.load_aov_image("", spi);
+    let output = device.request_buffer("_glare_overlay", width * height, 0);
+
+    let camera_eye  = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
+    let camera_dir  = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
+    let camera_up   = registry::get_global_parameter_vec3("__camera_up" , vec3_expand(0));
+    let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
+
+    let glareSettings = GlareSettings{
+        scale = 1 / (settings.iter + 1) as f32,
+        max   = registry::get_global_parameter_f32("_luminance_max", 1),
+        avg   = registry::get_global_parameter_f32("_luminance_avg", 1),
+        mul   = registry::get_global_parameter_f32("_glare_multiplier", 1),
+        vertical_illuminance = registry::get_global_parameter_f32("_glare_vertical_illuminance", -1)
+    };
+
+    ig_glare_pipeline(device, cam_fisheye, input, output, &glareSettings);
+}
