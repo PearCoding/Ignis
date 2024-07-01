@@ -1,0 +1,4 @@
+#pragma once
+
+#define IG_BUILD_DEFS "$<TARGET_PROPERTY:ig_lib_runtime,COMPILE_DEFINITIONS>"
+#define IG_BUILD_FLAGS "$<TARGET_PROPERTY:ig_lib_runtime,COMPILE_OPTIONS>"

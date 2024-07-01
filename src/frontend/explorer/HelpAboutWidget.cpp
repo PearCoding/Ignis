@@ -8,12 +8,15 @@ static std::string prepareText()
 {
     std::stringstream stream;
 
-    stream << "Version:    " << Build::getVersionString() << std::endl
-           << "Build:      " << Build::getBuildVariant() << std::endl
-           << "Git Rev:    " << Build::getGitRevision() << std::endl
-           << "Git Branch: " << Build::getGitBranch() << std::endl
-           << "Compiler:   " << Build::getCompilerName() << std::endl
-           << "OS:         " << Build::getOSName() << std::endl;
+    stream << "Version:     " << Build::getVersionString() << std::endl
+           << "Build:       " << Build::getBuildVariant() << std::endl
+           << "Git Rev:     " << Build::getGitRevision() << std::endl
+           << "Git Branch:  " << Build::getGitBranch() << std::endl
+           << "Git Dirty:   " << (Build::isGitDirty() ? "true" : "false") << std::endl
+           << "Compiler:    " << Build::getCompilerName() << std::endl
+           << "OS:          " << Build::getOSName() << std::endl
+           << "Definitions: " << Build::getBuildDefinitions() << std::endl
+           << "Options:     " << Build::getBuildOptions() << std::endl;
 
     return stream.str();
 }
