@@ -76,14 +76,14 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connec
     // Some surface was between the light source and the starting point -> There is no contribution from the light!
     fn @on_advanced_shadow_hit(_ctx: ShadingContext, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
         let lvs   = unwrap_lvsecondarypayload(secondary_payload);
-        let color = color_map(lvs.light);
+        let color = colormap::palette(lvs.light);
         make_option(make_gray_color(color_luminance(color) * no_connection_factor))
     }
 
     // No surface was between the light source and the starting point -> There is a contribution from the light!
     fn @on_advanced_shadow_miss(_ctx: ShadingContext, _shader: MaterialShader, secondary_payload: RayPayload, _contrib: Color) -> Option[Color] {
         let lvs = unwrap_lvsecondarypayload(secondary_payload);
-        make_option(color_map(lvs.light))
+        make_option(colormap::palette(lvs.light))
     }
 
     fn @on_bounce( ctx: ShadingContext

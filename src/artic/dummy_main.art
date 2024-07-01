@@ -55,7 +55,7 @@ fn ig_advanced_shadow_shader(_settings: &Settings, _mat_id: i32, _first: i32, _l
 }
 
 #[export]
-fn ig_imageinfo_shader(_settings: &Settings, _in_pixels: &[f32], _width: i32, _height: i32, _ii_settings: &ImageInfoSettings, _output: &ImageInfoOutput) -> () {
+fn ig_imageinfo_shader(_settings: &Settings, _in_pixels: &[f32], _width: i32, _height: i32, _ii_settings: &ImageInfoSettings, _output: &mut ImageInfoOutput) -> () {
 }
 
 #[export]

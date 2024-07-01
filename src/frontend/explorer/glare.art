@@ -6,7 +6,7 @@ struct GlareSettings {
     vertical_illuminance: f32 // Set < 0 to compute it automatically
 }
 
-fn @ig_glare_pipeline(device: Device, camera: Camera, input: AOVImage, overlay: DeviceBuffer, settings: &GlareSettings) {
+fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_luminance: DeviceBuffer, settings: &GlareSettings) {
     let width  = input.width;
     let height = input.height;
 
@@ -199,9 +199,10 @@ fn @ig_glare_pipeline(device: Device, camera: Camera, input: AOVImage, overlay: 
             // compute heatmap color
             let max_diff = math_builtins::fmax(flt_eps, lum_max - lum_source);
             let lum_diff = act_lum - lum_source;
-            let lerp_factor = lum_diff / max_diff;
-            let col = colormap::inferno(clampf(lerp_factor * lerp_factor, 0, 1));
-            overlay.store_i32(pixel.linear, bitcast[i32](make_byte_color(col)));
+            let rel_luminance = lum_diff / max_diff;
+            source_luminance.store_f32(pixel.linear, rel_luminance);
+        } else {
+            source_luminance.store_f32(pixel.linear, -1);
         }
     }
 

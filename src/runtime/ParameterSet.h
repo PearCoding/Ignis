@@ -36,5 +36,37 @@ struct IG_LIB ParameterSet {
     {
         ColorParameters[key] = value;
     }
+
+    inline int getInt(const std::string& key, int def = 0) const
+    {
+        if (const auto it = IntParameters.find(key); it != IntParameters.end())
+            return it->second;
+        else
+            return def;
+    }
+
+    inline float getFloat(const std::string& key, float def = 0.0f) const
+    {
+        if (const auto it = FloatParameters.find(key); it != FloatParameters.end())
+            return it->second;
+        else
+            return def;
+    }
+
+    inline Vector3f getVector(const std::string& key, const Vector3f& def = Vector3f::Zero()) const
+    {
+        if (const auto it = VectorParameters.find(key); it != VectorParameters.end())
+            return it->second;
+        else
+            return def;
+    }
+
+    inline Vector4f getColor(const std::string& key, const Vector4f& def = Vector4f::Zero()) const
+    {
+        if (const auto it = ColorParameters.find(key); it != ColorParameters.end())
+            return it->second;
+        else
+            return def;
+    }
 };
 } // namespace IG

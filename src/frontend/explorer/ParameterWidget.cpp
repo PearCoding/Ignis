@@ -1,6 +1,7 @@
 #include "ParameterWidget.h"
 #include "MenuItem.h"
 #include "RenderWidget.h"
+#include "Runtime.h"
 
 #include "imgui.h"
 
@@ -25,6 +26,8 @@ void ParameterWidget::onRender(Widget*)
 
     bool changed                        = false;
     RenderWidget::Parameters parameters = mRenderWidget->currentParameters();
+
+    Runtime* runtime = mRenderWidget->currentRuntime();
 
     bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
     if (ImGui::Begin("Parameters", mVisibleItem ? &visibility : nullptr)) {
@@ -53,6 +56,19 @@ void ParameterWidget::onRender(Widget*)
                 }
                 ImGui::EndTabItem();
             }
+
+            if (ImGui::BeginTabItem("Glare")) {
+                bool showOverlay = mRenderWidget->isOverlayVisible();
+                if (ImGui::Checkbox("Overlay", &showOverlay))
+                    mRenderWidget->showOverlay(showOverlay);
+
+                float multiplier = runtime->parameters().getFloat("_glare_multiplier");
+                if (ImGui::SliderFloat("Multiplier", &multiplier, 0.0f, 10.0f))
+                    runtime->setParameter("_glare_multiplier", multiplier);
+
+                ImGui::EndTabItem();
+            }
+
             ImGui::EndTabBar();
         }
     }

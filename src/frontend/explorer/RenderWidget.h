@@ -38,6 +38,9 @@ public:
     Runtime* currentRuntime();
     float currentFPS() const;
 
+    bool isOverlayVisible() const;
+    void showOverlay(bool b = true);
+
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;
 };
