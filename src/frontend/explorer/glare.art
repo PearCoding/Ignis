@@ -6,26 +6,30 @@ struct GlareSettings {
     vertical_illuminance: f32 // Set < 0 to compute it automatically
 }
 
+// An evalglare.c implementation using the GPU.
+// The biggest difference to the original code, beyond the missing features, is that it only supports a single glare source!
 fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_luminance: DeviceBuffer, settings: &GlareSettings) {
     let width  = input.width;
     let height = input.height;
 
     //let cam_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
-    let cam_up    = registry::get_global_parameter_vec3("__camera_up", vec3_expand(0));
-    let cam_dir   = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
-    let cam_right = vec3_cross(cam_dir, cam_up);
+    let cam_up  = vec3_normalize(registry::get_global_parameter_vec3("__camera_up", vec3_expand(0)));
+    let cam_dir = vec3_normalize(registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0)));
+
+    let cam_hv = vec3_normalize(vec3_cross(cam_dir, cam_up));
+    let cam_vv = vec3_normalize(vec3_cross(cam_dir, cam_hv));
 
     fn @calc_posindex(pixel: PixelCoord) -> f32 {
         let pseudo_rng = create_random_generator(42);
         let ray = camera.generate_ray(pseudo_rng, pixel);
 
-        let vangle = math_builtins::acos(vec3_dot(cam_up, ray.dir)) - flt_pi / 2.0;
-        let hangle = flt_pi / 2.0 - math_builtins::acos(vec3_dot(cam_right, ray.dir));
-        let sigma  = deg(math_builtins::fabs(math_builtins::acos(vec3_dot(cam_dir, ray.dir))));
+        let vangle = math_builtins::acos(vec3_dot(cam_vv, ray.dir)) - flt_pi / 2.0;
+        let hangle = flt_pi / 2.0 - math_builtins::acos(vec3_dot(cam_hv, ray.dir));
+        let t      = vec3_dot(cam_dir, ray.dir);
+        let sigma  = deg(math_builtins::fabs(math_builtins::acos(t)));
 
-        let t   = math_builtins::cos(sigma);
         let hv  = vec3_normalize(vec3_sub(vec3_mulf(ray.dir, 1.0 / t), ray.dir));
-        let tau = deg(math_builtins::acos(vec3_dot(cam_up, hv)));
+        let tau = deg(math_builtins::acos(vec3_dot(cam_vv, hv)));
 
         let phi   = math_builtins::fmax[f32](0.00001:f32, vangle);
         let theta = math_builtins::fmax[f32](0.00001:f32, hangle);
@@ -39,11 +43,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
             let s = math_builtins::tan(theta) / math_builtins::tan(phi);
             let r = math_builtins::fmin[f32](math_builtins::sqrt(1.0 / d * 1.0 / d + s * s / d / d), 3.0:f32);
 
-            let fact = if (r > 0.6) {
-                1.2:f32
-            } else {
-                0.8:f32
-            };
+            let fact = select(r > 0.6, 1.2:f32, 0.8:f32);
 
             1.0 + fact * r
 	    } else {
@@ -84,14 +84,14 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     }
 
     let scale     = settings.scale;
-    let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * srgb_to_xyY(color_mulf(col, scale)).b }; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
+    let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * srgb_to_xyY(col).b * scale }; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
 
     let lum_max    = color_builtins::white_efficiency * settings.max;
     let lum_source = color_builtins::white_efficiency *(settings.avg * settings.mul);
 
     let c1 = 5.87e-5 : f32;
-    let c2 = 0.0981  : f32;
-    let c3 = 0.16    : f32;
+    let c2 = 0.092   : f32;
+    let c3 = 0.159   : f32;
     let a1 = 2.0     : f32;
 	let a2 = 1.0     : f32;
 	let a3 = 1.87    : f32;
@@ -168,22 +168,44 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
         source_luminance.store_f32(pixel.linear, rel_luminance);
     }
 
-    let glare_posi = calc_posindex(make_pixelcoord_from_xy(glare_x as i32, glare_y as i32, width, height, math::fract(glare_x), math::fract(glare_y))); // For now just pick the middle
+    let glare_posi = calc_posindex(make_pixelcoord_from_xy(glare_x as i32, glare_y as i32, width, height, math::fract(glare_x), math::fract(glare_y)));
 
-    let dgp_acc    = math_builtins::pow(glare_lum, a1) / math_builtins::pow(glare_posi, a4) * math_builtins::pow(glare_omega, a2) / math_builtins::pow(E_v, a3);
-    let source_dgp = math_builtins::log10(1 + dgp_acc);
+    fn @compute_dgp() -> f32 {
+        let dgp_acc    = math_builtins::pow(glare_lum, a1) / math_builtins::pow(glare_posi, a4) * math_builtins::pow(glare_omega, a2) / math_builtins::pow(E_v, a3);
+        let source_dgp = math_builtins::log10(1 + dgp_acc);
 
-    let dgp = if glare_omega > 0 {
-        c1 * math_builtins::pow(E_v, a5) + c2 * source_dgp + c3
-    } else {
-        // No glare sources
-        c1 * math_builtins::pow(E_v, a5) + c3
-    };
+        if glare_omega > 0 {
+            c1 * math_builtins::pow(E_v, a5) + c2 * source_dgp + c3
+        } else {
+            // No glare sources
+            c1 * math_builtins::pow(E_v, a5) + c3
+        }
+    }
+
+    fn @compute_dgi() -> f32 {
+        let lum_backg = settings.avg; // TODO: Really?
+        let omega_s   = glare_omega / (glare_posi * glare_posi);
+        let sum_glare = 0.478 * math_builtins::pow(glare_lum, 1.6:f32) * math_builtins::pow(omega_s, 0.8:f32) / (lum_backg + 0.07 * math_builtins::pow(glare_omega, 0.5:f32) * glare_lum);
+        10 * math_builtins::log10(sum_glare)
+    }
+
+    fn @compute_dgi_mod() -> f32 {
+        let lum_a     = settings.avg; // TODO: Really?
+        let omega_s   = glare_omega / (glare_posi * glare_posi);
+        let sum_glare = 0.478 * math_builtins::pow(glare_lum, 1.6:f32) * math_builtins::pow(omega_s, 0.8:f32) / (math_builtins::pow(lum_a, 0.85:f32) + 0.07 * math_builtins::pow(glare_omega, 0.5:f32) * glare_lum);
+        10 * math_builtins::log10(sum_glare)
+    }
 
     // TODO: Add low-light correction
     // TODO: Add age correction
 
+    let dgp     = compute_dgp();
+    let dgi     = compute_dgi();
+    let dgi_mod = compute_dgi_mod();
+
     registry::set_global_parameter_f32("glare_dgp", dgp);
+    registry::set_global_parameter_f32("glare_dgi", dgi);
+    registry::set_global_parameter_f32("glare_dgi_mod", dgi_mod);
     registry::set_global_parameter_f32("glare_vertical_illuminance", E_v);
     registry::set_global_parameter_f32("glare_luminance", glare_lum);
     registry::set_global_parameter_f32("glare_omega", glare_omega);

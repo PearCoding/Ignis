@@ -41,7 +41,19 @@ void OverviewWidget::onRender(Widget*)
             ImGui::Text("Cam Up  (%6.3f, %6.3f, %6.3f)", camera.Up(0), camera.Up(1), camera.Up(2));
 
             ImGui::Separator();
-            ImGui::Text("DGP  %.3f", runtime->parameters().getFloat("glare_dgp"));
+            const float dgp           = runtime->parameters().getFloat("glare_dgp");
+            const float dgi           = runtime->parameters().getFloat("glare_dgi");
+            const float dgiMod        = runtime->parameters().getFloat("glare_dgi_mod");
+            const char* dgpPerception = "Imperceptible";
+            if (dgp > 0.45f)
+                dgpPerception = "Intolerable";
+            else if (dgp > 0.40f)
+                dgpPerception = "Disturbing";
+            else if (dgp > 0.35f)
+                dgpPerception = "Perceptible";
+
+            ImGui::Text("DGP  %.3f [%s]", dgp, dgpPerception);
+            ImGui::Text("DGI  %.3f | DGI (mod)  %.3f", dgi, dgiMod);
             ImGui::Text("Lux  %.3f", runtime->parameters().getFloat("glare_luminance"));
         }
     }

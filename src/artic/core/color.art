@@ -26,7 +26,7 @@ fn @color_abs(a: Color)              = make_color(math_builtins::fabs(a.r), math
 fn @color_saturate(a: Color, f: f32) = make_color(math_builtins::fmin[f32](a.r, f), math_builtins::fmin[f32](a.g, f), math_builtins::fmin[f32](a.b, f), math_builtins::fmin[f32](a.a, f));
 
 fn @color_average(c: Color)   = (c.r + c.g + c.b) / 3;
-fn @color_luminance(c: Color) = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
+fn @color_luminance(c: Color) = c.r * color_builtins::CIE_sRGB_r + c.g * color_builtins::CIE_sRGB_g + c.b * color_builtins::CIE_sRGB_b;
 
 // Will normalize such that one of the r,g,b components is 1. Ignores the alpha channel
 fn @color_normalize(c: Color)         = color_replace_a(color_mulf(c, safe_div(1, color_max_component(c))), c.a);
@@ -77,6 +77,10 @@ static false_color = red;
 static max_efficiency   = 683:f32; // Defined maximum at 550 nm
 static white_efficiency = 179:f32; // Uniform white light (Standard illuminant E)
 static d65_efficiency   = 203:f32; // Standard illuminant D65
+
+static CIE_sRGB_r = 0.2126:f32;
+static CIE_sRGB_g = 0.7152:f32;
+static CIE_sRGB_b = 0.0722:f32;
 }
 
 fn @xyz_to_srgb(c : Color) -> Color {
@@ -100,7 +104,7 @@ fn @xyY_to_srgb(c : Color) -> Color {
 fn @srgb_to_xyY(c : Color) -> Color {
     let s = srgb_to_xyz(c);
     let n = s.r + s.g + s.b;
-    if n <= flt_eps { color_builtins::black } else { make_color(s.r / n, s.g / n, s.g, 1) }
+    if n <= flt_eps { color_builtins::black } else { make_color(s.r / n, s.g / n, s.g, c.a) }
 }
 
 mod tonemapping {
@@ -361,3 +365,11 @@ fn @decode_rgbe(color: i32) -> Color {
         make_color(r * f, g * f, b * f, 1)
     }
 }
+
+fn @make_packed_color(r: u8, g: u8, b: u8, a: u8) = ((a as u32) << 24) | ((r as u32) << 16) | ((g as u32) << 8) | (b as u32);
+fn @make_byte_color(c : Color) = make_packed_color(
+    (clampf(c.r, 0, 1) * 255) as u8,
+    (clampf(c.g, 0, 1) * 255) as u8,
+    (clampf(c.b, 0, 1) * 255) as u8,
+    (clampf(c.a, 0, 1) * 255) as u8
+);

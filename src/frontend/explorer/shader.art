@@ -63,6 +63,7 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
 fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let width  = settings.width;
     let height = settings.height;
+    // let input  = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
     let input  = device.load_aov_image("", spi);
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
 
@@ -117,7 +118,7 @@ fn @handle_overlay_shader(device: Device, _spi: i32, settings: &Settings) {
         if lum < 0 {
             output.store_i32(dstCoord.linear, tonemapped.load_i32(dstCoord.linear));
         } else {
-            let color = colormap::inferno(lum * lum);
+            let color = colormap::inferno(lum);
             output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(color)));
         }
     }
