@@ -22,6 +22,7 @@ void OverviewWidget::onRender(Widget*)
         return;
 
     bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
+    ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Overview", mVisibleItem ? &visibility : nullptr)) {
         if (!runtime) {
             ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "No scene loaded...");

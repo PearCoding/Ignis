@@ -7,6 +7,7 @@
 namespace IG {
 SDL_Window* sWindow     = nullptr;
 SDL_Renderer* sRenderer = nullptr;
+int sMainWindowDockID   = -1;
 
 class MainWindowInternal {
 private:
@@ -93,6 +94,7 @@ public:
             SDL_RenderClear(mRenderer);
             ui::newFrame();
 
+            sMainWindowDockID = ImGui::DockSpaceOverViewport();
             // ImGui::ShowDemoWindow();
 
             for (const auto& child : mChildren)

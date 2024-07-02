@@ -13,6 +13,7 @@ extern const char* ig_shader[];
 
 namespace IG {
 extern SDL_Renderer* sRenderer;
+extern int sMainWindowDockID;
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file);
 
@@ -131,7 +132,7 @@ public:
             mRuntime->step();
 
             ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowDockID(1, ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowDockID(sMainWindowDockID, ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
                 if (mTexture)
                     runPipeline();

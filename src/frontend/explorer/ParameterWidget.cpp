@@ -34,6 +34,7 @@ void ParameterWidget::onRender(Widget*)
         return;
 
     bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
+    ImGui::SetNextWindowSize(ImVec2(350, 300), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Parameters", mVisibleItem ? &visibility : nullptr)) {
         if (ImGui::CollapsingHeader("View##parameters", HeaderFlags)) {
             if (ImGui::SliderFloat("Exposure", &parameters.ExposureFactor, -10.0f, 10.0f))
