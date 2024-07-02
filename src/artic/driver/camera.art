@@ -57,6 +57,15 @@ fn @make_pixelcoord_from_normalized(nx: f32, ny: f32, w: i32, h: i32) -> PixelCo
     }
 }
 
+fn @shift_pixelcoord(coord: PixelCoord, sx: f32, sy: f32) = make_pixelcoord_from_xy(
+    math_builtins::floor(coord.x as f32 + sx) as i32,
+    math_builtins::floor(coord.y as f32 + sy) as i32,
+    coord.w,
+    coord.h,
+    math::fract(coord.x as f32 + sx),
+    math::fract(coord.y as f32 + sy)
+);
+
 struct CameraSample {
     coord:  PixelCoord, // Sampled pixel
     dir:    Vec3,       // Sampled direction from given point TOWARDS the camera. The vector is NOT normalized

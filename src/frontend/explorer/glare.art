@@ -64,7 +64,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     }
 
     // Loosely adapted from pict_get_omega, pict_get_sangle and splane_normal
-    fn @calc_omega(pixel: PixelCoord) -> f32 {
+    fn @calc_omega(pixel: PixelCoord) -> (f32, Vec3) {
         fn @splane(p_a: Vec3, p_b: Vec3) -> Vec3 {
             let e1 = p_a;
             let e2 = vec3_sub(p_b, p_a);
@@ -74,9 +74,9 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
 
         let pseudo_rng = create_random_generator(42);
         let r1 = camera.generate_ray(pseudo_rng, pixel).dir;
-        let r2 = camera.generate_ray(pseudo_rng, make_pixelcoord_from_xy(pixel.x  , pixel.y+1, pixel.w, pixel.h, 0, 0)).dir;
-        let r3 = camera.generate_ray(pseudo_rng, make_pixelcoord_from_xy(pixel.x+1, pixel.y+1, pixel.w, pixel.h, 0, 0)).dir;
-        let r4 = camera.generate_ray(pseudo_rng, make_pixelcoord_from_xy(pixel.x+1, pixel.y  , pixel.w, pixel.h, 0, 0)).dir;
+        let r2 = camera.generate_ray(pseudo_rng, shift_pixelcoord(pixel, 0, 1)).dir;
+        let r3 = camera.generate_ray(pseudo_rng, shift_pixelcoord(pixel, 1, 1)).dir;
+        let r4 = camera.generate_ray(pseudo_rng, shift_pixelcoord(pixel, 1, 0)).dir;
 
         let n1 = splane(r1, r2);
         let n2 = splane(r2, r3);
@@ -89,7 +89,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
         let a4 = flt_pi - math_builtins::fabs(math_builtins::acos(vec3_dot(n4, n1)));
 
         let ang = a1 + a2 + a3 + a4;
-        ang - 2 * flt_pi
+        (ang - 2 * flt_pi, r1)
     }
 
     let scale     = settings.scale;
@@ -100,14 +100,12 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
 
     let reduce_handler = device.parallel_reduce_handler;
     let reduce_output  = reduce[ReduceOutputGlare](reduce_handler, width * height,
-        @|i:i32| { 
-            let pseudo_rng = create_random_generator(42);
-            let pixel   = make_pixelcoord_from_linear(i, width, height, 0, 0);
-            let ray     = camera.generate_ray(pseudo_rng, pixel);
-            let act_lum = luminance(input.get(pixel));
-            let omega   = calc_omega(pixel);
-            let cos_f   = math_builtins::fabs(vec3_dot(cam_dir, ray.dir));
-            let e_v     = act_lum * omega * cos_f;
+        @|i:i32| {
+            let pixel        = make_pixelcoord_from_linear(i, width, height, 0, 0);
+            let (omega, dir) = calc_omega(pixel);
+            let act_lum      = luminance(input.get(pixel));
+            let cos_f        = math_builtins::fabs(vec3_dot(cam_dir, dir));
+            let e_v          = act_lum * omega * cos_f;
             if act_lum > lum_source {
                 ReduceOutputGlare {
                     num_pixels = 1,
@@ -128,7 +126,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
                 }
             }
         },
-        @|a, b|  { ReduceOutputGlare{ 
+        @|a, b| { ReduceOutputGlare{ 
             num_pixels = a.num_pixels + b.num_pixels,
             sum_omega  = a.sum_omega  + b.sum_omega,
             sum_lum    = a.sum_lum    + b.sum_lum,
