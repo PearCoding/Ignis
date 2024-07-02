@@ -6,6 +6,15 @@ struct GlareSettings {
     vertical_illuminance: f32 // Set < 0 to compute it automatically
 }
 
+struct ReduceOutputGlare {
+    num_pixels: i32,
+    sum_omega:  f32,
+    sum_lum:    f32,
+    sum_x:      f32,
+    sum_y:      f32,
+    e_v:        f32,
+}
+
 // An evalglare.c implementation using the GPU.
 // The biggest difference to the original code, beyond the missing features, is that it only supports a single glare source!
 fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_luminance: DeviceBuffer, settings: &GlareSettings) {
@@ -34,11 +43,11 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
         let phi   = math_builtins::fmax[f32](0.00001:f32, vangle);
         let theta = math_builtins::fmax[f32](0.00001:f32, hangle);
 
-        // position index calculation with KIM model
+        // position index calculation with KIM model (postype==1)
         //posindex = math_builtins::exp ((sigma-(-0.000009*tau*tau*tau+0.0014*tau*tau+0.0866*tau+21.633))/(-0.000009*tau*tau*tau+0.0013*tau*tau+0.0853*tau+8.772));
         
-        // use Iwata model below line of sight
 	    let posindex = if (phi < 0.0) {
+            // use Iwata model below line of sight
             let d = 1.0 / math_builtins::tan(phi);
             let s = math_builtins::tan(theta) / math_builtins::tan(phi);
             let r = math_builtins::fmin[f32](math_builtins::sqrt(1.0 / d * 1.0 / d + s * s / d / d), 3.0:f32);
@@ -87,69 +96,53 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * srgb_to_xyY(col).b * scale }; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
 
     let lum_max    = color_builtins::white_efficiency * settings.max;
-    let lum_source = color_builtins::white_efficiency *(settings.avg * settings.mul);
+    let lum_source = color_builtins::white_efficiency * settings.avg * settings.mul;
 
-    let c1 = 5.87e-5 : f32;
-    let c2 = 0.092   : f32;
-    let c3 = 0.159   : f32;
-    let a1 = 2.0     : f32;
-	let a2 = 1.0     : f32;
-	let a3 = 1.87    : f32;
-	let a4 = 2.0     : f32;
-	let a5 = 1.0     : f32;
+    let reduce_handler = device.parallel_reduce_handler;
+    let reduce_output  = reduce[ReduceOutputGlare](reduce_handler, width * height,
+        @|i:i32| { 
+            let pseudo_rng = create_random_generator(42);
+            let pixel   = make_pixelcoord_from_linear(i, width, height, 0, 0);
+            let ray     = camera.generate_ray(pseudo_rng, pixel);
+            let act_lum = luminance(input.get(pixel));
+            let omega   = calc_omega(pixel);
+            let cos_f   = math_builtins::fabs(vec3_dot(cam_dir, ray.dir));
+            let e_v     = act_lum * omega * cos_f;
+            if act_lum > lum_source {
+                ReduceOutputGlare {
+                    num_pixels = 1,
+                    sum_omega  = omega,
+                    sum_lum    = act_lum * omega,
+                    sum_x      = pixel.x as f32 * omega,
+                    sum_y      = pixel.y as f32 * omega,
+                    e_v        = e_v
+                }
+            } else {
+                ReduceOutputGlare {
+                    num_pixels = 0,
+                    sum_omega  = 0,
+                    sum_lum    = 0,
+                    sum_x      = 0,
+                    sum_y      = 0,
+                    e_v        = e_v // Independent of the glare source
+                }
+            }
+        },
+        @|a, b|  { ReduceOutputGlare{ 
+            num_pixels = a.num_pixels + b.num_pixels,
+            sum_omega  = a.sum_omega  + b.sum_omega,
+            sum_lum    = a.sum_lum    + b.sum_lum,
+            sum_x      = a.sum_x      + b.sum_x,
+            sum_y      = a.sum_y      + b.sum_y,
+            e_v        = a.e_v        + b.e_v } }
+    );
 
-    let E_v = if settings.vertical_illuminance < 0 {        
-        // Compute automatically
-        device.parallel_reduce_f32(width * height,
-            @|idx| -> f32 {
-                let pixel = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let current_color = input.get(pixel);
-                let act_lum = luminance(current_color);
-
-                let pseudo_rng = create_random_generator(42);
-                let ray = camera.generate_ray(pseudo_rng, pixel);
-
-                let cos_f = math_builtins::fabs(vec3_dot(cam_dir, ray.dir));
-                let omega = calc_omega(pixel);
-                act_lum * cos_f * omega
-            },
-            @|a,b| a + b)
-    } else {
-        settings.vertical_illuminance
-    };
-
-    let glare_pixels = device.parallel_reduce_i32(width * height, @|idx| -> i32 {let v = luminance(input.get(make_pixelcoord_from_linear(idx, width, height, 0, 0))); select(v > lum_source, 1:i32, 0:i32) }, @|a,b| a + b);
-    let glare_omega  = device.parallel_reduce_f32(width * height,
-            @|idx| -> f32 {
-                let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let act_lum = luminance(input.get(pixel));
-                select(act_lum > lum_source, calc_omega(pixel), 0:f32)
-            },
-            @|a,b| a + b);
-
-    let glare_lum = device.parallel_reduce_f32(width * height,
-            @|idx| -> f32 {
-                let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let act_lum = luminance(input.get(pixel));
-                select(act_lum > lum_source, calc_omega(pixel), 0:f32) * act_lum
-            },
-            @|a,b| a + b) / glare_omega;
-
-    let glare_x = device.parallel_reduce_f32(width * height,
-            @|idx| -> f32 {
-                let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let act_lum = luminance(input.get(pixel));
-                select(act_lum > lum_source, calc_omega(pixel), 0:f32) * pixel.x as f32
-            },
-            @|a,b| a + b) / glare_omega;
-
-    let glare_y = device.parallel_reduce_f32(width * height,
-            @|idx| -> f32 {
-                let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-                let act_lum = luminance(input.get(pixel));
-                select(act_lum > lum_source, calc_omega(pixel), 0:f32) * pixel.y as f32
-            },
-            @|a,b| a + b) / glare_omega;
+    let glare_pixels = reduce_output.num_pixels;
+    let glare_omega  = reduce_output.sum_omega;
+    let glare_lum    = reduce_output.sum_lum / glare_omega;
+    let glare_x      = reduce_output.sum_x / glare_omega;
+    let glare_y      = reduce_output.sum_y / glare_omega;
+    let E_v          = if settings.vertical_illuminance < 0 { reduce_output.e_v } else { settings.vertical_illuminance };
 
     // primary glare source scan
     for idx in device.parallel_range(0, width * height) {
@@ -158,7 +151,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
         let act_lum       = luminance(current_color);
 
         let rel_luminance = if (act_lum > lum_source) {
-            // compute heatmap color
+            // compute relative luminance
             let max_diff = math_builtins::fmax(flt_eps, lum_max - lum_source);
             let lum_diff = act_lum - lum_source;
             lum_diff / max_diff
@@ -171,10 +164,19 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     let glare_posi = calc_posindex(make_pixelcoord_from_xy(glare_x as i32, glare_y as i32, width, height, math::fract(glare_x), math::fract(glare_y)));
 
     fn @compute_dgp() -> f32 {
+        let c1 = 5.87e-5 : f32;
+        let c2 = 0.092   : f32;
+        let c3 = 0.159   : f32;
+        let a1 = 2.0     : f32;
+        let a2 = 1.0     : f32;
+        let a3 = 1.87    : f32;
+        let a4 = 2.0     : f32;
+        let a5 = 1.0     : f32;
+
         let dgp_acc    = math_builtins::pow(glare_lum, a1) / math_builtins::pow(glare_posi, a4) * math_builtins::pow(glare_omega, a2) / math_builtins::pow(E_v, a3);
         let source_dgp = math_builtins::log10(1 + dgp_acc);
 
-        if glare_omega > 0 {
+        if glare_pixels > 0 {
             c1 * math_builtins::pow(E_v, a5) + c2 * source_dgp + c3
         } else {
             // No glare sources

@@ -66,8 +66,8 @@ void ParameterWidget::onRender(Widget*)
                 mRenderWidget->showOverlay(showOverlay);
 
             float multiplier = runtime->parameters().getFloat("_glare_multiplier");
-            if (ImGui::SliderFloat("Multiplier", &multiplier, 0.0f, 10.0f))
-                runtime->setParameter("_glare_multiplier", multiplier);
+            if (ImGui::SliderFloat("Multiplier", &multiplier, 0.001f, 10.0f))
+                runtime->setParameter("_glare_multiplier", std::max(0.001f, multiplier));
         }
     }
     ImGui::End();

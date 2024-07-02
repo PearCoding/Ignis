@@ -63,8 +63,8 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
 fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let width  = settings.width;
     let height = settings.height;
-    // let input  = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
-    let input  = device.load_aov_image("", spi);
+    let input  = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
+    // let input  = device.load_aov_image("", spi);
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
 
     let camera_eye  = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));

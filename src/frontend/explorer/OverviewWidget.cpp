@@ -53,7 +53,9 @@ void OverviewWidget::onRender(Widget*)
                 dgpPerception = "Perceptible";
 
             ImGui::Text("DGP  %.3f [%s]", dgp, dgpPerception);
-            ImGui::Text("DGI  %.3f | DGI (mod)  %.3f", dgi, dgiMod);
+            ImGui::Text("DGI  %.3f", dgi);
+            ImGui::Text("DGIm %.3f", dgiMod);
+            ImGui::Text("Ev   %.3f", runtime->parameters().getFloat("glare_vertical_illuminance"));
             ImGui::Text("Lux  %.3f", runtime->parameters().getFloat("glare_luminance"));
         }
     }
