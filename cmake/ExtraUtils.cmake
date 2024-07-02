@@ -154,6 +154,12 @@ function(add_linker_options TARGET)
     if(HAS_NEW_RPATH_FLAGS)
         target_link_options(${TARGET} PRIVATE ${NEW_RPATH_FLAGS})
     endif()
+    if(MSVC)
+        get_target_property(target_type ${TARGET} TYPE)
+        if (target_type STREQUAL "EXECUTABLE")
+            target_link_options(${TARGET} PRIVATE "/STACK:16777216")
+        endif()
+    endif()
 endfunction()
 
 # LTO
