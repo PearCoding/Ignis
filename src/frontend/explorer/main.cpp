@@ -82,9 +82,10 @@ private:
         mOverviewMenuItem  = std::make_shared<MenuItem>("Overview", [](MenuItem* item) { item->setSelected(!item->isSelected()); });
         mRegistryMenuItem  = std::make_shared<MenuItem>("Registry", [](MenuItem* item) { item->setSelected(!item->isSelected()); });
 
+        // TODO: Settings
         mParameterMenuItem->setSelected(true);
         mOverviewMenuItem->setSelected(true);
-        mRegistryMenuItem->setSelected(true);
+        mRegistryMenuItem->setSelected(false);
 
         viewMenu->add(mParameterMenuItem);
         viewMenu->add(mOverviewMenuItem);

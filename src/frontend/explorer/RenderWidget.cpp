@@ -130,6 +130,8 @@ public:
             }
             mRuntime->step();
 
+            ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowDockID(1, ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
                 if (mTexture)
                     runPipeline();
@@ -138,7 +140,7 @@ public:
                 const ImVec2 contentMax  = ImGui::GetWindowContentRegionMax();
                 const ImVec2 contentSize = ImVec2(contentMax.x - contentMin.x, contentMax.y - contentMin.y);
                 if (!mTexture || mWidth != contentSize.x || mHeight != contentSize.y)
-                    onContentResize((size_t)contentSize.x, (size_t)contentSize.y);
+                    onContentResize((size_t)std::max(0.0f, contentSize.x), (size_t)std::max(0.0f, contentSize.y));
 
                 mMouseOnWidget = ImGui::IsItemHovered(ImGuiHoveredFlags_RootAndChildWindows);
             }
@@ -335,6 +337,9 @@ private:
 
     inline bool runPipeline()
     {
+        if (mWidth == 0 || mHeight == 0)
+            return false;
+
         if (!mGlarePass->run()) {
             IG_LOG(L_FATAL) << "Failed to run glare pass" << std::endl;
             return false;
@@ -469,6 +474,9 @@ private:
     // Buffer stuff
     inline bool setupTextureBuffer(size_t width, size_t height)
     {
+        if (width == 0 || height == 0)
+            return false;
+
         if (mTexture)
             SDL_DestroyTexture(mTexture);
 
