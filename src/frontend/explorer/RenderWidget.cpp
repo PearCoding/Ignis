@@ -1,5 +1,6 @@
 #include "RenderWidget.h"
 #include "CameraProxy.h"
+#include "ColorbarGizmo.h"
 #include "Logger.h"
 #include "Runtime.h"
 #include "ShaderGenerator.h"
@@ -38,6 +39,8 @@ public:
         , mRequestReset(false)
         , mInternalViewWidth(1024)
         , mInternalViewHeight(1024)
+        , mColorbar()
+        , mShowColorbar(true)
     {
     }
 
@@ -131,6 +134,7 @@ public:
             ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowDockID(sMainWindowDockID, ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse)) {
+                const ImVec2 topLeft = ImGui::GetCursorPos();
                 if (mTexture)
                     runPipeline();
 
@@ -141,6 +145,14 @@ public:
                     onContentResize((size_t)std::max(0.0f, contentSize.x), (size_t)std::max(0.0f, contentSize.y));
 
                 handleInput();
+
+                if (mShowColorbar && mCurrentParameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
+                    ImGui::SetCursorPos(topLeft);
+
+                    const float min = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? (mRuntime->parameters().getFloat("_luminance_avg") * mRuntime->parameters().getFloat("_glare_multiplier")) : mRuntime->parameters().getFloat("_luminance_softmin");
+                    const float max = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? mRuntime->parameters().getFloat("_luminance_max") : mRuntime->parameters().getFloat("_luminance_softmax");
+                    mColorbar.render(min, max);
+                }
             }
             ImGui::End();
 
@@ -243,6 +255,9 @@ public:
     {
         return std::make_pair(mInternalViewWidth, mInternalViewHeight);
     }
+
+    inline bool isColorbarVisible() const { return mShowColorbar; }
+    inline void showColorbar(bool b) { mShowColorbar = b; }
 
 private:
     void handleInput()
@@ -532,6 +547,9 @@ private:
 
     size_t mInternalViewWidth;
     size_t mInternalViewHeight;
+
+    ColorbarGizmo mColorbar;
+    bool mShowColorbar;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
@@ -592,4 +610,7 @@ std::pair<size_t, size_t> RenderWidget::internalViewSize() const
 {
     return mInternal->internalViewSize();
 }
+
+bool RenderWidget::isColorbarVisible() const { return mInternal->isColorbarVisible(); }
+void RenderWidget::showColorbar(bool b) { mInternal->showColorbar(b); }
 }; // namespace IG

@@ -61,6 +61,12 @@ void ParameterWidget::onRender(Widget*)
                 ImGui::EndCombo();
             }
 
+            if (parameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
+                bool showColorbar = mRenderWidget->isColorbarVisible();
+                if (ImGui::Checkbox("Colorbar", &showColorbar))
+                    mRenderWidget->showColorbar(showColorbar);
+            }
+
             if (!hasTonemapping)
                 ImGui::BeginDisabled();
 

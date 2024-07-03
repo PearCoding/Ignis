@@ -50,6 +50,8 @@ public:
     void resizeInternalView(size_t width, size_t height);
     std::pair<size_t, size_t> internalViewSize() const;
 
+    bool isColorbarVisible() const;
+    void showColorbar(bool b = true);
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;
 };
