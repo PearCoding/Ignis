@@ -20,11 +20,19 @@ public:
         PbrNeutral
     };
 
+    enum class OverlayMethod {
+        None = 0,
+        Luminance,
+        LuminanceSquared,
+        GlareSource
+    };
+
     struct Parameters {
         float FOV;
         float ExposureFactor;
         float ExposureOffset;
         RenderWidget::ToneMappingMethod ToneMappingMethod;
+        RenderWidget::OverlayMethod OverlayMethod;
     };
 
     void cleanup();
@@ -38,9 +46,6 @@ public:
 
     Runtime* currentRuntime();
     float currentFPS() const;
-
-    bool isOverlayVisible() const;
-    void showOverlay(bool b = true);
 
     void resizeInternalView(size_t width, size_t height);
     std::pair<size_t, size_t> internalViewSize() const;

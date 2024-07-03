@@ -20,6 +20,10 @@ static const char* const ToneMappingMethodOptions[] = {
     "None", "Reinhard", "Mod. Reinhard", "ACES", "Uncharted2", "AGX", "PbrNeutral"
 };
 
+static const char* const OverlayMethodOptions[] = {
+    "None", "Luminance", "Luminance Squared", "Glare Source"
+};
+
 void ParameterWidget::onRender(Widget*)
 {
     if (mVisibleItem && !mVisibleItem->isSelected())
@@ -34,10 +38,32 @@ void ParameterWidget::onRender(Widget*)
     if (!runtime)
         return;
 
+    const bool hasTonemapping = parameters.OverlayMethod == RenderWidget::OverlayMethod::None || parameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource;
+
     bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
     ImGui::SetNextWindowSize(ImVec2(350, 300), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Parameters", mVisibleItem ? &visibility : nullptr)) {
         if (ImGui::CollapsingHeader("View##parameters", HeaderFlags)) {
+            const char* current_overlay = OverlayMethodOptions[(int)parameters.OverlayMethod];
+            if (ImGui::BeginCombo("Overlay", current_overlay)) {
+                for (int i = 0; i < IM_ARRAYSIZE(OverlayMethodOptions); ++i) {
+                    bool is_selected = (current_overlay == OverlayMethodOptions[i]);
+                    if (ImGui::Selectable(OverlayMethodOptions[i], is_selected)) {
+                        if (parameters.OverlayMethod != (RenderWidget::OverlayMethod)i) {
+                            parameters.OverlayMethod = (RenderWidget::OverlayMethod)i;
+                            changed                  = true;
+                        }
+                    }
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+
+                ImGui::EndCombo();
+            }
+
+            if (!hasTonemapping)
+                ImGui::BeginDisabled();
+
             if (ImGui::SliderFloat("Exposure", &parameters.ExposureFactor, -10.0f, 10.0f))
                 changed = true;
             if (ImGui::SliderFloat("Offset", &parameters.ExposureOffset, -10.0f, 10.0f))
@@ -59,19 +85,18 @@ void ParameterWidget::onRender(Widget*)
 
                 ImGui::EndCombo();
             }
+
+            if (!hasTonemapping)
+                ImGui::EndDisabled();
         }
 
-        if (ImGui::CollapsingHeader("Glare##parameters", HeaderFlags)) {
-            bool showOverlay = mRenderWidget->isOverlayVisible();
-            if (ImGui::Checkbox("Overlay", &showOverlay))
-                mRenderWidget->showOverlay(showOverlay);
-
+        if (ImGui::CollapsingHeader("Glare##parameters", 0)) {
             float multiplier = runtime->parameters().getFloat("_glare_multiplier");
             if (ImGui::SliderFloat("Multiplier", &multiplier, 0.001f, 10.0f))
                 runtime->setParameter("_glare_multiplier", std::max(0.001f, multiplier));
         }
 
-        if (ImGui::CollapsingHeader("Renderer##parameters", HeaderFlags)) {
+        if (ImGui::CollapsingHeader("Renderer##parameters", 0)) {
             const auto internalSize = mRenderWidget->internalViewSize();
 
             ImGui::Checkbox("Keep equal", &mKeepSizeSynced);

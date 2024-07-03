@@ -30,12 +30,12 @@ public:
               .ExposureFactor    = 0,
               .ExposureOffset    = 0,
               .ToneMappingMethod = RenderWidget::ToneMappingMethod::PbrNeutral,
+              .OverlayMethod     = RenderWidget::OverlayMethod::None,
           })
         , mLoading(false)
         , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())
         , mCurrentTravelSpeed(1)
         , mRequestReset(false)
-        , mShowOverlay(true)
         , mInternalViewWidth(1024)
         , mInternalViewHeight(1024)
     {
@@ -201,8 +201,10 @@ public:
     inline void updateParameters(const RenderWidget::Parameters& params)
     {
         mCurrentParameters = params;
-        if (mRuntime)
+        if (mRuntime) {
             mRuntime->setParameter("_canvas_fov", mCurrentParameters.FOV);
+            mRuntime->setParameter("_overlay_method", (int)mCurrentParameters.OverlayMethod);
+        }
 
         if (mTonemapPass) {
             mTonemapPass->setParameter("_tonemap_method", (int)mCurrentParameters.ToneMappingMethod);
@@ -214,9 +216,6 @@ public:
     inline const RenderWidget::Parameters& currentParameters() const { return mCurrentParameters; }
     inline Runtime* currentRuntime() { return mRuntime.get(); }
     inline float currentFPS() const { return mCurrentFPS; }
-
-    inline bool isOverlayVisible() const { return mShowOverlay; }
-    inline void showOverlay(bool b) { mShowOverlay = b; }
 
     inline void cleanup()
     {
@@ -355,6 +354,8 @@ private:
         if (mWidth == 0 || mHeight == 0)
             return false;
 
+        IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
+
         if (!mGlarePass->run()) {
             IG_LOG(L_FATAL) << "Failed to run glare pass" << std::endl;
             return false;
@@ -370,20 +371,21 @@ private:
             return false;
         }
 
-        if (!mTonemapPass->run()) {
-            IG_LOG(L_FATAL) << "Failed to run tonemap pass" << std::endl;
-            return false;
+        if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::None
+            || mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource) {
+            if (!mTonemapPass->run()) {
+                IG_LOG(L_FATAL) << "Failed to run tonemap pass" << std::endl;
+                return false;
+            }
         }
 
-        if (mShowOverlay) {
+        if (mCurrentParameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
             if (!mOverlayPass->run()) {
                 IG_LOG(L_FATAL) << "Failed to run overlay pass" << std::endl;
                 return false;
             }
-            IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
             mOverlayPass->copyOutputToHost("_overlay_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
         } else {
-            IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
             mTonemapPass->copyOutputToHost("_tonemap_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
         }
 
@@ -528,8 +530,6 @@ private:
     float mCurrentTravelSpeed;
     bool mRequestReset;
 
-    bool mShowOverlay;
-
     size_t mInternalViewWidth;
     size_t mInternalViewHeight;
 };
@@ -581,16 +581,6 @@ Runtime* RenderWidget::currentRuntime()
 float RenderWidget::currentFPS() const
 {
     return mInternal->currentFPS();
-}
-
-bool RenderWidget::isOverlayVisible() const
-{
-    return mInternal->isOverlayVisible();
-}
-
-void RenderWidget::showOverlay(bool b)
-{
-    mInternal->showOverlay(b);
 }
 
 void RenderWidget::resizeInternalView(size_t width, size_t height)
