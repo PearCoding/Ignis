@@ -16,9 +16,6 @@ extern int sMainWindowDockID;
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file);
 
-constexpr uint32 FisheyeWidth  = 1024;
-constexpr uint32 FisheyeHeight = 1024;
-
 constexpr float RSPEED  = 0.005f;
 constexpr float KRSPEED = 10 * RSPEED;
 
@@ -39,6 +36,8 @@ public:
         , mCurrentTravelSpeed(1)
         , mRequestReset(false)
         , mShowOverlay(true)
+        , mInternalViewWidth(1024)
+        , mInternalViewHeight(1024)
     {
     }
 
@@ -157,7 +156,7 @@ public:
         auto options              = RuntimeOptions::makeDefault();
         options.IsInteractive     = true;
         options.EnableTonemapping = false; // We do our own stuff
-        options.OverrideFilmSize  = { FisheyeWidth, FisheyeHeight };
+        options.OverrideFilmSize  = { (uint32)mInternalViewWidth, (uint32)mInternalViewHeight };
 
         SceneParser parser;
         auto scene = parser.loadFromFile(path);
@@ -227,6 +226,23 @@ public:
         mGlarePass.reset();
         mOverlayPass.reset();
         mRuntime.reset();
+    }
+
+    void resizeInternalView(size_t width, size_t height)
+    {
+        if (width == 0 || height == 0)
+            return;
+
+        mInternalViewWidth  = width;
+        mInternalViewHeight = height;
+
+        if (mRuntime)
+            mRuntime->resizeFramebuffer(width, height);
+    }
+
+    inline std::pair<size_t, size_t> internalViewSize() const
+    {
+        return std::make_pair(mInternalViewWidth, mInternalViewHeight);
     }
 
 private:
@@ -513,6 +529,9 @@ private:
     bool mRequestReset;
 
     bool mShowOverlay;
+
+    size_t mInternalViewWidth;
+    size_t mInternalViewHeight;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
@@ -572,5 +591,15 @@ bool RenderWidget::isOverlayVisible() const
 void RenderWidget::showOverlay(bool b)
 {
     mInternal->showOverlay(b);
+}
+
+void RenderWidget::resizeInternalView(size_t width, size_t height)
+{
+    mInternal->resizeInternalView(width, height);
+}
+
+std::pair<size_t, size_t> RenderWidget::internalViewSize() const
+{
+    return mInternal->internalViewSize();
 }
 }; // namespace IG

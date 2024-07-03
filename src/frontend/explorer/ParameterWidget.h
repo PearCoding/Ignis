@@ -16,5 +16,7 @@ public:
 private:
     MenuItem* mVisibleItem;
     RenderWidget* const mRenderWidget;
+
+    bool mKeepSizeSynced;
 };
 } // namespace IG

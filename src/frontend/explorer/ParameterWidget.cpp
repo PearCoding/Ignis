@@ -11,6 +11,7 @@ ParameterWidget::ParameterWidget(RenderWidget* renderWidget)
     : Widget()
     , mVisibleItem(nullptr)
     , mRenderWidget(renderWidget)
+    , mKeepSizeSynced(true)
 {
     IG_ASSERT(renderWidget, "Expected a valid render widget");
 }
@@ -68,6 +69,25 @@ void ParameterWidget::onRender(Widget*)
             float multiplier = runtime->parameters().getFloat("_glare_multiplier");
             if (ImGui::SliderFloat("Multiplier", &multiplier, 0.001f, 10.0f))
                 runtime->setParameter("_glare_multiplier", std::max(0.001f, multiplier));
+        }
+
+        if (ImGui::CollapsingHeader("Renderer##parameters", HeaderFlags)) {
+            const auto internalSize = mRenderWidget->internalViewSize();
+
+            ImGui::Checkbox("Keep equal", &mKeepSizeSynced);
+
+            int width = (int)internalSize.first;
+            ImGui::SliderInt("Width", &width, 32, 4096);
+
+            if (mKeepSizeSynced)
+                ImGui::BeginDisabled();
+            int height = mKeepSizeSynced ? width : (int)internalSize.second;
+            ImGui::SliderInt("Height", &height, 32, 4096);
+            if (mKeepSizeSynced)
+                ImGui::EndDisabled();
+
+            if (width != (int)internalSize.first || height != (int)internalSize.second)
+                mRenderWidget->resizeInternalView((size_t)std::max(32, width), (size_t)std::max(32, height));
         }
     }
     ImGui::End();
