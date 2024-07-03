@@ -130,7 +130,8 @@ private:
     {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            ui::processSDLEvent(event);
+            if (ui::processSDLEvent(event))
+                continue; // Already handled
 
             switch (event.type) {
             case SDL_QUIT:
@@ -155,9 +156,6 @@ private:
                 break;
             }
         }
-
-        for (const auto& child : mChildren)
-            child->onInput(nullptr);
 
         return false;
     }

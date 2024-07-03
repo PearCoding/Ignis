@@ -16,7 +16,7 @@ void notifyResize(SDL_Window* window, SDL_Renderer* renderer);
 void newFrame();
 void renderFrame(SDL_Renderer* renderer);
 
-void processSDLEvent(const SDL_Event& event);
+bool processSDLEvent(const SDL_Event& event);
 void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_, bool start_);
 float getFontScale(SDL_Window* window, SDL_Renderer* renderer);
 } // namespace IG::ui

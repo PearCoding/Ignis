@@ -4,8 +4,7 @@
 #include "Runtime.h"
 #include "ShaderGenerator.h"
 
-#include "imgui.h"
-#include <SDL.h>
+#include "UI.h"
 
 #include <thread>
 
@@ -38,7 +37,6 @@ public:
         , mLoading(false)
         , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())
         , mCurrentTravelSpeed(1)
-        , mMouseOnWidget(false)
         , mRequestReset(false)
         , mShowOverlay(true)
     {
@@ -133,7 +131,7 @@ public:
 
             ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowDockID(sMainWindowDockID, ImGuiCond_FirstUseEver);
-            if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+            if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse)) {
                 if (mTexture)
                     runPipeline();
 
@@ -143,7 +141,7 @@ public:
                 if (!mTexture || mWidth != contentSize.x || mHeight != contentSize.y)
                     onContentResize((size_t)std::max(0.0f, contentSize.x), (size_t)std::max(0.0f, contentSize.y));
 
-                mMouseOnWidget = ImGui::IsItemHovered(ImGuiHoveredFlags_RootAndChildWindows);
+                handleInput();
             }
             ImGui::End();
 
@@ -152,85 +150,6 @@ public:
             if (!std::isfinite(mCurrentFPS))
                 mCurrentFPS = 0;
         }
-    }
-
-    void onInput()
-    {
-        if (!mRuntime)
-            return;
-
-        const ImGuiIO& io = ImGui::GetIO();
-
-        if (!io.WantTextInput) {
-            if (ImGui::IsKeyPressed(ImGuiKey_Keypad1, false))
-                mCurrentCamera.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
-            if (ImGui::IsKeyPressed(ImGuiKey_Keypad3, false))
-                mCurrentCamera.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
-            if (ImGui::IsKeyPressed(ImGuiKey_Keypad7, false))
-                mCurrentCamera.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
-            if (ImGui::IsKeyPressed(ImGuiKey_Keypad9, false))
-                mCurrentCamera.update_dir(-mCurrentCamera.Direction, mCurrentCamera.Up);
-            if (ImGui::IsKeyPressed(ImGuiKey_O, true))
-                mCurrentCamera.snap_up();
-            if (ImGui::IsKeyPressed(ImGuiKey_R, false))
-                mCurrentCamera = CameraProxy(mRuntime->initialCameraOrientation());
-
-            if (ImGui::IsKeyDown(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_W))
-                mCurrentCamera.move(0, 0, mCurrentTravelSpeed);
-            if (ImGui::IsKeyDown(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_S))
-                mCurrentCamera.move(0, 0, -mCurrentTravelSpeed);
-            if (ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_A))
-                mCurrentCamera.move(-mCurrentTravelSpeed, 0, 0);
-            if (ImGui::IsKeyDown(ImGuiKey_RightArrow) || ImGui::IsKeyDown(ImGuiKey_D))
-                mCurrentCamera.move(mCurrentTravelSpeed, 0, 0);
-            if (ImGui::IsKeyDown(ImGuiKey_E))
-                mCurrentCamera.roll(KRSPEED);
-            if (ImGui::IsKeyDown(ImGuiKey_Q))
-                mCurrentCamera.roll(-KRSPEED);
-            if (ImGui::IsKeyDown(ImGuiKey_PageUp))
-                mCurrentCamera.move(0, mCurrentTravelSpeed, 0);
-            if (ImGui::IsKeyDown(ImGuiKey_PageDown))
-                mCurrentCamera.move(0, -mCurrentTravelSpeed, 0);
-            if (ImGui::IsKeyDown(ImGuiKey_Keypad2))
-                handleRotation(0, KRSPEED);
-            if (ImGui::IsKeyDown(ImGuiKey_Keypad8))
-                handleRotation(0, -KRSPEED);
-            if (ImGui::IsKeyDown(ImGuiKey_Keypad4))
-                handleRotation(-KRSPEED, 0);
-            if (ImGui::IsKeyDown(ImGuiKey_Keypad6))
-                handleRotation(KRSPEED, 0);
-
-            if (ImGui::IsKeyDown(ImGuiKey_KeypadAdd))
-                mCurrentTravelSpeed *= 1.1f;
-            if (ImGui::IsKeyDown(ImGuiKey_KeypadSubtract))
-                mCurrentTravelSpeed *= 0.9f;
-        }
-
-        // Note: Not sure why io.WantMouseCapture does not work as intended... or I misunderstood something
-        if (mMouseOnWidget) {
-            if (io.MouseWheel != 0)
-                mCurrentCamera.move(0, 0, io.MouseWheel * mCurrentTravelSpeed);
-
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0)) {
-                const ImVec2 lookDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0);
-                const float aspeed     = RSPEED;
-                handleRotation(lookDelta.x * aspeed, lookDelta.y * aspeed);
-                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
-            }
-
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0)) {
-                const ImVec2 panDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right, 0);
-                const float aspeed    = mCurrentTravelSpeed / 10;
-                mCurrentCamera.move(panDelta.x * aspeed, -panDelta.y * aspeed, 0);
-                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
-            }
-        }
-
-        const auto previousCamera = mRuntime->getCameraOrientation();
-
-        mRequestReset = previousCamera.Eye != mCurrentCamera.Eye
-                        || previousCamera.Up != mCurrentCamera.Up
-                        || previousCamera.Dir != mCurrentCamera.Direction;
     }
 
     inline void loadFromFile(const Path& path)
@@ -311,6 +230,85 @@ public:
     }
 
 private:
+    void handleInput()
+    {
+        if (!mRuntime)
+            return;
+
+        const ImGuiIO& io = ImGui::GetIO();
+
+        if (!io.WantTextInput) {
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad1, false))
+                mCurrentCamera.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad3, false))
+                mCurrentCamera.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad7, false))
+                mCurrentCamera.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad9, false))
+                mCurrentCamera.update_dir(-mCurrentCamera.Direction, mCurrentCamera.Up);
+            if (ImGui::IsKeyPressed(ImGuiKey_O, true))
+                mCurrentCamera.snap_up();
+            if (ImGui::IsKeyPressed(ImGuiKey_R, false))
+                mCurrentCamera = CameraProxy(mRuntime->initialCameraOrientation());
+
+            if (ImGui::IsKeyDown(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_W))
+                mCurrentCamera.move(0, 0, mCurrentTravelSpeed);
+            if (ImGui::IsKeyDown(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_S))
+                mCurrentCamera.move(0, 0, -mCurrentTravelSpeed);
+            if (ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_A))
+                mCurrentCamera.move(-mCurrentTravelSpeed, 0, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_RightArrow) || ImGui::IsKeyDown(ImGuiKey_D))
+                mCurrentCamera.move(mCurrentTravelSpeed, 0, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_E))
+                mCurrentCamera.roll(KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_Q))
+                mCurrentCamera.roll(-KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_PageUp))
+                mCurrentCamera.move(0, mCurrentTravelSpeed, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_PageDown))
+                mCurrentCamera.move(0, -mCurrentTravelSpeed, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad2))
+                handleRotation(0, KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad8))
+                handleRotation(0, -KRSPEED);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad4))
+                handleRotation(-KRSPEED, 0);
+            if (ImGui::IsKeyDown(ImGuiKey_Keypad6))
+                handleRotation(KRSPEED, 0);
+
+            if (ImGui::IsKeyDown(ImGuiKey_KeypadAdd))
+                mCurrentTravelSpeed *= 1.1f;
+            if (ImGui::IsKeyDown(ImGuiKey_KeypadSubtract))
+                mCurrentTravelSpeed *= 0.9f;
+        }
+
+        // Note: Not sure why io.WantMouseCapture does not work as intended... or I misunderstood something
+        if (io.WantCaptureMouse && ImGui::IsItemHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
+            if (io.MouseWheel != 0)
+                mCurrentCamera.move(0, 0, io.MouseWheel * mCurrentTravelSpeed);
+
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0)) {
+                const ImVec2 lookDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0);
+                const float aspeed     = RSPEED;
+                handleRotation(lookDelta.x * aspeed, lookDelta.y * aspeed);
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+            }
+
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0)) {
+                const ImVec2 panDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right, 0);
+                const float aspeed    = mCurrentTravelSpeed / 10;
+                mCurrentCamera.move(panDelta.x * aspeed, -panDelta.y * aspeed, 0);
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
+            }
+        }
+
+        const auto previousCamera = mRuntime->getCameraOrientation();
+
+        mRequestReset = previousCamera.Eye != mCurrentCamera.Eye
+                        || previousCamera.Up != mCurrentCamera.Up
+                        || previousCamera.Dir != mCurrentCamera.Direction;
+    }
+
     inline void handleRotation(float xmotion, float ymotion)
     {
         const ImGuiIO& io = ImGui::GetIO();
@@ -512,7 +510,6 @@ private:
 
     Vector3f mSceneCenter;
     float mCurrentTravelSpeed;
-    bool mMouseOnWidget;
     bool mRequestReset;
 
     bool mShowOverlay;
@@ -545,11 +542,6 @@ void RenderWidget::openFile(const Path& path)
 void RenderWidget::onRender(Widget*)
 {
     mInternal->onRender();
-}
-
-void RenderWidget::onInput(Widget*)
-{
-    mInternal->onInput();
 }
 
 void RenderWidget::updateParameters(const Parameters& params)

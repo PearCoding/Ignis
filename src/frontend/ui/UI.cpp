@@ -66,13 +66,14 @@ static void handleOldSDLMouse()
 }
 #endif
 
-void processSDLEvent(const SDL_Event& event)
+bool processSDLEvent(const SDL_Event& event)
 {
 #ifndef USE_OLD_SDL
-    ImGui_ImplSDL2_ProcessEvent(&event);
+    return ImGui_ImplSDL2_ProcessEvent(&event);
 #else
     handleOldSDL(event);
     handleOldSDLMouse();
+    return false;
 #endif
 }
 

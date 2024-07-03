@@ -50,16 +50,6 @@ void Menu::onRender(Widget* parent)
         ImGui::EndMenu();
 }
 
-void Menu::onInput(Widget* parent)
-{
-    IG_UNUSED(parent);
-
-    for (const auto& p : mItems) {
-        if (std::holds_alternative<std::shared_ptr<Menu>>(p))
-            std::get<std::shared_ptr<Menu>>(p)->onInput(this);
-    }
-}
-
 void Menu::add(const std::shared_ptr<Menu>& child)
 {
     mItems.emplace_back(child);

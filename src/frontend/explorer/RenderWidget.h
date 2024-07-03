@@ -32,7 +32,6 @@ public:
     void openFile(const Path& path);
 
     void onRender(Widget* parent) override;
-    void onInput(Widget* parent) override;
 
     void updateParameters(const Parameters& params);
     const Parameters& currentParameters() const;
