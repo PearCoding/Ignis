@@ -22,7 +22,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(Ignis
-	VERSION 0.3.4
+	VERSION 0.3.5
 	DESCRIPTION "Experimental ray tracer")
 
 # For whatever reason Ignis might be used as a subproject...
@@ -58,6 +58,7 @@ endif()
 option(IG_WITH_CLI           "Build commandline interface igcli" ON)
 option(IG_WITH_VIEWER        "Build interactive viewer igview" ON)
 option(IG_WITH_TRACER        "Build tracing frontend igtrace" ON)
+option(IG_WITH_EXPLORER      "Build interactive viewer for glare analysis" ON)
 option(IG_WITH_PYTHON_API    "Build python API" ON)
 option(IG_WITH_TOOLS         "Build tools" ON)
 option(IG_WITH_DOCUMENTATION "Build the documentation if Sphinx is available on the system" ON)
@@ -137,7 +138,8 @@ if(IG_OPTIMIZE_FOR_NATIVE)
 endif()
 
 # Optional GUI
-if(IG_WITH_VIEWER)
+# set(IG_HAS_UI OFF)
+if(IG_WITH_VIEWER OR IG_WITH_EXPLORER)
     find_package(SDL2)
 
     if(SDL2_FOUND)
@@ -147,8 +149,12 @@ if(IG_WITH_VIEWER)
     endif()
 endif()
 
-if(IG_HAS_UI)
+if(IG_HAS_UI AND IG_WITH_VIEWER)
     message(STATUS "Building with interactive viewer")
+endif()
+
+if(IG_HAS_UI AND IG_WITH_EXPLORER)
+    message(STATUS "Building with interactive glare explorer")
 endif()
 
 if(IG_WITH_PYTHON_API)
