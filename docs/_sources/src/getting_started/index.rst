@@ -66,8 +66,6 @@ Run a frontend of your choice like this:
 Tiny tools
 ----------
 
-Two tiny tools ``exr2hdr`` and ``hdr2exr`` are available to convert between the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa.
+The tool ``igutil`` is able to convert between multiple formats like the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa. Further it can output information embedded inside images.
 
 This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option ``IG_WITH_TOOLS`` to ``Off``.
-
-Actually, the tool might convert from any format the ``stb_image`` framework supports to the second format.
