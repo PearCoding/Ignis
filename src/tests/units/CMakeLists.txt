@@ -1,4 +1,4 @@
-CPMAddPackage("gh:catchorg/Catch2@3.4.0")
+CPMAddPackage("gh:catchorg/Catch2@3.6.0")
     
 macro(push_test name files)
 	set(options NO_ADD)
