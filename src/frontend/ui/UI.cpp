@@ -197,6 +197,11 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
 
     setupStandardFont(window, renderer);
 
+    ImGuiStyle& style  = ImGui::GetStyle();
+    style.GrabRounding = 3;
+    style.TabRounding  = 3;
+    style.ScaleAllSizes(getFontScale(window, renderer));
+
 #ifndef USE_OLD_SDL
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
