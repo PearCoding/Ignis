@@ -377,12 +377,12 @@ float SpectralMapper::computeNormFactorD65()
 {
     std::set<float> wavelengths;
     for (size_t i = 0; i < CIEWavelengthSize; ++i) {
-        float wvl = (CIEWavelengthEnd - CIEWavelengthStart) * i / (CIEWavelengthSize - 1) + CIEWavelengthStart;
+        const float wvl = (CIEWavelengthEnd - CIEWavelengthStart) * i / float(CIEWavelengthSize - 1) + (float)CIEWavelengthStart;
         wavelengths.insert(wvl);
     }
 
     for (size_t i = 0; i < D65WavelengthSize; ++i) {
-        float wvl = (D65WavelengthEnd - D65WavelengthStart) * i / (D65WavelengthSize - 1) + D65WavelengthStart;
+        const float wvl = (D65WavelengthEnd - D65WavelengthStart) * i / float(D65WavelengthSize - 1) + (float)D65WavelengthStart;
         if (wvl >= CIEWavelengthStart && wvl <= CIEWavelengthEnd)
             wavelengths.insert(wvl);
     }
@@ -394,17 +394,17 @@ float SpectralMapper::computeNormFactorD65()
         if (nit == wavelengths.end())
             break;
 
-        float wa = *it;
-        float wb = *nit;
+        const float wa = *it;
+        const float wb = *nit;
 
-        float aY = lookup(wa, CIE_Y, CIEWavelengthStart, CIEWavelengthEnd, CIEWavelengthSize);
-        float aI = lookupD65(wa);
-        float bY = lookup(wb, CIE_Y, CIEWavelengthStart, CIEWavelengthEnd, CIEWavelengthSize);
-        float bI = lookupD65(wb);
+        const float aY = lookup(wa, CIE_Y, CIEWavelengthStart, CIEWavelengthEnd, CIEWavelengthSize);
+        const float aI = lookupD65(wa);
+        const float bY = lookup(wb, CIE_Y, CIEWavelengthStart, CIEWavelengthEnd, CIEWavelengthSize);
+        const float bI = lookupD65(wb);
 
-        float a  = aI * aY;
-        float b  = bI * bY;
-        float dx = wb - wa;
+        const float a  = aI * aY;
+        const float b  = bI * bY;
+        const float dx = wb - wa;
         trapz += dx * (b + a) / 2;
     }
 
