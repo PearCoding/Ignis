@@ -180,14 +180,14 @@ void runtime_module(nb::module_& m)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
             size_t shape[] = { rays.size(), 3ul };
-            return nb::ndarray<nb::numpy, float, nb::shape<nb::any, 3>>(r.getFramebufferForHost({}).Data, 2, shape);
+            return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, 2, shape, nb::handle());
         })
         .def("reset", &Runtime::reset)
         .def("getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
-                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape); }, nb::arg("aov") = "")
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape, nb::handle()); }, nb::arg("aov") = "")
         .def("getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
@@ -213,8 +213,8 @@ void runtime_module(nb::module_& m)
                     }
                 }
 
-                return nb::ndarray<nb::numpy, float, nb::shape<nb::any, nb::any, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId); }, nb::arg("aov") = "")
-        .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> output) {
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId); }, nb::arg("aov") = "")
+        .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::ndim<2>, nb::c_contig, nb::device::cpu> output) {
             // TODO: Add device specific access!
             TonemapSettings settings;
             settings.AOV            = "";
@@ -291,7 +291,7 @@ void runtime_module(nb::module_& m)
             "loadFromScene", [](const Scene* scene, const Path& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); },
             "Generate a runtime with given options from an already loaded scene with directory for external resources")
         .def(
-            "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any, 3>, nb::c_contig, nb::device::cpu> b) {
+            "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);
                 size_t height = b.shape(0);
 
@@ -301,7 +301,7 @@ void runtime_module(nb::module_& m)
                 return Image::save(path, (const float*)b.data(), width, height, 3);
             },
             "Save an OpenEXR image to the filesystem")
-        .def("saveExr", [](const Path& path, nb::ndarray<float, nb::shape<nb::any, nb::any>, nb::c_contig, nb::device::cpu> b) {
+        .def("saveExr", [](const Path& path, nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);
                 size_t height = b.shape(0);
 
