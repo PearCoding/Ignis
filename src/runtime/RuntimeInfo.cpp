@@ -125,7 +125,7 @@ Path RuntimeInfo::modulePath(void* func)
 #endif
 }
 
-Path RuntimeInfo::dataPath()
+Path RuntimeInfo::readonlyDataPath()
 {
     const Path exePath = executablePath();
     if (exePath.empty())
@@ -140,6 +140,43 @@ Path RuntimeInfo::dataPath()
         return sharePath;
     else
         return {};
+}
+
+Path RuntimeInfo::configDirectory()
+{
+#if defined(IG_OS_LINUX)
+    const char* cache_home = std::getenv("XDG_CONFIG_HOME");
+    if (cache_home == nullptr) {
+        const char* home = std::getenv("HOME");
+        if (home == nullptr) {
+            const auto dir = executablePath();
+            if (dir.empty())
+                return modulePath().parent_path() / "config";
+            else
+                return dir.parent_path() / "config";
+        }
+        return Path(home) / ".config" / APP_NAME;
+    }
+    return Path(cache_home) / APP_NAME;
+#elif defined(IG_OS_APPLE)
+    // TODO: Better path?
+    const auto dir = executablePath();
+    if (dir.empty())
+        return modulePath().parent_path() / "config";
+    else
+        return dir.parent_path() / "config";
+#elif defined(IG_OS_WINDOWS)
+    wchar_t* path = nullptr;
+    HRESULT res   = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path);
+
+    if (SUCCEEDED(res)) {
+        Path full_path = path;
+        CoTaskMemFree(static_cast<PWSTR>(path));
+        return full_path / APP_NAME / "config";
+    } else {
+        return {};
+    }
+#endif
 }
 
 Path RuntimeInfo::cacheDirectory()
@@ -184,12 +221,13 @@ size_t RuntimeInfo::sizeOfDirectory(const Path& dir)
     if (!std::filesystem::exists(dir))
         return 0;
 
-    // Non-recursive as the cache directory should be flat
     size_t size = 0;
     for (std::filesystem::directory_entry const& entry :
          std::filesystem::directory_iterator(dir)) {
         if (entry.is_regular_file())
             size += entry.file_size();
+        else if (entry.is_directory())
+            size += sizeOfDirectory(entry.path());
     }
 
     return size;

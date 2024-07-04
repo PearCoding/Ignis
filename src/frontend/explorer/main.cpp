@@ -1,3 +1,4 @@
+#include "DefaultConfig.h"
 #include "ExplorerOptions.h"
 #include "HelpAboutWidget.h"
 #include "HelpControlWidget.h"
@@ -10,6 +11,7 @@
 #include "ParameterWidget.h"
 #include "RegistryWidget.h"
 #include "RenderWidget.h"
+#include "RuntimeInfo.h"
 
 #include "UI.h"
 
@@ -139,12 +141,22 @@ int main(int argc, char** argv)
     if (args.ShouldExit)
         return EXIT_SUCCESS;
 
+    // Ensure directory is available
+    std::filesystem::create_directories(RuntimeInfo::configDirectory());
+    const std::string ini_file = (RuntimeInfo::configDirectory() / "ui_explorer.ini").generic_string();
+
     try {
         MainWindow window(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
         Context::instance().setup(&window);
 
         if (!args.InputFile.empty())
             openFileCallback(args.InputFile);
+
+        auto& io       = ImGui::GetIO();
+        io.IniFilename = ini_file.c_str();
+
+        if (!std::filesystem::exists(io.IniFilename))
+            LoadDefaultConfig();
 
         const int exitcode = window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
         Context::instance().renderWidget()->cleanup();
