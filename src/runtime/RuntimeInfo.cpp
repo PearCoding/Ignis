@@ -125,6 +125,23 @@ Path RuntimeInfo::modulePath(void* func)
 #endif
 }
 
+Path RuntimeInfo::dataPath()
+{
+    const Path exePath = executablePath();
+    if (exePath.empty())
+        return {};
+
+    const Path dataPath = exePath.parent_path().parent_path() / "data";
+    if (std::filesystem::exists(dataPath) && std::filesystem::is_directory(dataPath))
+        return dataPath;
+
+    const Path sharePath = exePath.parent_path().parent_path() / "share" / "Ignis";
+    if (std::filesystem::exists(dataPath) && std::filesystem::is_directory(sharePath))
+        return sharePath;
+    else
+        return {};
+}
+
 Path RuntimeInfo::cacheDirectory()
 {
 #if defined(IG_OS_LINUX)

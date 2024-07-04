@@ -9,6 +9,7 @@ public:
     [[nodiscard]] static Path igcPath();                        // Path to the ignis jit compiler 'igc'
     [[nodiscard]] static Path libdevicePath();                  // Path to 'libdevice.10.bc' needed by the cuda device
     [[nodiscard]] static Path modulePath(void* func = nullptr); // Path to the module/dll for the given function
+    [[nodiscard]] static Path dataPath();                       // Path to the data folder alongside the framework. Contains like fonts, etc.
     [[nodiscard]] static Path cacheDirectory();
     [[nodiscard]] static size_t sizeOfDirectory(const Path& dir);
 

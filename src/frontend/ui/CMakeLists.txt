@@ -27,4 +27,14 @@ add_library(ig_lib_ui STATIC ${SRC})
 target_include_directories(ig_lib_ui SYSTEM PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
 target_include_directories(ig_lib_ui PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_link_libraries(ig_lib_ui PUBLIC ${SDL2_LIBRARY} ig_lib_runtime)
+add_custom_command(TARGET ig_lib_ui POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/fonts/ ${CMAKE_BINARY_DIR}/data/fonts)
 add_checks(ig_lib_ui)
+
+if(WIN32)
+    set(INSTALL_DEST data/fonts)
+else()
+    set(INSTALL_DEST share/${PROJECT_NAME}/fonts)
+endif()
+
+install(DIRECTORY fonts/ ${_IG_RUNTIME_SET} COMPONENT frontends DESTINATION ${INSTALL_DEST})

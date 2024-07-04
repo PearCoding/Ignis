@@ -1,5 +1,6 @@
 #include "UI.h"
-#include "IG_Config.h"
+#include "Logger.h"
+#include "RuntimeInfo.h"
 
 #include <filesystem>
 
@@ -141,25 +142,35 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
 
 static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 {
+    const auto dataPath = RuntimeInfo::dataPath();
+    Path fontFile;
+    if (!dataPath.empty()) {
+        fontFile = dataPath / "fonts" / "UbuntuMono-R.ttf";
+        if (!std::filesystem::exists(fontFile))
+            fontFile.clear();
+    }
+    if (fontFile.empty()) {
+        IG_LOG(L_WARNING) << "Could not load custom font. Trying to use system default." << std::endl;
+#if defined(IG_OS_WINDOWS)
+        fontFile = "C:\\Windows\\Fonts\\consola.ttf";
+#elif defined(IG_OS_APPLE)
+        fontFile = "/System/Library/Fonts/TODO.otf";
+#else
+        fontFile = "/usr/share/fonts/truetype/liberation2/LiberationMono-Regular.ttf";
+#endif
+    }
+
     auto& io = ImGui::GetIO();
 
-#if defined(__WIN32__)
-    const char* font_file = "C:\\Windows\\Fonts\\consola.ttf";
-#elif defined(__APPLE__)
-    const char* font_file = "/System/Library/Fonts/TODO.otf";
-#else
-    const char* font_file = "/usr/share/fonts/truetype/liberation2/LiberationMono-Regular.ttf";
-#endif
-
     const float font_scaling_factor = getFontScale(window, renderer);
-    if (!std::filesystem::exists(font_file)) {
+    if (!std::filesystem::exists(fontFile)) {
         io.FontGlobalScale = font_scaling_factor;
     } else {
         ImFontConfig config;
         config.SizePixels    = 13 * font_scaling_factor;
         config.GlyphOffset.y = 1.0f * std::floor(config.SizePixels / 13.0f); // Add +1 offset per 13 units
 
-        io.Fonts->AddFontFromFileTTF(font_file, config.SizePixels, &config);
+        io.Fonts->AddFontFromFileTTF(fontFile.generic_string().c_str(), config.SizePixels, &config);
     }
 }
 
