@@ -96,53 +96,45 @@ void markdownFormatCallback(const ImGui::MarkdownFormatInfo& markdownFormatInfo_
 static float sDPI = -1;
 float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
 {
-    (void)(renderer);
-
     if (sDPI > 0)
         return sDPI;
 
-    int window_width{ 0 };
-    int window_height{ 0 };
-    SDL_GetWindowSize(
-        window,
-        &window_width, &window_height);
+    int window_width  = 0;
+    int window_height = 0;
+    SDL_GetWindowSize(window, &window_width, &window_height);
 
-    int render_output_width{ 0 };
-    int render_output_height{ 0 };
+    int render_output_width  = 0;
+    int render_output_height = 0;
 
 #if SDL_VERSION_ATLEAST(2, 26, 0)
+    IG_UNUSED(renderer);
     SDL_GetWindowSizeInPixels(window, &render_output_width, &render_output_height);
 #else
-    SDL_GetRendererOutputSize(
-        renderer,
-        &render_output_width, &render_output_height);
+    SDL_GetRendererOutputSize(renderer, &render_output_width, &render_output_height);
 #endif
 
     if (window_width <= 0)
         return 1;
 
-#if !defined(__WIN32__) || !defined(__APPLE__)
+#if !defined(IG_OS_WINDOWS) || !defined(IG_OS_APPLE)
     if (render_output_width == window_width) {
         // In contrary to the warning, this is more reliable on Linux
         float dpi;
-        SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), NULL, &dpi, NULL);
+        SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), nullptr, &dpi, nullptr);
         sDPI = dpi / 96;
         return sDPI;
     }
 #endif
 
-    const auto scale_x{
-        static_cast<float>(render_output_width) / static_cast<float>(window_width)
-    };
+    const float scale_x = (float)render_output_width / (float)window_width;
 
     sDPI = scale_x;
-
     return scale_x;
 }
 
 static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 {
-    const auto dataPath = RuntimeInfo::dataPath();
+    const auto dataPath = RuntimeInfo::readonlyDataPath();
     Path fontFile;
     if (!dataPath.empty()) {
         fontFile = dataPath / "fonts" / "UbuntuMono-R.ttf";
@@ -244,11 +236,6 @@ void newFrame()
     ImGui_ImplSDL2_NewFrame();
 #endif
     ImGui::NewFrame();
-
-#ifdef IMGUI_HAS_DOCK
-    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable)
-        ImGui::DockSpaceOverViewport();
-#endif
 }
 
 void renderFrame(SDL_Renderer* renderer)
