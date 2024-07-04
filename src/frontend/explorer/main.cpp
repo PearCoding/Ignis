@@ -154,7 +154,6 @@ int main(int argc, char** argv)
 
         auto& io       = ImGui::GetIO();
         io.IniFilename = ini_file.c_str();
-
         if (!std::filesystem::exists(io.IniFilename))
             LoadDefaultConfig();
 

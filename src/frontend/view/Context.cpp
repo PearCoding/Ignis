@@ -671,8 +671,8 @@ public:
     static constexpr int WindowFlags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNavFocus;
     void handleControlWindow()
     {
-        constexpr size_t UI_W   = 300;
-        constexpr size_t UI_H   = 500;
+        constexpr size_t UI_W   = 400;
+        constexpr size_t UI_H   = 665;
         constexpr size_t HIST_W = 250;
 
         ImGui::SetNextWindowPos(ImVec2(5, 5), ImGuiCond_Once);

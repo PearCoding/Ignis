@@ -4,7 +4,9 @@
 #include "Logger.h"
 #include "ProgramOptions.h"
 #include "Runtime.h"
+#include "RuntimeInfo.h"
 #include "Timer.h"
+#include "UI.h"
 #include "config/Build.h"
 
 using namespace IG;
@@ -110,6 +112,13 @@ int main(int argc, char** argv)
     } catch (...) {
         return EXIT_FAILURE;
     }
+
+    // Ensure directory is available
+    std::filesystem::create_directories(RuntimeInfo::configDirectory());
+    const std::string ini_file = (RuntimeInfo::configDirectory() / "ui_view.ini").generic_string();
+
+    auto& io       = ImGui::GetIO();
+    io.IniFilename = ini_file.c_str();
 
     // Setup initial travel-speed
     BoundingBox bbox = runtime->sceneBoundingBox();
