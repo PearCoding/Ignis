@@ -18,7 +18,7 @@ function HandleGIT {
     )
 
     If (!(Test-Path -Path $Directory)) {
-        & $GIT_BIN clone --depth 1 --branch $Branch $URL thorin
+        & $GIT_BIN clone --depth 1 --branch $Branch $URL $Directory
         Set-Location $Directory
     }
     else {
