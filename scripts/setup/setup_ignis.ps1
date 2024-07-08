@@ -52,7 +52,7 @@ if ($IsWindows) {
     $CMAKE_Args += '-DOpenImageDenoise_DIR:PATH=' + $($OIDN_DIR.FullName)
 }
 $CMAKE_Args += '-DIG_WITH_ASSERTS:BOOL=ON'
-$CMAKE_Args += '-DBUILD_TESTING:BOOL=OFF'
+$CMAKE_Args += '-DBUILD_TESTING:BOOL=ON'
 
 
 foreach ($device in $Config.RUNTIME.DEVICES) {
