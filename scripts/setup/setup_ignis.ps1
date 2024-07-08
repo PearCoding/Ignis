@@ -57,7 +57,7 @@ $CMAKE_Args += '-DBUILD_TESTING:BOOL=OFF'
 
 foreach ($device in $Config.RUNTIME.DEVICES) {
     $runtime_name = "runtime_$device"
-    $runtime_build_dir = "$DEPS_ROOT\runtime\$device"
+    $runtime_build_dir = "$DEPS_ROOT\runtime\build_$device"
     if ($IsWindows) {
         $runtime_lib = "$($runtime_name).lib"
         $runtime_jit_lib = "$($runtime_name)_jit_artic.lib"
@@ -111,13 +111,13 @@ if ($LASTEXITCODE -ne 0) {
 if (GetPD $Config.IGNIS.BUILD_INSTALLER $false) {
     Set-Location $BUILD_DIR
     if ($IsWindows) {
-        & $Config.CPACK.BINARY -G NSIS --config "$BUILD_TYPE"
+        & $Config.CPACK.BINARY -G NSIS -C "$BUILD_TYPE"
     }
     elseif ($IsLinux) {
-        & $Config.CPACK.BINARY -G DEB --config "$BUILD_TYPE"
+        & $Config.CPACK.BINARY -G DEB -C "$BUILD_TYPE"
     }
     else {
-        & $Config.CPACK.BINARY -G ZIP --config "$BUILD_TYPE"
+        & $Config.CPACK.BINARY -G ZIP -C "$BUILD_TYPE"
     }
 }
 
