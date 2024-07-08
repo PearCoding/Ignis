@@ -18,7 +18,5 @@ if(IG_WITH_CONVERTER_MITSUBA)
     target_link_libraries(igutil PRIVATE tinyparser_mitsuba)
 endif()
 
-add_lto(igutil)
-add_checks(igutil)
-add_linker_options(igutil)
+ig_add_extra_options(igutil)
 install(TARGETS igutil ${_IG_RUNTIME_SET} COMPONENT tools)

@@ -20,7 +20,7 @@ set_target_properties(pyignis PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}/ignis"
                       DEBUG_POSTFIX "" # Disable suffix for this target
                       )
-add_linker_options(pyignis)
+ig_add_extra_options(pyignis)
 add_custom_command(TARGET pyignis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml "${OUTPUT_DIR}/pyproject.toml"

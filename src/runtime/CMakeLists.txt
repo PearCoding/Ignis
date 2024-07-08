@@ -63,7 +63,6 @@ elseif(TARGET OpenImageDenoise)
 endif()
 
 target_compile_features(ig_lib_runtime PUBLIC cxx_std_20)
-add_checks(ig_lib_runtime)
-add_linker_options(ig_lib_runtime)
+ig_add_extra_options(ig_lib_runtime)
 set_target_properties(ig_lib_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 install(TARGETS ig_lib_runtime ${_IG_RUNTIME_SET} COMPONENT runtime)

@@ -29,7 +29,7 @@ target_include_directories(ig_lib_ui PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SO
 target_link_libraries(ig_lib_ui PUBLIC ${SDL2_LIBRARY} ig_lib_runtime)
 add_custom_command(TARGET ig_lib_ui POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/fonts/ ${CMAKE_BINARY_DIR}/data/fonts)
-add_checks(ig_lib_ui)
+ig_add_extra_options(ig_lib_ui)
 
 if(WIN32)
     set(INSTALL_DEST data/fonts)
