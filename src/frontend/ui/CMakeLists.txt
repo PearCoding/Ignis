@@ -37,4 +37,4 @@ else()
     set(INSTALL_DEST share/${PROJECT_NAME}/fonts)
 endif()
 
-install(DIRECTORY fonts/ ${_IG_RUNTIME_SET} COMPONENT frontends DESTINATION ${INSTALL_DEST})
+install(DIRECTORY fonts/ COMPONENT frontends DESTINATION ${INSTALL_DEST})

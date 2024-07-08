@@ -25,7 +25,7 @@ if(CUDAToolkit_FOUND)
 
     if(_LIBDEVICE_LIB)
         message(STATUS "Redistributing ${_LIBDEVICE_LIB}")
-        install(FILES ${_LIBDEVICE_LIB} ${_IG_RUNTIME_SET} DESTINATION bin COMPONENT runtime)
+        install(FILES ${_LIBDEVICE_LIB} DESTINATION bin COMPONENT runtime)
     else()
         message(WARNING "Could not find 'libdevice.10.bc'. Redistribution might fail")
     endif()
