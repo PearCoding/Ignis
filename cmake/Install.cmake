@@ -13,9 +13,9 @@ set(CPACK_RESOURCE_FILE_README "${PROJECT_SOURCE_DIR}/README.md")
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_PACKAGE_CONTACT "${Ignis_URL}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME}")
-set(CPACK_CREATE_DESKTOP_LINKS ) # We do not have desktop stuff (yet)
 
-# TODO: Add scenes
+set(CPACK_PACKAGE_EXECUTABLES igexplorer "${PROJECT_NAME} Glare Viewer")
+set(CPACK_CREATE_DESKTOP_LINKS igexplorer)
 
 SET(CPACK_COMPONENTS_ALL runtime frontends plugins scenes)
 if(TARGET ig_documentation)
