@@ -39,6 +39,9 @@ If ($IsLinux) {
     }
 }
 
+# Clone or update if necessary
+HandleGIT runtime $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT
+
 function CompileRuntime {
     param (
         [ValidateNotNullOrEmpty()]
@@ -47,14 +50,13 @@ function CompileRuntime {
 
     if ($Device -eq 'default') {
         $runtime_name = "runtime"
+        $build_dir = "build"
     }
     else {
         $runtime_name = "runtime_$Device"
+        $build_dir = "build_$Device"
     }
 
-    # Clone or update if necessary
-    HandleGIT $runtime_name $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT
-    
     # Setup cmake
     $CMAKE_Args = @()
     $CMAKE_Args += $Config.CMAKE.EXTRA_ARGS
@@ -99,20 +101,20 @@ function CompileRuntime {
         $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_pal:BOOL=ON'
     }
 
-    & $CMAKE_BIN -S . -B build $CMAKE_Args 
+    & $CMAKE_BIN -S . -B $build_dir $CMAKE_Args 
 
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to configure AnyDSL runtime for $Device"
     }
 
     # Build it
-    & $CMAKE_BIN --build build --config "$BUILD_TYPE" --parallel $Config.CMAKE.PARALLEL_JOBS
+    & $CMAKE_BIN --build $build_dir --config "$BUILD_TYPE" --parallel $Config.CMAKE.PARALLEL_JOBS
 
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to build AnyDSL runtime for $Device"
     }
 
-    # & $CMAKE_BIN --install build --config "$BUILD_TYPE"
+    # & $CMAKE_BIN --install $build_dir --config "$BUILD_TYPE"
 
     # if ($LASTEXITCODE -ne 0) {
     #     throw "Failed to install LLVM"
@@ -120,10 +122,8 @@ function CompileRuntime {
 
     # Copy dlls
     if ($IsWindows) {
-        Copy-Item -Path "build/bin/*" -Destination "$BIN_ROOT\" > $null
+        Copy-Item -Path "$build_dir/bin/*" -Destination "$BIN_ROOT\" > $null
     }
-
-    Set-Location $CURRENT
 }
 
 # Compile basic version
@@ -132,6 +132,6 @@ CompileRuntime
 # Compile per variant stuff
 foreach ($device in $Config.RUNTIME.DEVICES) {
     CompileRuntime -Device $device
-    Set-Location $CURRENT
 }
+
 Set-Location $CURRENT

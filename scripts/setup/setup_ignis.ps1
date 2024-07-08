@@ -57,7 +57,7 @@ $CMAKE_Args += '-DBUILD_TESTING:BOOL=OFF'
 
 foreach ($device in $Config.RUNTIME.DEVICES) {
     $runtime_name = "runtime_$device"
-    $runtime_device_dir = "$DEPS_ROOT\$runtime_name"
+    $runtime_build_dir = "$DEPS_ROOT\runtime\$device"
     if ($IsWindows) {
         $runtime_lib = "$($runtime_name).lib"
         $runtime_jit_lib = "$($runtime_name)_jit_artic.lib"
@@ -65,10 +65,10 @@ foreach ($device in $Config.RUNTIME.DEVICES) {
         $runtime_lib = "lib$($runtime_name).so"
         $runtime_jit_lib = "lib$($runtime_name)_jit_artic.so"
     }
-    if (Test-Path -Path "$runtime_device_dir/build/lib/$runtime_lib") {
-        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_INCLUDE_DIR:PATH=" + ($runtime_device_dir + "/src").Replace("\", "/")
-        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY:FILEPATH=" + ($runtime_device_dir + "/build/lib/$runtime_lib").Replace("\", "/")
-        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY_JIT:FILEPATH=" + ($runtime_device_dir + "/build/lib/$runtime_jit_lib").Replace("\", "/")
+    if (Test-Path -Path "$runtime_build_dir/lib/$runtime_lib") {
+        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_INCLUDE_DIR:PATH=" + ($runtime_build_dir + "/../src").Replace("\", "/")
+        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY:FILEPATH=" + ($runtime_build_dir + "/lib/$runtime_lib").Replace("\", "/")
+        $CMAKE_Args += "-DAnyDSLRuntimeDevice_$($device)_LIBRARY_JIT:FILEPATH=" + ($runtime_build_dir + "/lib/$runtime_jit_lib").Replace("\", "/")
     }
 }
 
