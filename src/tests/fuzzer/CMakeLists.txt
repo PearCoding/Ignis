@@ -2,7 +2,7 @@ SET(SRC_FILES
     main.cpp )
 
 add_executable(ig_test_fuzzer ${SRC_FILES})
-target_link_libraries(ig_test_fuzzer PRIVATE ig_lib_runtime)
+target_link_libraries(ig_test_fuzzer PRIVATE ig_runtime)
 ig_add_extra_options(ig_test_fuzzer)
 
 set(SANITIZER_FLAGS -fsanitize=address -g -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=memory -fsanitize=undefined)

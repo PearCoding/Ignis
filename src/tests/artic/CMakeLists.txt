@@ -14,5 +14,5 @@ SET(_FILES
     ${ARTIC_TEST_FILE})
     
 add_executable(ig_test_artic ${_FILES})
-target_link_libraries(ig_test_artic PRIVATE ig_lib_runtime)
+target_link_libraries(ig_test_artic PRIVATE ig_runtime)
 ig_add_extra_options(ig_test_artic NO_LTO)

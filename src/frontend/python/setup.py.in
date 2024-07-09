@@ -41,6 +41,6 @@ setup(
         '-DAnyDSL_runtime_DIR=${AnyDSL_runtime_DIR}'
     ],
     packages=['ignis'],
-    package_data={'ignis': ['*ig_lib_runtime*', '*pyignis*']},
+    package_data={'ignis': ['*ig_runtime*', '*pyignis*']},
     python_requires=">=3.8"
 )

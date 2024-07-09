@@ -13,7 +13,7 @@ nanobind_add_module(pyignis STABLE_ABI LTO ${SRC})
 # pybind11_add_module(pyignis MODULE ${SRC})
 # add_library(pyignis MODULE ${SRC})
 
-target_link_libraries(pyignis PRIVATE ig_lib_runtime)
+target_link_libraries(pyignis PRIVATE ig_runtime)
 target_compile_definitions(pyignis PRIVATE IGNIS_VERSION=${PROJECT_VERSION})
 set_target_properties(pyignis PROPERTIES 
                       LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}/ignis"

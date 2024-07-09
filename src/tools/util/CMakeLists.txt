@@ -3,7 +3,7 @@ option(IG_WITH_CONVERTER_MITSUBA "Build tool to convert from mitsuba to our form
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "*.cpp")
 
 add_executable(igutil ${SRC})
-target_link_libraries(igutil PRIVATE ig_lib_common)
+target_link_libraries(igutil PRIVATE ig_common)
 target_include_directories(igutil PRIVATE ${stb_SOURCE_DIR})
 
 if(IG_WITH_CONVERTER_MITSUBA)

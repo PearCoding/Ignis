@@ -91,7 +91,7 @@ foreach(var ${VARIANTS})
     endif()
 
     add_library(${_target_name} MODULE ${SRC})
-    target_link_libraries(${_target_name} PUBLIC ig_lib_runtime PRIVATE ${AnyDSLRuntimeDevice_LIBRARIES} TBB::tbb TBB::tbbmalloc)
+    target_link_libraries(${_target_name} PUBLIC ig_runtime PRIVATE ${AnyDSLRuntimeDevice_LIBRARIES} TBB::tbb TBB::tbbmalloc)
     target_include_directories(${_target_name} SYSTEM PRIVATE ${AnyDSLRuntimeDevice_INCLUDE_DIRS})
     target_compile_definitions(${_target_name} PRIVATE $<BUILD_INTERFACE:"IG_BUILD_DEVICE_${VAR_UPPER}">)
     set_target_properties(${_target_name} PROPERTIES PREFIX "")

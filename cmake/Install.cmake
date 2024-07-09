@@ -56,7 +56,7 @@ if(IG_INSTALL_RUNTIME_DEPENDENCIES)
             )
     endif()
 
-    set(search_dirs "$<TARGET_FILE_DIR:ig_lib_runtime>")
+    set(search_dirs "$<TARGET_FILE_DIR:ig_runtime>")
     if(IG_HAS_PYTHON_API)
         list(APPEND search_dirs "${Python_RUNTIME_LIBRARY_DIRS}")
         list(APPEND search_dirs "${Python_RUNTIME_SABI_LIBRARY_DIRS}")
