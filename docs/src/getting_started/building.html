@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta property="article:modified_time" content="2023-06-03T12:41:42+00:00" />
+    <meta property="article:modified_time" content="2024-07-09T16:00:10+00:00" />
     <title>Building &#8212; Ignis  documentation</title>
   
   
@@ -54,7 +54,7 @@
     <link rel="prev" title="Getting Started" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Jun 03, 2023"/>
+    <meta name="docbuild:last-update" content="Jul 09, 2024"/>
   </head>
   
   
@@ -400,11 +400,34 @@ document.write(`
                   
   <section id="building">
 <h1>Building<a class="headerlink" href="#building" title="Link to this heading">#</a></h1>
-<p>The active development is done on a linux operating system (Ubuntu in particular).
+<p>The active development is done on a linux operating system (Ubuntu in particular) and Windows 11.
 The raytracer is platform independent to a large extend and works on Linux, Windows and Mac OS operating systems.
 A reasonable powerful machine is recommended to have any fun with raytracing.</p>
-<section id="linux-mac-os">
-<h2>Linux &amp; Mac OS<a class="headerlink" href="#linux-mac-os" title="Link to this heading">#</a></h2>
+<section id="automatic-setup">
+<h2>Automatic Setup<a class="headerlink" href="#automatic-setup" title="Link to this heading">#</a></h2>
+<p>The recommended way to setup Ignis for development on any operating system.
+This mini tutorial is expecting some basic knowledge about build systems and a recent PowerShell (also available on Linux).</p>
+<ol class="arabic simple">
+<li><p>Clone Ignis from <a class="github reference external" href="https://github.com/PearCoding/Ignis">PearCoding/Ignis</a>.</p>
+<ol class="arabic simple">
+<li><p>(Optional) Copy the config file <code class="docutils literal notranslate"><span class="pre">scripts/setup/config.json</span></code> and change it to your needs. Normally you do not have to change anything. The option <code class="docutils literal notranslate"><span class="pre">LOCATION</span></code> can be used to specify a different location for the dependencies.</p></li>
+<li><p>Run the script <code class="docutils literal notranslate"><span class="pre">scripts/setup/setup.ps1</span></code>. If you use a different config file, specify the path as an argument to the script. The script will download all the necessary dependencies, except CUDA, compile it and create a new directory <code class="docutils literal notranslate"><span class="pre">deps/</span></code> on the directory on top of Ignis or the location specified in the config. This step has to be done only once, or if some of the dependencies got updated.</p></li>
+<li><p>By default the <code class="docutils literal notranslate"><span class="pre">build/</span></code> directory contains a Ninja based <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.</p></li>
+</ol>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It might be necessary to run the script <code class="docutils literal notranslate"><span class="pre">scripts/setup/vc_dev_env.ps1</span></code> every time a new terminal is opened to ensure the correct visual studio environment is available on Windows.</p>
+</div>
+<p>To change from the single build configuration using <code class="docutils literal notranslate"><span class="pre">`Ninja</span></code> to a multiconfig-generator, remove or adapt the following line in <code class="docutils literal notranslate"><span class="pre">scripts/setup/config.json</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;CMAKE_EXTRA_ARGS&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-GNinja&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-UCMAKE_CONFIGURATION_TYPES&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="linux-mac-os-manual">
+<h2>Linux &amp; Mac OS (Manual)<a class="headerlink" href="#linux-mac-os-manual" title="Link to this heading">#</a></h2>
 <p>A quick and dirty tutorial to show how to setup AnyDSL and Ignis on a typical Linux OS or an Apple machine.
 The following will need <code class="docutils literal notranslate"><span class="pre">cmake</span></code> and a working C++ development environment.</p>
 <ol class="arabic simple">
@@ -428,28 +451,6 @@ The following will need <code class="docutils literal notranslate"><span class="
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>MacOS CPU vectorization and GPU support is still very experimental and limited.</p>
-</div>
-</section>
-<section id="windows-automatic">
-<h2>Windows (Automatic)<a class="headerlink" href="#windows-automatic" title="Link to this heading">#</a></h2>
-<p>This mini tutorial is expecting some basic knowledge about the Windows build system based on Visual Studio and a recent PowerShell.</p>
-<ol class="arabic simple">
-<li><p>Clone Ignis from <a class="github reference external" href="https://github.com/PearCoding/Ignis">PearCoding/Ignis</a>.</p>
-<ol class="arabic simple">
-<li><p>(Optional) Copy the config file <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/config.json</span></code> and change it to your needs. Normally you do not have to change anything. The option <code class="docutils literal notranslate"><span class="pre">LOCATION</span></code> can be used to specify a different location for the dependencies.</p></li>
-<li><p>Run the script <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/setup.ps1</span></code>. If you use a different config file, specify the path as an argument to the script. The script will download all the necessary dependencies, except CUDA, compile it and create a new directory <code class="docutils literal notranslate"><span class="pre">deps/</span></code> on the directory on top of Ignis or the location specified in the config. This step has to be done only once, or if some of the dependencies got updated.</p></li>
-<li><p>By default the <code class="docutils literal notranslate"><span class="pre">build/</span></code> directory contains a Ninja based <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration.</p></li>
-<li><p>The <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.</p></li>
-</ol>
-</li>
-</ol>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>It might be necessary to run the script <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/vc_dev_env.ps1</span></code> every time a new terminal is opened to ensure the correct visual studio environment is available.</p>
-</div>
-<p>To change from the single build configuration using <code class="docutils literal notranslate"><span class="pre">`Ninja</span></code> to a multiconfig-generator, remove or adapt the following line in <code class="docutils literal notranslate"><span class="pre">scripts/setup/windows/config.json</span></code>:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;CMAKE_EXTRA_ARGS&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-GNinja&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-UCMAKE_CONFIGURATION_TYPES&quot;</span><span class="p">]</span>
-</pre></div>
 </div>
 </section>
 <section id="windows-manual">
@@ -608,8 +609,8 @@ Setting the environment variable <code class="docutils literal notranslate"><spa
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#linux-mac-os">Linux &amp; Mac OS</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#windows-automatic">Windows (Automatic)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#automatic-setup">Automatic Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#linux-mac-os-manual">Linux &amp; Mac OS (Manual)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#windows-manual">Windows (Manual)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#known-issues">Known Issues</a></li>
 </ul>
@@ -621,7 +622,7 @@ Setting the environment variable <code class="docutils literal notranslate"><spa
           </div>
           <footer class="bd-footer-content">
             <p class="last-updated">
-  Last updated on Jun 03, 2023.
+  Last updated on Jul 09, 2024.
   <br/>
 </p>
           </footer>
