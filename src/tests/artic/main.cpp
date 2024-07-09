@@ -1,16 +1,3 @@
-#include <cstdint>
-#include <cstring>
-#include <fstream>
-#include <iostream>
-
-#if defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-#endif
-
 #include "Logger.h"
 #include "device/DeviceManager.h"
 #include "device/ICompilerDevice.h"
@@ -24,6 +11,8 @@ extern const char* ig_test_shader[];
 
 int main(int argc, char** argv)
 {
+    IG_LOGGER.setVerbosity(L_DEBUG); // This is a test, so go full verbose
+
     Target target = Target::pickBest();
     bool run      = true;
 
@@ -33,8 +22,6 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--no-run") == 0)
             run = false;
     }
-
-    IG_LOGGER.setVerbosity(L_DEBUG);
 
     if (!DeviceManager::instance().init(/*TODO Parameter*/)) {
         IG_LOG(L_ERROR) << "Could not initialize devices" << std::endl;

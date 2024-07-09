@@ -6,11 +6,15 @@
 #include "Logger.h"
 
 using namespace IG;
-int main(int, const char**)
+int main(int argc, const char** argv)
 {
     IG_LOGGER.setVerbosity(LogLevel::L_DEBUG);
 
     const std::string shader = Transpiler::generateTestShader();
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--dump") == 0)
+            std::cout << shader << std::endl;
+    }
 
     if (!DeviceManager::instance().init())
         return EXIT_FAILURE;
@@ -19,10 +23,6 @@ int main(int, const char**)
     const auto deviceInterface = DeviceManager::instance().getDevice(target.architecture());
     if (deviceInterface == nullptr) {
         std::cerr << "Could not get target " << target.toString() << std::endl;
-        std::cout << "Available are: [";
-        for (const auto& arch : DeviceManager::instance().availableDevices())
-            std::cout << Target::toString(arch) << ", ";
-        std::cout << "]" << std::endl;
         return EXIT_FAILURE;
     }
 

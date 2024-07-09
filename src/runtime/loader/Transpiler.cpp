@@ -1307,7 +1307,7 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
     }
 
     // Some special use functions
-    const bool usesContext = res.find_first_of("check_ray_visibility(ctx.ray") != std::string::npos || res.find_first_of("ctx.coord.to_") != std::string::npos;   
+    const bool usesContext = res.find_first_of("check_ray_visibility(ctx.ray") != std::string::npos || res.find_first_of("ctx.coord.to_") != std::string::npos;
 
     return Result{ res, std::move(visitor.usedTextures()), visitor.usedVariables(), scalar_output, usesContext };
 }
@@ -1350,9 +1350,8 @@ std::string Transpiler::generateTestShader()
     std::stringstream stream;
 
     // Dump variables
-    stream << "#[export]" << std::endl
-           << "fn _var_test_() -> () { " << std::endl
-           << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray());" << std::endl;
+    stream << "#[export] fn _var_test_() -> () { " << std::endl
+           << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray(), make_null_shading_info());" << std::endl;
 
     for (const auto& p : sInternalVariables)
         stream << "  let _var_" << p.first << " = " << p.second.Map << ";" << std::endl;
@@ -1360,10 +1359,10 @@ std::string Transpiler::generateTestShader()
            << std::endl;
 
     // Dump out functions
+    size_t funcCounter = 0;
     for (const auto& p : sInternalFunctions) {
         const auto& def = p.second;
-        stream << "#[export]" << std::endl
-               << "fn _test_" << p.first << "(";
+        stream << "#[export] fn _test_" << (funcCounter++) << "_" << p.first << "(";
 
         if (p.first == "check_ray_flag") {
             // Special case
@@ -1379,6 +1378,8 @@ std::string Transpiler::generateTestShader()
             }
         } else {
             for (size_t i = 0; i < def.Arguments.size(); ++i) {
+                if (p.first != "select" && def.Arguments[i] == PExprType::String) // Do not expose 'constant' strings
+                    continue;
                 stream << "v" << i << ": " << typeArtic(def.Arguments[i]);
                 if (i < def.Arguments.size() - 1)
                     stream << ", ";
@@ -1386,7 +1387,7 @@ std::string Transpiler::generateTestShader()
         }
 
         stream << ") -> " << typeArtic(def.ReturnType) << " {" << std::endl
-               << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray());" << std::endl
+               << "  let ctx = make_miss_shading_context(make_empty_pixelcoord(), make_zero_ray(), make_null_shading_info());" << std::endl
                << "  maybe_unused(ctx);" << std::endl;
 
         ParamArr arguments;
@@ -1397,6 +1398,20 @@ std::string Transpiler::generateTestShader()
             arguments[0] = "v0";
             arguments[1] = "'global'";
             arguments[2] = "'object'";
+        } else if (p.first == "voronoi" || p.first == "cvoronoi") {
+            // Replace string parameters with constants
+            int arg = 0;
+            for (size_t i = 0; i < def.Arguments.size(); ++i) {
+                if (def.Arguments[i] == PExprType::String) {
+                    if (arg++ == 0) {
+                        arguments[i] = "'f1'";
+                    } else {
+                        arguments[i] = "'minkowski'"; // Needed to test the optional exponent
+                    }
+                } else {
+                    arguments[i] = "v" + std::to_string(i);
+                }
+            }
         } else if (p.first == "lookup") {
             arguments[0] = "'linear'";
             for (size_t i = 1; i < def.Arguments.size(); ++i)
