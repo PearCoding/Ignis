@@ -1,22 +1,18 @@
 file(GLOB_RECURSE ARTIC_TEST_SRC CONFIGURE_DEPENDS "*.art")
+set(ARTIC_TEST_FILE ${CMAKE_CURRENT_BINARY_DIR}/tests.cpp)
 
-# Compile artic stuff
-SET(ARTIC_OBJS ) 
-anydsl_runtime_wrap(ARTIC_OBJS
-    NAME "artic_test"
-    FRONTEND "artic"
-    CLANG_FLAGS ${IG_ARTIC_CLANG_FLAGS}
-    ARTIC_FLAGS ${IG_ARTIC_FLAGS} --log-level info -Wall
-    FILES ${ARTIC_MAIN_SRC} ${ARTIC_TEST_SRC}
-    INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface)
+add_custom_command(
+  OUTPUT ${ARTIC_TEST_FILE}
+  COMMAND $<TARGET_FILE:ig_api_collector> --prefix ig_test_shader ${ARTIC_TEST_SRC} ${ARTIC_TEST_FILE}
+  DEPENDS ${ARTIC_TEST_SRC}
+  VERBATIM)
 
 # Setup actual test
 SET(_FILES 
     interface.cpp 
     main.cpp 
-    ${ARTIC_OBJS}
-    ${CMAKE_CURRENT_BINARY_DIR}/generated_test_interface.h)
+    ${ARTIC_TEST_FILE})
     
 add_executable(ig_test_artic ${_FILES})
-target_link_libraries(ig_test_artic PRIVATE ig_lib_runtime ${AnyDSL_runtime_LIBRARIES})
-target_include_directories(ig_test_artic PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(ig_test_artic PRIVATE ig_lib_runtime)
+ig_add_extra_options(ig_test_artic NO_LTO)

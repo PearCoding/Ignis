@@ -1,3 +1,15 @@
-#[export] fn test_main(no_gpu: bool) -> i32 { 
-    test_bbox() + test_matrix() + test_intersection() + test_interval() + test_microfacet() + test_reduction(no_gpu) + test_cdf() + test_warp()
+#[import(cc = "C")] fn ignis_set_error_count(i32) -> ();
+
+#[export] fn test_main(_settings: &Settings) -> () {
+
+    let mut err = test_bbox();
+    err += test_matrix();
+    err += test_intersection();
+    err += test_interval();
+    err += test_microfacet();
+    err += test_cdf();
+    err += test_warp() ;
+    err += test_reduction(NoGPU);
+    
+    ignis_set_error_count(err);
 }

@@ -20,6 +20,18 @@ static int compileScript(const ICompilerDevice::Settings& settings, const std::s
             anydsl_link(module_path.generic_string().c_str());
         }
 
+        const auto runtime_path = RuntimeInfo::modulePath();
+        if (!runtime_path.empty()) {
+            IG_LOG(L_DEBUG) << "Loading symbolic module " << runtime_path << std::endl;
+            anydsl_link(runtime_path.generic_string().c_str());
+        }
+
+        const auto exe_path = RuntimeInfo::executablePath();
+        if (!exe_path.empty()) {
+            IG_LOG(L_DEBUG) << "Loading symbolic module " << exe_path << std::endl;
+            anydsl_link(exe_path.generic_string().c_str());
+        }
+
         const auto cache_dir = RuntimeInfo::cacheDirectory();
         anydsl_set_cache_directory(cache_dir.generic_string().c_str());
     });
