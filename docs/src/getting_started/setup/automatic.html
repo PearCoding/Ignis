@@ -8,8 +8,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta property="article:modified_time" content="2023-01-03T15:39:46+00:00" />
-    <title>Plugins &#8212; Ignis  documentation</title>
+    <meta property="article:modified_time" content="2024-07-09T17:30:26+00:00" />
+    <title>Automatic Setup &#8212; Ignis  documentation</title>
   
   
   
@@ -46,15 +46,15 @@
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../_static/design-tabs.js?v=36754332"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'src/getting_started/plugins/index';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'src/getting_started/setup/automatic';</script>
     <script src="../../../_static/js/lightbox.js?v=ef67d018"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="Blender Plugin" href="blender.html" />
-    <link rel="prev" title="Using Ignis together with Python Jupyter notebooks" href="../tutorials/python.html" />
+    <link rel="next" title="Linux &amp; Mac OS" href="linux_manual.html" />
+    <link rel="prev" title="Setup" href="../setup.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Jan 03, 2023"/>
+    <meta name="docbuild:last-update" content="Jul 09, 2024"/>
   </head>
   
   
@@ -326,10 +326,10 @@ document.write(`
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 has-children"><a class="reference internal" href="../setup.html">Setup</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../setup/automatic.html">Automatic (Recommended)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../setup/linux_manual.html">Linux &amp; Mac OS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../setup/windows_manual.html">Windows</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../setup.html">Setup</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Automatic (Recommended)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="linux_manual.html">Linux &amp; Mac OS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="windows_manual.html">Windows</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../known_issues.html">Known Issues</a></li>
@@ -339,8 +339,8 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/python.html">Jupyter Notebooks</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Plugins</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="blender.html">Blender</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../plugins/index.html">Plugins</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../plugins/blender.html">Blender</a></li>
 </ul>
 </details></li>
 </ul>
@@ -383,7 +383,10 @@ document.write(`
     
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Getting Started</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page">Plugins</li>
+    
+    <li class="breadcrumb-item"><a href="../setup.html" class="nav-link">Setup</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Automatic Setup</li>
   </ul>
 </nav>
 </div>
@@ -400,10 +403,27 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="plugins">
-<h1>Plugins<a class="headerlink" href="#plugins" title="Link to this heading">#</a></h1>
-<p>This section contains some information about plugins related to the Ignis rendering framework. Select one of the left sections to learn more.</p>
-<div class="toctree-wrapper compound">
+  <section id="automatic-setup">
+<span id="id1"></span><h1>Automatic Setup<a class="headerlink" href="#automatic-setup" title="Link to this heading">#</a></h1>
+<p>The recommended way to setup Ignis for development on any operating system.
+This mini tutorial is expecting some basic knowledge about build systems and a recent PowerShell (also available on Linux).</p>
+<ol class="arabic simple">
+<li><p>Clone Ignis from <a class="github reference external" href="https://github.com/PearCoding/Ignis">PearCoding/Ignis</a>.</p>
+<ol class="arabic simple">
+<li><p>(Optional) Copy the config file <code class="docutils literal notranslate"><span class="pre">scripts/setup/config.json</span></code> and change it to your needs. Normally you do not have to change anything. The option <code class="docutils literal notranslate"><span class="pre">LOCATION</span></code> can be used to specify a different location for the dependencies.</p></li>
+<li><p>Run the script <code class="docutils literal notranslate"><span class="pre">scripts/setup/setup.ps1</span></code>. If you use a different config file, specify the path as an argument to the script. The script will download all the necessary dependencies, except CUDA, compile it and create a new directory <code class="docutils literal notranslate"><span class="pre">deps/</span></code> on the directory on top of Ignis or the location specified in the config. This step has to be done only once, or if some of the dependencies got updated.</p></li>
+<li><p>By default the <code class="docutils literal notranslate"><span class="pre">build/</span></code> directory contains a Ninja based <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration is well tested and should be used for most purposes. Any other configuration is experimental and may fail at any time.</p></li>
+</ol>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It might be necessary to run the script <code class="docutils literal notranslate"><span class="pre">scripts/setup/vc_dev_env.ps1</span></code> every time a new terminal is opened to ensure the correct visual studio environment is available on Windows.</p>
+</div>
+<p>To change from the single build configuration using <code class="docutils literal notranslate"><span class="pre">`Ninja</span></code> to a multiconfig-generator, remove or adapt the following line in <code class="docutils literal notranslate"><span class="pre">scripts/setup/config.json</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;CMAKE_EXTRA_ARGS&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-GNinja&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-UCMAKE_CONFIGURATION_TYPES&quot;</span><span class="p">]</span>
+</pre></div>
 </div>
 </section>
 
@@ -418,20 +438,20 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../tutorials/python.html"
+       href="../setup.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Using Ignis together with Python Jupyter notebooks</p>
+        <p class="prev-next-title">Setup</p>
       </div>
     </a>
     <a class="right-next"
-       href="blender.html"
+       href="linux_manual.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Blender Plugin</p>
+        <p class="prev-next-title">Linux &amp; Mac OS</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -446,7 +466,7 @@ document.write(`
           </div>
           <footer class="bd-footer-content">
             <p class="last-updated">
-  Last updated on Jan 03, 2023.
+  Last updated on Jul 09, 2024.
   <br/>
 </p>
           </footer>

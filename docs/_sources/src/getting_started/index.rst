@@ -6,7 +6,8 @@ This section gives an overview of the Ignis rendering framework. Select one of t
 ..  toctree::
     :hidden:
 
-    building
+    setup
+    known_issues
     realtime
     tutorials/index
     plugins/index

@@ -8,8 +8,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta property="article:modified_time" content="2023-01-03T15:39:46+00:00" />
-    <title>Plugins &#8212; Ignis  documentation</title>
+    <meta property="article:modified_time" content="2024-07-09T17:30:26+00:00" />
+    <title>Windows &#8212; Ignis  documentation</title>
   
   
   
@@ -46,15 +46,15 @@
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../_static/design-tabs.js?v=36754332"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'src/getting_started/plugins/index';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'src/getting_started/setup/windows_manual';</script>
     <script src="../../../_static/js/lightbox.js?v=ef67d018"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="Blender Plugin" href="blender.html" />
-    <link rel="prev" title="Using Ignis together with Python Jupyter notebooks" href="../tutorials/python.html" />
+    <link rel="next" title="Known Issues" href="../known_issues.html" />
+    <link rel="prev" title="Linux &amp; Mac OS" href="linux_manual.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Jan 03, 2023"/>
+    <meta name="docbuild:last-update" content="Jul 09, 2024"/>
   </head>
   
   
@@ -326,10 +326,10 @@ document.write(`
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 has-children"><a class="reference internal" href="../setup.html">Setup</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../setup/automatic.html">Automatic (Recommended)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../setup/linux_manual.html">Linux &amp; Mac OS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../setup/windows_manual.html">Windows</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../setup.html">Setup</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="automatic.html">Automatic (Recommended)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="linux_manual.html">Linux &amp; Mac OS</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Windows</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../known_issues.html">Known Issues</a></li>
@@ -339,8 +339,8 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/python.html">Jupyter Notebooks</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Plugins</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="blender.html">Blender</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../plugins/index.html">Plugins</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../plugins/blender.html">Blender</a></li>
 </ul>
 </details></li>
 </ul>
@@ -383,7 +383,10 @@ document.write(`
     
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Getting Started</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page">Plugins</li>
+    
+    <li class="breadcrumb-item"><a href="../setup.html" class="nav-link">Setup</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Windows</li>
   </ul>
 </nav>
 </div>
@@ -400,11 +403,94 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="plugins">
-<h1>Plugins<a class="headerlink" href="#plugins" title="Link to this heading">#</a></h1>
-<p>This section contains some information about plugins related to the Ignis rendering framework. Select one of the left sections to learn more.</p>
-<div class="toctree-wrapper compound">
+  <section id="windows">
+<h1>Windows<a class="headerlink" href="#windows" title="Link to this heading">#</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is recommended to use the new <a class="reference internal" href="automatic.html#automatic-setup"><span class="std std-ref">automatic setup</span></a> instead of the following one! The following may get outdated.</p>
 </div>
+<p>This mini tutorial is expecting some basic knowledge about CMake and the Windows build system based on Visual Studio. I highly recommend using the CMake Ninja generator in favour of the Visual Studio ones, as Visual Studio as an IDE itself has support for both.</p>
+<ol class="arabic">
+<li><p>Clone AnyDSL from <a class="github reference external" href="https://github.com/AnyDSL/anydsl">AnyDSL/anydsl</a>. You have to use the <code class="docutils literal notranslate"><span class="pre">cmake-based-setup</span></code> branch.</p>
+<ol class="arabic">
+<li><p>Make sure all the necessary dependencies are installed. Especially zlib and potentially CUDA.</p></li>
+<li><p>Create a new directory named <code class="docutils literal notranslate"><span class="pre">build</span></code></p></li>
+<li><p>Open the command line interface in the newly created directory. Make sure the recent VC environment is available.</p></li>
+<li><p>Use CMake and the following command line to configure the project. It is very likely that you have to change some paths.</p>
+<p>Also make sure that the following snippet is written in a single line and, if necessary, the <code class="docutils literal notranslate"><span class="pre">\</span></code> in paths is properly escaped:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake</span>
+<span class="go">    -DRUNTIME_JIT=ON</span>
+<span class="go">    -DBUILD_SHARED_LIBS=ON</span>
+<span class="go">    -DCMAKE_BUILD_TYPE=&quot;Release&quot;</span>
+<span class="go">    -DAnyDSL_runtime_BUILD_SHARED=ON</span>
+<span class="go">    -DAnyDSL_PKG_LLVM_AUTOBUILD=ON</span>
+<span class="go">    -DAnyDSL_PKG_LLVM_VERSION=&quot;14.0.6&quot;</span>
+<span class="go">    -DAnyDSL_PKG_RV_TAG=&quot;origin/release/14.x&quot;</span>
+<span class="go">    -DAnyDSL_PKG_LLVM_URL=&quot;https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.6/llvm-project-14.0.6.src.tar.xz&quot;</span>
+<span class="go">    -DTHORIN_PROFILE=OFF</span>
+<span class="go">    -DBUILD_SHARED_LIBS=OFF</span>
+<span class="go">    -DCUDAToolkit_NVVM_LIBRARY=&quot;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.7\\nvvm\\lib\\x64\\nvvm.lib&quot;</span>
+<span class="go">    -DZLIB_LIBRARY=&quot;C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib&quot;</span>
+<span class="go">    -DZLIB_INCLUDE_DIR=&quot;C:\\Development\\Dependencies\\zlib\\include&quot;</span>
+<span class="go">    ..</span>
+</pre></div>
+</div>
+</li>
+<li><p>If you get a similar cmake error like the following:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">CMake Error in build/_deps/rv-src/src/CMakeLists.txt:</span>
+<span class="go">  Target &quot;RV&quot; INTERFACE_INCLUDE_DIRECTORIES property contains path:</span>
+
+<span class="go">    &quot;C:/Development/Projects/AnyDSL/build/_deps/rv-src/include&quot;</span>
+
+<span class="go">  which is prefixed in the build directory.</span>
+</pre></div>
+</div>
+<p>Just ignore it. A file named <code class="docutils literal notranslate"><span class="pre">AnyDSL.sln</span></code> should still be created in the build folder. This might only be relevant for cmake configs with Visual Studio generators, however.</p>
+</li>
+<li><p>If you are using the Visual Studio generator, you can now use the generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> to compile the project. This will take some time. Make sure that you use the <code class="docutils literal notranslate"><span class="pre">Release</span></code> configuration. Make sure the <code class="docutils literal notranslate"><span class="pre">runtime</span></code>, <code class="docutils literal notranslate"><span class="pre">clang</span></code> and <code class="docutils literal notranslate"><span class="pre">artic</span></code> project are built successfully, the others might fail for unknown reasons.</p></li>
+<li><p>For other IDEs use <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">--build</span> <span class="pre">..</span></code></p></li>
+</ol>
+</li>
+<li><p>Clone Ignis from <a class="github reference external" href="https://github.com/PearCoding/Ignis">PearCoding/Ignis</a>. This time the <code class="docutils literal notranslate"><span class="pre">master</span></code> branch is fine.</p>
+<ol class="arabic">
+<li><p>Getting AnyDSL to work is the hardest part. Congrats if you made it so far. However, Ignis requires some dependencies and configurations to work with AnyDSL.</p></li>
+<li><p>Make sure zlib and Intel oneAPI TBB are installed on your system. It is also recommended to install SDL2 to be able to use the viewer.</p></li>
+<li><p>Create a new directory named <code class="docutils literal notranslate"><span class="pre">build</span></code></p></li>
+<li><p>Open the command line interface in the newly created directory. Make sure the recent VC environment is available.</p></li>
+<li><p>In the command line interface write the following and adapt it to your AnyDSL setup:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">set PATH=%PATH%;C:\Development\Projects\AnyDSL\build\_deps\llvm-build\Release\bin</span>
+</pre></div>
+</div>
+</li>
+<li><p>Use CMake and the following command line to configure the project. Make sure you use the <code class="docutils literal notranslate"><span class="pre">Makefile</span></code> or <code class="docutils literal notranslate"><span class="pre">Ninja</span></code> generator, as the Visual Studio one is not working. It is very likely that you have to change some paths. Especially, adapt it to your AnyDSL setup.</p>
+<p>Also make sure that the following snippet is written in a single line and, if necessary, the <code class="docutils literal notranslate"><span class="pre">\</span></code> in paths is properly escaped:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cmake</span>
+<span class="go">    -DCMAKE_BUILD_TYPE=&quot;Release&quot;</span>
+<span class="go">    -DBUILD_TESTING=OFF</span>
+<span class="go">    -DClang_BIN=&quot;C:\\Development\\Projects\\AnyDSL\\build\\_deps\\llvm-build\\Release\\bin\\clang.exe&quot;</span>
+<span class="go">    -DAnyDSL_runtime_DIR=&quot;C:\\Development\\Projects\\AnyDSL\\build\\share\\anydsl\\cmake&quot;</span>
+<span class="go">    -DArtic_BINARY_DIR=&quot;C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release&quot;</span>
+<span class="go">    -DArtic_BIN=&quot;C:\\Development\\Projects\\AnyDSL\\build\\bin\\Release\\artic.exe&quot;</span>
+<span class="go">    -DTBB_tbb_LIBRARY_RELEASE=&quot;C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\lib\\intel64\\vc_mt\\tbb12.lib&quot;</span>
+<span class="go">    -DTBB_tbbmalloc_LIBRARY_RELEASE=&quot;C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\lib\\intel64\\vc_mt\\tbbmalloc.lib&quot;</span>
+<span class="go">    -DTBB_INCLUDE_DIR=&quot;C:\\Program Files (x86)\\Intel\\oneAPI\\tbb\\2021.1.1\\include&quot;</span>
+<span class="go">    -DZLIB_LIBRARY_RELEASE=&quot;C:\\Development\\Dependencies\\zlib\\lib\\zlib.lib&quot;</span>
+<span class="go">    -DZLIB_INCLUDE_DIR=&quot;C:\\Development\\Dependencies\\zlib\\include&quot;</span>
+<span class="go">    -DSDL2_LIBRARY=&quot;C:\\Development\\Dependencies\\SDL2\\lib\\x64\\SDL2.lib&quot;</span>
+<span class="go">    -DSDL2_INCLUDE_DIR=&quot;C:\\Development\\Dependencies\\SDL2\\include&quot;</span>
+<span class="go">    ..</span>
+</pre></div>
+</div>
+<p>You can ignore the <code class="docutils literal notranslate"><span class="pre">SDL2</span></code> entries if you decide not to use <code class="docutils literal notranslate"><span class="pre">igview</span></code> or change the build type to <code class="docutils literal notranslate"><span class="pre">Debug</span></code> if necessary.</p>
+</li>
+<li><p>In contrary to the AnyDSL setup you can <strong>not</strong> use the newly generated <code class="docutils literal notranslate"><span class="pre">.sln</span></code> file directly. Use <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">--build</span> <span class="pre">.</span> <span class="pre">--config</span> <span class="pre">Release</span></code> or use Visual Studio with the CMake interface.</p></li>
+<li><p>To run the frontends you might have to add multiple shared libraries (<code class="docutils literal notranslate"><span class="pre">*.dlls</span></code>) to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable or copy it next to the executables.
+Currently the shared libraries <code class="docutils literal notranslate"><span class="pre">runtime.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">runtime_jit_artic.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">nvvm64.dll</span></code> or <code class="docutils literal notranslate"><span class="pre">nvvm64_40_0.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">tbb.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">SDL2.dll</span></code>, <code class="docutils literal notranslate"><span class="pre">zlib.dll</span></code> are known to be required.
+The list is not exhaustive however, as the final list of dependencies depends on the system, current state of development and other external factors.
+Use one of the many dll dependency viewers available on Windows to find missing dlls and copy it next to the build executable or add it to the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable.</p></li>
+</ol>
+</li>
+</ol>
 </section>
 
 
@@ -418,20 +504,20 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../tutorials/python.html"
+       href="linux_manual.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Using Ignis together with Python Jupyter notebooks</p>
+        <p class="prev-next-title">Linux &amp; Mac OS</p>
       </div>
     </a>
     <a class="right-next"
-       href="blender.html"
+       href="../known_issues.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Blender Plugin</p>
+        <p class="prev-next-title">Known Issues</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -446,7 +532,7 @@ document.write(`
           </div>
           <footer class="bd-footer-content">
             <p class="last-updated">
-  Last updated on Jan 03, 2023.
+  Last updated on Jul 09, 2024.
   <br/>
 </p>
           </footer>

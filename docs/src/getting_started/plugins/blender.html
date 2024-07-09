@@ -330,7 +330,13 @@ document.write(`
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../building.html">Building</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../setup.html">Setup</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../setup/automatic.html">Automatic (Recommended)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../setup/linux_manual.html">Linux &amp; Mac OS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../setup/windows_manual.html">Windows</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../known_issues.html">Known Issues</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../realtime.html">Realtime Rendering</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/evalglare.html">Evalglare</a></li>
@@ -417,14 +423,14 @@ document.write(`
 <p>depending on your operating system. This will create a zip file <code class="docutils literal notranslate"><span class="pre">ignis_blender.zip</span></code> in <code class="docutils literal notranslate"><span class="pre">scripts/blender_exporter</span></code>. Use the zip file to install the plugin via Blender as shown in the following two images:</p>
 <div class="figure subfigure compound align-center" id="fig-blender_install">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id1" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../../_images/screenshot_blender_addon_1.jpg" style="width: 95%" data-lightbox="900996885964891104" data-title=""><img alt="../../../_images/screenshot_blender_addon_1.jpg" src="../../../_images/screenshot_blender_addon_1.jpg" style="width: 95%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../../_images/screenshot_blender_addon_1.jpg" style="width: 95%" data-lightbox="3174043377524719253" data-title=""><img alt="../../../_images/screenshot_blender_addon_1.jpg" src="../../../_images/screenshot_blender_addon_1.jpg" style="width: 95%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Go to install</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id2" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../../_images/screenshot_blender_addon_2.jpg" style="width: 95%" data-lightbox="5319918633328255879" data-title=""><img alt="../../../_images/screenshot_blender_addon_2.jpg" src="../../../_images/screenshot_blender_addon_2.jpg" style="width: 95%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../../_images/screenshot_blender_addon_2.jpg" style="width: 95%" data-lightbox="7150251193738624728" data-title=""><img alt="../../../_images/screenshot_blender_addon_2.jpg" src="../../../_images/screenshot_blender_addon_2.jpg" style="width: 95%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Select the <code class="align-center subsubfigure lightbox-image docutils literal notranslate"><span class="align-center subsubfigure lightbox-image pre">ignis_blender.zip</span></code> zip file</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Link to this image">#</a></p>
@@ -435,7 +441,7 @@ document.write(`
 <span id="fig-blender_install"></span><h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">#</a></h2>
 <div class="figure subfigure compound align-center" id="fig-blender_config">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id3" style="width: 95%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../../_images/screenshot_blender_addon_3.jpg" style="width: 95%" data-lightbox="7076810103040038881" data-title=""><img alt="../../../_images/screenshot_blender_addon_3.jpg" src="../../../_images/screenshot_blender_addon_3.jpg" style="width: 95%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../../_images/screenshot_blender_addon_3.jpg" style="width: 95%" data-lightbox="-647597644796174285" data-title=""><img alt="../../../_images/screenshot_blender_addon_3.jpg" src="../../../_images/screenshot_blender_addon_3.jpg" style="width: 95%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Set the API directory to the correct path</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Link to this image">#</a></p>
