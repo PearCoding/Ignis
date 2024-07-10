@@ -94,6 +94,16 @@ std::ostream& Logger::startEntry(LogLevel level)
     return mStream;
 }
 
+void Logger::closeExtraConsole()
+{
+    mConsoleLogListener->closeExtraConsole();
+}
+
+void Logger::openConsole()
+{
+    mConsoleLogListener->openConsole();
+}
+
 std::streambuf::int_type Logger::StreamBuf::overflow(std::streambuf::int_type c)
 {
     if (mIgnore)

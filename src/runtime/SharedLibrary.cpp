@@ -29,7 +29,7 @@ struct SharedLibraryInternal {
         : Handle(LoadLibraryA(path.c_str()))
     {
         if (!Handle)
-            throw std::runtime_error("Could not load library: " + std::to_string(GetLastError()));
+            throw std::runtime_error("Could not load library: " + std::system_category().message(GetLastError()));
     }
 #endif
 

@@ -112,13 +112,13 @@ Path RuntimeInfo::modulePath(void* func)
                            (LPCWSTR)func, &hm)
         == 0) {
         int ret = GetLastError();
-        IG_LOG(L_ERROR) << "GetModuleHandleExW failed, error = " << ret << std::endl;
+        IG_LOG(L_ERROR) << "GetModuleHandleExW failed, error = " << std::system_category().message(ret) << std::endl;
         return {};
     }
 
     if (GetModuleFileNameW(hm, path, MAX_PATH) == 0) {
         int ret = GetLastError();
-        IG_LOG(L_ERROR) << "GetModuleFileNameW failed, error = " << ret << std::endl;
+        IG_LOG(L_ERROR) << "GetModuleFileNameW failed, error = " << std::system_category().message(ret) << std::endl;
         return {};
     }
     return path;

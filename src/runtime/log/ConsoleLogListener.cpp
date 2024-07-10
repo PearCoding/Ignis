@@ -85,4 +85,23 @@ void ConsoleLogListener::stopColoring()
 {
     std::cout << ANSI_RESET;
 }
+
+void ConsoleLogListener::closeExtraConsole()
+{
+#ifdef IG_OS_WINDOWS
+    DWORD processes[2];
+    DWORD count = GetConsoleProcessList(processes, 2);
+    if (count == 1) {
+        // Apparently we are the only process attached to this console. Close it
+        FreeConsole();
+    }
+#endif
+}
+
+void ConsoleLogListener::openConsole()
+{
+#ifdef IG_OS_WINDOWS
+    AllocConsole(); // Ignore output
+#endif
+}
 } // namespace IG

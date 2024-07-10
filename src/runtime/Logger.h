@@ -86,6 +86,11 @@ public:
     void enableAnsiTerminal(bool b);
     bool isUsingAnsiTerminal() const;
 
+    /// Close any additional console started due to the console subsystem (only relevant on Windows)
+    void closeExtraConsole();
+    /// Open a new console if none exists. Currently only supported on Windows
+    void openConsole();
+
     std::ostream& startEntry(LogLevel level);
 
     static Logger& instance();

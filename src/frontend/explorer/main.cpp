@@ -93,6 +93,11 @@ private:
         viewMenu->add(mOverviewMenuItem);
         viewMenu->add(mRegistryMenuItem);
 
+#ifdef IG_OS_WINDOWS
+        viewMenu->add(std::make_shared<MenuSeparator>());
+        viewMenu->add(std::make_shared<MenuItem>("Terminal", [](MenuItem*) { IG_LOGGER.openConsole(); }));
+#endif
+
         mParameterWidget->connectMenuItem(mParameterMenuItem.get());
         mOverviewWidget->connectMenuItem(mOverviewMenuItem.get());
         mRegistryWidget->connectMenuItem(mRegistryMenuItem.get());
@@ -136,6 +141,8 @@ int main(int argc, char** argv)
         std::cerr << "Portable File Dialogs are not available on this platform." << std::endl;
         return EXIT_FAILURE;
     }
+
+    IG_LOGGER.closeExtraConsole();
 
     ExplorerOptions args(argc, argv, "Ignis Scene Explorer");
     if (args.ShouldExit)

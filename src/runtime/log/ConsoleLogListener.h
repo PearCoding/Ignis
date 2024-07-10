@@ -15,6 +15,11 @@ public:
     inline void enableAnsi(bool b = true) { mUseAnsi = b; }
     inline bool isUsingAnsi() const { return mUseAnsi; }
 
+    /// Close any additional console started due to the console subsystem (only relevant on Windows)
+    void closeExtraConsole();
+    /// Open a new console if none exists. Currently only supported on Windows
+    void openConsole();
+
 private:
     bool mUseAnsi;
 
