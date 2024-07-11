@@ -873,6 +873,10 @@ Context::Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi)
     , mDebugMode(DebugMode::Normal)
     , mInternal(std::make_unique<ContextInternal>())
 {
+#ifdef IG_OS_WINDOWS
+    SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+#endif
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
         IG_LOG(L_FATAL) << "Cannot initialize SDL: " << SDL_GetError() << std::endl;
         throw std::runtime_error("Could not setup UI");
@@ -917,8 +921,7 @@ Context::Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi)
 
     mInternal->ShowProperties = runtime->hasSceneParameters();
 
-    const float dpi_scale = ui::getFontScale(mInternal->Window, mInternal->Renderer);
-    if ((float)mInternal->Width < 450 * dpi_scale || (float)mInternal->Height < 600 * dpi_scale) {
+    if ((float)mInternal->Width < 450 || (float)mInternal->Height < 600) {
         IG_LOG(L_WARNING) << "Window too small to show UI. Hiding it by default. Press F2 or F4 to show it" << std::endl;
         mInternal->ShowControl    = false;
         mInternal->ShowProperties = false;

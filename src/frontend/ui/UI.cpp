@@ -116,12 +116,13 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
     if (window_width <= 0)
         return 1;
 
-#if !defined(IG_OS_WINDOWS) || !defined(IG_OS_APPLE)
+#if !defined(IG_OS_WINDOWS) && !defined(IG_OS_APPLE)
     if (render_output_width == window_width) {
         // In contrary to the warning, this is more reliable on Linux
         float dpi;
         SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), nullptr, &dpi, nullptr);
         sDPI = dpi / 96;
+        IG_LOG(L_DEBUG) << "Detected DPI=" << sDPI << std::endl;
         return sDPI;
     }
 #endif
@@ -129,6 +130,7 @@ float getFontScale(SDL_Window* window, SDL_Renderer* renderer)
     const float scale_x = (float)render_output_width / (float)window_width;
 
     sDPI = scale_x;
+    IG_LOG(L_DEBUG) << "Detected DPI=" << sDPI << std::endl;
     return scale_x;
 }
 
@@ -136,12 +138,10 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 {
     const auto dataPath = RuntimeInfo::readonlyDataPath();
     Path fontFile;
-    if (!dataPath.empty()) {
+    if (!dataPath.empty())
         fontFile = dataPath / "fonts" / "UbuntuMono-R.ttf";
-        if (!std::filesystem::exists(fontFile))
-            fontFile.clear();
-    }
-    if (fontFile.empty()) {
+
+    if (!std::filesystem::exists(fontFile)) {
         IG_LOG(L_WARNING) << "Could not load custom font. Trying to use system default." << std::endl;
 #if defined(IG_OS_WINDOWS)
         fontFile = "C:\\Windows\\Fonts\\consola.ttf";
@@ -158,11 +158,14 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
     if (!std::filesystem::exists(fontFile)) {
         io.FontGlobalScale = font_scaling_factor;
     } else {
+        constexpr int DefaultFontSize = 13;
         ImFontConfig config;
-        config.SizePixels    = 13 * font_scaling_factor;
-        config.GlyphOffset.y = 1.0f * std::floor(config.SizePixels / 13.0f); // Add +1 offset per 13 units
+        config.SizePixels    = DefaultFontSize * font_scaling_factor;
+        config.PixelSnapH    = true;
+        config.GlyphOffset.y = 1.0f * std::floor(config.SizePixels / (float)DefaultFontSize); // Add +1 offset per 13 units
 
         io.Fonts->AddFontFromFileTTF(fontFile.generic_string().c_str(), config.SizePixels, &config);
+        io.FontGlobalScale = 1 / font_scaling_factor;
     }
 }
 
@@ -192,7 +195,7 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
     ImGuiStyle& style  = ImGui::GetStyle();
     style.GrabRounding = 3;
     style.TabRounding  = 3;
-    style.ScaleAllSizes(getFontScale(window, renderer));
+    // style.ScaleAllSizes(getFontScale(window, renderer));
 
 #ifndef USE_OLD_SDL
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
@@ -241,11 +244,17 @@ void newFrame()
 void renderFrame(SDL_Renderer* renderer)
 {
     ImGui::Render();
+    const auto& io = ImGui::GetIO();
+    float prevScaleX, prevScaleY;
+    SDL_RenderGetScale(renderer, &prevScaleX, &prevScaleY);
+    SDL_RenderSetScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
+
 #ifndef USE_OLD_SDL
     ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
 #else
-    IG_UNUSED(renderer);
     ImGuiSDL::Render(ImGui::GetDrawData());
 #endif
+
+    SDL_RenderSetScale(renderer, prevScaleX, prevScaleY);
 }
 } // namespace IG::ui

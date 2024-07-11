@@ -25,6 +25,15 @@ private:
 public:
     MainWindowInternal(size_t width, size_t height, float dpi)
     {
+#ifdef IG_OS_WINDOWS
+        SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+#endif
+
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+            IG_LOG(L_FATAL) << "Cannot initialize SDL: " << SDL_GetError() << std::endl;
+            throw std::runtime_error("Could not setup UI");
+        }
+
         mWindow = SDL_CreateWindow(
             "Ignis",
             SDL_WINDOWPOS_UNDEFINED,
