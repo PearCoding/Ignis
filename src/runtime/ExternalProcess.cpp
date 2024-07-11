@@ -329,16 +329,16 @@ public:
         ZeroMemory(&pi, sizeof(pi));
 
         // Start the child process.
-        if (!CreateProcessW(NULL,                    // No module name (use command line)
-                            cmdLine.data(),          // Command line
-                            NULL,                    // Process handle not inheritable
-                            NULL,                    // Thread handle not inheritable
-                            TRUE,                    // Set handle inheritance to TRUE
-                            INHERIT_PARENT_AFFINITY, // Only keep the affinity
-                            NULL,                    // Use parent's environment block
-                            NULL,                    // Use parent's starting directory
-                            &si,                     // Pointer to STARTUPINFO structure
-                            &pi)                     // Pointer to PROCESS_INFORMATION structure
+        if (!CreateProcessW(NULL,                                       // No module name (use command line)
+                            cmdLine.data(),                             // Command line
+                            NULL,                                       // Process handle not inheritable
+                            NULL,                                       // Thread handle not inheritable
+                            TRUE,                                       // Set handle inheritance to TRUE
+                            CREATE_NO_WINDOW | INHERIT_PARENT_AFFINITY, // Only keep the affinity and do not create a new console window if parent is closed
+                            NULL,                                       // Use parent's environment block
+                            NULL,                                       // Use parent's starting directory
+                            &si,                                        // Pointer to STARTUPINFO structure
+                            &pi)                                        // Pointer to PROCESS_INFORMATION structure
         ) {
             IG_LOG(L_ERROR) << "CreateProcess failed: " << std::system_category().message(GetLastError()) << std::endl;
             return false;
