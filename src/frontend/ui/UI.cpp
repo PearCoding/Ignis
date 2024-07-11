@@ -165,7 +165,10 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
         config.GlyphOffset.y = 1.0f * std::floor(config.SizePixels / (float)DefaultFontSize); // Add +1 offset per 13 units
 
         io.Fonts->AddFontFromFileTTF(fontFile.generic_string().c_str(), config.SizePixels, &config);
+#ifdef IG_OS_WINDOWS
+        // Why is this needed on Windows but not on other systems??
         io.FontGlobalScale = 1 / font_scaling_factor;
+#endif
     }
 }
 
@@ -195,7 +198,11 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
     ImGuiStyle& style  = ImGui::GetStyle();
     style.GrabRounding = 3;
     style.TabRounding  = 3;
-    // style.ScaleAllSizes(getFontScale(window, renderer));
+
+#ifndef IG_OS_WINDOWS
+    // Windows handles scaling different than other systems
+    style.ScaleAllSizes(getFontScale(window, renderer));
+#endif
 
 #ifndef USE_OLD_SDL
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
