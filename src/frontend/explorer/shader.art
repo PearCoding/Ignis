@@ -17,7 +17,7 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let camera_dir = make_vec3(0,0,1);
     let camera_up  = make_vec3(0,1,0);
 
-    let pers_scale = compute_scale_from_hfov(pers_fov, canvas_width as f32 / canvas_height as f32);
+    let pers_scale = compute_scale_from_vfov(pers_fov, canvas_width as f32 / canvas_height as f32);
 
     let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
     let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
@@ -99,7 +99,7 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
     let camera_dir = make_vec3(0,0,1);
     let camera_up  = make_vec3(0,1,0);
 
-    let pers_scale = compute_scale_from_hfov(pers_fov, canvas_width as f32 / canvas_height as f32);
+    let pers_scale = compute_scale_from_vfov(pers_fov, canvas_width as f32 / canvas_height as f32);
 
     let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
     let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
