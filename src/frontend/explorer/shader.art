@@ -115,18 +115,18 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
             let rnd = create_random_generator(0xdeadbeef);
             let ray = cam_perspective.generate_ray(rnd, dstCoord);
 
-            let lum = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
+            let rel_lum = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
                 source_lum.load_f32(srcCoord.linear)
             } else {
-                -1
+                0
             };
 
-            if lum < 0 {
-                output.store_i32(dstCoord.linear, tonemapped.load_i32(dstCoord.linear));
-            } else {
-                let color = colormap::inferno(lum);
-                output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(color)));
-            }
+            let tonemap_color  = make_color_from_byte(bitcast[u32](tonemapped.load_i32(dstCoord.linear)));
+            let colormap_color = colormap::inferno(rel_lum);
+
+            let t     = math_builtins::fmin(rel_lum, 0.1 : f32) / 0.1;
+            let color = color_lerp(tonemap_color, colormap_color, t);
+            output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(color)));
         }
     }
 

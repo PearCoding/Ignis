@@ -373,3 +373,10 @@ fn @make_byte_color(c : Color) = make_packed_color(
     (clampf(c.b, 0, 1) * 255) as u8,
     (clampf(c.a, 0, 1) * 255) as u8
 );
+
+fn @make_color_from_byte(color: u32) = make_color(
+    clampf(((color >> 16) & 0xFF) as f32 / 255, 0, 1),
+    clampf(((color >>  8) & 0xFF) as f32 / 255, 0, 1),
+    clampf(((color      ) & 0xFF) as f32 / 255, 0, 1),
+    clampf(((color >> 24) & 0xFF) as f32 / 255, 0, 1)
+);

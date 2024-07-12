@@ -154,7 +154,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
             let lum_diff = act_lum - lum_source;
             lum_diff / max_diff
         } else {
-            -1:f32
+            0:f32
         };
         source_luminance.store_f32(pixel.linear, rel_luminance);
     }
