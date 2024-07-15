@@ -61,4 +61,16 @@ std::string ShaderGenerator::generateOverlay(const LoaderOptions& options)
 
     return stream.str();
 }
+
+std::string ShaderGenerator::generateAOV(const LoaderOptions& options)
+{
+    std::stringstream stream;
+
+    stream << "#[export] fn ig_pass_main(settings: &Settings) -> () {" << std::endl
+           << "  " << ShaderUtils::constructDevice(options) << std::endl
+           << "  handle_aov_shader(device, spi, settings);" << std::endl
+           << "}";
+
+    return stream.str();
+}
 } // namespace IG

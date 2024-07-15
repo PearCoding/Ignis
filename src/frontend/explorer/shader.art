@@ -6,12 +6,7 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
 
     let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
-    // let framebuffer = device.load_aov_image("", spi);
     let output      = device.request_buffer("_perspective_output", canvas_width * canvas_height * 3, 0);
-
-    // let camera_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
-    // let camera_dir = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
-    // let camera_up  = registry::get_global_parameter_vec3("__camera_up" , vec3_expand(0));
 
     let camera_eye = make_vec3(0,0,0);
     let camera_dir = make_vec3(0,0,1);
@@ -28,11 +23,8 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
         let rnd = create_random_generator(0xdeadbeef);
         let ray = cam_perspective.generate_ray(rnd, dstCoord);
 
-        // let color = make_color((dstCoord.nx+1)/2, 0, (dstCoord.ny+1)/2, 1);
         let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
-            // make_color((srcCoord.nx+1)/2, 0, (srcCoord.ny+1)/2, 1)
             framebuffer.get(srcCoord)
-            // framebuffer.get(make_pixelcoord_from_normalized(dstCoord.nx, dstCoord.ny, input_width, input_height))
         } else {
             color_builtins::pink
         };
@@ -43,11 +35,64 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     device.sync();
 }
 
+fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
+    let input_width   = settings.width;
+    let input_height  = settings.height;
+    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
+    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
+    let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
+    let aov_name      = registry::get_global_parameter_string("_aov", "");
+
+    let framebuffer = device.load_aov_image(aov_name, spi);
+    let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
+
+    let camera_eye = make_vec3(0,0,0);
+    let camera_dir = make_vec3(0,0,1);
+    let camera_up  = make_vec3(0,1,0);
+
+    let pers_scale = compute_scale_from_vfov(pers_fov, canvas_width as f32 / canvas_height as f32);
+
+    let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
+    let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
+
+    fn @run_method(remap: bool) {
+        for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
+            let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
+
+            let rnd = create_random_generator(0xdeadbeef);
+            let ray = cam_perspective.generate_ray(rnd, dstCoord);
+
+            let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
+                framebuffer.get(srcCoord)
+            } else {
+                color_builtins::black
+            };
+
+            let mapped = if remap {
+                color_map(color, @|x| (x+1)/2)
+            } else {
+                color
+            };
+
+            let out_color = make_color(srgb_gamma(mapped.r), srgb_gamma(mapped.g), srgb_gamma(mapped.b), mapped.a);
+            output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(out_color)));
+        }
+    }
+
+    let method = registry::get_global_parameter_i32("_overlay_method", 0); // RenderWidget::OverlayMethod
+    match method {
+        4 => run_method(true), // Normals
+        _ => run_method(false) // Albedo
+    }
+
+    device.sync();
+}
+
 fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () {
     let width  = registry::get_global_parameter_i32("_canvas_width",  128);
     let height = registry::get_global_parameter_i32("_canvas_height", 128);
     let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
-    let output = device.request_buffer("_tonemap_output", width * height, 0);
+    let output = device.request_buffer("_final_output", width * height, 0);
 
     let tonemapSettings = TonemapSettings{
         scale           = 1 / (settings.iter + 1) as f32,
@@ -92,8 +137,7 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
     
     let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
     let source_lum  = device.request_buffer("_glare_source_luminance", input_width * input_width, 0);
-    let tonemapped  = device.request_buffer("_tonemap_output", canvas_width * canvas_height, 0);
-    let output      = device.request_buffer("_overlay_output", canvas_width * canvas_height, 0);
+    let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
 
     let camera_eye = make_vec3(0,0,0);
     let camera_dir = make_vec3(0,0,1);
@@ -121,7 +165,7 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
                 0
             };
 
-            let tonemap_color  = make_color_from_byte(bitcast[u32](tonemapped.load_i32(dstCoord.linear)));
+            let tonemap_color  = make_color_from_byte(bitcast[u32](output.load_i32(dstCoord.linear)));
             let colormap_color = colormap::inferno(rel_lum);
 
             let t     = math_builtins::fmin(rel_lum, 0.1 : f32) / 0.1;

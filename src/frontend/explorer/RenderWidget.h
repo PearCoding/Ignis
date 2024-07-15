@@ -24,7 +24,9 @@ public:
         None = 0,
         Luminance,
         LuminanceSquared,
-        GlareSource
+        GlareSource,
+        Normal,
+        Albedo
     };
 
     struct Parameters {
@@ -33,6 +35,11 @@ public:
         float ExposureOffset;
         RenderWidget::ToneMappingMethod ToneMappingMethod;
         RenderWidget::OverlayMethod OverlayMethod;
+
+        inline bool allowColorbar() const
+        {
+            return OverlayMethod == OverlayMethod::Luminance || OverlayMethod == OverlayMethod::LuminanceSquared || OverlayMethod == OverlayMethod::GlareSource;
+        }
     };
 
     void cleanup();
@@ -52,6 +59,7 @@ public:
 
     bool isColorbarVisible() const;
     void showColorbar(bool b = true);
+
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;
 };

@@ -9,5 +9,6 @@ struct ShaderGenerator {
     [[nodiscard]] static std::string generateTonemap(const LoaderOptions& ctx);
     [[nodiscard]] static std::string generateGlare(const LoaderOptions& ctx);
     [[nodiscard]] static std::string generateOverlay(const LoaderOptions& ctx);
+    [[nodiscard]] static std::string generateAOV(const LoaderOptions& ctx);
 };
 } // namespace IG

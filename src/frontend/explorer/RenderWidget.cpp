@@ -146,7 +146,7 @@ public:
 
                 handleInput();
 
-                if (mShowColorbar && mCurrentParameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
+                if (mShowColorbar && mCurrentParameters.allowColorbar()) {
                     ImGui::SetCursorPos(topLeft);
 
                     const float min = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? (mRuntime->parameters().getFloat("_luminance_avg") * mRuntime->parameters().getFloat("_glare_multiplier")) : mRuntime->parameters().getFloat("_luminance_softmin");
@@ -191,6 +191,7 @@ public:
             setupTonemapPass(path, scene.get());
             setupGlarePass(path, scene.get());
             setupOverlayPass(path, scene.get());
+            setupAOVPass(path, scene.get());
 
             updateSize(mWidth, mHeight);
             updateParameters(mCurrentParameters);
@@ -236,6 +237,7 @@ public:
         mTonemapPass.reset();
         mGlarePass.reset();
         mOverlayPass.reset();
+        mAOVPass.reset();
         mRuntime.reset();
     }
 
@@ -386,22 +388,38 @@ private:
             return false;
         }
 
-        if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::None
-            || mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource) {
-            if (!mTonemapPass->run()) {
-                IG_LOG(L_FATAL) << "Failed to run tonemap pass" << std::endl;
+        if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::Normal) {
+            mRuntime->setParameter("_aov", "Normals");
+            if (!mAOVPass->run()) {
+                IG_LOG(L_FATAL) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-        }
-
-        if (mCurrentParameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
-            if (!mOverlayPass->run()) {
-                IG_LOG(L_FATAL) << "Failed to run overlay pass" << std::endl;
+            mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+        } else if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::Albedo) {
+            mRuntime->setParameter("_aov", "Albedo");
+            if (!mAOVPass->run()) {
+                IG_LOG(L_FATAL) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-            mOverlayPass->copyOutputToHost("_overlay_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+            mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
         } else {
-            mTonemapPass->copyOutputToHost("_tonemap_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+            if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::None
+                || mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource) {
+                if (!mTonemapPass->run()) {
+                    IG_LOG(L_FATAL) << "Failed to run tonemap pass" << std::endl;
+                    return false;
+                }
+            }
+
+            if (mCurrentParameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
+                if (!mOverlayPass->run()) {
+                    IG_LOG(L_FATAL) << "Failed to run overlay pass" << std::endl;
+                    return false;
+                }
+                mOverlayPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+            } else {
+                mTonemapPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+            }
         }
 
         SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32)));
@@ -503,6 +521,22 @@ private:
         return true;
     }
 
+    inline bool setupAOVPass(const Path& path, Scene* scene)
+    {
+        IG_LOG(L_DEBUG) << "Compiling aov pass" << std::endl;
+        auto loaderOptions     = mRuntime->loaderOptions();
+        loaderOptions.FilePath = path;
+        loaderOptions.Scene    = scene;
+
+        mAOVPass = createPass(ShaderGenerator::generateAOV(loaderOptions));
+        if (!mAOVPass) {
+            IG_LOG(L_ERROR) << "Could not setup aov pass" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
     // Buffer stuff
     inline bool setupTextureBuffer(size_t width, size_t height)
     {
@@ -533,6 +567,7 @@ private:
     std::shared_ptr<RenderPass> mTonemapPass;
     std::shared_ptr<RenderPass> mGlarePass;
     std::shared_ptr<RenderPass> mOverlayPass;
+    std::shared_ptr<RenderPass> mAOVPass;
     Path mRequestedPath;
 
     std::unique_ptr<std::thread> mLoadingThread;

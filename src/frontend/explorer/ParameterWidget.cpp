@@ -21,7 +21,7 @@ static const char* const ToneMappingMethodOptions[] = {
 };
 
 static const char* const OverlayMethodOptions[] = {
-    "None", "Luminance", "Luminance Squared", "Glare Source"
+    "None", "Luminance", "Luminance Squared", "Glare Source", "Normals", "Albedo"
 };
 
 void ParameterWidget::onRender(Widget*)
@@ -61,7 +61,7 @@ void ParameterWidget::onRender(Widget*)
                 ImGui::EndCombo();
             }
 
-            if (parameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
+            if (parameters.allowColorbar()) {
                 bool showColorbar = mRenderWidget->isColorbarVisible();
                 if (ImGui::Checkbox("Colorbar", &showColorbar))
                     mRenderWidget->showColorbar(showColorbar);
