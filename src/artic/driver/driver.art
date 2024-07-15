@@ -54,6 +54,7 @@ struct WorkInfo {
 #[import(cc = "C")] fn ignis_get_parameter_f32(&[u8], f32, bool) -> f32;
 #[import(cc = "C")] fn ignis_get_parameter_vector(&[u8], f32, f32, f32, &mut f32, &mut f32, &mut f32, bool) -> ();
 #[import(cc = "C")] fn ignis_get_parameter_color(&[u8], f32, f32, f32, f32, &mut f32, &mut f32, &mut f32, &mut f32, bool) -> ();
+#[import(cc = "C")] fn ignis_get_parameter_string(&[u8], &[u8], bool) -> &[u8];
 
 #[import(cc = "C")] fn ignis_set_parameter_i32(&[u8], i32, bool) -> ();
 #[import(cc = "C")] fn ignis_set_parameter_f32(&[u8], f32, bool) -> ();

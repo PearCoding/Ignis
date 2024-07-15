@@ -1598,6 +1598,16 @@ public:
         }
     }
 
+    const char* getParameterString(const char* name, const char* def, bool global)
+    {
+        const ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
+        // IG_ASSERT(registry != nullptr, "No parameters available!");
+        if (registry && registry->StringParameters.count(name) > 0)
+            return registry->StringParameters.at(name).c_str();
+        else
+            return def;
+    }
+
     void setParameterInt(const char* name, int value, bool global)
     {
         ParameterSet* registry = global ? mCurrentParameters : getCurrentLocalRegistry();
@@ -2116,6 +2126,11 @@ IG_EXPORT void ignis_get_parameter_vector(const char* name, float defX, float de
 IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a, bool global)
 {
     sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a, global);
+}
+
+IG_EXPORT const char* ignis_get_parameter_string(const char* name, const char* def, bool global)
+{
+    return sInterface->getParameterString(name, def, global);
 }
 
 IG_EXPORT void ignis_set_parameter_i32(const char* name, int value, bool global)

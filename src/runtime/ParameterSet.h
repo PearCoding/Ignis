@@ -8,8 +8,9 @@ struct IG_LIB ParameterSet {
     std::unordered_map<std::string, float> FloatParameters;
     AlignedUnorderedMap<std::string, Vector3f> VectorParameters;
     AlignedUnorderedMap<std::string, Vector4f> ColorParameters;
+    std::unordered_map<std::string, std::string> StringParameters;
 
-    inline bool empty() const { return IntParameters.empty() && FloatParameters.empty() && VectorParameters.empty() && ColorParameters.empty(); }
+    inline bool empty() const { return IntParameters.empty() && FloatParameters.empty() && VectorParameters.empty() && ColorParameters.empty() && StringParameters.empty(); }
 
     /// @brief Dump current parameter set information as a multi-line string for debug purposes
     std::string dump() const;
@@ -35,6 +36,11 @@ struct IG_LIB ParameterSet {
     inline void set(const std::string& key, const Vector4f& value)
     {
         ColorParameters[key] = value;
+    }
+
+    inline void set(const std::string& key, const std::string& value)
+    {
+        StringParameters[key] = value;
     }
 
     inline int getInt(const std::string& key, int def = 0) const
@@ -64,6 +70,14 @@ struct IG_LIB ParameterSet {
     inline Vector4f getColor(const std::string& key, const Vector4f& def = Vector4f::Zero()) const
     {
         if (const auto it = ColorParameters.find(key); it != ColorParameters.end())
+            return it->second;
+        else
+            return def;
+    }
+
+    inline std::string getString(const std::string& key, const std::string& def) const
+    {
+        if (const auto it = StringParameters.find(key); it != StringParameters.end())
             return it->second;
         else
             return def;

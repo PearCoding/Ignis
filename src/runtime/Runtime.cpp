@@ -705,6 +705,11 @@ void Runtime::setParameter(const std::string& name, const Vector4f& value)
     mGlobalRegistry.ColorParameters[name] = value;
 }
 
+void Runtime::setParameter(const std::string& name, const std::string& value)
+{
+    mGlobalRegistry.StringParameters[name] = value;
+}
+
 void Runtime::mergeParametersFrom(const ParameterSet& other)
 {
     mGlobalRegistry.mergeFrom(other, true);

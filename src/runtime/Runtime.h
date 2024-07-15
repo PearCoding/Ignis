@@ -136,6 +136,8 @@ public:
     void setParameter(const std::string& name, const Vector3f& value);
     /// Set 4d vector parameter in the registry. Will replace already present values
     void setParameter(const std::string& name, const Vector4f& value);
+    /// Set string parameter in the registry. Will replace already present values
+    void setParameter(const std::string& name, const std::string& value);
 
     /// Get read-only registry
     [[nodiscard]] inline const ParameterSet& parameters() const { return mGlobalRegistry; }
