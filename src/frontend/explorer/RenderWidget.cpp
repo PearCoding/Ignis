@@ -184,6 +184,20 @@ public:
 
         scene->setCamera(cameraObject);
 
+        // Add environment map if none is available
+        bool hasEnv = false;
+        for (const auto& pair : scene->lights()) {
+            if (pair.second->pluginType() != "point"
+                && pair.second->pluginType() != "spot"
+                && pair.second->pluginType() != "area") {
+                hasEnv = true;
+                break;
+            }
+        }
+        if (!hasEnv)
+            scene->addConstantEnvLight();
+        // TODO: Add perez with parameters instead
+
         mRuntime = std::make_unique<Runtime>(options);
         if (mRuntime->loadFromScene(scene.get())) {
             setupPerspectivePass(path, scene.get());
