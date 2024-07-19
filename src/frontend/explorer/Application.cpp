@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+#include "Application.h"
 #include "Logger.h"
 #include "Runtime.h"
 #include "UI.h"
@@ -9,7 +9,7 @@ SDL_Window* sWindow     = nullptr;
 SDL_Renderer* sRenderer = nullptr;
 int sMainWindowDockID   = -1;
 
-class MainWindowInternal {
+class ApplicationInternal {
 private:
     std::shared_ptr<Runtime> mCurrentRuntime;
 
@@ -23,7 +23,7 @@ private:
     bool mQuit = false;
 
 public:
-    MainWindowInternal(size_t width, size_t height, float dpi)
+    ApplicationInternal(size_t width, size_t height, float dpi)
     {
 #ifdef IG_OS_WINDOWS
         SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
@@ -62,7 +62,7 @@ public:
         sRenderer = mRenderer;
     }
 
-    ~MainWindowInternal()
+    ~ApplicationInternal()
     {
         ui::shutdown();
 
@@ -170,36 +170,36 @@ private:
     }
 };
 
-MainWindow::MainWindow(size_t width, size_t height, float dpi)
-    : mInternal(std::make_unique<MainWindowInternal>(width, height, dpi))
+Application::Application(size_t width, size_t height, float dpi)
+    : mInternal(std::make_unique<ApplicationInternal>(width, height, dpi))
 {
 }
 
-MainWindow::~MainWindow()
+Application::~Application()
 {
 }
 
-void MainWindow::setTitle(const std::string& str)
+void Application::setTitle(const std::string& str)
 {
     mInternal->setTitle(str.c_str());
 }
 
-bool MainWindow::exec()
+bool Application::exec()
 {
     return mInternal->exec();
 }
 
-void MainWindow::addChild(const std::shared_ptr<Widget>& widget)
+void Application::addChild(const std::shared_ptr<Widget>& widget)
 {
     mInternal->addChild(widget);
 }
 
-void MainWindow::setDropCallback(const std::function<void(const Path&)>& callback)
+void Application::setDropCallback(const std::function<void(const Path&)>& callback)
 {
     mInternal->setDropCallback(callback);
 }
 
-void MainWindow::signalQuit()
+void Application::signalQuit()
 {
     mInternal->signalQuit();
 }

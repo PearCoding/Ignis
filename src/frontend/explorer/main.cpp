@@ -1,9 +1,10 @@
+#include "Application.h"
 #include "DefaultConfig.h"
 #include "ExplorerOptions.h"
 #include "HelpAboutWidget.h"
 #include "HelpControlWidget.h"
+#include "IO.h"
 #include "Logger.h"
-#include "MainWindow.h"
 #include "Menu.h"
 #include "MenuItem.h"
 #include "MenuSeparator.h"
@@ -11,6 +12,7 @@
 #include "ParameterWidget.h"
 #include "RegistryWidget.h"
 #include "RenderWidget.h"
+#include "Runtime.h"
 #include "RuntimeInfo.h"
 
 #include "UI.h"
@@ -21,9 +23,10 @@ using namespace IG;
 
 static void openFileCallback(const Path& path);
 static void openFileDialogCallback();
+static void exportFileDialogCallback(Runtime* runtime);
 
 class Context {
-    MainWindow* mMainWindow = nullptr;
+    Application* mApplication = nullptr;
     std::shared_ptr<RenderWidget> mRenderWidget;
     std::shared_ptr<HelpAboutWidget> mHelpAboutWidget;
     std::shared_ptr<HelpControlWidget> mHelpControlWidget;
@@ -35,9 +38,9 @@ class Context {
     std::shared_ptr<MenuItem> mRegistryMenuItem;
 
 public:
-    void setup(MainWindow* window)
+    void setup(Application* app)
     {
-        mMainWindow        = window;
+        mApplication       = app;
         mRenderWidget      = std::make_shared<RenderWidget>();
         mHelpAboutWidget   = std::make_shared<HelpAboutWidget>();
         mHelpControlWidget = std::make_shared<HelpControlWidget>();
@@ -45,15 +48,15 @@ public:
         mOverviewWidget    = std::make_shared<OverviewWidget>(mRenderWidget.get());
         mRegistryWidget    = std::make_shared<RegistryWidget>(mRenderWidget.get());
 
-        window->addChild(mRenderWidget);
-        window->addChild(setupMainMenu());
-        window->addChild(mParameterWidget);
-        window->addChild(mOverviewWidget);
-        window->addChild(mRegistryWidget);
-        window->addChild(mHelpControlWidget);
-        window->addChild(mHelpAboutWidget);
+        app->addChild(mRenderWidget);
+        app->addChild(setupMainMenu());
+        app->addChild(mParameterWidget);
+        app->addChild(mOverviewWidget);
+        app->addChild(mRegistryWidget);
+        app->addChild(mHelpControlWidget);
+        app->addChild(mHelpAboutWidget);
 
-        window->setDropCallback(openFileCallback);
+        app->setDropCallback(openFileCallback);
     }
 
     static inline Context& instance()
@@ -62,7 +65,7 @@ public:
         return sContext;
     }
 
-    inline MainWindow* window() { return mMainWindow; }
+    inline Application* window() { return mApplication; }
     inline RenderWidget* renderWidget() { return mRenderWidget.get(); }
 
 private:
@@ -78,7 +81,9 @@ private:
 
         fileMenu->add(std::make_shared<MenuItem>("Open", [](MenuItem*) { openFileDialogCallback(); }));
         fileMenu->add(std::make_shared<MenuSeparator>());
-        fileMenu->add(std::make_shared<MenuItem>("Quit", [&](MenuItem*) { mMainWindow->signalQuit(); }));
+        fileMenu->add(std::make_shared<MenuItem>("Export image", [&](MenuItem*) { exportFileDialogCallback(mRenderWidget->currentRuntime()); }));
+        fileMenu->add(std::make_shared<MenuSeparator>());
+        fileMenu->add(std::make_shared<MenuItem>("Quit", [&](MenuItem*) { mApplication->signalQuit(); }));
 
         mParameterMenuItem = std::make_shared<MenuItem>("Parameter", [](MenuItem* item) { item->setSelected(!item->isSelected()); });
         mOverviewMenuItem  = std::make_shared<MenuItem>("Overview", [](MenuItem* item) { item->setSelected(!item->isSelected()); });
@@ -135,6 +140,27 @@ static void openFileDialogCallback()
     openFileCallback(files[0]);
 }
 
+static void exportFileDialogCallback(Runtime* runtime)
+{
+    if (!runtime)
+        return;
+
+    // TODO: Add support for HDR
+    auto f = pfd::save_file("Export image", pfd::path::home(),
+                            { "OpenEXR", "*.exr" },
+                            pfd::opt::none);
+
+    const auto path = f.result();
+    if (path.empty()) // Canceled
+        return;
+
+    const CameraOrientation orientation = runtime->getCameraOrientation();
+    if (!saveImageOutput(path, *runtime, &orientation))
+        IG_LOG(L_ERROR) << "Failed to save EXR file '" << path << "'" << std::endl;
+    else
+        IG_LOG(L_INFO) << "Screenshot saved to '" << path << "'" << std::endl;
+}
+
 int main(int argc, char** argv)
 {
     if (!pfd::settings::available()) {
@@ -153,7 +179,7 @@ int main(int argc, char** argv)
     const std::string ini_file = (RuntimeInfo::configDirectory() / "ui_explorer.ini").generic_string();
 
     try {
-        MainWindow window(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
+        Application window(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
         Context::instance().setup(&window);
 
         if (!args.InputFile.empty())

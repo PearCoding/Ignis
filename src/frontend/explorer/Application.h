@@ -6,10 +6,10 @@
 
 namespace IG {
 class Widget;
-class MainWindow {
+class Application {
 public:
-    MainWindow(size_t width, size_t height, float dpi);
-    ~MainWindow();
+    Application(size_t width, size_t height, float dpi);
+    ~Application();
 
     void setTitle(const std::string& str);
 
@@ -22,6 +22,6 @@ public:
     void signalQuit();
 
 private:
-    std::unique_ptr<class MainWindowInternal> mInternal;
+    std::unique_ptr<class ApplicationInternal> mInternal;
 };
 } // namespace IG
