@@ -44,6 +44,10 @@ void ParameterWidget::onRender(Widget*)
     ImGui::SetNextWindowSize(ImVec2(350, 300), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Parameters", mVisibleItem ? &visibility : nullptr)) {
         if (ImGui::CollapsingHeader("View##parameters", HeaderFlags)) {
+            bool fisheye = runtime->parameters().getInt("_perspective_enabled") == 0;
+            if (ImGui::Checkbox("Fisheye", &fisheye))
+                runtime->setParameter("_perspective_enabled", (int)(fisheye ? 0 : 1));
+
             const char* current_overlay = OverlayMethodOptions[(int)parameters.OverlayMethod];
             if (ImGui::BeginCombo("Overlay", current_overlay)) {
                 for (int i = 0; i < IM_ARRAYSIZE(OverlayMethodOptions); ++i) {

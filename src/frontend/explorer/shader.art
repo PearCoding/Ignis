@@ -1,36 +1,64 @@
-fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> () {
-    let input_width   = settings.width;
-    let input_height  = settings.height;
+struct Projector {
+    project: fn (PixelCoord) -> Option[PixelCoord],
+}
+
+fn @make_perspective_projector(input_width: i32, input_height: i32) -> Projector {
     let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
     let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
     let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
-
-    let aov_name    = registry::get_global_parameter_string("_aov", "");
-    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
-    let output      = device.request_buffer("_perspective_output", canvas_width * canvas_height * 3, 0);
 
     let camera_eye = make_vec3(0,0,0);
     let camera_dir = make_vec3(0,0,1);
     let camera_up  = make_vec3(0,1,0);
 
     let pers_scale = compute_scale_from_vfov(pers_fov, canvas_width as f32 / canvas_height as f32);
-
+    
     let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
     let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
 
-    for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
-        let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
+    Projector {
+        project = @|coord| {
+            let rnd = create_random_generator(0xdeadbeef);
+            let ray = cam_perspective.generate_ray(rnd, coord);
+            cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir))
+        }
+    }
+}
 
-        let rnd = create_random_generator(0xdeadbeef);
-        let ray = cam_perspective.generate_ray(rnd, dstCoord);
+fn @make_passthrough_projector(input_width: i32, input_height: i32) = Projector {
+    project = @|coord| make_option(make_pixelcoord_from_normalized(coord.nx, coord.ny, input_width, input_height))
+};
 
-        let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
-            framebuffer.get(srcCoord)
-        } else {
-            color_builtins::pink
-        };
+fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> () {
+    let input_width   = settings.width;
+    let input_height  = settings.height;
+    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
+    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
 
-        output.store_vec3(dstCoord.linear * 3, color_to_vec3(color));
+    let enabled = registry::get_global_parameter_i32("_perspective_enabled",  1) != 0;
+
+    let aov_name    = registry::get_global_parameter_string("_aov", "");
+    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
+    let output      = device.request_buffer("_perspective_output", canvas_width * canvas_height * 3, 0);
+
+    fn @run_method(proj: Projector) {
+        for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
+            let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
+
+            let color = if let Option[PixelCoord]::Some(srcCoord) = proj.project(dstCoord) {
+                framebuffer.get(srcCoord)
+            } else {
+                color_builtins::pink
+            };
+
+            output.store_vec3(dstCoord.linear * 3, color_to_vec3(color));
+        } 
+    }
+
+    if enabled {
+        run_method(make_perspective_projector(input_width, input_height))
+    } else {
+        run_method(make_passthrough_projector(input_width, input_height))
     }
 
     device.sync();
@@ -41,29 +69,16 @@ fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let input_height  = settings.height;
     let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
     let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
-    let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
     let aov_name      = registry::get_global_parameter_string("_aov", "");
 
     let framebuffer = device.load_aov_image(aov_name, spi);
     let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
 
-    let camera_eye = make_vec3(0,0,0);
-    let camera_dir = make_vec3(0,0,1);
-    let camera_up  = make_vec3(0,1,0);
-
-    let pers_scale = compute_scale_from_vfov(pers_fov, canvas_width as f32 / canvas_height as f32);
-
-    let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
-    let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
-
-    fn @run_method(remap: bool) {
+    fn @run_method(remap: bool, proj: Projector) {
         for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
             let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
 
-            let rnd = create_random_generator(0xdeadbeef);
-            let ray = cam_perspective.generate_ray(rnd, dstCoord);
-
-            let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
+            let color = if let Option[PixelCoord]::Some(srcCoord) = proj.project(dstCoord) {
                 framebuffer.get(srcCoord)
             } else {
                 color_builtins::black
@@ -80,10 +95,19 @@ fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
         }
     }
 
-    let method = registry::get_global_parameter_i32("_overlay_method", 0); // RenderWidget::OverlayMethod
-    match method {
-        4 => run_method(true), // Normals
-        _ => run_method(false) // Albedo
+    fn @run_method2(proj: Projector) {
+        let method = registry::get_global_parameter_i32("_overlay_method", 0); // RenderWidget::OverlayMethod
+        match method {
+            4 => run_method(true, proj), // Normals
+            _ => run_method(false, proj) // Albedo
+        }
+    }
+
+    let enabled = registry::get_global_parameter_i32("_perspective_enabled",  1) != 0;
+    if enabled {
+        run_method2(make_perspective_projector(input_width, input_height))
+    } else {
+        run_method2(make_passthrough_projector(input_width, input_height))
     }
 
     device.sync();
@@ -136,34 +160,21 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
     let input_height  = settings.height;
     let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
     let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
-    let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
     
     let aov_name    = registry::get_global_parameter_string("_aov", "");
     let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
     let source_lum  = device.request_buffer("_glare_source_luminance", input_width * input_width, 0);
     let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
 
-    let camera_eye = make_vec3(0,0,0);
-    let camera_dir = make_vec3(0,0,1);
-    let camera_up  = make_vec3(0,1,0);
-
-    let pers_scale = compute_scale_from_vfov(pers_fov, canvas_width as f32 / canvas_height as f32);
-
-    let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
-    let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
-
     let scale   = 1 / (settings.iter + 1) as f32;
     let lum_min = registry::get_global_parameter_f32("_luminance_softmin", 0);
     let lum_max = registry::get_global_parameter_f32("_luminance_softmax", 1);
 
-    fn @run_glare_overlay() {
+    fn @run_glare_overlay(proj: Projector) {
         for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
             let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
 
-            let rnd = create_random_generator(0xdeadbeef);
-            let ray = cam_perspective.generate_ray(rnd, dstCoord);
-
-            let rel_lum = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
+            let rel_lum = if let Option[PixelCoord]::Some(srcCoord) = proj.project(dstCoord) {
                 source_lum.load_f32(srcCoord.linear)
             } else {
                 0
@@ -178,14 +189,11 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
         }
     }
 
-    fn @run_luminance_overlay(squared: bool) {
+    fn @run_luminance_overlay(squared: bool, proj: Projector) {
         for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
             let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
 
-            let rnd = create_random_generator(0xdeadbeef);
-            let ray = cam_perspective.generate_ray(rnd, dstCoord);
-
-            let color = if let Option[PixelCoord]::Some(srcCoord) = cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir)) {
+            let color = if let Option[PixelCoord]::Some(srcCoord) = proj.project(dstCoord) {
                 framebuffer.get(srcCoord)
             } else {
                 color_builtins::black
@@ -200,11 +208,20 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
         }
     }
  
-    let method = registry::get_global_parameter_i32("_overlay_method", 0); // RenderWidget::OverlayMethod
-    match method {
-        1 => run_luminance_overlay(false),
-        2 => run_luminance_overlay(true),
-        _ => run_glare_overlay(),
+    fn @run_method2(proj: Projector) {
+        let method = registry::get_global_parameter_i32("_overlay_method", 0); // RenderWidget::OverlayMethod
+        match method {
+            1 => run_luminance_overlay(false, proj),
+            2 => run_luminance_overlay(true, proj),
+            _ => run_glare_overlay(proj),
+        }
+    }
+
+    let enabled = registry::get_global_parameter_i32("_perspective_enabled",  1) != 0;
+    if enabled {
+        run_method2(make_perspective_projector(input_width, input_height))
+    } else {
+        run_method2(make_passthrough_projector(input_width, input_height))
     }
 
     device.sync();
