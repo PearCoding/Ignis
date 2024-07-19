@@ -19,10 +19,12 @@ public:
     [[nodiscard]] size_t framebufferHeight() const override;
     [[nodiscard]] bool isInteractive() const override;
 
-    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name) override;
-    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name) override;
+    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name, bool sync) override;
+    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name, bool sync) override;
     void clearFramebuffer(const std::string& name) override;
     void clearAllFramebuffer() override;
+    void syncFramebufferHostToDevice(const std::string& name) override;
+    void syncAllFramebufferHostToDevice() override;
 
     [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name) override;
     [[nodiscard]] bool copyBufferToHost(const std::string& name, void* buffer, size_t maxSizeByte) override;

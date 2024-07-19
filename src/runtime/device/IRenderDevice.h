@@ -62,10 +62,12 @@ public:
     [[nodiscard]] virtual size_t framebufferHeight() const = 0;
     [[nodiscard]] virtual bool isInteractive() const       = 0;
 
-    [[nodiscard]] virtual AOVAccessor getFramebufferForHost(const std::string& name)   = 0;
-    [[nodiscard]] virtual AOVAccessor getFramebufferForDevice(const std::string& name) = 0;
-    virtual void clearFramebuffer(const std::string& name)                             = 0;
-    virtual void clearAllFramebuffer()                                                 = 0;
+    [[nodiscard]] virtual AOVAccessor getFramebufferForHost(const std::string& name, bool sync = true)   = 0;
+    [[nodiscard]] virtual AOVAccessor getFramebufferForDevice(const std::string& name, bool sync = true) = 0;
+    virtual void clearFramebuffer(const std::string& name)                                               = 0;
+    virtual void clearAllFramebuffer()                                                                   = 0;
+    virtual void syncFramebufferHostToDevice(const std::string& name)                                    = 0;
+    virtual void syncAllFramebufferHostToDevice()                                                        = 0;
 
     [[nodiscard]] virtual size_t getBufferSizeInBytes(const std::string& name)                             = 0;
     [[nodiscard]] virtual bool copyBufferToHost(const std::string& name, void* buffer, size_t maxSizeByte) = 0;

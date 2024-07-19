@@ -11,7 +11,7 @@ static void errorFunc(void* userPtr, oidn::Error code, const char* message)
 
     if (code == oidn::Error::None)
         IG_LOG(IG::L_INFO) << "OIDN: " << message << std::endl;
-    else if(strcmp(message, "driver shutting down") != 0 /* Ignore this message */)
+    else if (strcmp(message, "driver shutting down") != 0 /* Ignore this message */)
         IG_LOG(IG::L_ERROR) << "OIDN: " << message << std::endl;
 }
 
@@ -73,7 +73,7 @@ public:
             if (!target.isGPU())
                 return false;
             if (target.gpuArchitecture() == GPUArchitecture::AMD_HSA)
-                return true;         // TODO: Device number!
+                return true; // TODO: Device number!
             return false;
         case oidn::DeviceType::SYCL: // TODO: Sycl is not necessarily Intel only
             if (!target.isGPU())
@@ -97,7 +97,7 @@ public:
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
         const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised");
+        const auto output = device->getFramebufferForHost("Denoised", false);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -122,6 +122,7 @@ public:
         mMainFilter.execute();
 
         mOutputBuffer.read(0, sizeof(float) * framebufferSize, output.Data);
+        device->syncFramebufferHostToDevice("Denoised");
     }
 
     inline void filterDevice(IRenderDevice* device)
@@ -258,7 +259,7 @@ public:
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
         const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised");
+        const auto output = device->getFramebufferForHost("Denoised", false);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -276,6 +277,8 @@ public:
             mAlbedoFilter.execute();
         }
         mMainFilter.execute();
+
+        device->syncFramebufferHostToDevice("Denoised");
     }
 
 private:
