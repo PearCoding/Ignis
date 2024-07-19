@@ -1,10 +1,14 @@
+#include "OIDN.h"
 #include "Logger.h"
+#include "Runtime.h"
 #include "device/IRenderDevice.h"
 
 #ifdef IG_HAS_DENOISER
 #include "OpenImageDenoise/oidn.hpp"
+#endif
 
 namespace IG {
+#ifdef IG_HAS_DENOISER
 static void errorFunc(void* userPtr, oidn::Error code, const char* message)
 {
     IG_UNUSED(userPtr);
@@ -18,8 +22,9 @@ static void errorFunc(void* userPtr, oidn::Error code, const char* message)
 #if OIDN_VERSION_MAJOR >= 2
 class OIDNContext {
 public:
-    OIDNContext()
-        : mPrefilter(false) // TODO: Should be a user parameter?
+    OIDNContext(bool prefilter, bool highQuality)
+        : mPrefilter(prefilter)
+        , mHighQuality(highQuality)
         , mWidth(0)
         , mHeight(0)
         , mDeviceType()
@@ -108,7 +113,7 @@ public:
         const size_t height = device->framebufferHeight();
 
         if (mWidth != width || mHeight != height)
-            setupHost(width, height, device->isInteractive());
+            setupHost(width, height);
 
         const size_t framebufferSize = 3 * width * height;
         mColorBuffer.write(0, sizeof(float) * framebufferSize, color.Data);
@@ -141,7 +146,7 @@ public:
         const size_t height = device->framebufferHeight();
 
         if (mWidth != width || mHeight != height)
-            setupDevice(color.Data, normal.Data, albedo.Data, output.Data, width, height, device->isInteractive());
+            setupDevice(color.Data, normal.Data, albedo.Data, output.Data, width, height);
 
         if (mPrefilter) {
             mNormalFilter.execute();
@@ -151,7 +156,7 @@ public:
     }
 
 private:
-    inline void setupHost(size_t width, size_t height, bool isInteractive)
+    inline void setupHost(size_t width, size_t height)
     {
         const size_t framebufferSize = 3 * width * height;
 
@@ -160,11 +165,11 @@ private:
         mAlbedoBuffer = mDevice.newBuffer(sizeof(float) * framebufferSize);
         mOutputBuffer = mDevice.newBuffer(sizeof(float) * framebufferSize);
 
-        setup(width, height, isInteractive);
+        setup(width, height);
     }
 
     inline void setupDevice(const float* color, const float* normal, const float* albedo, float* output,
-                            size_t width, size_t height, bool isInteractive)
+                            size_t width, size_t height)
     {
         const size_t framebufferSize = 3 * width * height;
 
@@ -173,10 +178,10 @@ private:
         mAlbedoBuffer = mDevice.newBuffer(const_cast<float*>(albedo), sizeof(float) * framebufferSize);
         mOutputBuffer = mDevice.newBuffer(output, sizeof(float) * framebufferSize);
 
-        setup(width, height, isInteractive);
+        setup(width, height);
     }
 
-    inline void setup(size_t width, size_t height, bool isInteractive)
+    inline void setup(size_t width, size_t height)
     {
         // Main
         mMainFilter = mDevice.newFilter("RT");
@@ -185,7 +190,7 @@ private:
         mMainFilter.setImage("albedo", mAlbedoBuffer, oidn::Format::Float3, width, height);
         mMainFilter.setImage("output", mOutputBuffer, oidn::Format::Float3, width, height);
 
-        if (isInteractive)
+        if (!mHighQuality)
             mMainFilter.set("quality", oidn::Quality::Balanced);
 
         mMainFilter.set("hdr", true);
@@ -199,7 +204,7 @@ private:
             mNormalFilter.setImage("normal", mNormalBuffer, oidn::Format::Float3, width, height);
             mNormalFilter.setImage("output", mNormalBuffer, oidn::Format::Float3, width, height);
 
-            if (isInteractive)
+            if (!mHighQuality)
                 mNormalFilter.set("quality", oidn::Quality::Balanced);
 
             mNormalFilter.commit();
@@ -209,7 +214,7 @@ private:
             mAlbedoFilter.setImage("albedo", mAlbedoBuffer, oidn::Format::Float3, width, height);
             mAlbedoFilter.setImage("output", mAlbedoBuffer, oidn::Format::Float3, width, height);
 
-            if (isInteractive)
+            if (!mHighQuality)
                 mAlbedoFilter.set("quality", oidn::Quality::Balanced);
 
             mAlbedoFilter.commit();
@@ -220,6 +225,8 @@ private:
     }
 
     const bool mPrefilter;
+    const bool mHighQuality;
+
     size_t mWidth;
     size_t mHeight;
     oidn::DeviceType mDeviceType;
@@ -238,8 +245,9 @@ private:
 // Old, CPU only version
 class OIDNContext {
 public:
-    OIDNContext()
-        : mPrefilter(false) // TODO: Should be a user parameter?
+    OIDNContext(bool prefilter, bool highQuality)
+        : mPrefilter(prefilter)
+        , mHighQuality(highQuality)
         , mWidth(0)
         , mHeight(0)
     {
@@ -323,6 +331,8 @@ private:
     }
 
     const bool mPrefilter;
+    const bool mHighQuality;
+
     size_t mWidth;
     size_t mHeight;
     oidn::DeviceRef mDevice;
@@ -338,15 +348,39 @@ private:
 };
 #endif
 
-// Will be exposed to the device and used in Device.cpp
-// TODO: This can be handled waaaay cleaner
-IG_EXPORT void ignis_denoise(IRenderDevice* device)
-{
-    using namespace oidn;
+#else // IG_HAS_DENOISER
+class OIDNContext {
+};
+#endif
 
-    static auto ctx = OIDNContext();
-    ctx.filter(device);
+OIDN::OIDN(Runtime* runtime)
+#ifdef IG_HAS_DENOISER
+    : mInternal(std::make_unique<OIDNContext>(runtime->options().Denoiser.Prefilter, runtime->options().Denoiser.HighQuality))
+#else
+    : mInternal()
+#endif
+{
+}
+
+OIDN::~OIDN()
+{
+}
+
+void OIDN::run(IRenderDevice* device)
+{
+#ifdef IG_HAS_DENOISER
+    mInternal->filter(device);
+#else
+    IG_UNUSED(device);
+#endif
+}
+
+bool OIDN::isAvailable()
+{
+#ifdef IG_HAS_DENOISER
+    return true;
+#else
+    return false;
+#endif
 }
 } // namespace IG
-
-#endif

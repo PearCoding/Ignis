@@ -8,6 +8,7 @@
 #include "camera/CameraOrientation.h"
 #include "device/ICompilerDevice.h"
 #include "device/IRenderDevice.h"
+#include "extra/OIDN.h"
 #include "loader/Loader.h"
 #include "shader/ScriptCompiler.h"
 #include "table/SceneDatabase.h"
@@ -193,6 +194,8 @@ private:
 
     std::unique_ptr<ScriptCompiler> mCompiler;
     std::unique_ptr<IRenderDevice> mDevice;
+
+    std::unique_ptr<OIDN> mDenoiser;
 
     size_t mSamplesPerIteration;
 

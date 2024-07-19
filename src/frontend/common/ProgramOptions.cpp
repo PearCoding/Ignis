@@ -337,8 +337,9 @@ void ProgramOptions::populate(RuntimeOptions& options) const
     options.AddExtraEnvLight = AddExtraEnvLight;
     options.Specialization   = Specialization;
 
-    options.DisableStandardAOVs = NoStdAOVs;
-    options.Denoiser.Enabled    = Denoise;
+    options.DisableStandardAOVs  = NoStdAOVs;
+    options.Denoiser.Enabled     = Denoise;
+    options.Denoiser.HighQuality = !options.IsInteractive;
 
     options.EnableCache = !NoCache;
     options.CacheDir    = CacheDir;

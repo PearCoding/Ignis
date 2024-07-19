@@ -166,12 +166,13 @@ public:
 
     inline void loadFromFile(const Path& path)
     {
-        auto options                = RuntimeOptions::makeDefault();
-        options.IsInteractive       = true;
-        options.EnableTonemapping   = false; // We do our own stuff
-        options.DisableStandardAOVs = false;
-        options.Denoiser.Enabled    = true;
-        options.OverrideFilmSize    = { (uint32)mInternalViewWidth, (uint32)mInternalViewHeight };
+        auto options                 = RuntimeOptions::makeDefault();
+        options.IsInteractive        = true;
+        options.EnableTonemapping    = false; // We do our own stuff
+        options.DisableStandardAOVs  = false;
+        options.Denoiser.Enabled     = true;
+        options.Denoiser.HighQuality = false;
+        options.OverrideFilmSize     = { (uint32)mInternalViewWidth, (uint32)mInternalViewHeight };
 
         SceneParser parser;
         auto scene = parser.loadFromFile(path);

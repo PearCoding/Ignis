@@ -36,7 +36,6 @@ public:
         size_t frame     = 0;
         size_t user_seed = 0;
         TechniqueVariantInfo info;
-        bool denoise = false;
     };
 
     struct AOVAccessor {

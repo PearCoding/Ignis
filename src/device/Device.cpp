@@ -131,10 +131,6 @@ struct CPUData {
 };
 thread_local CPUData* tlThreadData = nullptr;
 
-#ifdef IG_HAS_DENOISER
-IG_IMPORT void ignis_denoise(IRenderDevice* device);
-#endif
-
 static inline int computeTargetID(const Target& target)
 {
     switch (target.gpuArchitecture()) {
@@ -1536,21 +1532,6 @@ public:
         }
     }
 
-#ifdef IG_HAS_DENOISER
-    inline void denoise()
-    {
-        if (mAOVs.count("Denoised") == 0 && mHostFramebuffer.IterationCount > 0)
-            return;
-
-        ignis_denoise(mIGDevice);
-
-        // Make sure the iteration count resembles the input
-        auto& outputAOV          = mAOVs["Denoised"];
-        outputAOV.IterationCount = mHostFramebuffer.IterationCount;
-        outputAOV.IterDiff       = 0;
-    }
-#endif
-
     inline void present()
     {
         // Single thread access
@@ -1742,11 +1723,6 @@ void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::Re
     sInterface->ensureFramebuffer();
     sInterface->runDeviceShader();
     sInterface->present();
-
-#ifdef IG_HAS_DENOISER
-    if (settings.denoise)
-        sInterface->denoise();
-#endif
 
     leaveDevice();
 }

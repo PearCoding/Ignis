@@ -320,6 +320,10 @@ bool Runtime::load(const Path& path, const Scene* scene)
 
     if (mOptions.WarnUnused)
         scene->warnUnusedProperties();
+
+    if (mOptions.Denoiser.Enabled && !mOptions.DisableStandardAOVs)
+        mDenoiser = std::make_unique<OIDN>(this);
+
     return true;
 }
 
@@ -365,7 +369,6 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
 
     IRenderDevice::RenderSettings settings;
     settings.rays      = nullptr; // No artificial ray streams
-    settings.denoise   = mOptions.Denoiser.Enabled && !ignoreDenoiser && !mOptions.DisableStandardAOVs;
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = info.GetWidth(mFilmWidth);
     settings.height    = info.GetHeight(mFilmHeight);
@@ -375,6 +378,9 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
     settings.user_seed = mOptions.Seed;
 
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
+
+    if (mDenoiser && !ignoreDenoiser)
+        mDenoiser->run(mDevice.get());
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -425,7 +431,6 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
 
     IRenderDevice::RenderSettings settings;
     settings.rays      = rays.data();
-    settings.denoise   = false;
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = rays.size();
     settings.height    = 1;
@@ -747,11 +752,7 @@ CameraOrientation Runtime::getCameraOrientation() const
 
 bool Runtime::hasDenoiser()
 {
-#ifdef IG_HAS_DENOISER
-    return true;
-#else
-    return false;
-#endif
+    return OIDN::isAvailable();
 }
 
 void Runtime::handleTime()

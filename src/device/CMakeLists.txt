@@ -99,14 +99,6 @@ foreach(var ${VARIANTS})
     set_target_properties(${_target_name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
     install(TARGETS ${_target_name} ${_IG_RUNTIME_SET} LIBRARY DESTINATION bin COMPONENT runtime)
 
-    if(TARGET OpenImageDenoise::OpenImageDenoise)
-        target_link_libraries(${_target_name} PRIVATE OpenImageDenoise::OpenImageDenoise)
-        target_compile_definitions(${_target_name} PRIVATE "IG_HAS_DENOISER")
-    elseif(TARGET OpenImageDenoise)
-        target_link_libraries(${_target_name} PRIVATE OpenImageDenoise)
-        target_compile_definitions(${_target_name} PRIVATE "IG_HAS_DENOISER")
-    endif()
-
     # Some of the compilation process requires a lot of memory.
     # Prevent parallel build of the devices (per default) by chaining them together
     # This will rebuild all the devices up the line,
