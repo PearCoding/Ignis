@@ -473,11 +473,12 @@ private:
         loaderOptions.Scene    = scene;
 
         mPerspectivePass = createPass(ShaderGenerator::generatePerspective(loaderOptions));
-        mRuntime->setParameter("_perspective_enabled", (int)1);
         if (!mPerspectivePass) {
             IG_LOG(L_ERROR) << "Could not setup perspective pass" << std::endl;
             return false;
         }
+
+        mRuntime->setParameter("_perspective_enabled", (int)1);
 
         return true;
     }
