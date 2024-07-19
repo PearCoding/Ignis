@@ -337,7 +337,7 @@ private:
 
 // Will be exposed to the device and used in Device.cpp
 // TODO: This can be handled waaaay cleaner
-void ignis_denoise(IRenderDevice* device)
+IG_EXPORT void ignis_denoise(IRenderDevice* device)
 {
     using namespace oidn;
 

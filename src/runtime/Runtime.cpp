@@ -745,7 +745,7 @@ CameraOrientation Runtime::getCameraOrientation() const
     };
 }
 
-bool Runtime::hasDenoiser() const
+bool Runtime::hasDenoiser()
 {
 #ifdef IG_HAS_DENOISER
     return true;

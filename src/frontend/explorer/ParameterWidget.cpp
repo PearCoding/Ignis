@@ -119,6 +119,12 @@ void ParameterWidget::onRender(Widget*)
 
             if (width != (int)internalSize.first || height != (int)internalSize.second)
                 mRenderWidget->resizeInternalView((size_t)std::max(32, width), (size_t)std::max(32, height));
+
+            if (Runtime::hasDenoiser()) {
+                bool useDenoiser = mRenderWidget->isDenoiserEnabled();
+                if (ImGui::Checkbox("Denoise", &useDenoiser))
+                    mRenderWidget->enableDenoiser(useDenoiser);
+            }
         }
     }
     ImGui::End();

@@ -41,6 +41,7 @@ public:
         , mInternalViewHeight(1024)
         , mColorbar()
         , mShowColorbar(true)
+        , mUseDenoiser(Runtime::hasDenoiser())
     {
     }
 
@@ -129,7 +130,7 @@ public:
                 mRuntime->reset();
                 mRequestReset = false;
             }
-            mRuntime->step();
+            mRuntime->step(!mUseDenoiser);
 
             ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowDockID(sMainWindowDockID, ImGuiCond_FirstUseEver);
@@ -165,10 +166,12 @@ public:
 
     inline void loadFromFile(const Path& path)
     {
-        auto options              = RuntimeOptions::makeDefault();
-        options.IsInteractive     = true;
-        options.EnableTonemapping = false; // We do our own stuff
-        options.OverrideFilmSize  = { (uint32)mInternalViewWidth, (uint32)mInternalViewHeight };
+        auto options                = RuntimeOptions::makeDefault();
+        options.IsInteractive       = true;
+        options.EnableTonemapping   = false; // We do our own stuff
+        options.DisableStandardAOVs = false;
+        options.Denoiser.Enabled    = true;
+        options.OverrideFilmSize    = { (uint32)mInternalViewWidth, (uint32)mInternalViewHeight };
 
         SceneParser parser;
         auto scene = parser.loadFromFile(path);
@@ -274,6 +277,13 @@ public:
 
     inline bool isColorbarVisible() const { return mShowColorbar; }
     inline void showColorbar(bool b) { mShowColorbar = b; }
+
+    inline bool isDenoiserEnabled() const { return mUseDenoiser; }
+    inline void enableDenoiser(bool b)
+    {
+        if (Runtime::hasDenoiser())
+            mUseDenoiser = b;
+    }
 
 private:
     void handleInput()
@@ -386,6 +396,8 @@ private:
             return false;
 
         IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
+
+        mRuntime->setParameter("_aov", mUseDenoiser ? "Denoised" : "");
 
         if (!mGlarePass->run()) {
             IG_LOG(L_FATAL) << "Failed to run glare pass" << std::endl;
@@ -599,6 +611,8 @@ private:
 
     ColorbarGizmo mColorbar;
     bool mShowColorbar;
+
+    bool mUseDenoiser;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
@@ -662,4 +676,7 @@ std::pair<size_t, size_t> RenderWidget::internalViewSize() const
 
 bool RenderWidget::isColorbarVisible() const { return mInternal->isColorbarVisible(); }
 void RenderWidget::showColorbar(bool b) { mInternal->showColorbar(b); }
+
+bool RenderWidget::isDenoiserEnabled() const { return mInternal->isDenoiserEnabled(); }
+void RenderWidget::enableDenoiser(bool b) { mInternal->enableDenoiser(b); }
 }; // namespace IG

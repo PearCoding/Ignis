@@ -130,7 +130,7 @@ struct CPUData {
 thread_local CPUData* tlThreadData = nullptr;
 
 #ifdef IG_HAS_DENOISER
-void ignis_denoise(Device* device);
+IG_IMPORT void ignis_denoise(IRenderDevice* device);
 #endif
 
 static inline int computeTargetID(const Target& target)
@@ -199,7 +199,7 @@ private:
         }
     };
 
-    Device const* mIGDevice;
+    Device* const mIGDevice;
     const int mDeviceID;
     DeviceData mDeviceData;
 
@@ -1062,7 +1062,7 @@ public:
         if (mSetupSettings.AcquireStats)
             getThreadData()->stats.endShaderLaunch(ShaderType::Tonemap, {});
     }
-    
+
     inline ::ImageInfoOutput runImageinfoShader(float* in_pixels, ::ImageInfoSettings& settings)
     {
         if (mSetupSettings.DebugTrace)
@@ -1508,13 +1508,13 @@ public:
 #ifdef IG_HAS_DENOISER
     inline void denoise()
     {
-        if (aovs.count("Denoised") == 0 && mHostFramebuffer.IterationCount > 0)
+        if (mAOVs.count("Denoised") == 0 && mHostFramebuffer.IterationCount > 0)
             return;
 
         ignis_denoise(mIGDevice);
 
         // Make sure the iteration count resembles the input
-        auto& outputAOV          = aovs["Denoised"];
+        auto& outputAOV          = mAOVs["Denoised"];
         outputAOV.IterationCount = mHostFramebuffer.IterationCount;
         outputAOV.IterDiff       = 0;
     }

@@ -60,6 +60,9 @@ public:
     bool isColorbarVisible() const;
     void showColorbar(bool b = true);
 
+    bool isDenoiserEnabled() const;
+    void enableDenoiser(bool b = true);
+
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;
 };

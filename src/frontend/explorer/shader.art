@@ -5,7 +5,8 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
     let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
 
-    let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
+    let aov_name    = registry::get_global_parameter_string("_aov", "");
+    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
     let output      = device.request_buffer("_perspective_output", canvas_width * canvas_height * 3, 0);
 
     let camera_eye = make_vec3(0,0,0);
@@ -108,7 +109,9 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
 fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let width  = settings.width;
     let height = settings.height;
-    let input  = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
+
+    let aov_name = registry::get_global_parameter_string("_aov", "");
+    let input    = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
     // let input  = device.load_aov_image("", spi);
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
 
@@ -135,7 +138,8 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
     let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
     let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
     
-    let framebuffer = attach_lanczos_filter(device.load_aov_image("", spi), 3, 3);
+    let aov_name    = registry::get_global_parameter_string("_aov", "");
+    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
     let source_lum  = device.request_buffer("_glare_source_luminance", input_width * input_width, 0);
     let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
 

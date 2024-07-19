@@ -159,7 +159,7 @@ public:
     CameraOrientation getCameraOrientation() const;
 
     /// True if denoising can be applied
-    [[nodiscard]] bool hasDenoiser() const;
+    [[nodiscard]] static bool hasDenoiser();
 
     /// True if the scene has entries in the `parameters` section
     [[nodiscard]] inline bool hasSceneParameters() const { return mHasSceneParameters; }
