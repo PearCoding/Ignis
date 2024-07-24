@@ -429,6 +429,7 @@ private:
         //     IG_LOG(L_ERROR) << "Cannot update SDL texture: " << SDL_GetError() << std::endl;
         //     return false;
         // }
+
         return true;
     }
 
