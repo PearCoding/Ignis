@@ -420,13 +420,13 @@ private:
         }
 
         uint8* pixels;
-        int pitch = static_cast<int>(mWidth * sizeof(uint32));
+        int pitch = (int)(mWidth * sizeof(uint32));
         if (SDL_LockTexture(mTexture, nullptr, (void**)&pixels, &pitch) != 0) {
             IG_LOG(L_ERROR) << "Cannot lock SDL texture: " << SDL_GetError() << std::endl;
             return false;
         }
 
-        if (pitch != mWidth * sizeof(uint32)) {
+        if (pitch != (int)(mWidth * sizeof(uint32))) {
             SDL_UnlockTexture(mTexture);
             IG_LOG(L_ERROR) << "Locked texture has an unsupported pitch" << std::endl;
             return false;
@@ -480,7 +480,7 @@ private:
 
         SDL_UnlockTexture(mTexture);
 
-        // if (SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32))) != 0) {
+        // if (SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), (int)(mWidth * sizeof(uint32))) != 0) {
         //     IG_LOG(L_ERROR) << "Cannot update SDL texture: " << SDL_GetError() << std::endl;
         //     return false;
         // }

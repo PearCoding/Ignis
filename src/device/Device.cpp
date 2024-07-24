@@ -1348,15 +1348,14 @@ public:
             return;
 
         bool created = false;
-        auto& device = mDeviceData;
-        if (device.aovs[name].size() != host.Data.size()) {
+        if (mDeviceData.aovs[name].size() != host.Data.size()) {
             _SECTION(SectionType::AOVUpdate);
-            device.aovs[name] = createFramebuffer(mDeviceID);
-            created           = true;
+            mDeviceData.aovs[name] = createFramebuffer(mDeviceID);
+            created                = true;
         }
 
         if (!onlyAtCreation || created) {
-            anydsl::copy(host.Data, device.aovs[name]);
+            anydsl::copy(host.Data, mDeviceData.aovs[name]);
             host.Dirty = false;
         }
     }
@@ -1380,7 +1379,7 @@ public:
     {
         mapAOVToDevice({}, onlyAtCreation);
         for (const auto& p : mAOVs)
-            mapAOVToDevice(p.first.c_str(), onlyAtCreation);
+            mapAOVToDevice(p.first, onlyAtCreation);
     }
 
     inline Device::AOVAccessor getAOVImageOnlyCPU(const std::string& aov_name)
@@ -1716,22 +1715,30 @@ Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name, boo
 
 void Device::clearAllFramebuffer()
 {
+    sInterface->registerThread();
     sInterface->clearAllAOVs();
+    sInterface->unregisterThread();
 }
 
 void Device::clearFramebuffer(const std::string& name)
 {
+    sInterface->registerThread();
     sInterface->clearAOV(name);
+    sInterface->unregisterThread();
 }
 
 void Device::syncFramebufferHostToDevice(const std::string& name)
 {
+    sInterface->registerThread();
     sInterface->mapAOVToDevice(name, false);
+    sInterface->unregisterThread();
 }
 
 void Device::syncAllFramebufferHostToDevice()
 {
+    sInterface->registerThread();
     sInterface->mapAllAOVToDevice(false);
+    sInterface->unregisterThread();
 }
 
 size_t Device::getBufferSizeInBytes(const std::string& name)
