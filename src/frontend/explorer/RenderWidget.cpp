@@ -405,67 +405,85 @@ private:
         mRuntime->setParameter("_aov", mUseDenoiser ? "Denoised" : "");
 
         if (!mGlarePass->run()) {
-            IG_LOG(L_FATAL) << "Failed to run glare pass" << std::endl;
+            IG_LOG(L_ERROR) << "Failed to run glare pass" << std::endl;
             return false;
         }
 
         if (!mPerspectivePass->run()) {
-            IG_LOG(L_FATAL) << "Failed to run perspective pass" << std::endl;
+            IG_LOG(L_ERROR) << "Failed to run perspective pass" << std::endl;
             return false;
         }
 
         if (!mImageInfoPass->run()) {
-            IG_LOG(L_FATAL) << "Failed to run imageinfo pass" << std::endl;
+            IG_LOG(L_ERROR) << "Failed to run imageinfo pass" << std::endl;
+            return false;
+        }
+
+        uint8* pixels;
+        int pitch = static_cast<int>(mWidth * sizeof(uint32));
+        if (SDL_LockTexture(mTexture, nullptr, (void**)&pixels, &pitch) != 0) {
+            IG_LOG(L_ERROR) << "Cannot lock SDL texture: " << SDL_GetError() << std::endl;
+            return false;
+        }
+
+        if (pitch != mWidth * sizeof(uint32)) {
+            SDL_UnlockTexture(mTexture);
+            IG_LOG(L_ERROR) << "Locked texture has an unsupported pitch" << std::endl;
             return false;
         }
 
         if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::Normal) {
             mRuntime->setParameter("_aov", "Normals");
             if (!mAOVPass->run()) {
-                IG_LOG(L_FATAL) << "Failed to run aov pass" << std::endl;
+                IG_LOG(L_ERROR) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-            if (!mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
-                IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+            if (!mAOVPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
+                IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
                 return false;
             }
         } else if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::Albedo) {
             mRuntime->setParameter("_aov", "Albedo");
             if (!mAOVPass->run()) {
-                IG_LOG(L_FATAL) << "Failed to run aov pass" << std::endl;
+                IG_LOG(L_ERROR) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-            if (!mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
-                IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+            if (!mAOVPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
+                IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
                 return false;
             }
         } else {
             if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::None
                 || mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource) {
                 if (!mTonemapPass->run()) {
-                    IG_LOG(L_FATAL) << "Failed to run tonemap pass" << std::endl;
+                    IG_LOG(L_ERROR) << "Failed to run tonemap pass" << std::endl;
                     return false;
                 }
             }
 
             if (mCurrentParameters.OverlayMethod != RenderWidget::OverlayMethod::None) {
                 if (!mOverlayPass->run()) {
-                    IG_LOG(L_FATAL) << "Failed to run overlay pass" << std::endl;
+                    IG_LOG(L_ERROR) << "Failed to run overlay pass" << std::endl;
                     return false;
                 }
-                if (!mOverlayPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
-                    IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+                if (!mOverlayPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
+                    IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
                     return false;
                 }
             } else {
-                if (!mTonemapPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
-                    IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+                if (!mTonemapPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
+                    IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
                     return false;
                 }
             }
         }
 
-        SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32)));
+        SDL_UnlockTexture(mTexture);
+
+        // if (SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), static_cast<int>(mWidth * sizeof(uint32))) != 0) {
+        //     IG_LOG(L_ERROR) << "Cannot update SDL texture: " << SDL_GetError() << std::endl;
+        //     return false;
+        // }
         ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
 
         return true;
