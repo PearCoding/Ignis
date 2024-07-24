@@ -12,7 +12,6 @@ struct WorkInfo {
 #[import(cc = "C")] fn ignis_get_work_info(&mut WorkInfo) -> ();
 #[import(cc = "C")] fn ignis_get_film_data(&mut &mut [f32], &mut i32, &mut i32) -> ();
 #[import(cc = "C")] fn ignis_get_aov_image(&[u8], &mut &mut [f32]) -> ();
-#[import(cc = "C")] fn ignis_mark_aov_as_used(&[u8], i32) -> ();
 
 #[import(cc = "C")] fn ignis_get_primary_stream(i32, &mut PrimaryStream, i32) -> ();
 #[import(cc = "C")] fn ignis_get_primary_stream_const(i32, &mut PrimaryStream) -> ();

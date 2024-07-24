@@ -572,7 +572,7 @@ public:
 
         const auto acc       = currentPixels();
         const float* film    = acc.Data;
-        const float inv_iter = acc.IterationCount > 0 ? 1.0f / acc.IterationCount : 0.0f;
+        const float inv_iter = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 0.0f;
         const size_t ind     = y * width + x;
 
         return RGB{
@@ -859,7 +859,7 @@ public:
             int mouse_x, mouse_y;
             SDL_GetMouseState(&mouse_x, &mouse_y);
             const auto acc = currentPixels();
-            ui_inspect_image(mouse_x, mouse_y, Width, Height, acc.IterationCount == 0 ? 1.0f : 1.0f / acc.IterationCount, acc.Data, Buffer.data());
+            ui_inspect_image(mouse_x, mouse_y, Width, Height, Runtime->currentIterationCount() == 0 ? 1.0f : 1.0f / Runtime->currentIterationCount(), acc.Data, Buffer.data());
         }
 
         return result;

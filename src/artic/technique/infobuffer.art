@@ -6,12 +6,6 @@ fn @wrap_infobuffer_renderer(device: Device, iter: i32, spi: i32, other: Techniq
     let aov_albedo = device.load_aov_image("Albedo",  spi);
     // let aov_depth  = device.load_aov_image("Depth",   spi); // Not used for now
 
-    if iter == 0 {
-        aov_normal.mark_as_used();
-        aov_albedo.mark_as_used();
-        // aov_depth.mark_as_used();
-    }
-
     fn @on_hit( ctx: ShadingContext
               , payload: RayPayload
               , mat: Material

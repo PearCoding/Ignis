@@ -40,7 +40,6 @@ public:
 
     struct AOVAccessor {
         float* Data;
-        size_t IterationCount;
     };
 
     struct BufferAccessor {

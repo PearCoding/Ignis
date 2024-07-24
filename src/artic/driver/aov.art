@@ -1,11 +1,10 @@
 // A single AOV RGB image.
 // Ignis only supports RGB
 struct AOVImage {
-    width:        i32,
-    height:       i32,
-    splat:        fn (PixelCoord, Color) -> (),
-    get:          fn (PixelCoord) -> Color,
-    mark_as_used: fn () -> (), // Note: Only useable on the host!
+    width:  i32,
+    height: i32,
+    splat:  fn (PixelCoord, Color) -> (),
+    get:    fn (PixelCoord) -> Color
 }
 
 // Contains all the aov images available
@@ -15,11 +14,10 @@ fn @make_empty_aov_image() = AOVImage {
     width        = 0,
     height       = 0,
     splat        = @|_, _| -> () {},
-    get          = @|_| -> Color { color_builtins::black },
-    mark_as_used = @|| -> () {}
+    get          = @|_| -> Color { color_builtins::black }
 };
 
-fn @make_atomic_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32, atomics: Atomics) -> AOVImage {
+fn @make_atomic_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32, atomics: Atomics) -> AOVImage {
     let accumulate = make_atomic_accumulator(atomics, pixels, spi);
     AOVImage{
         width  = w,
@@ -28,14 +26,11 @@ fn @make_atomic_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i3
         get    = @|coord| -> Color     {
             let ptr2 = &pixels(coord.linear * 3) as &[f32];
             make_color(ptr2(0), ptr2(1), ptr2(2), 1)
-        },
-        mark_as_used = @|| -> () {
-            ignis_mark_aov_as_used(id, 1);
         }
     }
 }
 
-fn @make_std_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage {
+fn @make_std_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage {
     let accumulate = make_standard_accumulator(pixels, spi);
     AOVImage {
         width  = w,
@@ -44,14 +39,11 @@ fn @make_std_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) 
         get = @|coord| -> Color {
             let ptr2 = &pixels(coord.linear * 3) as &[f32];
             make_color(ptr2(0), ptr2(1), ptr2(2), 1)
-        },
-        mark_as_used = @|| -> () {
-            ignis_mark_aov_as_used(id, 1);
         }
     }
 }
 
-fn @make_rv_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage {
+fn @make_rv_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage {
     let accumulate = make_standard_accumulator(pixels, spi);
     AOVImage {
         width  = w,
@@ -79,9 +71,6 @@ fn @make_rv_aov_image(id: &[u8], pixels: &mut [f32], w: i32, h: i32, spi: i32) -
                 color.b = rv_insert(color.b, lane, pixels(j * 3 + 2));
             }
             color
-        },
-        mark_as_used = @|| -> () {
-            ignis_mark_aov_as_used(id, 1);
         }
     }
 }
@@ -99,14 +88,12 @@ fn @make_aov_image_from_buffer(buffer: DeviceBuffer, width: i32, height: i32) = 
     width  = width,
     height = height,
     splat  = @|coord, color| -> () { device_buffer_store_vec3_unaligned(buffer, coord.linear*3, vec3_add(device_buffer_load_vec3_unaligned(buffer, coord.linear * 3), color_to_vec3(color))); },
-    get    = @|coord| vec3_to_color(device_buffer_load_vec3_unaligned(buffer, coord.linear * 3)),
-    mark_as_used = @|| -> () {}
+    get    = @|coord| vec3_to_color(device_buffer_load_vec3_unaligned(buffer, coord.linear * 3))
 };
 
 fn @make_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, height: i32) = AOVImage {
     width  = width,
     height = height,
     splat  = @|_, _| -> () { /* Nothing */ },
-    get    = @|coord| vec3_to_color(shallow_buffer_load_vec3_unaligned(buffer, coord.linear * 3)),
-    mark_as_used = @|| -> () {}
+    get    = @|coord| vec3_to_color(shallow_buffer_load_vec3_unaligned(buffer, coord.linear * 3))
 };

@@ -462,9 +462,6 @@ fn @make_adaptive_env_sampling_path_renderer(device: Device, max_path_len: i32, 
     let aov_guiding       = device.load_aov_image("Guiding", spi);
     let aov_guiding_pdf   = device.load_aov_image("Guiding PDF", spi);
     let aov_guiding_count = device.load_aov_image("Guiding Count", spi);
-    aov_guiding.mark_as_used();
-    aov_guiding_pdf.mark_as_used();
-    aov_guiding_count.mark_as_used();
    
     let ae_prob = 0.75:f32; // TODO: Make this adaptive?
 
