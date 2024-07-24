@@ -148,6 +148,9 @@ public:
 
                 handleInput();
 
+                if (mTexture)
+                    ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
+
                 if (mShowColorbar && mCurrentParameters.allowColorbar()) {
                     ImGui::SetCursorPos(topLeft);
 
@@ -396,12 +399,43 @@ private:
         }
     }
 
+    inline bool updateTexture(const char* aov, std::shared_ptr<RenderPass>& pass)
+    {
+        void* pixels;
+        int pitch = (int)(mWidth * sizeof(uint32));
+        if (SDL_LockTexture(mTexture, nullptr, &pixels, &pitch) != 0) {
+            IG_LOG(L_ERROR) << "Cannot lock SDL texture: " << SDL_GetError() << std::endl;
+            return false;
+        }
+
+        if (pitch != (int)(mWidth * sizeof(uint32))) {
+            SDL_UnlockTexture(mTexture);
+            IG_LOG(L_ERROR) << "Locked texture has an unsupported pitch" << std::endl;
+            return false;
+        }
+
+        if (!pass->copyOutputToHost(aov, pixels, mWidth * mHeight * sizeof(uint32))) {
+            SDL_UnlockTexture(mTexture);
+            IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
+            return false;
+        }
+
+        // TODO: Add support for different pitches
+
+        SDL_UnlockTexture(mTexture);
+
+        // IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
+        // if (SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), (int)(mWidth * sizeof(uint32))) != 0) {
+        //     IG_LOG(L_ERROR) << "Cannot update SDL texture: " << SDL_GetError() << std::endl;
+        //     return false;
+        // }
+        return true;
+    }
+
     inline bool runPipeline()
     {
         if (mWidth == 0 || mHeight == 0)
             return false;
-
-        IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
 
         mRuntime->setParameter("_aov", mUseDenoiser ? "Denoised" : "");
 
@@ -420,39 +454,20 @@ private:
             return false;
         }
 
-        uint8* pixels;
-        int pitch = (int)(mWidth * sizeof(uint32));
-        if (SDL_LockTexture(mTexture, nullptr, (void**)&pixels, &pitch) != 0) {
-            IG_LOG(L_ERROR) << "Cannot lock SDL texture: " << SDL_GetError() << std::endl;
-            return false;
-        }
-
-        if (pitch != (int)(mWidth * sizeof(uint32))) {
-            SDL_UnlockTexture(mTexture);
-            IG_LOG(L_ERROR) << "Locked texture has an unsupported pitch" << std::endl;
-            return false;
-        }
-
         if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::Normal) {
             mRuntime->setParameter("_aov", "Normals");
             if (!mAOVPass->run()) {
                 IG_LOG(L_ERROR) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-            if (!mAOVPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
-                IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
-                return false;
-            }
+            return updateTexture("_final_output", mAOVPass);
         } else if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::Albedo) {
             mRuntime->setParameter("_aov", "Albedo");
             if (!mAOVPass->run()) {
                 IG_LOG(L_ERROR) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-            if (!mAOVPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
-                IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
-                return false;
-            }
+            return updateTexture("_final_output", mAOVPass);
         } else {
             if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::None
                 || mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource) {
@@ -467,27 +482,11 @@ private:
                     IG_LOG(L_ERROR) << "Failed to run overlay pass" << std::endl;
                     return false;
                 }
-                if (!mOverlayPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
-                    IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
-                    return false;
-                }
+                return updateTexture("_final_output", mOverlayPass);
             } else {
-                if (!mTonemapPass->copyOutputToHost("_final_output", pixels, mWidth * mHeight * sizeof(uint32))) {
-                    IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
-                    return false;
-                }
+                return updateTexture("_final_output", mTonemapPass);
             }
         }
-
-        SDL_UnlockTexture(mTexture);
-
-        // if (SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), (int)(mWidth * sizeof(uint32))) != 0) {
-        //     IG_LOG(L_ERROR) << "Cannot update SDL texture: " << SDL_GetError() << std::endl;
-        //     return false;
-        // }
-        ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
-
-        return true;
     }
 
     inline std::shared_ptr<RenderPass> createPass(const std::string& suffixSrc) const
@@ -532,12 +531,12 @@ private:
             return false;
         }
 
-        mBuffer.resize(width * height);
+        // mBuffer.resize(width * height);
         return true;
     }
 
     SDL_Texture* mTexture = nullptr;
-    std::vector<uint32> mBuffer;
+    // std::vector<uint32> mBuffer;
     size_t mWidth, mHeight;
     RenderWidget::Parameters mCurrentParameters;
 

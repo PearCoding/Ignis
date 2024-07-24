@@ -889,7 +889,7 @@ public:
         if (!acc.Data)
             return false;
 
-        size_t size = std::min(acc.SizeInBytes, maxSizeByte);
+        const size_t size = std::min(acc.SizeInBytes, maxSizeByte);
         if (size == 0)
             return false;
 
