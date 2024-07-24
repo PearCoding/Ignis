@@ -347,25 +347,24 @@ void Runtime::step(bool ignoreDenoiser)
         IG_ASSERT(active.size() > 0, "Expected some variants to be returned by the technique variant selector");
 
         for (size_t i = 0; i < active.size(); ++i)
-            stepVariant(ignoreDenoiser, active[i], i == active.size() - 1);
+            stepVariant(active[i]);
     } else {
         for (size_t i = 0; i < mTechniqueVariants.size(); ++i)
-            stepVariant(ignoreDenoiser, (int)i, i == mTechniqueVariants.size() - 1);
+            stepVariant((int)i);
     }
+
+    if (mDenoiser && !ignoreDenoiser)
+        mDenoiser->run(mDevice.get());
 
     ++mCurrentIteration;
 }
 
-void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
+void Runtime::stepVariant(size_t variant)
 {
     IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
     const auto& info = mTechniqueInfo.Variants[variant];
 
     // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
-
-    // Only apply denoiser after the final pass
-    if (!lastVariant)
-        ignoreDenoiser = true;
 
     IRenderDevice::RenderSettings settings;
     settings.rays      = nullptr; // No artificial ray streams
@@ -378,9 +377,6 @@ void Runtime::stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant)
     settings.user_seed = mOptions.Seed;
 
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
-
-    if (mDenoiser && !ignoreDenoiser)
-        mDenoiser->run(mDevice.get());
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;

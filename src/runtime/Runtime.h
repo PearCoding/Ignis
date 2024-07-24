@@ -183,7 +183,7 @@ private:
     bool load(const Path& path, const Scene* scene);
     bool setupScene();
     bool compileShaders();
-    void stepVariant(bool ignoreDenoiser, size_t variant, bool lastVariant);
+    void stepVariant(size_t variant);
     void traceVariant(const std::vector<Ray>& rays, size_t variant);
     void handleTime();
 

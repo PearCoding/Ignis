@@ -204,12 +204,16 @@ public:
 
         mRuntime = std::make_unique<Runtime>(options);
         if (mRuntime->loadFromScene(scene.get())) {
-            setupPerspectivePass(path, scene.get());
-            setupImageInfoPass(path, scene.get());
-            setupTonemapPass(path, scene.get());
-            setupGlarePass(path, scene.get());
-            setupOverlayPass(path, scene.get());
-            setupAOVPass(path, scene.get());
+            setupPass("perspective", path, scene.get(), mPerspectivePass, ShaderGenerator::generatePerspective);
+            setupPass("imageinfo", path, scene.get(), mImageInfoPass, ShaderGenerator::generateImageInfo);
+            setupPass("tonemap", path, scene.get(), mTonemapPass, ShaderGenerator::generateTonemap);
+            setupPass("glare", path, scene.get(), mGlarePass, ShaderGenerator::generateGlare);
+            setupPass("overlay", path, scene.get(), mOverlayPass, ShaderGenerator::generateOverlay);
+            setupPass("aov", path, scene.get(), mAOVPass, ShaderGenerator::generateAOV);
+
+            mRuntime->setParameter("_perspective_enabled", (int)1);
+            mRuntime->setParameter("_glare_multiplier", 1.0f);
+            mRuntime->setParameter("_glare_vertical_illuminance", -1.0f /* Automatic */);
 
             updateSize(mWidth, mHeight);
             updateParameters(mCurrentParameters);
@@ -421,14 +425,20 @@ private:
                 IG_LOG(L_FATAL) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-            mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+            if (!mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
+                IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+                return false;
+            }
         } else if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::Albedo) {
             mRuntime->setParameter("_aov", "Albedo");
             if (!mAOVPass->run()) {
                 IG_LOG(L_FATAL) << "Failed to run aov pass" << std::endl;
                 return false;
             }
-            mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+            if (!mAOVPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
+                IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+                return false;
+            }
         } else {
             if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::None
                 || mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource) {
@@ -443,9 +453,15 @@ private:
                     IG_LOG(L_FATAL) << "Failed to run overlay pass" << std::endl;
                     return false;
                 }
-                mOverlayPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+                if (!mOverlayPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
+                    IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+                    return false;
+                }
             } else {
-                mTonemapPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32));
+                if (!mTonemapPass->copyOutputToHost("_final_output", mBuffer.data(), mWidth * mHeight * sizeof(uint32))) {
+                    IG_LOG(L_FATAL) << "Failed to copy buffer" << std::endl;
+                    return false;
+                }
             }
         }
 
@@ -465,101 +481,17 @@ private:
         return mRuntime->createPass(shader.str());
     }
 
-    inline bool setupPerspectivePass(const Path& path, Scene* scene)
+    template <typename GenFunc>
+    inline bool setupPass(const char* name, const Path& path, Scene* scene, std::shared_ptr<RenderPass>& pass, GenFunc gen)
     {
-        IG_LOG(L_DEBUG) << "Compiling perspective pass" << std::endl;
+        IG_LOG(L_DEBUG) << "Compiling " << name << " pass" << std::endl;
         auto loaderOptions     = mRuntime->loaderOptions();
         loaderOptions.FilePath = path;
         loaderOptions.Scene    = scene;
 
-        mPerspectivePass = createPass(ShaderGenerator::generatePerspective(loaderOptions));
-        if (!mPerspectivePass) {
-            IG_LOG(L_ERROR) << "Could not setup perspective pass" << std::endl;
-            return false;
-        }
-
-        mRuntime->setParameter("_perspective_enabled", (int)1);
-
-        return true;
-    }
-
-    inline bool setupImageInfoPass(const Path& path, Scene* scene)
-    {
-        IG_LOG(L_DEBUG) << "Compiling imageinfo pass" << std::endl;
-        auto loaderOptions     = mRuntime->loaderOptions();
-        loaderOptions.FilePath = path;
-        loaderOptions.Scene    = scene;
-
-        mImageInfoPass = createPass(ShaderGenerator::generateImageInfo(loaderOptions));
-        if (!mImageInfoPass) {
-            IG_LOG(L_ERROR) << "Could not setup imageinfo pass" << std::endl;
-            return false;
-        }
-
-        return true;
-    }
-
-    inline bool setupTonemapPass(const Path& path, Scene* scene)
-    {
-        IG_LOG(L_DEBUG) << "Compiling tonemap pass" << std::endl;
-        auto loaderOptions     = mRuntime->loaderOptions();
-        loaderOptions.FilePath = path;
-        loaderOptions.Scene    = scene;
-
-        mTonemapPass = createPass(ShaderGenerator::generateTonemap(loaderOptions));
-        if (!mTonemapPass) {
-            IG_LOG(L_ERROR) << "Could not setup tonemap pass" << std::endl;
-            return false;
-        }
-
-        return true;
-    }
-
-    inline bool setupGlarePass(const Path& path, Scene* scene)
-    {
-        IG_LOG(L_DEBUG) << "Compiling glare pass" << std::endl;
-        auto loaderOptions     = mRuntime->loaderOptions();
-        loaderOptions.FilePath = path;
-        loaderOptions.Scene    = scene;
-
-        mGlarePass = createPass(ShaderGenerator::generateGlare(loaderOptions));
-        if (!mGlarePass) {
-            IG_LOG(L_ERROR) << "Could not setup glare pass" << std::endl;
-            return false;
-        }
-
-        return true;
-    }
-
-    inline bool setupOverlayPass(const Path& path, Scene* scene)
-    {
-        IG_LOG(L_DEBUG) << "Compiling overlay pass" << std::endl;
-        auto loaderOptions     = mRuntime->loaderOptions();
-        loaderOptions.FilePath = path;
-        loaderOptions.Scene    = scene;
-
-        mOverlayPass = createPass(ShaderGenerator::generateOverlay(loaderOptions));
-        if (!mOverlayPass) {
-            IG_LOG(L_ERROR) << "Could not setup overlay pass" << std::endl;
-            return false;
-        }
-
-        mRuntime->setParameter("_glare_multiplier", 1.0f);
-        mRuntime->setParameter("_glare_vertical_illuminance", -1.0f /* Automatic */);
-
-        return true;
-    }
-
-    inline bool setupAOVPass(const Path& path, Scene* scene)
-    {
-        IG_LOG(L_DEBUG) << "Compiling aov pass" << std::endl;
-        auto loaderOptions     = mRuntime->loaderOptions();
-        loaderOptions.FilePath = path;
-        loaderOptions.Scene    = scene;
-
-        mAOVPass = createPass(ShaderGenerator::generateAOV(loaderOptions));
-        if (!mAOVPass) {
-            IG_LOG(L_ERROR) << "Could not setup aov pass" << std::endl;
+        pass = createPass(gen(loaderOptions));
+        if (!pass) {
+            IG_LOG(L_ERROR) << "Could not setup " << name << " pass" << std::endl;
             return false;
         }
 
