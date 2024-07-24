@@ -13,6 +13,8 @@ std::string ParameterSet::dump() const
         stream << "[vec3] " << p.first << " = [" << p.second.x() << ", " << p.second.y() << ", " << p.second.z() << "]" << std::endl;
     for (auto p : ColorParameters)
         stream << "[color] " << p.first << " = [" << p.second.x() << ", " << p.second.y() << ", " << p.second.z() << ", " << p.second.w() << "]" << std::endl;
+    for (auto p : StringParameters)
+        stream << "[str] " << p.first << " = " << p.second << std::endl;
 
     return stream.str();
 }
@@ -28,6 +30,8 @@ void ParameterSet::mergeFrom(const ParameterSet& other, bool replace)
             VectorParameters.try_emplace(p.first, p.second);
         for (auto p : other.ColorParameters)
             ColorParameters.try_emplace(p.first, p.second);
+        for (auto p : other.StringParameters)
+            StringParameters.try_emplace(p.first, p.second);
     } else {
         for (auto p : other.IntParameters)
             IntParameters.insert_or_assign(p.first, p.second);
@@ -35,8 +39,8 @@ void ParameterSet::mergeFrom(const ParameterSet& other, bool replace)
             FloatParameters.insert_or_assign(p.first, p.second);
         for (auto p : other.VectorParameters)
             VectorParameters.insert_or_assign(p.first, p.second);
-        for (auto p : other.ColorParameters)
-            ColorParameters.insert_or_assign(p.first, p.second);
+        for (auto p : other.StringParameters)
+            StringParameters.insert_or_assign(p.first, p.second);
     }
 }
 

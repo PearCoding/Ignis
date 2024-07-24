@@ -14,6 +14,19 @@ static inline void draw_header()
     ImGui::TableHeadersRow();
 }
 
+static int inputTextCallback(ImGuiInputTextCallbackData* data)
+{
+    std::string* str = (std::string*)data->UserData;
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+        // Resize string callback
+        // If for some reason we refuse the new length (BufTextLen) and/or capacity (BufSize) we need to set them back to what we want.
+        IM_ASSERT(data->Buf == str->c_str());
+        str->resize(data->BufTextLen);
+        data->Buf = (char*)str->c_str();
+    }
+    return 0;
+}
+
 template <typename _Tp, typename _Hash, typename _Pred, typename _Alloc>
 static inline size_t getPropertyCount(const std::unordered_map<std::string, _Tp, _Hash, _Pred, _Alloc>& map, bool hide_internal)
 {
@@ -149,6 +162,36 @@ bool ui_property_view(Runtime* runtime, bool readonly)
 
                         if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (!readonly && is_public ? ImGuiColorEditFlags_NoInputs : 0)))
                             updated = true;
+                    }
+                }
+
+                ImGui::EndTable();
+            }
+        }
+    }
+
+    if (getPropertyCount(registry.StringParameters, hide_internal) != 0) {
+        if (ImGui::CollapsingHeader("Strings", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::BeginTable("_table_strings", 2, TableFlags)) {
+                // Header
+                draw_header();
+
+                // Content
+                for (auto& param : registry.StringParameters) {
+                    const bool is_public = !string_starts_with(param.first, "_");
+
+                    if (is_public || !hide_internal) {
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(param.first.c_str());
+                        ImGui::TableNextColumn();
+
+                        if (!readonly && is_public) {
+                            const std::string id = "##" + param.first;
+                            if (ImGui::InputText(id.c_str(), (char*)param.second.c_str(), param.second.capacity() + 1, InputFlags, inputTextCallback, &param.second))
+                                updated = true;
+                        } else {
+                            ImGui::TextUnformatted(param.second.c_str());
+                        }
                     }
                 }
 
