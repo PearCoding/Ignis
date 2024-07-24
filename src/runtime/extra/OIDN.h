@@ -14,6 +14,7 @@ public:
     void run(IRenderDevice* device);
 
     [[nodiscard]] static bool isAvailable();
+    [[nodiscard]] static bool hasGPU();
 
 private:
     std::unique_ptr<class OIDNContext> mInternal;

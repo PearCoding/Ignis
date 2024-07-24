@@ -383,4 +383,13 @@ bool OIDN::isAvailable()
     return false;
 #endif
 }
+
+bool OIDN::hasGPU()
+{
+#ifdef IG_HAS_DENOISER
+    return OIDN_VERSION_MAJOR >= 2;
+#else
+    return false;
+#endif
+}
 } // namespace IG

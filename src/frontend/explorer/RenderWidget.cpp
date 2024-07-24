@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "Runtime.h"
 #include "ShaderGenerator.h"
+#include "extra/OIDN.h"
 
 #include "UI.h"
 
@@ -41,7 +42,7 @@ public:
         , mInternalViewHeight(1024)
         , mColorbar()
         , mShowColorbar(true)
-        , mUseDenoiser(Runtime::hasDenoiser())
+        , mUseDenoiser(OIDN::hasGPU()) // Enable denoiser by default if GPU is available, else it has too much of a performance impact
     {
     }
 
