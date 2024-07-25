@@ -146,10 +146,10 @@ public:
                 if (!mTexture || mWidth != contentSize.x || mHeight != contentSize.y)
                     onContentResize((size_t)std::max(0.0f, contentSize.x), (size_t)std::max(0.0f, contentSize.y));
 
-                handleInput();
-
                 if (mTexture)
                     ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
+
+                handleInput();
 
                 if (mShowColorbar && mCurrentParameters.allowColorbar()) {
                     ImGui::SetCursorPos(topLeft);
