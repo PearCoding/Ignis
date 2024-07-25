@@ -386,8 +386,8 @@ bool OIDN::isAvailable()
 
 bool OIDN::hasGPU()
 {
-#ifdef IG_HAS_DENOISER
-    return OIDN_VERSION_MAJOR >= 2;
+#if defined(OIDN_DEVICE_CUDA) || defined(OIDN_DEVICE_SYCL) || defined(OIDN_DEVICE_HIP) || defined(OIDN_DEVICE_METAL)
+    return true;
 #else
     return false;
 #endif

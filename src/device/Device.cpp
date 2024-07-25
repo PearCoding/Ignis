@@ -277,8 +277,7 @@ public:
         mCurrentRenderSettings = settings;
         mCurrentParameters     = parameterSet;
 
-        // Ensure the host framebuffer is always dirty each iteration
-        mHostFramebuffer.Dirty = true;
+        resetFramebufferAccess();
     }
 
     inline size_t getPrimaryPayloadBlockSize() const { return mCurrentRenderSettings.info.PrimaryPayloadCount; }
