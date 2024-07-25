@@ -80,12 +80,15 @@ bool saveImageOutput(const Path& path, const Runtime& runtime, const CameraOrien
     for (size_t aov = 0; aov < aov_count; ++aov) {
         const std::string aov_name = aov == 0 ? std::string{} : aovs[aov - 1];
 
-        const auto acc    = runtime.getFramebufferForHost(aov_name);
-        const float scale = runtime.currentIterationCount() > 0 ? 1.0f / runtime.currentIterationCount() : 0.0f; // TODO: Add flags for single use AOVs
-        const float* src  = acc.Data;
-        float* dst_r      = &images[width * height * (3 * aov + 0)];
-        float* dst_g      = &images[width * height * (3 * aov + 1)];
-        float* dst_b      = &images[width * height * (3 * aov + 2)];
+        float scale = runtime.currentIterationCount() > 0 ? 1.0f / runtime.currentIterationCount() : 1.0f;
+        if (aov_name == "Normals" || aov_name == "Albedo")
+            scale = 1; // TODO: Add flags for single use AOVs
+
+        const auto acc   = runtime.getFramebufferForHost(aov_name);
+        const float* src = acc.Data;
+        float* dst_r     = &images[width * height * (3 * aov + 0)];
+        float* dst_g     = &images[width * height * (3 * aov + 1)];
+        float* dst_b     = &images[width * height * (3 * aov + 2)];
 
         const auto pixelF = [&](size_t ind) {
             float r = src[ind * 3 + 0];
