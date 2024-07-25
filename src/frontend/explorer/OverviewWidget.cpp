@@ -41,9 +41,15 @@ void OverviewWidget::onRender(Widget*)
             ImGui::Text("Cam Up  (%6.3f, %6.3f, %6.3f)", camera.Up(0), camera.Up(1), camera.Up(2));
 
             ImGui::Separator();
-            const float dgp           = runtime->parameters().getFloat("glare_dgp");
-            const float dgi           = runtime->parameters().getFloat("glare_dgi");
-            const float dgiMod        = runtime->parameters().getFloat("glare_dgi_mod");
+            const float dgp    = runtime->parameters().getFloat("glare_dgp");
+            const float dgi    = runtime->parameters().getFloat("glare_dgi");
+            const float dgiMod = runtime->parameters().getFloat("glare_dgi_mod");
+            const float dgr    = runtime->parameters().getFloat("glare_dgr");
+            const float vcp    = runtime->parameters().getFloat("glare_vcp");
+            const float ugr    = runtime->parameters().getFloat("glare_ugr");
+            const float ugrExp = runtime->parameters().getFloat("glare_ugr_exp");
+            const float ugp    = runtime->parameters().getFloat("glare_ugp");
+
             const char* dgpPerception = "Imperceptible";
             if (dgp > 0.45f)
                 dgpPerception = "Intolerable";
@@ -55,6 +61,11 @@ void OverviewWidget::onRender(Widget*)
             ImGui::Text("DGP  %.3f [%s]", dgp, dgpPerception);
             ImGui::Text("DGI  %.3f", dgi);
             ImGui::Text("DGIm %.3f", dgiMod);
+            ImGui::Text("DGR  %.3f", dgr);
+            ImGui::Text("VCP  %.3f", vcp);
+            ImGui::Text("UGR  %.3f", ugr);
+            ImGui::Text("UGRe %.3f", ugrExp);
+            ImGui::Text("UGP  %.3f", ugp);
             ImGui::Text("Ev   %.3f lx", runtime->parameters().getFloat("glare_vertical_illuminance"));
             ImGui::Text("Lv   %.3f lx", runtime->parameters().getFloat("glare_source_luminance"));
         }

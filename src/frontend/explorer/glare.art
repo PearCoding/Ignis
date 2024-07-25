@@ -7,12 +7,15 @@ struct GlareSettings {
 }
 
 struct ReduceOutputGlare {
-    num_pixels: i32,
-    sum_omega:  f32,
-    sum_lum:    f32,
-    sum_x:      f32,
-    sum_y:      f32,
-    e_v:        f32,
+    source_pixels: i32,
+    source_omega:  f32,
+    source_lum:    f32,
+    source_x:      f32,
+    source_y:      f32,
+
+    total_omega: f32,
+    total_lum:   f32,
+    e_v:         f32,
 }
 
 // An evalglare.c implementation using the GPU.
@@ -108,38 +111,45 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
             let e_v          = act_lum * omega * cos_f;
             if act_lum > lum_source {
                 ReduceOutputGlare {
-                    num_pixels = 1,
-                    sum_omega  = omega,
-                    sum_lum    = act_lum * omega,
-                    sum_x      = pixel.x as f32 * omega,
-                    sum_y      = pixel.y as f32 * omega,
-                    e_v        = e_v
+                    source_pixels = 1,
+                    source_omega  = omega,
+                    source_lum    = act_lum * omega,
+                    source_x      = pixel.x as f32 * omega,
+                    source_y      = pixel.y as f32 * omega,
+                    total_omega   = omega,
+                    total_lum     = act_lum * omega,
+                    e_v           = e_v
                 }
             } else {
                 ReduceOutputGlare {
-                    num_pixels = 0,
-                    sum_omega  = 0,
-                    sum_lum    = 0,
-                    sum_x      = 0,
-                    sum_y      = 0,
-                    e_v        = e_v // Independent of the glare source
+                    source_pixels = 0,
+                    source_omega  = 0,
+                    source_lum    = 0,
+                    source_x      = 0,
+                    source_y      = 0,
+                    // Below is independent of the glare source
+                    total_omega = omega,
+                    total_lum   = act_lum * omega,
+                    e_v         = e_v 
                 }
             }
         },
         @|a, b| { ReduceOutputGlare{ 
-            num_pixels = a.num_pixels + b.num_pixels,
-            sum_omega  = a.sum_omega  + b.sum_omega,
-            sum_lum    = a.sum_lum    + b.sum_lum,
-            sum_x      = a.sum_x      + b.sum_x,
-            sum_y      = a.sum_y      + b.sum_y,
-            e_v        = a.e_v        + b.e_v } }
+            source_pixels = a.source_pixels + b.source_pixels,
+            source_omega  = a.source_omega  + b.source_omega,
+            source_lum    = a.source_lum    + b.source_lum,
+            source_x      = a.source_x      + b.source_x,
+            source_y      = a.source_y      + b.source_y,
+            total_omega   = a.total_omega   + b.total_omega,
+            total_lum     = a.total_lum     + b.total_lum,
+            e_v           = a.e_v           + b.e_v } }
     );
 
-    let glare_pixels = reduce_output.num_pixels;
-    let glare_omega  = reduce_output.sum_omega;
-    let glare_lum    = reduce_output.sum_lum / glare_omega;
-    let glare_x      = reduce_output.sum_x / glare_omega;
-    let glare_y      = reduce_output.sum_y / glare_omega;
+    let glare_pixels = reduce_output.source_pixels;
+    let glare_omega  = reduce_output.source_omega;
+    let glare_lum    = reduce_output.source_lum / glare_omega;
+    let glare_x      = reduce_output.source_x / glare_omega;
+    let glare_y      = reduce_output.source_y / glare_omega;
     let E_v          = if settings.vertical_illuminance < 0 { reduce_output.e_v } else { settings.vertical_illuminance };
 
     // primary glare source scan
@@ -160,6 +170,9 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     }
 
     let glare_posi = calc_posindex(make_pixelcoord_from_xy(glare_x as i32, glare_y as i32, width, height, math::fract(glare_x), math::fract(glare_y)));
+    let lum_a      = E_v / flt_pi;
+    let lum_avg    = reduce_output.total_lum / reduce_output.total_omega;
+    let lum_backg  = if glare_pixels == width * height { lum_avg } else { (reduce_output.total_lum - reduce_output.source_lum) / (reduce_output.total_omega - reduce_output.source_omega) };
 
     fn @compute_dgp() -> f32 {
         let c1 = 5.87e-5 : f32;
@@ -183,32 +196,85 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     }
 
     fn @compute_dgi() -> f32 {
-        let lum_backg = settings.avg; // TODO: Really?
         let omega_s   = glare_omega / (glare_posi * glare_posi);
         let sum_glare = 0.478 * math_builtins::pow(glare_lum, 1.6:f32) * math_builtins::pow(omega_s, 0.8:f32) / (lum_backg + 0.07 * math_builtins::pow(glare_omega, 0.5:f32) * glare_lum);
         10 * math_builtins::log10(sum_glare)
     }
 
     fn @compute_dgi_mod() -> f32 {
-        let lum_a     = settings.avg; // TODO: Really?
         let omega_s   = glare_omega / (glare_posi * glare_posi);
         let sum_glare = 0.478 * math_builtins::pow(glare_lum, 1.6:f32) * math_builtins::pow(omega_s, 0.8:f32) / (math_builtins::pow(lum_a, 0.85:f32) + 0.07 * math_builtins::pow(glare_omega, 0.5:f32) * glare_lum);
         10 * math_builtins::log10(sum_glare)
     }
 
-    // TODO: Add low-light correction
+    fn @compute_dgr() -> f32 {
+        let sum_glare = 0.5 * glare_lum * (20.4 * glare_omega + 1.52 * math_builtins::pow(glare_omega, 0.2:f32) - 0.075) / (glare_posi * math_builtins::pow(lum_avg, 0.44:f32));
+        math_builtins::pow(sum_glare, math_builtins::pow(glare_pixels as f32, -0.0914:f32))
+    }
+
+    fn @compute_vcp(dgr_v: f32) = if dgr_v > 750 { 
+        0:f32 
+    } else if dgr_v < 20 {
+        100:f32 
+    } else {
+        50 * math::erf((6.374 - 1.3227 * math_builtins::log(dgr_v)) / 1.414213562373) + 50
+    };
+
+    fn @compute_ugr() -> f32 {
+        let sum_glare = math_builtins::pow(glare_lum / glare_posi, 2:f32) * glare_omega;
+        if sum_glare == 0 {
+            0:f32
+        } else {
+            8 * math_builtins::log10(0.25 / lum_backg * sum_glare)
+        }
+    }
+
+    fn @compute_ugr_exp() -> f32 {
+        let sum_glare = math_builtins::pow(1 / glare_posi, 2:f32) * glare_lum * glare_omega;
+        if sum_glare == 0 {
+            0:f32
+        } else {
+            8 * math_builtins::log10(lum_a) + 8 * math_builtins::log10(sum_glare / lum_backg)
+        }
+    }
+
+    fn @compute_ugp() = compute_ugr() / 8 * 0.26;
+
+    // low-light correction
+    let low_light_corr = if E_v < 1000 {
+        let k = math_builtins::exp(0.024 * E_v - 4);
+        k/(1 + k)
+    } else { 
+        1.0:f32
+    };
+
     // TODO: Add age correction
 
-    let dgp     = compute_dgp();
-    let dgi     = compute_dgi();
-    let dgi_mod = compute_dgi_mod();
+    let not_sufficient = glare_pixels == 0 || E_v < 100;
+
+    let dgp     = if not_sufficient { 0:f32 } else { low_light_corr * compute_dgp() };
+    let dgi     = if not_sufficient { 0:f32 } else { compute_dgi() };
+    let dgi_mod = if not_sufficient { 0:f32 } else { compute_dgi_mod() };
+    let dgr     = if not_sufficient { 0:f32 } else { compute_dgr() };
+    let vcp     = if not_sufficient { 0:f32 } else { compute_vcp(dgr) };
+    let ugr     = if not_sufficient { 0:f32 } else { compute_ugr() };
+    let ugr_exp = if not_sufficient { 0:f32 } else { compute_ugr_exp() };
+    let ugp     = if not_sufficient { 0:f32 } else { compute_ugp() };
 
     registry::set_global_parameter_f32("glare_dgp", dgp);
     registry::set_global_parameter_f32("glare_dgi", dgi);
     registry::set_global_parameter_f32("glare_dgi_mod", dgi_mod);
+    registry::set_global_parameter_f32("glare_dgr", dgr);
+    registry::set_global_parameter_f32("glare_vcp", vcp);
+    registry::set_global_parameter_f32("glare_ugr", ugr);
+    registry::set_global_parameter_f32("glare_ugr_exp", ugr_exp);
+    registry::set_global_parameter_f32("glare_ugp", ugp);
     registry::set_global_parameter_f32("glare_vertical_illuminance", E_v);
     registry::set_global_parameter_f32("glare_source_luminance", glare_lum);
     registry::set_global_parameter_f32("glare_omega", glare_omega);
+    registry::set_global_parameter_f32("glare_background_luminance", lum_backg);
+    registry::set_global_parameter_f32("total_omega", reduce_output.total_omega);
+    registry::set_global_parameter_f32("total_lum", reduce_output.total_lum);
     registry::set_global_parameter_i32("num_glare_pixels", glare_pixels);
 
     device.sync();
