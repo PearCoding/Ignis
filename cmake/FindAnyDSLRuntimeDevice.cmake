@@ -43,6 +43,9 @@ foreach(component ${AnyDSLRuntimeDevice_FIND_COMPONENTS})
         PATH_SUFFIXES include/ local/include/
         PATHS ${_def_search_paths}
     )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.20)
+        cmake_path(NORMAL_PATH AnyDSLRuntimeDevice_${component}_INCLUDE_DIR)
+    endif()
 
     # cmake_path(GET AnyDSLRuntimeDevice_${component}_INCLUDE_DIR PARENT_PATH _AnyDSLRuntimeDevice_${component}_ROOT_DIR)
     get_filename_component(_AnyDSLRuntimeDevice_${component}_ROOT_DIR "${AnyDSLRuntimeDevice_${component}_INCLUDE_DIR}" DIRECTORY)
@@ -51,6 +54,9 @@ foreach(component ${AnyDSLRuntimeDevice_FIND_COMPONENTS})
         PATH_SUFFIXES include/ local/include/
         PATHS ${_def_search_paths} ${_AnyDSLRuntimeDevice_${component}_ROOT_DIR}/build
     )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.20)
+        cmake_path(NORMAL_PATH AnyDSLRuntimeDevice_${component}_INCLUDE_CONFIG_DIR)
+    endif()
 
     set(AnyDSLRuntimeDevice_${component}_INCLUDE_DIRS "${AnyDSLRuntimeDevice_${component}_INCLUDE_DIR}" "${AnyDSLRuntimeDevice_${component}_INCLUDE_CONFIG_DIR}")
     set(AnyDSLRuntimeDevice_INCLUDE_DIRS ${AnyDSLRuntimeDevice_INCLUDE_DIRS} ${AnyDSLRuntimeDevice_${component}_INCLUDE_DIRS})
