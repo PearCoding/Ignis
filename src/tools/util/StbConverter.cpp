@@ -1,6 +1,6 @@
 #include "Image.h"
-#include "ImageUtils.h"
 #include "ImageIO.h"
+#include "ImageUtils.h"
 
 IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -63,11 +63,12 @@ static int write_hdr(char const* filename, int x, int y, int comp, const float* 
 
 static std::string genCommandLine(const ImageMetaData& metaData)
 {
-    Vector3f eye = metaData.CameraEye.value_or(Vector3f::Zero());
-    Vector3f dir = metaData.CameraDir.value_or(-Vector3f::UnitZ());
-    Vector3f up  = metaData.CameraUp.value_or(Vector3f::UnitY());
+    const Vector3f eye = metaData.CameraEye.value_or(Vector3f::Zero());
+    const Vector3f dir = metaData.CameraDir.value_or(-Vector3f::UnitZ());
+    const Vector3f up  = metaData.CameraUp.value_or(Vector3f::UnitY());
 
-    if (metaData.CameraType.value_or("") == "perspective") {
+    const std::string camera_type = metaData.CameraType.value_or("");
+    if (camera_type == "perspective") {
         // TODO: What about other field of views?
         std::stringstream stream;
         stream << "VIEW= -vtv "
@@ -76,7 +77,7 @@ static std::string genCommandLine(const ImageMetaData& metaData)
                << " -vu " << up.x() << " " << up.y() << " " << up.z()
                << " -vh 60" << std::endl;
         return stream.str();
-    } else if (metaData.CameraType.value_or("") == "fishlens") {
+    } else if (camera_type == "fishlens" || camera_type == "fisheye") {
         // TODO: What about other fishlens types?
         std::stringstream stream;
         stream << "VIEW= -vta "

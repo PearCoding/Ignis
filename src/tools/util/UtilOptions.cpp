@@ -63,7 +63,7 @@ UtilOptions::UtilOptions(int argc, char** argv, const std::string& desc)
     auto convert = app.add_subcommand("convert", "Convert from one format to another");
 
     convert->add_option("input", InputFile, "Input file")->check(CLI::ExistingFile)->required();
-    convert->add_option("output", OutputFile, "Output file")->check(CLI::ExistingFile)->required();
+    convert->add_option("output", OutputFile, "Output file")->required();
     convert->add_option("--format", ConvertFormat, "Format to convert to. If auto, format will be determined by the output path name")->transform(EnumValidator(ConvertOptionMap, CLI::ignore_case))->default_str("auto");
 
     convert->add_option("--exposure", ToneMapExposure, "Set tonemap exposure for output image");
