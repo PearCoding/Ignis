@@ -201,16 +201,25 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
 
 #ifndef IG_OS_WINDOWS
     // Windows handles scaling different than other systems
-    style.ScaleAllSizes(getFontScale(window, renderer));
+    const float scale = getFontScale(window, renderer);
+    style.ScaleAllSizes(scale);
+
+    if ((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) == 0) {
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+        SDL_SetWindowSize(window, (int)(width * scale), (int)(height * scale));
+    }
 #endif
 
 #ifndef USE_OLD_SDL
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
 #else
-    int width, height;
-    SDL_GetWindowSize(window, &width, &height);
-    ImGuiSDL::Initialize(renderer, width, height);
+    {
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+        ImGuiSDL::Initialize(renderer, width, height);
+    }
 #endif
 }
 
