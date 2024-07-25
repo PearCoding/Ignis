@@ -216,7 +216,7 @@ public:
             setupPass("aov", path, scene.get(), mAOVPass, ShaderGenerator::generateAOV);
 
             mRuntime->setParameter("_perspective_enabled", (int)1);
-            mRuntime->setParameter("_glare_multiplier", 1.0f);
+            mRuntime->setParameter("_glare_multiplier", 5.0f);
             mRuntime->setParameter("_glare_vertical_illuminance", -1.0f /* Automatic */);
 
             updateSize(mWidth, mHeight);
