@@ -93,7 +93,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     }
 
     let scale     = settings.scale;
-    let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * srgb_to_xyY(col).b * scale }; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
+    let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * color_luminance(col) * scale }; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
 
     let lum_max    = color_builtins::white_efficiency * settings.max;
     let lum_source = color_builtins::white_efficiency * settings.avg * settings.mul;
@@ -207,7 +207,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     registry::set_global_parameter_f32("glare_dgi", dgi);
     registry::set_global_parameter_f32("glare_dgi_mod", dgi_mod);
     registry::set_global_parameter_f32("glare_vertical_illuminance", E_v);
-    registry::set_global_parameter_f32("glare_luminance", glare_lum);
+    registry::set_global_parameter_f32("glare_source_luminance", glare_lum);
     registry::set_global_parameter_f32("glare_omega", glare_omega);
     registry::set_global_parameter_i32("num_glare_pixels", glare_pixels);
 

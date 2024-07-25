@@ -21,7 +21,7 @@ fn @ig_imageinfo_pipeline2(device: Device, input: AOVImage, settings: &ImageInfo
     let scale  = settings.scale;
 
     let get_color     = @|pixel: PixelCoord| color_mulf(color_map(input.get(pixel), @|a| select(math_builtins::isfinite(a), a, 0:f32)), scale);
-    let get_luminance = @|pixel: PixelCoord| srgb_to_xyY(get_color(pixel)).b; // Only luminance
+    let get_luminance = @|pixel: PixelCoord| color_luminance(get_color(pixel)); // Only luminance
 
     let reduce_handler = device.parallel_reduce_handler;
     let reduce_output  = reduce[ReduceOutputImageInfo](reduce_handler, size,
@@ -146,7 +146,7 @@ fn @ig_imageinfo_pipeline2(device: Device, input: AOVImage, settings: &ImageInfo
         // Update histogram
         for i in device.parallel_range(0, size) {
             let c = get_color(make_pixelcoord_from_linear(i, width, height, 0, 0));
-            let L = srgb_to_xyY(c).b;
+            let L = color_luminance(c);
 
             dev_histogram_r.add_atomic_i32(get_bin(c.r), 1);
             dev_histogram_g.add_atomic_i32(get_bin(c.g), 1);
