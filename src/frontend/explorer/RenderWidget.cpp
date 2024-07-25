@@ -137,17 +137,18 @@ public:
             ImGui::SetNextWindowDockID(sMainWindowDockID, ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse)) {
                 const ImVec2 topLeft = ImGui::GetCursorPos();
-                if (mTexture)
+                if (mTexture) {
                     runPipeline();
+                    ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
+                }
 
                 const ImVec2 contentMin  = ImGui::GetWindowContentRegionMin();
                 const ImVec2 contentMax  = ImGui::GetWindowContentRegionMax();
                 const ImVec2 contentSize = ImVec2(contentMax.x - contentMin.x, contentMax.y - contentMin.y);
-                if (!mTexture || mWidth != contentSize.x || mHeight != contentSize.y)
-                    onContentResize((size_t)std::max(0.0f, contentSize.x), (size_t)std::max(0.0f, contentSize.y));
-
-                if (mTexture)
-                    ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
+                const size_t curWidth    = (size_t)std::max(0.0f, contentSize.x);
+                const size_t curHeight   = (size_t)std::max(0.0f, contentSize.y);
+                if (!mTexture || mWidth != curWidth || mHeight != curHeight)
+                    onContentResize(curWidth, curHeight);
 
                 handleInput();
 
@@ -402,7 +403,7 @@ private:
     inline bool updateTexture(const char* aov, std::shared_ptr<RenderPass>& pass)
     {
         void* pixels;
-        int pitch = (int)(mWidth * sizeof(uint32));
+        int pitch;
         if (SDL_LockTexture(mTexture, nullptr, &pixels, &pitch) != 0) {
             IG_LOG(L_ERROR) << "Cannot lock SDL texture: " << SDL_GetError() << std::endl;
             return false;
