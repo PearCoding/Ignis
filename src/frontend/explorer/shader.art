@@ -146,8 +146,6 @@ fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
 
     let glareSettings = GlareSettings{
         scale = 1 / (settings.iter + 1) as f32,
-        max   = registry::get_global_parameter_f32("_luminance_max", 1),
-        avg   = registry::get_global_parameter_f32("_luminance_avg", 1),
         mul   = registry::get_global_parameter_f32("_glare_multiplier", 5),
         vertical_illuminance = registry::get_global_parameter_f32("_glare_vertical_illuminance", -1)
     };
