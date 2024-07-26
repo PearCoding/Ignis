@@ -14,13 +14,16 @@ fn @make_perspective_projector(input_width: i32, input_height: i32) -> Projector
     let pers_scale = compute_scale_from_vfov(pers_fov, canvas_width as f32 / canvas_height as f32);
     
     let cam_perspective = make_perspective_camera(camera_eye, camera_dir, camera_up, pers_scale, canvas_width, canvas_height, 0, 100);
-    let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
+    let cam_fisheye     = make_fishlens_camera(camera_eye, camera_dir, camera_up, input_width, input_height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100, true);
 
     Projector {
         project = @|coord| {
             let rnd = create_random_generator(0xdeadbeef);
-            let ray = cam_perspective.generate_ray(rnd, coord);
-            cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir))
+            if let Option[Ray]::Some(ray) = cam_perspective.generate_ray(rnd, coord) {
+                cam_fisheye.pos_to_pixel(vec3_add(ray.org, ray.dir))
+            } else {
+                Option[PixelCoord]::None
+            }
         }
     }
 }
@@ -142,7 +145,7 @@ fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let camera_eye  = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
     let camera_dir  = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
     let camera_up   = registry::get_global_parameter_vec3("__camera_up" , vec3_expand(0));
-    let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100);
+    let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100, true);
 
     let glareSettings = GlareSettings{
         scale = 1 / (settings.iter + 1) as f32,

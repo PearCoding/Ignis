@@ -61,8 +61,10 @@ fn @gpu_traverse_primary(primary: PrimaryStream
         let ray     = rays(gid, 0);
         let mut hit = invalid_hit(ray.tmax);
 
-        for k in unroll(0, scene.type_count) {
-            hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), false /* any_hit */, 1 /*root*/);
+        if primary.rays.id(gid) != -1 {
+            for k in unroll(0, scene.type_count) {
+                hit = gpu_traverse_scene(min_max, ray, hit, scene.get(k), false /* any_hit */, 1 /*root*/);
+            }
         }
         
         hits(gid, 0, hit);
@@ -649,9 +651,13 @@ fn @gpu_generate_rays( primary: PrimaryStream
         let payload = get_payload(dst_id, 0);
 
         let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
-        write_ray(dst_id, 0, ray);
-        write_rnd(dst_id, 0, rnd.get_counter());
-        write_id(dst_id, 0, ray_id);
+        if let Option[Ray]::Some(actual_ray) = ray {
+            write_ray(dst_id, 0, actual_ray);
+            write_rnd(dst_id, 0, rnd.get_counter());
+            write_id(dst_id, 0, ray_id);
+        } else {
+            write_id(dst_id, 0, -1);
+        }
     });
     acc.sync();
 

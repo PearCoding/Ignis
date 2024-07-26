@@ -148,7 +148,7 @@ fn @make_ppm_light_emitter(light_selector: LightSelector, config: RenderConfig) 
         let sample_emission    = light.sample_emission;
         let light_sample       = @sample_emission(rnd);
         
-        let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light);
+        let ray      = make_option(make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light));
         let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), light_pdf));
         
         write_ppmraypayload(payload, PPMRayPayload {

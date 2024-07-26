@@ -5,7 +5,7 @@ enum FisheyeAspectMode {
 }
 
 // Creates a fishlens camera
-fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: FisheyeAspectMode, tmin: f32, tmax: f32) -> Camera {
+fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: FisheyeAspectMode, tmin: f32, tmax: f32, mask: bool) -> Camera {
     let right = vec3_normalize(vec3_cross(dir, up));
     let view  = make_mat3x3(right, up, dir);
     let fov   = flt_pi;
@@ -33,18 +33,20 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: F
         }
     };
 
-    fn @compute_d(x:f32, y:f32) -> Vec3 {
+    fn @compute_d(x:f32, y:f32) -> Option[Vec3] {
         let nx    = x * xasp;
         let ny    = y * yasp;
         let r	  = math_builtins::sqrt(nx * nx + ny * ny);
 		let theta = r * fov / 2;
+
+        if mask && r > 1 { return(Option[Vec3]::None) }
 
 		let sT = math_builtins::sin(theta);
         let cT = math_builtins::cos(theta);
         let sP = if r < flt_eps { 0 } else { ny / r };
         let cP = if r < flt_eps { 0 } else { nx / r };
         let nd = make_vec3(sT*cP, sT*sP, cT);
-        mat3x3_mul(view, nd)
+        make_option(mat3x3_mul(view, nd))
     }
     
     fn @pos_to_pixel(pos: Vec3) -> Option[PixelCoord] {
@@ -55,6 +57,8 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: F
         let sinTheta = math_builtins::sqrt(1 - un.z * un.z);
 
         let r = 2 * theta / fov;
+
+        if mask && r > 1 { return(Option[PixelCoord]::None) }
 
         let sx = safe_div(un.x * r, sinTheta);
         let sy = safe_div(un.y * r, sinTheta);
@@ -71,31 +75,39 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: F
 
     Camera {
         generate_ray = @ |_, coord| {
-            make_ray(eye, compute_d(coord.nx, coord.ny), tmin, tmax, ray_flag_camera)
+            if let Option[Vec3]::Some(dir) = compute_d(coord.nx, coord.ny) {
+                make_option(make_ray(eye, dir, tmin, tmax, ray_flag_camera))
+            } else {
+                Option[Ray]::None
+            }
         },
         sample_pixel = @ |_rnd, pos| {
             if let Option[PixelCoord]::Some(coord) = pos_to_pixel(pos) {
-                let ray   = make_ray(eye, compute_d(coord.nx, coord.ny), tmin, tmax, ray_flag_camera);
-                let s_dir = vec3_sub(ray.org, pos);
+                if let Option[Vec3]::Some(dir) = compute_d(coord.nx, coord.ny) {
+                    let ray   = make_ray(eye, dir, tmin, tmax, ray_flag_camera);
+                    let s_dir = vec3_sub(ray.org, pos);
 
-                let cos = vec3_dot(dir, ray.dir);
-                let jacobian = 1 / math_builtins::fabs(cos * cos * cos); // TODO: Check this
+                    let cos = vec3_dot(dir, ray.dir);
+                    let jacobian = 1 / math_builtins::fabs(cos * cos * cos); // TODO: Check this
 
-                make_option(CameraSample{
-                    coord  = coord,
-                    dir    = s_dir, // From pos to camera
-                    weight = make_gray_color(jacobian),
-                    pdf    = 1,
-                })
+                    make_option(CameraSample{
+                        coord  = coord,
+                        dir    = s_dir, // From pos to camera
+                        weight = make_gray_color(jacobian),
+                        pdf    = 1,
+                    })
+                } else{
+                    Option[CameraSample]::None
+                }
             } else {
                 Option[CameraSample]::None
             }
         },
         pos_to_pixel = pos_to_pixel,
         differential = @ |coord| {
-            let d0  = compute_d(coord.nx, coord.ny);
-            let d1x = compute_d(coord.nx + 1 / w as f32, coord.ny);
-            let d1y = compute_d(coord.nx, coord.ny + 1 / h as f32);
+            let d0  = if let Option[Vec3]::Some(dir) = compute_d(coord.nx, coord.ny) { dir } else { vec3_expand(0) };
+            let d1x = if let Option[Vec3]::Some(dir) = compute_d(coord.nx + 1 / w as f32, coord.ny) { dir } else { vec3_expand(0) };
+            let d1y = if let Option[Vec3]::Some(dir) = compute_d(coord.nx, coord.ny + 1 / h as f32) { dir } else { vec3_expand(0) };
             
             (
                 vec3_mulf(vec3_sub(d1x, d0), w as f32),

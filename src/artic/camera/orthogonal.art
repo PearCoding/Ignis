@@ -18,7 +18,7 @@ fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32, 
     Camera {
         generate_ray = @ |_, coord| {
             let pos = vec3_add(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 0)), eye);
-            make_ray(pos, dir, tmin, tmax, ray_flag_camera)
+            make_option(make_ray(pos, dir, tmin, tmax, ray_flag_camera))
         },
         sample_pixel = @ |_, pos| {
             if let Option[PixelCoord]::Some(coord) = orthogonal_pos_to_pixel(pos, eye, view, scale, w, h) {

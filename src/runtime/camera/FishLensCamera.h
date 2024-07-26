@@ -22,5 +22,6 @@ private:
     Transformf mTransform;
     float mNearClip;
     float mFarClip;
+    bool mMask;
 };
 } // namespace IG

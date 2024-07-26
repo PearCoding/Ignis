@@ -1,8 +1,8 @@
 #include "FishLensCamera.h"
+#include "StringUtils.h"
 #include "loader/LoaderContext.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
-#include "StringUtils.h"
 
 namespace IG {
 FishLensCamera::FishLensCamera(SceneObject& camera)
@@ -13,6 +13,7 @@ FishLensCamera::FishLensCamera(SceneObject& camera)
 
     mNearClip = camera.property("near_clip").getNumber(0);
     mFarClip  = camera.property("far_clip").getNumber(std::numeric_limits<float>::max());
+    mMask     = camera.property("mask").getBool(false);
 
     if (mFarClip < mNearClip)
         std::swap(mNearClip, mFarClip);
@@ -59,7 +60,8 @@ void FishLensCamera::serialize(const SerializationInput& input) const
                  << "    settings.height, " << std::endl
                  << "    " << mode << ", " << std::endl
                  << "    " << mNearClip << ", " << std::endl
-                 << "    " << mFarClip << ");" << std::endl;
+                 << "    " << mFarClip << ", " << std::endl
+                 << "    " << (mMask ? "true" : "false") << ");" << std::endl;
 }
 
 CameraOrientation FishLensCamera::getOrientation(const LoaderContext&) const

@@ -76,7 +76,7 @@ struct CameraSample {
 // Opaque camera object
 struct Camera {
     // Generates a ray for a point on the image plane
-    generate_ray: fn (RandomGenerator, PixelCoord) -> Ray,
+    generate_ray: fn (RandomGenerator, PixelCoord) -> Option[Ray],
     // Sample a point on the image plane with corresponding pixel for given point in the scene if possible
     // This call might fail if given point in scene is not within the direction of the camera
     sample_pixel: fn (RandomGenerator, Vec3) -> Option[CameraSample],

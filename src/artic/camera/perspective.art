@@ -38,7 +38,7 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32,
     Camera {
         generate_ray = @ |_, coord| {
             let d = compute_dir(coord.nx, coord.ny);
-            make_ray(eye, d, tmin, tmax, ray_flag_camera)
+            make_option(make_ray(eye, d, tmin, tmax, ray_flag_camera))
         },
         sample_pixel = @ |_, pos| {
             if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, w, h) {
@@ -82,7 +82,7 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
     }
 
     Camera {
-        generate_ray = gen_ray,
+        generate_ray = @ |rnd, coord| make_option(gen_ray(rnd, coord)),
         sample_pixel = @ |rnd, pos| {
             if let Option[PixelCoord]::Some(coord) = perspective_pos_to_pixel(pos, eye, view, scale, w, h) {
                 let ray   = gen_ray(rnd, coord);

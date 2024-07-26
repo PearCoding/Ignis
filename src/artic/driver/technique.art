@@ -28,4 +28,4 @@ fn @TechniqueNoBounceFunction    (_: ShadingContext, _: RandomGenerator, _: RayP
 fn @TechniqueNoShadowHitFunction (_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)             = Option[Color]::None;
 fn @TechniqueNoShadowMissFunction(_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)             = Option[Color]::None;
 
-type RayEmitter = fn (i32, i32, i32, i32, i32, RayPayload) -> (Ray, RandomGenerator);
+type RayEmitter = fn (i32, i32, i32, i32, i32, RayPayload) -> (Option[Ray], RandomGenerator);

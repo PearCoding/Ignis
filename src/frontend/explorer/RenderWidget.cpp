@@ -186,6 +186,7 @@ public:
 
         auto cameraObject = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "fisheye", Path{});
         cameraObject->setProperty("mode", SceneProperty::fromString("circular"));
+        cameraObject->setProperty("mask", SceneProperty::fromBool(true));
         if (prevCamera && prevCamera->hasProperty("transform"))
             cameraObject->setProperty("transform", prevCamera->property("transform"));
         if (prevCamera && prevCamera->hasProperty("fov")) // TODO: Other types?

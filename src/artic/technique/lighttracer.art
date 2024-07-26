@@ -44,7 +44,7 @@ fn @make_lt_emitter(light_selector: LightSelector, config: RenderConfig) -> RayE
         //let num_paths = width * height;
         let sample_f = 1:f32;//num_paths as f32;
 
-        let ray      = make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light);
+        let ray      = make_option(make_ray(light_sample.pos, light_sample.dir, select(light.infinite, 0:f32, offset), flt_max, ray_flag_light));
         let radiance = color_mulf(light_sample.intensity, safe_div(math_builtins::fabs(light_sample.cos), light_pdf * sample_f));
 
         write_ltraypayload(payload, LTRayPayload {

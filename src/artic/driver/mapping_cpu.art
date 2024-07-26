@@ -346,9 +346,14 @@ fn @cpu_generate_rays( primary: PrimaryStream
         let cur_ray = current_size + i;
         let payload = get_payload(cur_ray, 0);
         let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
-        write_ray(cur_ray, 0, ray);
+        if let Option[Ray]::Some(actual_ray) = ray {
+            write_ray(cur_ray, 0, actual_ray);
+            primary.rays.id(cur_ray) = (y * film_width + x) * spi + sample;
+        } else {
+            write_ray(cur_ray, 0, make_zero_ray());
+            primary.rays.id(cur_ray) = -1;
+        }
         write_rnd(cur_ray, 0, rnd.get_counter());
-        primary.rays.id(cur_ray) = (y * film_width + x) * spi + sample;
     }
     
     current_size + num_rays
