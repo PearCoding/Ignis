@@ -12,7 +12,6 @@ struct ReduceOutputInfo {
 }
 
 struct ReduceOutputGlare {
-    source_pixels: i32,
     source_omega:  f32,
     source_lum:    f32,
     source_x:      f32,
@@ -150,38 +149,34 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
             let act_lum    = luminance(input.get(pixel));
             if check_if_valid(pixel) && act_lum > lum_source {
                 ReduceOutputGlare {
-                    source_pixels = 1,
-                    source_omega  = omega,
-                    source_lum    = act_lum * omega,
-                    source_x      = pixel.x as f32 * omega,
-                    source_y      = pixel.y as f32 * omega,
+                    source_omega = omega,
+                    source_lum   = act_lum * omega,
+                    source_x     = pixel.x as f32 * omega,
+                    source_y     = pixel.y as f32 * omega,
                 }
             } else {
                 ReduceOutputGlare {
-                    source_pixels = 0,
-                    source_omega  = 0,
-                    source_lum    = 0,
-                    source_x      = 0,
-                    source_y      = 0 
+                    source_omega = 0,
+                    source_lum   = 0,
+                    source_x     = 0,
+                    source_y     = 0 
                 }
             }
         },
         @|a, b| ReduceOutputGlare{ 
-            source_pixels = a.source_pixels + b.source_pixels,
-            source_omega  = a.source_omega  + b.source_omega,
-            source_lum    = a.source_lum    + b.source_lum,
-            source_x      = a.source_x      + b.source_x,
-            source_y      = a.source_y      + b.source_y }
+            source_omega = a.source_omega + b.source_omega,
+            source_lum   = a.source_lum   + b.source_lum,
+            source_x     = a.source_x     + b.source_x,
+            source_y     = a.source_y     + b.source_y }
     );
 
-    let glare_pixels = reduce_glare.source_pixels;
     let glare_omega  = reduce_glare.source_omega;
     let glare_lum    = reduce_glare.source_lum / glare_omega;
     let glare_x      = reduce_glare.source_x / glare_omega;
     let glare_y      = reduce_glare.source_y / glare_omega;
 
     let lum_a     = E_v / flt_pi;
-    let lum_backg = if glare_pixels == width * height { lum_avg } else { (reduce_info.total_lum - reduce_glare.source_lum) / (reduce_info.total_omega - reduce_glare.source_omega) };
+    let lum_backg = if glare_omega <= flt_eps { lum_avg } else { (reduce_info.total_lum - reduce_glare.source_lum) / (reduce_info.total_omega - reduce_glare.source_omega) };
 
     // primary glare source scan
     for idx in device.parallel_range(0, width * height) {
@@ -215,7 +210,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
         let dgp_acc    = math_builtins::pow(glare_lum, a1) / math_builtins::pow(glare_posi, a4) * math_builtins::pow(glare_omega, a2) / math_builtins::pow(E_v, a3);
         let source_dgp = math_builtins::log10(1 + dgp_acc);
 
-        if glare_pixels > 0 {
+        if glare_omega > 0 {
             c1 * math_builtins::pow(E_v, a5) + c2 * source_dgp + c3
         } else {
             // No glare sources
@@ -237,7 +232,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
 
     fn @compute_dgr() -> f32 {
         let sum_glare = 0.5 * glare_lum * (20.4 * glare_omega + 1.52 * math_builtins::pow(glare_omega, 0.2:f32) - 0.075) / (glare_posi * math_builtins::pow(lum_avg, 0.44:f32));
-        math_builtins::pow(sum_glare, math_builtins::pow(glare_pixels as f32, -0.0914:f32))
+        sum_glare
     }
 
     fn @compute_vcp(dgr_v: f32) = if dgr_v > 750 { 
@@ -278,7 +273,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
 
     // TODO: Add age correction
 
-    let not_sufficient = glare_pixels == 0 || E_v < 100;
+    let not_sufficient = E_v < 100;
 
     let dgp     = if not_sufficient { 0:f32 } else { low_light_corr * compute_dgp() };
     let dgi     = if not_sufficient { 0:f32 } else { compute_dgi() };
@@ -304,7 +299,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     registry::set_global_parameter_f32("total_omega", reduce_info.total_omega);
     registry::set_global_parameter_f32("total_lum", reduce_info.total_lum);
     registry::set_global_parameter_f32("max_lum", reduce_info.max_lum);
-    registry::set_global_parameter_i32("num_glare_pixels", glare_pixels);
+    registry::set_global_parameter_f32("avg_lum", lum_avg);
 
     device.sync();
 }

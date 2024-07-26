@@ -41,6 +41,7 @@ void OverviewWidget::onRender(Widget*)
             ImGui::Text("Cam Up  (%6.3f, %6.3f, %6.3f)", camera.Up(0), camera.Up(1), camera.Up(2));
 
             ImGui::Separator();
+
             const float dgp    = runtime->parameters().getFloat("glare_dgp");
             const float dgi    = runtime->parameters().getFloat("glare_dgi");
             const float dgiMod = runtime->parameters().getFloat("glare_dgi_mod");
@@ -66,6 +67,9 @@ void OverviewWidget::onRender(Widget*)
             ImGui::Text("UGR  %.3f", ugr);
             ImGui::Text("UGRe %.3f", ugrExp);
             ImGui::Text("UGP  %.3f", ugp);
+
+            ImGui::Separator();
+
             ImGui::Text("Ev   %.3f lx", runtime->parameters().getFloat("glare_vertical_illuminance"));
             ImGui::Text("Lv   %.3f lx", runtime->parameters().getFloat("glare_source_luminance"));
         }
