@@ -48,6 +48,15 @@ void ParameterWidget::onRender(Widget*)
             if (ImGui::Checkbox("Fisheye", &fisheye))
                 runtime->setParameter("_perspective_enabled", (int)(fisheye ? 0 : 1));
 
+            if (fisheye)
+                ImGui::BeginDisabled();
+
+            if (ImGui::SliderFloat("FOV", &parameters.FOV, 10.0f, 90.0f, "%.1f"))
+                changed = true;
+
+            if (fisheye)
+                ImGui::EndDisabled();
+
             const char* current_overlay = OverlayMethodOptions[(int)parameters.OverlayMethod];
             if (ImGui::BeginCombo("Overlay", current_overlay)) {
                 for (int i = 0; i < IM_ARRAYSIZE(OverlayMethodOptions); ++i) {
@@ -70,7 +79,7 @@ void ParameterWidget::onRender(Widget*)
                 if (ImGui::Checkbox("Colorbar", &showColorbar))
                     mRenderWidget->showColorbar(showColorbar);
             }
-
+            
             if (!hasTonemapping)
                 ImGui::BeginDisabled();
 
