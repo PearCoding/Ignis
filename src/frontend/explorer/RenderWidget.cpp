@@ -155,8 +155,10 @@ public:
                 if (mShowColorbar && mCurrentParameters.allowColorbar()) {
                     ImGui::SetCursorPos(topLeft);
 
-                    const float min = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? (mRuntime->parameters().getFloat("_luminance_avg") * mRuntime->parameters().getFloat("_glare_multiplier")) : mRuntime->parameters().getFloat("_luminance_softmin");
-                    const float max = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? mRuntime->parameters().getFloat("_luminance_max") : mRuntime->parameters().getFloat("_luminance_softmax");
+                    constexpr float WhiteEfficiency = 179;
+
+                    const float min = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? mRuntime->parameters().getFloat("glare_src_lum") : (mRuntime->parameters().getFloat("_luminance_softmin") * WhiteEfficiency);
+                    const float max = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? mRuntime->parameters().getFloat("glare_max_lum") : (mRuntime->parameters().getFloat("_luminance_softmax") * WhiteEfficiency);
                     mColorbar.render(min, max);
                 }
             }

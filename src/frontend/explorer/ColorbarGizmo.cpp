@@ -26,15 +26,13 @@ void ColorbarGizmo::render(float min, float max)
     if (!mTexture)
         return;
 
-    constexpr float WhiteEfficiency = 179;
-
     if (ImGui::BeginChild("#colormap", ImVec2(0, 0), false, ImGuiWindowFlags_NoInputs)) {
         const ImVec2 sz = ImGui::CalcTextSize("TEST");
         ImGui::Image(mTexture, ImVec2(ColorbarWidth, ColorbarHeight));
         ImGui::SetCursorPos(ImVec2(ColorbarWidth + 5, 0));
-        ImGui::Text("%.2f lx", max * WhiteEfficiency);
+        ImGui::Text("%.2f lx", max);
         ImGui::SetCursorPos(ImVec2(ColorbarWidth + 5, ColorbarHeight - sz.y));
-        ImGui::Text("%.2f lx", min * WhiteEfficiency);
+        ImGui::Text("%.2f lx", min);
     }
     ImGui::EndChild();
 }

@@ -298,8 +298,9 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     registry::set_global_parameter_f32("glare_background_luminance", lum_backg);
     registry::set_global_parameter_f32("total_omega", reduce_info.total_omega);
     registry::set_global_parameter_f32("total_lum", reduce_info.total_lum);
-    registry::set_global_parameter_f32("max_lum", reduce_info.max_lum);
-    registry::set_global_parameter_f32("avg_lum", lum_avg);
+    registry::set_global_parameter_f32("glare_max_lum", lum_max);
+    registry::set_global_parameter_f32("glare_avg_lum", lum_avg);
+    registry::set_global_parameter_f32("glare_src_lum", lum_source);
 
     device.sync();
 }
