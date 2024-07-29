@@ -2,10 +2,14 @@ struct Projector {
     project: fn (PixelCoord) -> Option[PixelCoord],
 }
 
+fn @get_canvas_size() = (
+    registry::get_global_parameter_i32("_canvas_width",  128),
+    registry::get_global_parameter_i32("_canvas_height", 128)
+);
+
 fn @make_perspective_projector(input_width: i32, input_height: i32) -> Projector {
-    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
-    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
-    let pers_fov      = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
+    let (canvas_width, canvas_height) = get_canvas_size();
+    let pers_fov = rad(registry::get_global_parameter_f32("_canvas_fov", 60));
 
     let camera_eye = make_vec3(0,0,0);
     let camera_dir = make_vec3(0,0,1);
@@ -32,13 +36,39 @@ fn @make_passthrough_projector(input_width: i32, input_height: i32) = Projector 
     project = @|coord| make_option(make_pixelcoord_from_normalized(coord.nx, coord.ny, input_width, input_height))
 };
 
-fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> () {
-    let input_width   = settings.width;
-    let input_height  = settings.height;
-    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
-    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
+fn @make_rectified_projector(input_width: i32, input_height: i32) -> Projector {
+    let (canvas_width, canvas_height) = get_canvas_size();
 
-    let enabled = registry::get_global_parameter_i32("_perspective_enabled",  1) != 0;
+    fn @compute_scale(w: f32, h: f32) = if w < h { 
+        (1:f32, h / w)
+    } else {
+        (w / h, 1:f32)
+    };
+
+    let (aspect_x1, aspect_y1) = compute_scale(canvas_width as f32, canvas_height as f32);
+    let (aspect_x2, aspect_y2) = compute_scale(input_width  as f32, input_height  as f32);
+    let (aspect_x,  aspect_y)  = (aspect_x1 / aspect_x2, aspect_y1 / aspect_y2);
+
+    Projector {
+        project = @|coord| {
+            let nx = coord.nx * aspect_x;
+            let ny = coord.ny * aspect_y;
+
+            if nx < -1 || nx > 1 || ny < -1 || ny > 1 {
+                Option[PixelCoord]::None
+            } else {
+                make_option(make_pixelcoord_from_normalized(nx, ny, input_width, input_height))
+            }
+        }
+    }
+}
+
+fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> () {
+    let input_width  = settings.width;
+    let input_height = settings.height;
+    let (canvas_width, canvas_height) = get_canvas_size();
+
+    let enabled = registry::get_global_parameter_i32("_perspective_enabled", 1) != 0;
 
     let aov_name    = registry::get_global_parameter_string("_aov", "");
     let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
@@ -51,7 +81,7 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
             let color = if let Option[PixelCoord]::Some(srcCoord) = proj.project(dstCoord) {
                 framebuffer.get(srcCoord)
             } else {
-                color_builtins::pink
+                color_builtins::black
             };
 
             output.store_vec3(dstCoord.linear * 3, color_to_vec3(color));
@@ -61,18 +91,17 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     if enabled {
         run_method(make_perspective_projector(input_width, input_height))
     } else {
-        run_method(make_passthrough_projector(input_width, input_height))
+        run_method(make_rectified_projector(input_width, input_height))
     }
 
     device.sync();
 }
 
 fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
-    let input_width   = settings.width;
-    let input_height  = settings.height;
-    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
-    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
-    let aov_name      = registry::get_global_parameter_string("_aov", "");
+    let input_width  = settings.width;
+    let input_height = settings.height;
+    let aov_name     = registry::get_global_parameter_string("_aov", "");
+    let (canvas_width, canvas_height) = get_canvas_size();
 
     let framebuffer = device.load_aov_image(aov_name, spi);
     let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
@@ -110,15 +139,14 @@ fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
     if enabled {
         run_method2(make_perspective_projector(input_width, input_height))
     } else {
-        run_method2(make_passthrough_projector(input_width, input_height))
+        run_method2(make_rectified_projector(input_width, input_height))
     }
 
     device.sync();
 }
 
 fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () {
-    let width  = registry::get_global_parameter_i32("_canvas_width",  128);
-    let height = registry::get_global_parameter_i32("_canvas_height", 128);
+    let (width, height) = get_canvas_size();
     let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
     let output = device.request_buffer("_final_output", width * height, 0);
 
@@ -157,10 +185,9 @@ fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
 }
 
 fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
-    let input_width   = settings.width;
-    let input_height  = settings.height;
-    let canvas_width  = registry::get_global_parameter_i32("_canvas_width",  128);
-    let canvas_height = registry::get_global_parameter_i32("_canvas_height", 128);
+    let input_width  = settings.width;
+    let input_height = settings.height;
+    let (canvas_width, canvas_height) = get_canvas_size();
     
     let aov_name    = registry::get_global_parameter_string("_aov", "");
     let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
@@ -218,20 +245,19 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
         }
     }
 
-    let enabled = registry::get_global_parameter_i32("_perspective_enabled",  1) != 0;
+    let enabled = registry::get_global_parameter_i32("_perspective_enabled", 1) != 0;
     if enabled {
         run_method2(make_perspective_projector(input_width, input_height))
     } else {
-        run_method2(make_passthrough_projector(input_width, input_height))
+        run_method2(make_rectified_projector(input_width, input_height))
     }
 
     device.sync();
 }
 
 fn @handle_imageinfo_shader(device: Device, _spi: i32, settings: &Settings) {
-    let width  = registry::get_global_parameter_i32("_canvas_width",  128);
-    let height = registry::get_global_parameter_i32("_canvas_height", 128);
-    let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
+    let (width, height) = get_canvas_size();
+    let input = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
 
     let imageinfoSettings = ImageInfoSettings{
         scale           = 1 / (settings.iter + 1) as f32,
