@@ -1,6 +1,6 @@
 #include "MenuItem.h"
 
-#include "imgui.h"
+#include "UI.h"
 
 namespace IG {
 MenuItem::MenuItem(const std::string& name, const Callback& callback)

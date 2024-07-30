@@ -1,6 +1,6 @@
 #include "MenuSeparator.h"
 
-#include "imgui.h"
+#include "UI.h"
 
 namespace IG {
 MenuSeparator::MenuSeparator()

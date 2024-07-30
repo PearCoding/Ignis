@@ -2,7 +2,7 @@
 #include "MenuItem.h"
 #include "MenuSeparator.h"
 
-#include "imgui.h"
+#include "UI.h"
 
 namespace IG {
 

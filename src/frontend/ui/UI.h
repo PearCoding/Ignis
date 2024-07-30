@@ -5,6 +5,9 @@
 #endif
 #include <SDL.h>
 
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#define IMGUI_DISABLE_OBSOLETE_KEYIO
+
 #include "imgui.h"
 #include "imgui_markdown.h"
 #include "implot.h"

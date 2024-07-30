@@ -136,19 +136,17 @@ public:
             ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowDockID(sMainWindowDockID, ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse)) {
-                const ImVec2 topLeft = ImGui::GetCursorPos();
-                if (mTexture) {
-                    runPipeline();
-                    ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
-                }
-
-                const ImVec2 contentMin  = ImGui::GetWindowContentRegionMin();
-                const ImVec2 contentMax  = ImGui::GetWindowContentRegionMax();
-                const ImVec2 contentSize = ImVec2(contentMax.x - contentMin.x, contentMax.y - contentMin.y);
+                const ImVec2 topLeft     = ImGui::GetCursorPos();
+                const ImVec2 contentSize = ImGui::GetContentRegionAvail();
                 const size_t curWidth    = (size_t)std::max(0.0f, contentSize.x);
                 const size_t curHeight   = (size_t)std::max(0.0f, contentSize.y);
                 if (!mTexture || mWidth != curWidth || mHeight != curHeight)
                     onContentResize(curWidth, curHeight);
+
+                if (mTexture) {
+                    runPipeline();
+                    ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
+                }
 
                 handleInput();
 

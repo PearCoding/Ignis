@@ -1,7 +1,7 @@
 #include "Inspector.h"
 #include "IG_Config.h"
 
-#include "imgui.h"
+#include "UI.h"
 
 #include <array>
 #include <numeric>
