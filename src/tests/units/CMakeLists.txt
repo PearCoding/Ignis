@@ -1,4 +1,10 @@
-CPMAddPackage("gh:catchorg/Catch2@3.6.0")
+CPMAddPackage(
+    NAME Catch2
+    GITHUB_REPOSITORY catchorg/Catch2 
+    GIT_TAG v3.6.0
+    EXCLUDE_FROM_ALL YES
+    SYSTEM
+)
     
 macro(push_test name files)
 	set(options NO_ADD)
