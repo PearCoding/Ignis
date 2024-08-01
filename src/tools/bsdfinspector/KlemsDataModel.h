@@ -9,8 +9,8 @@ public:
     KlemsDataModel(const std::shared_ptr<Klems>& klems);
     ~KlemsDataModel();
 
-    void renderView(const Vector3f& view, DataComponent component) override;
-    void renderProperties(DataComponent component) override;
+    void renderView(float viewTheta, float viewPhi, float radius, DataComponent component) override;
+    void renderProperties(float viewTheta, float viewPhi, DataComponent component) override;
 
 private:
     std::shared_ptr<Klems> mKlems;

@@ -12,7 +12,7 @@ enum class DataComponent {
 
 class IDataModel {
 public:
-    virtual void renderView(const Vector3f& view, DataComponent component) = 0;
-    virtual void renderProperties(DataComponent component)                 = 0;
+    virtual void renderView(float viewTheta, float viewPhi, float radius, DataComponent component) = 0;
+    virtual void renderProperties(float viewTheta, float viewPhi, DataComponent component)         = 0;
 };
 } // namespace IG

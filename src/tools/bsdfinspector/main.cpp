@@ -42,6 +42,7 @@ public:
         mPropertyWidget  = std::make_shared<PropertyWidget>();
 
         mViewWidget->connectProperties(mPropertyWidget.get());
+        mPropertyWidget->connectView(mViewWidget.get());
 
         app->addChild(setupMainMenu());
         app->addChild(mViewWidget);

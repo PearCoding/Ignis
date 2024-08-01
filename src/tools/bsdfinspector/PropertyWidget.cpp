@@ -1,6 +1,7 @@
 #include "PropertyWidget.h"
 #include "IDataModel.h"
 #include "MenuItem.h"
+#include "ViewWidget.h"
 
 #include "UI.h"
 
@@ -10,7 +11,7 @@ PropertyWidget::PropertyWidget()
     : Widget()
     , mModel()
     , mVisibleItem(nullptr)
-    , mView(Vector3f::UnitZ())
+    , mViewWidget(nullptr)
     , mComponent(DataComponent::FrontReflection)
 {
 }
@@ -25,6 +26,8 @@ static const char* const ComponentOptions[] = {
 
 void PropertyWidget::onRender(Widget*)
 {
+    IG_ASSERT(mViewWidget, "Expected property widget to be valid");
+
     if (mVisibleItem && !mVisibleItem->isSelected())
         return;
 
@@ -46,7 +49,7 @@ void PropertyWidget::onRender(Widget*)
 
         if (mModel) {
             ImGui::Separator();
-            mModel->renderProperties(mComponent);
+            mModel->renderProperties(mViewWidget->incidentTheta(), mViewWidget->incidentPhi(), mComponent);
         }
     }
     ImGui::End();

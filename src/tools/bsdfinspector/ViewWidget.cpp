@@ -11,6 +11,8 @@ ViewWidget::ViewWidget()
     , mModel()
     , mVisibleItem(nullptr)
     , mPropertyWidget(nullptr)
+    , mViewTheta(0)
+    , mViewPhi(0)
 {
 }
 
@@ -25,10 +27,38 @@ void ViewWidget::onRender(Widget*)
     if (mVisibleItem && !mVisibleItem->isSelected())
         return;
 
+    if (!mModel)
+        return;
+
     bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
     if (ImGui::Begin("View", mVisibleItem ? &visibility : nullptr)) {
-        if (mModel)
-            mModel->renderView(mPropertyWidget->currentView(), mPropertyWidget->pickedComponent());
+        auto& drawList = *ImGui::GetWindowDrawList();
+        drawList.AddRectFilled(ImGui::GetCursorScreenPos(), ImVec2(ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x, ImGui::GetCursorScreenPos().y + ImGui::GetContentRegionAvail().y), ImColor(240, 240, 240));
+
+        bool hasView = false;
+        if (ImGui::BeginChild("##view_child")) {
+            const ImVec2 area  = ImGui::GetContentRegionAvail();
+            const float radius = std::min(area.x, area.y) / 2 - 10;
+            if (radius > 1) {
+                mModel->renderView(mViewTheta, mViewPhi, radius, mPropertyWidget->pickedComponent());
+                hasView = true;
+            }
+        }
+        ImGui::EndChild();
+
+        if (hasView && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            const ImVec2 area   = ImGui::GetItemRectSize();
+            const ImVec2 center = ImVec2((ImGui::GetItemRectMin().x + ImGui::GetItemRectMax().x) / 2, (ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) / 2);
+            const float radius  = std::min(area.x, area.y) / 2 - 10;
+            const ImVec2 rpos   = ImVec2((ImGui::GetMousePos().x - center.x) / radius, (ImGui::GetMousePos().y - center.y) / radius);
+
+            if (rpos.x * rpos.x + rpos.y * rpos.y < 1) {
+                mViewTheta = std::sqrt(rpos.x * rpos.x + rpos.y * rpos.y) * Pi2;
+                mViewPhi   = std::atan2(rpos.y, rpos.x);
+                if (mViewPhi < 0)
+                    mViewPhi += 2 * Pi;
+            }
+        }
     }
     ImGui::End();
 

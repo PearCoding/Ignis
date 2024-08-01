@@ -14,4 +14,4 @@ private:
     void setupTexture();
     void* mTexture;
 };
-} // namespace IG
+} // namespace IGmatrix
