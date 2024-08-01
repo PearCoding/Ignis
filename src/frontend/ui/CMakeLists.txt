@@ -19,12 +19,19 @@ CPMAddPackage(
     DOWNLOAD_ONLY YES
 )
 
+CPMAddPackage(
+    NAME portable_file_dialogs
+    GITHUB_REPOSITORY samhocevar/portable-file-dialogs
+    GIT_TAG main
+    DOWNLOAD_ONLY YES
+)
+
 #################################
 
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "*.cpp")
 
 add_library(ig_ui STATIC ${SRC})
-target_include_directories(ig_ui SYSTEM PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR})
+target_include_directories(ig_ui SYSTEM PUBLIC ${SDL2_INCLUDE_DIR} ${imgui_SOURCE_DIR} ${implot_SOURCE_DIR} ${imgui_markdown_SOURCE_DIR} ${portable_file_dialogs_SOURCE_DIR})
 target_include_directories(ig_ui PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_link_libraries(ig_ui PUBLIC ${SDL2_LIBRARY} ig_runtime)
 add_custom_command(TARGET ig_ui POST_BUILD

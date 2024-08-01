@@ -2,7 +2,6 @@
 #include "EnumValidator.h"
 #include "Runtime.h"
 #include "config/Build.h"
-#include "loader/Transpiler.h"
 
 namespace IG {
 static const std::map<std::string, LogLevel> LogLevelMap{ { "fatal", L_FATAL }, { "error", L_ERROR }, { "warning", L_WARNING }, { "info", L_INFO }, { "debug", L_DEBUG } };

@@ -65,7 +65,7 @@ public:
         return sContext;
     }
 
-    inline Application* window() { return mApplication; }
+    inline Application* app() { return mApplication; }
     inline RenderWidget* renderWidget() { return mRenderWidget.get(); }
 
 private:
@@ -122,8 +122,8 @@ static void openFileCallback(const Path& path)
     if (Context::instance().renderWidget())
         Context::instance().renderWidget()->openFile(path);
 
-    if (Context::instance().window())
-        Context::instance().window()->setTitle("Ignis | " + std::filesystem::weakly_canonical(path).generic_string());
+    if (Context::instance().app())
+        Context::instance().app()->setTitle("Ignis | " + std::filesystem::weakly_canonical(path).generic_string());
 }
 
 static void openFileDialogCallback()
@@ -179,8 +179,8 @@ int main(int argc, char** argv)
     const std::string ini_file = (RuntimeInfo::configDirectory() / "ui_explorer.ini").generic_string();
 
     try {
-        Application window(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
-        Context::instance().setup(&window);
+        Application app(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
+        Context::instance().setup(&app);
 
         if (!args.InputFile.empty())
             openFileCallback(args.InputFile);
@@ -190,7 +190,7 @@ int main(int argc, char** argv)
         if (!std::filesystem::exists(io.IniFilename))
             LoadDefaultConfig();
 
-        const int exitcode = window.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
+        const int exitcode = app.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
         Context::instance().renderWidget()->cleanup();
 
         return exitcode;
