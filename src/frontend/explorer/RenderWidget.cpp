@@ -1,4 +1,5 @@
 #include "RenderWidget.h"
+#include "Application.h"
 #include "CameraProxy.h"
 #include "ColorbarGizmo.h"
 #include "Logger.h"
@@ -13,9 +14,6 @@
 extern const char* ig_shader[];
 
 namespace IG {
-extern SDL_Renderer* sRenderer;
-extern int sMainWindowDockID;
-
 void loaderThread(RenderWidgetInternal* internal, Path scene_file);
 
 constexpr float RSPEED  = 0.005f;
@@ -134,7 +132,7 @@ public:
             mRuntime->step(!mUseDenoiser);
 
             ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowDockID(sMainWindowDockID, ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowDockID(Application::getMainWindowDockID(), ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoCollapse)) {
                 const ImVec2 topLeft     = ImGui::GetCursorPos();
                 const ImVec2 contentSize = ImGui::GetContentRegionAvail();
@@ -528,7 +526,7 @@ private:
         if (mTexture)
             SDL_DestroyTexture(mTexture);
 
-        mTexture = SDL_CreateTexture(sRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, (int)width, (int)height);
+        mTexture = SDL_CreateTexture(Application::getRenderer(), SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, (int)width, (int)height);
         if (!mTexture) {
             IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
             return false;

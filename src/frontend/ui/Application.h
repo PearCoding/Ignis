@@ -4,6 +4,8 @@
 
 #include <functional>
 
+struct SDL_Renderer;
+
 namespace IG {
 class Widget;
 class Application {
@@ -20,6 +22,9 @@ public:
     void setDropCallback(const std::function<void(const Path&)>& callback);
 
     void signalQuit();
+
+    static int getMainWindowDockID();
+    static SDL_Renderer* getRenderer();
 
 private:
     std::unique_ptr<class ApplicationInternal> mInternal;

@@ -5,7 +5,6 @@
 #include "Widget.h"
 
 namespace IG {
-SDL_Window* sWindow     = nullptr;
 SDL_Renderer* sRenderer = nullptr;
 int sMainWindowDockID   = -1;
 
@@ -58,7 +57,6 @@ public:
 
         ui::setup(mWindow, mRenderer, true, dpi);
 
-        sWindow   = mWindow;
         sRenderer = mRenderer;
     }
 
@@ -202,5 +200,15 @@ void Application::setDropCallback(const std::function<void(const Path&)>& callba
 void Application::signalQuit()
 {
     mInternal->signalQuit();
+}
+
+int Application::getMainWindowDockID()
+{
+    return sMainWindowDockID;
+}
+
+SDL_Renderer* Application::getRenderer()
+{
+    return sRenderer;
 }
 } // namespace IG

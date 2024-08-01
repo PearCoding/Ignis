@@ -1,10 +1,10 @@
 #include "ColorbarGizmo.h"
+#include "Application.h"
 #include "Logger.h"
 
 #include "UI.h"
 
 namespace IG {
-extern SDL_Renderer* sRenderer;
 
 constexpr int ColorbarWidth  = 16;
 constexpr int ColorbarHeight = 128;
@@ -57,7 +57,7 @@ static inline Vector4f computeInferno(float t)
 
 void ColorbarGizmo::setupTexture()
 {
-    auto texture = SDL_CreateTexture(sRenderer, SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_STREAMING, ColorbarWidth, ColorbarHeight);
+    auto texture = SDL_CreateTexture(Application::getRenderer(), SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_STREAMING, ColorbarWidth, ColorbarHeight);
     if (!texture) {
         IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
         return;
