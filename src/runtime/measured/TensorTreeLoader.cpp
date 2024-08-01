@@ -8,157 +8,7 @@
 #include <pugixml.hpp>
 
 namespace IG {
-// Only used in the building process
-struct TensorTreeNode {
-    std::vector<std::unique_ptr<TensorTreeNode>> Children;
-    std::vector<float> Values;
-
-    inline bool isLeaf() const { return Children.empty(); }
-
-    // The root is the only node with one child. Get rid of this special case
-    inline void eat()
-    {
-        IG_ASSERT(Values.empty() && Children.size() == 1, "Invalid call to eat");
-
-        std::swap(Children[0]->Values, Values);
-        std::swap(Children[0]->Children, Children);
-    }
-
-    inline float computeTotal(size_t depth) const
-    {
-        const float area = 1.0f / (depth * (Values.size() + Children.size()));
-
-        float total = 0;
-        for (const auto& child : Children)
-            total += child->computeTotal(depth + 1);
-
-        for (float val : Values)
-            total += Pi * val * area;
-
-        return total;
-    }
-
-    inline size_t computeMaxDepth(size_t depth) const
-    {
-        if (isLeaf())
-            return depth;
-
-        size_t d = 0;
-        for (const auto& child : Children)
-            d = std::max(d, child->computeMaxDepth(depth + 1));
-
-        return d;
-    }
-
-    inline void dump(std::ostream& stream) const
-    {
-        if (isLeaf()) {
-            stream << "[ ";
-            for (const auto& c : Values)
-                stream << c << " ";
-            stream << "]";
-        } else {
-            stream << "{ ";
-            for (const auto& c : Children)
-                c->dump(stream);
-            stream << " }";
-        }
-    }
-};
-
-using NodeValue = int32_t;
-
-static_assert(sizeof(NodeValue) == sizeof(float), "Node and Leaf value elements have to have the same size");
-class TensorTreeComponent {
-public:
-    inline explicit TensorTreeComponent(uint32 ndim)
-        : mNDim(ndim)
-        , mMaxValuesPerNode(1 << ndim)
-        , mTotal(0)
-        , mMinProjSA(Pi)
-        , mRootIsLeaf(false)
-    {
-    }
-
-    inline void addNode(const TensorTreeNode& node, std::optional<size_t> parentOffsetValue)
-    {
-        if (node.isLeaf()) {
-            size_t off = mValues.size();
-            if (parentOffsetValue.has_value())
-                mNodes[parentOffsetValue.value()] = -(static_cast<NodeValue>(off) + 1);
-            else
-                mRootIsLeaf = true;
-
-            bool single = node.Values.size() == 1;
-            if (single) {
-                mValues.emplace_back((float)std::copysign(node.Values.front(), -1));
-            } else {
-                IG_ASSERT(node.Values.size() == mMaxValuesPerNode, "Expected valid number of values in a leaf");
-                mValues.insert(mValues.end(), node.Values.begin(), node.Values.end());
-            }
-        } else {
-            IG_ASSERT(node.Children.size() == mMaxValuesPerNode, "Expected valid number of children in a node");
-
-            size_t off = mNodes.size();
-            if (parentOffsetValue.has_value())
-                mNodes[parentOffsetValue.value()] = static_cast<NodeValue>(off);
-
-            // First create the entries to linearize access
-            for (size_t i = 0; i < node.Children.size(); ++i)
-                mNodes.emplace_back();
-
-            // Recursively add nodes
-            for (size_t i = 0; i < node.Children.size(); ++i)
-                addNode(*node.Children[i], off + i);
-        }
-    }
-
-    inline void makeBlack()
-    {
-        mNodes     = std::vector<NodeValue>(mMaxValuesPerNode, 0);
-        mValues    = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
-        mTotal     = 0;
-        mMinProjSA = Pi;
-
-        std::fill(mNodes.begin(), mNodes.end(), -1);
-    }
-
-    inline void write(std::ostream& os) const
-    {
-        auto node_count  = static_cast<uint32>(mNodes.size());
-        auto value_count = static_cast<uint32>(mValues.size());
-
-        // We do not make use of this header, but it might get handy in other applications
-        os.write(reinterpret_cast<const char*>(&mNDim), sizeof(mNDim));
-        os.write(reinterpret_cast<const char*>(&mMaxValuesPerNode), sizeof(mMaxValuesPerNode));
-        os.write(reinterpret_cast<const char*>(&node_count), sizeof(node_count));
-        os.write(reinterpret_cast<const char*>(&value_count), sizeof(value_count));
-
-        os.write(reinterpret_cast<const char*>(mNodes.data()), mNodes.size() * sizeof(NodeValue));
-        os.write(reinterpret_cast<const char*>(mValues.data()), mValues.size() * sizeof(float));
-    }
-
-    [[nodiscard]] inline size_t nodeCount() const { return mNodes.size(); }
-    [[nodiscard]] inline size_t valueCount() const { return mValues.size(); }
-
-    inline void setTotal(float f) { mTotal = f; }
-    [[nodiscard]] inline float total() const { return mTotal; }
-    [[nodiscard]] inline float isRootLeaf() const { return mRootIsLeaf; }
-
-    inline void setMinProjSA(float sa) { mMinProjSA = sa; }
-    [[nodiscard]] inline float minProjSA() const { return mMinProjSA; }
-
-private:
-    uint32 mNDim;
-    uint32 mMaxValuesPerNode;
-    std::vector<NodeValue> mNodes;
-    std::vector<float> mValues;
-    float mTotal;
-    float mMinProjSA;
-    bool mRootIsLeaf;
-};
-
-bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorTreeSpecification& spec)
+bool TensorTreeLoader::load(const Path& in_xml, TensorTree& tree)
 {
     // Read Radiance based klems BSDF xml document
     pugi::xml_document doc;
@@ -187,8 +37,6 @@ bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorT
         IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Expected IncidentDataStructure of 'TensorTree4' or 'TensorTree3' but got '" << type << "' instead" << std::endl;
         return false;
     }
-
-    spec.ndim = dim4 ? 4 : 3;
 
     std::shared_ptr<TensorTreeComponent> reflectionFront;
     std::shared_ptr<TensorTreeComponent> transmissionFront;
@@ -348,11 +196,20 @@ bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorT
         return false;
     }
 
-    std::ofstream stream(out_data, std::ios::binary | std::ios::trunc);
-    reflectionFront->write(stream);
-    transmissionFront->write(stream);
-    reflectionBack->write(stream);
-    transmissionBack->write(stream);
+    tree.is_isotropic       = !dim4;
+    tree.front_reflection   = std::move(reflectionFront);
+    tree.back_reflection    = std::move(reflectionBack);
+    tree.front_transmission = std::move(transmissionFront);
+    tree.back_transmission  = std::move(transmissionBack);
+
+    return true;
+}
+
+bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorTreeSpecification& spec)
+{
+    TensorTree tree;
+    if (!load(in_xml, tree))
+        return false;
 
     // Fill missing parts in the specification
     const auto assignSpec = [](TensorTreeComponentSpecification& spec, const TensorTreeComponent& comp) {
@@ -363,10 +220,20 @@ bool TensorTreeLoader::prepare(const Path& in_xml, const Path& out_data, TensorT
         spec.min_proj_sa  = comp.minProjSA();
     };
 
-    assignSpec(spec.front_reflection, *reflectionFront);
-    assignSpec(spec.back_reflection, *reflectionBack);
-    assignSpec(spec.front_transmission, *transmissionFront);
-    assignSpec(spec.back_transmission, *transmissionBack);
+    spec.ndim = tree.is_isotropic ? 3 : 4;
+    assignSpec(spec.front_reflection, *tree.front_reflection);
+    assignSpec(spec.back_reflection, *tree.back_reflection);
+    assignSpec(spec.front_transmission, *tree.front_transmission);
+    assignSpec(spec.back_transmission, *tree.back_transmission);
+
+    if (!out_data.empty()) {
+        // Note: Order matters!
+        std::ofstream stream(out_data, std::ios::binary | std::ios::trunc);
+        tree.front_reflection->write(stream);
+        tree.front_transmission->write(stream);
+        tree.back_reflection->write(stream);
+        tree.back_transmission->write(stream);
+    }
 
     return true;
 }
