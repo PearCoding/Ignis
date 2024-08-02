@@ -177,16 +177,20 @@ static inline void drawPatch(const Vector2f& minPos, const Vector2f& maxPos, con
 {
     auto& drawList = *ImGui::GetWindowDrawList();
 
-    const Vector2f minRPhi = squareToConcentricDiskAngles(minPos);
-    const Vector2f maxRPhi = squareToConcentricDiskAngles(maxPos);
+    const auto& transform2 = [&](float x, float y) {
+        const Vector2f rPhi = squareToConcentricDiskAngles(Vector2f(x, y));
+        const float theta   = rPhi.x() * Pi2;
+        const float phi     = rPhi.y();
+        return transform(theta, phi);
+    };
 
-    const float theta0 = minRPhi.x() * Pi2;
-    const float phi0   = minRPhi.y();
-    const float theta1 = maxRPhi.x() * Pi2;
-    const float phi1   = maxRPhi.y();
+    const ImVec2 p00 = transform2(minPos.x(), minPos.y());
+    const ImVec2 p01 = transform2(minPos.x(), maxPos.y());
+    const ImVec2 p10 = transform2(maxPos.x(), minPos.y());
+    const ImVec2 p11 = transform2(maxPos.x(), maxPos.y());
 
-    drawList.AddQuadFilled(transform(theta0, phi0), transform(theta0, phi1), transform(theta1, phi1), transform(theta1, phi0), ImColor(color.x(), color.y(), color.z()));
-    drawList.AddQuad(transform(theta0, phi0), transform(theta0, phi1), transform(theta1, phi1), transform(theta1, phi0), LineColor);
+    drawList.AddQuadFilled(p00, p01, p11, p10, ImColor(color.x(), color.y(), color.z()));
+    drawList.AddQuad(p00, p01, p11, p10, LineColor);
 }
 
 template <typename TransformF>
