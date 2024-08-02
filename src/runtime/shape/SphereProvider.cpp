@@ -39,7 +39,7 @@ void SphereProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std:
     acc.DatabaseAccessMutex.lock();
 
     auto& table         = ctx.Database.DynTables["shapes"];
-    auto& data          = table.addLookup((uint32)this->id(), 0, DefaultAlignment);
+    auto& data          = table.addLookup((uint32)this->id(), 0, Pack4Alignment);
     const size_t offset = table.currentOffset();
 
     VectorSerializer serializer(data, false);
