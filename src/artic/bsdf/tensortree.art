@@ -49,6 +49,7 @@ fn @tt_is_leaf_single_value(leaf_val: f32) = math_builtins::signbit(leaf_val);
 fn @tt_lookup_grid(pos: Vec4, component: TensorTreeComponentSpecification) -> (i32, Vec4) {
     let mut spos: [f32*4];
     let mut n    = 0:i32;
+    // TODO: Reverse this
     for i in unroll_rev(component.ndim, 0) {
         let p = 2 * vec4_at(pos, i - 1);
         let t = select(p >= 1, 1:i32, 0:i32);
