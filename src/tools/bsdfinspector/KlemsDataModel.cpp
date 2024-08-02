@@ -153,11 +153,12 @@ void KlemsDataModel::renderInfo(float incidentTheta, float incidentPhi, float ou
     }
 
     if (ImGui::BeginTooltip()) {
-        ImGui::Text("Value:      %3.2f", value);
-        ImGui::Text("SolidAngle: %3.2f", solidAngle);
+        ImGui::Text("Value:       %3.2f", solidAngle > 0 ? value / solidAngle : 0.0f);
+        ImGui::Text("Solid Angle: %3.2f", solidAngle);
+        ImGui::Text("Entry:       %3.2f", value);
         ImGui::Separator();
-        ImGui::Text("Row:        %i", row);
-        ImGui::Text("Column:     %i", col);
+        ImGui::Text("Row:         %i", row);
+        ImGui::Text("Column:      %i", col);
         ImGui::EndTooltip();
     }
 }
