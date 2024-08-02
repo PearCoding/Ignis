@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "DefaultConfig.h"
 #include "HelpAboutWidget.h"
 #include "IO.h"
 #include "InspectorOptions.h"
@@ -163,8 +164,8 @@ int main(int argc, char** argv)
 
         auto& io       = ImGui::GetIO();
         io.IniFilename = ini_file.c_str();
-        // if (!std::filesystem::exists(io.IniFilename))
-        //     LoadDefaultConfig();
+        if (!std::filesystem::exists(io.IniFilename))
+            LoadDefaultConfig();
 
         const int exitcode = app.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
 
