@@ -1,5 +1,3 @@
-#define IMGUI_DEFINE_MATH_OPERATORS
-
 #include "RangeSlider.h"
 
 #include <limits>
@@ -161,15 +159,15 @@ bool RangeSliderFloat(const char* label, float* v1, float* v2, float v_min, floa
     const ImGuiID id        = window->GetID(label);
     const float w           = CalcItemWidth();
 
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y * 2.0f));
-    const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
+    const ImVec2 label_size = CalcTextSize(label, nullptr, true);
+    const ImRect frame_bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + w, window->DC.CursorPos.y + label_size.y + style.FramePadding.y * 2.0f));
+    const ImRect total_bb(frame_bb.Min, ImVec2(frame_bb.Max.x + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), frame_bb.Max.y));
 
     ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id, &frame_bb, 0))
         return false;
 
-    if (single_display_format == NULL)
+    if (single_display_format == nullptr)
         single_display_format = DataTypeGetInfo(ImGuiDataType_Float)->PrintFmt;
 
     const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
@@ -218,7 +216,7 @@ bool RangeSliderFloat(const char* label, float* v1, float* v2, float v_min, floa
 
     if (g.LogEnabled)
         LogSetNextTextDecoration("{", "}");
-    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
+    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, nullptr, ImVec2(0.5f, 0.5f));
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
