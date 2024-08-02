@@ -93,7 +93,7 @@ void KlemsDataModel::renderView(float incidentTheta, float incidentPhi, float ra
                 const float phi0 = phiInd / (float)base.PhiCount * 2 * Pi + Pi;
                 const float phi1 = (phiInd + 1) / (float)base.PhiCount * 2 * Pi + Pi;
 
-                const int patches = std::max(1, (int)std::floor(Pi / (phi1 - phi0)));
+                const int patches = std::max(1, (int)std::floor(64 * (phi1 - phi0) / Pi));
 
                 for (int i = 0; i < patches; ++i) {
                     const float t0 = i / (float)patches;
@@ -171,14 +171,10 @@ void KlemsDataModel::renderProperties(float incidentTheta, float incidentPhi, Da
     // Get row of view vector
     const int row = computeIndex(comp->row().get(), incidentTheta, incidentPhi);
 
-    const float total   = comp->computeTotal();
-    const float maxHemi = comp->computeMaxHemisphericalScattering();
-    const float minProj = comp->computeMinimumProjectedSolidAngle();
-
     ImGui::Text("Incident Patch: %i", row);
-
-    ImGui::Text("Total:    %3.2f", total);
-    ImGui::Text("Max Hemi: %3.2f", maxHemi);
-    ImGui::Text("Min Proj: %3.2f", minProj);
+    ImGui::Separator();
+    ImGui::Text("Total:    %3.2f", comp->computeTotal());
+    ImGui::Text("Max Hemi: %3.2f", comp->computeMaxHemisphericalScattering());
+    ImGui::Text("Min Proj: %3.2f", comp->computeMinimumProjectedSolidAngle());
 }
 } // namespace IG

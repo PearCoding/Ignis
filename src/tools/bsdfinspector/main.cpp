@@ -11,8 +11,10 @@
 #include "PropertyWidget.h"
 #include "Runtime.h"
 #include "RuntimeInfo.h"
+#include "TensorDataModel.h"
 #include "ViewWidget.h"
 #include "measured/KlemsLoader.h"
+#include "measured/TensorTreeLoader.h"
 
 #include "UI.h"
 
@@ -68,7 +70,9 @@ public:
             if (KlemsLoader::load(path, *klems))
                 mLoadedModel = std::make_shared<KlemsDataModel>(klems);
         } else {
-            // TODO
+            auto ttree = std::make_shared<TensorTree>();
+            if (TensorTreeLoader::load(path, *ttree))
+                mLoadedModel = std::make_shared<TensorDataModel>(ttree);
         }
 
         mViewWidget->setModel(mLoadedModel);

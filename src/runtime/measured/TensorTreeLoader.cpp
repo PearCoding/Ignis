@@ -150,11 +150,7 @@ bool TensorTreeLoader::load(const Path& in_xml, TensorTree& tree)
 
         // Setup component
         std::shared_ptr<TensorTreeComponent> component = std::make_shared<TensorTreeComponent>(dim4 ? 4 : 3);
-        component->addNode(*root, {});
-        component->setTotal(root->computeTotal(1));
-
-        const size_t maxDepth = root->computeMaxDepth(1);
-        component->setMinProjSA(Pi / (float)(1 << maxDepth)); // TODO: Validate
+        component->setRoot(std::move(root));
 
         // Select correct component
         // The window definition flips the front & back
