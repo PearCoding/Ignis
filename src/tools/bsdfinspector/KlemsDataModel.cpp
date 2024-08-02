@@ -1,5 +1,5 @@
 #include "KlemsDataModel.h"
-#include "Colormap.h"
+#include "Colormapper.h"
 #include "measured/KlemsLoader.h"
 
 #include "UI.h"
@@ -29,7 +29,24 @@ static inline KlemsComponent* getComponent(const std::shared_ptr<Klems>& klems, 
     }
 }
 
-void KlemsDataModel::renderView(float viewTheta, float viewPhi, float radius, DataComponent component)
+static inline int computeIndex(KlemsBasis* basis, float theta, float phi)
+{
+    phi = std::fmod(phi, 2 * Pi);
+
+    int ind = 0;
+    for (const auto& base : basis->thetaBasis()) {
+        if (theta < base.UpperTheta) {
+            // Find phi
+            ind += std::min(base.PhiCount - 1, (uint32)std::floor(base.PhiCount * phi / (2 * Pi)));
+            break;
+        } else {
+            ind += base.PhiCount;
+        }
+    }
+    return ind;
+}
+
+void KlemsDataModel::renderView(float incidentTheta, float incidentPhi, float radius, DataComponent component, const Colormapper& mapper)
 {
     KlemsComponent* comp = getComponent(mKlems, component);
     if (!comp)
@@ -40,20 +57,10 @@ void KlemsDataModel::renderView(float viewTheta, float viewPhi, float radius, Da
 
     auto& drawList = *ImGui::GetWindowDrawList();
 
-    const auto& rowThetas = comp->row()->thetaBasis();
     const auto& colThetas = comp->column()->thetaBasis();
 
     // Get row of view vector
-    int row = 0;
-    for (const auto& base : rowThetas) {
-        if (viewTheta < base.UpperTheta) {
-            // Find phi
-            row += std::min(base.PhiCount - 1, (uint32)std::floor(base.PhiCount * viewPhi / (2 * Pi)));
-            break;
-        } else {
-            row += base.PhiCount;
-        }
-    }
+    const int row = computeIndex(comp->row().get(), incidentTheta, incidentPhi);
 
     // const float maxOfRow = comp->matrix().row(row).maxCoeff();
 
@@ -75,12 +82,9 @@ void KlemsDataModel::renderView(float viewTheta, float viewPhi, float radius, Da
         const float theta1 = base.UpperTheta;
         const float scale  = base.PhiSolidAngle / Pi;
 
-        // TODO
-        constexpr float TonemapMin = 0.001f;
-        constexpr float TonemapMax = 100.0f;
         for (uint32 phiInd = 0; phiInd < base.PhiCount; ++phiInd) {
             const float value     = comp->matrix()(row, col) / scale;
-            const Vector4f mapped = colormap::plasma((value - TonemapMin) / (TonemapMax - TonemapMin));
+            const Vector4f mapped = mapper.apply(value);
             const ImColor color   = ImColor(mapped.x(), mapped.y(), mapped.z());
 
             if (base.PhiCount == 1) { // Circle
@@ -122,26 +126,50 @@ void KlemsDataModel::renderView(float viewTheta, float viewPhi, float radius, Da
     }
 
     // Draw view point
-    drawList.AddCircleFilled(transform(viewTheta, viewPhi), 8, ImColor(0, 100, 200));
+    drawList.AddCircleFilled(transform(incidentTheta, incidentPhi), 8, ImColor(0, 100, 200));
 }
 
-void KlemsDataModel::renderProperties(float viewTheta, float viewPhi, DataComponent component)
+void KlemsDataModel::renderInfo(float incidentTheta, float incidentPhi, float outgoingTheta, float outgoingPhi, DataComponent component)
 {
     KlemsComponent* comp = getComponent(mKlems, component);
     if (!comp)
         return;
 
     // Get row of view vector
-    int row = 0;
-    for (const auto& base : comp->row()->thetaBasis()) {
-        if (viewTheta < base.UpperTheta) {
-            // Find phi
-            row += std::min(base.PhiCount - 1, (uint32)std::floor(base.PhiCount * viewPhi / (2 * Pi)));
+    const int row = computeIndex(comp->row().get(), incidentTheta, incidentPhi);
+    const int col = computeIndex(comp->column().get(), outgoingTheta, outgoingPhi + Pi);
+
+    const float value = comp->matrix()(row, col);
+
+    float solidAngle = 0;
+    for (const auto& base : comp->column()->thetaBasis()) {
+        const float theta0 = base.LowerTheta;
+        const float theta1 = base.UpperTheta;
+
+        if (outgoingTheta >= theta0 && outgoingTheta <= theta1) {
+            solidAngle = base.PhiSolidAngle;
             break;
-        } else {
-            row += base.PhiCount;
         }
     }
+
+    if (ImGui::BeginTooltip()) {
+        ImGui::Text("Value:      %3.2f", value);
+        ImGui::Text("SolidAngle: %3.2f", solidAngle);
+        ImGui::Separator();
+        ImGui::Text("Row:        %i", row);
+        ImGui::Text("Column:     %i", col);
+        ImGui::EndTooltip();
+    }
+}
+
+void KlemsDataModel::renderProperties(float incidentTheta, float incidentPhi, DataComponent component)
+{
+    KlemsComponent* comp = getComponent(mKlems, component);
+    if (!comp)
+        return;
+
+    // Get row of view vector
+    const int row = computeIndex(comp->row().get(), incidentTheta, incidentPhi);
 
     const float total   = comp->computeTotal();
     const float maxHemi = comp->computeMaxHemisphericalScattering();

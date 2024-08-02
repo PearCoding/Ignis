@@ -10,9 +10,11 @@ enum class DataComponent {
     BackTransmission
 };
 
+class Colormapper;
 class IDataModel {
 public:
-    virtual void renderView(float viewTheta, float viewPhi, float radius, DataComponent component) = 0;
-    virtual void renderProperties(float viewTheta, float viewPhi, DataComponent component)         = 0;
+    virtual void renderView(float incidentTheta, float incidentPhi, float radius, DataComponent component, const Colormapper& mapper) = 0;
+    virtual void renderInfo(float incidentTheta, float incidentPhi, float outgoingTheta, float outgoingPhi, DataComponent component)  = 0;
+    virtual void renderProperties(float incidentTheta, float incidentPhi, DataComponent component)                                    = 0;
 };
 } // namespace IG

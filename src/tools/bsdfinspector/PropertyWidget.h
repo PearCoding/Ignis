@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Colormapper.h"
 #include "IDataModel.h"
 #include "Widget.h"
 
@@ -18,6 +19,7 @@ public:
     inline void connectView(ViewWidget* widget) { mViewWidget = widget; }
 
     inline DataComponent pickedComponent() const { return mComponent; }
+    inline const Colormapper& colormapper() const { return mColormapper; }
 
 private:
     std::shared_ptr<IDataModel> mModel;
@@ -25,5 +27,6 @@ private:
     ViewWidget* mViewWidget;
 
     DataComponent mComponent;
+    Colormapper mColormapper;
 };
 } // namespace IG

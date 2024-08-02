@@ -40,23 +40,31 @@ void ViewWidget::onRender(Widget*)
             const ImVec2 area  = ImGui::GetContentRegionAvail();
             const float radius = std::min(area.x, area.y) / 2 - 10;
             if (radius > 1) {
-                mModel->renderView(mViewTheta, mViewPhi, radius, mPropertyWidget->pickedComponent());
+                mModel->renderView(mViewTheta, mViewPhi, radius, mPropertyWidget->pickedComponent(), mPropertyWidget->colormapper());
                 hasView = true;
             }
         }
         ImGui::EndChild();
 
-        if (hasView && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        if (hasView) {
             const ImVec2 area   = ImGui::GetItemRectSize();
             const ImVec2 center = ImVec2((ImGui::GetItemRectMin().x + ImGui::GetItemRectMax().x) / 2, (ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) / 2);
             const float radius  = std::min(area.x, area.y) / 2 - 10;
             const ImVec2 rpos   = ImVec2((ImGui::GetMousePos().x - center.x) / radius, (ImGui::GetMousePos().y - center.y) / radius);
 
             if (rpos.x * rpos.x + rpos.y * rpos.y < 1) {
-                mViewTheta = std::sqrt(rpos.x * rpos.x + rpos.y * rpos.y) * Pi2;
-                mViewPhi   = std::atan2(rpos.y, rpos.x);
-                if (mViewPhi < 0)
-                    mViewPhi += 2 * Pi;
+                const float r     = std::sqrt(rpos.x * rpos.x + rpos.y * rpos.y);
+                const float theta = std::sqrt(rpos.x * rpos.x + rpos.y * rpos.y) * Pi2;
+                float phi         = std::atan2(rpos.y / r, rpos.x / r);
+                if (phi < 0)
+                    phi += 2 * Pi;
+
+                if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                    mViewTheta = theta;
+                    mViewPhi   = phi;
+                } else {
+                    mModel->renderInfo(mViewTheta, mViewPhi, theta, phi, mPropertyWidget->pickedComponent());
+                }
             }
         }
     }

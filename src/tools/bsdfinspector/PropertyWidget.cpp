@@ -1,6 +1,7 @@
 #include "PropertyWidget.h"
 #include "IDataModel.h"
 #include "MenuItem.h"
+#include "RangeSlider.h"
 #include "ViewWidget.h"
 
 #include "UI.h"
@@ -45,6 +46,11 @@ void PropertyWidget::onRender(Widget*)
             }
 
             ImGui::EndCombo();
+        }
+
+        if (ImGui::CollapsingHeader("Colormap", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Logarithmic", &mColormapper.isLogarithmic());
+            ui::RangeSliderFloat("Range##colormap_range", &mColormapper.min(), &mColormapper.max(), 0, 1000);
         }
 
         if (mModel) {
