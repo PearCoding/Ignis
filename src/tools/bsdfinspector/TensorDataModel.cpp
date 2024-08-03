@@ -145,70 +145,97 @@ struct QueryPos {
 }
 
 struct QuerySubset {
-    uint32 ChildOffset;
+    uint32 Offset;
     Vector2f NormalizedPos;
     uint32 Pitch;
 };
 
-[[nodiscard]] static inline QuerySubset queryChildSubset(const TensorTreeNode* node, Vector2f pos)
+[[nodiscard]] static inline QuerySubset queryChildSubset(const TensorTreeNode* node, Vector2f incidentPos)
 {
-    const bool isIsotropic = node->Children.size() == 4; // Why 4 and not 8??
-    if (isIsotropic) {
-        // TODO
-        return QuerySubset{ .ChildOffset = 0, .NormalizedPos = pos, .Pitch = 1 };
-    } else {
-        pos *= 2;
+    const bool isIsotropic   = node->Children.size() == 8;
+    const uint32 pitchBranch = isIsotropic ? 2 : 4;
+    const int incidentDim    = isIsotropic ? 1 : 2;
+
+    incidentPos *= 2;
+    if (node->isLeaf()) {
+        // Why is this the other way around?
+
         uint32 mask = 0;
-        for (int d = 0; d < 2; ++d) {
-            if (pos[d] >= 1) {
-                mask |= (1 << d);
-                pos[d] -= 1;
+        for (int d = 0; d < incidentDim; ++d) {
+            if (incidentPos[d] >= 1) {
+                mask |= (1 << (2 - d + incidentDim - 1));
+                incidentPos[d] -= 1;
             }
         }
 
-        return QuerySubset{ .ChildOffset = mask, .NormalizedPos = pos, .Pitch = 4 };
+        return QuerySubset{ .Offset = mask, .NormalizedPos = incidentPos, .Pitch = 1 };
+    } else {
+        uint32 mask = 0;
+        for (int d = 0; d < incidentDim; ++d) {
+            if (incidentPos[d] >= 1) {
+                mask |= (1 << d);
+                incidentPos[d] -= 1;
+            }
+        }
+
+        return QuerySubset{ .Offset = mask, .NormalizedPos = incidentPos, .Pitch = pitchBranch };
+    }
+}
+
+template <typename TransformF>
+static inline void drawLineSegment(ImDrawList& drawList, const Vector2f& minPos, const Vector2f& maxPos, TransformF transform, int segments)
+{
+    const Vector2f delta = (maxPos - minPos) / segments;
+    for (int i = 0; i < segments; ++i) {
+        drawList.PathLineTo(transform(minPos + (i + 1) * delta));
     }
 }
 
 static const ImColor LineColor = ImColor(200, 200, 200);
-
 template <typename TransformF>
-static inline void drawPatch(const Vector2f& minPos, const Vector2f& maxPos, const Vector4f& color, TransformF transform)
+static inline void drawPatch(const Vector2f& minPos, const Vector2f& maxPos, const Vector4f& color, TransformF transform, int depth)
 {
     auto& drawList = *ImGui::GetWindowDrawList();
 
-    const auto& transform2 = [&](float x, float y) {
-        const Vector2f rPhi = squareToConcentricDiskAngles(Vector2f(x, y));
+    const int segments = std::max(1, 32 / (1 << depth));
+
+    const auto& transform2 = [&](const Vector2f& p) {
+        const Vector2f rPhi = squareToConcentricDiskAngles(p);
         const float theta   = rPhi.x() * Pi2;
-        const float phi     = rPhi.y();
+        const float phi     = rPhi.y() + Pi;// Rotate 180° for outgoing
         return transform(theta, phi);
     };
 
-    const ImVec2 p00 = transform2(minPos.x(), minPos.y());
-    const ImVec2 p01 = transform2(minPos.x(), maxPos.y());
-    const ImVec2 p10 = transform2(maxPos.x(), minPos.y());
-    const ImVec2 p11 = transform2(maxPos.x(), maxPos.y());
-
-    drawList.AddQuadFilled(p00, p01, p11, p10, ImColor(color.x(), color.y(), color.z()));
-    drawList.AddQuad(p00, p01, p11, p10, LineColor);
+    drawList.PathClear();
+    drawLineSegment(drawList, minPos, Vector2f(minPos.x(), maxPos.y()), transform2, segments);
+    drawLineSegment(drawList, Vector2f(minPos.x(), maxPos.y()), maxPos, transform2, segments);
+    drawLineSegment(drawList, maxPos, Vector2f(maxPos.x(), minPos.y()), transform2, segments);
+    drawLineSegment(drawList, Vector2f(maxPos.x(), minPos.y()), minPos, transform2, segments);
+    drawList.AddConvexPolyFilled(drawList._Path.Data, drawList._Path.Size, ImColor(color.x(), color.y(), color.z()));
+    drawList.PathStroke(LineColor, ImDrawFlags_Closed, 1.0f);
 }
 
 template <typename TransformF>
-static void drawPatchRecursive(const TensorTreeNode* node, const Vector2f& incidentPos, const Vector2f& minPos, const Vector2f& maxPos, TransformF transform, const Colormapper& mapper)
+static void drawPatchRecursive(const TensorTreeNode* node, const Vector2f& incidentPos, const Vector2f& minPos, const Vector2f& maxPos, TransformF transform, const Colormapper& mapper, int depth)
 {
     const auto subset     = queryChildSubset(node, incidentPos);
     const Vector2f midPos = (minPos + maxPos) / 2;
     if (node->isLeaf()) {
-        // No idea why the order is reversed in this case (see tt_lookup_leaf in tensortree.art, which is given by bsdf_t.c in Radiance)
-        drawPatch(minPos, midPos, mapper.apply(node->Values[3]), transform);
-        drawPatch(Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), mapper.apply(node->Values[2]), transform);
-        drawPatch(Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), mapper.apply(node->Values[1]), transform);
-        drawPatch(midPos, maxPos, mapper.apply(node->Values[0]), transform);
+        if (node->Values.size() == 1) {
+            drawPatch(minPos, maxPos, mapper.apply(node->Values.at(0)), transform, depth);
+        } else {
+            IG_ASSERT(node->Values.size() == 4 || node->Values.size() == 16, "Expected valid value size");
+            // No idea why the order is reversed in this case (see tt_lookup_leaf in tensortree.art, which is given by bsdf_t.c in Radiance)
+            drawPatch(minPos, midPos, mapper.apply(node->Values.at(subset.Offset + 3 * subset.Pitch)), transform, depth + 1);
+            drawPatch(Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), mapper.apply(node->Values.at(subset.Offset + 2 * subset.Pitch)), transform, depth + 1);
+            drawPatch(Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), mapper.apply(node->Values.at(subset.Offset + 1 * subset.Pitch)), transform, depth + 1);
+            drawPatch(midPos, maxPos, mapper.apply(node->Values.at(subset.Offset + 0 * subset.Pitch)), transform, depth + 1);
+        }
     } else {
-        drawPatchRecursive(node->Children[0 * subset.Pitch].get(), subset.NormalizedPos, minPos, midPos, transform, mapper);
-        drawPatchRecursive(node->Children[1 * subset.Pitch].get(), subset.NormalizedPos, Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), transform, mapper);
-        drawPatchRecursive(node->Children[2 * subset.Pitch].get(), subset.NormalizedPos, Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), transform, mapper);
-        drawPatchRecursive(node->Children[3 * subset.Pitch].get(), subset.NormalizedPos, midPos, maxPos, transform, mapper);
+        drawPatchRecursive(node->Children.at(subset.Offset + 0 * subset.Pitch).get(), subset.NormalizedPos, minPos, midPos, transform, mapper, depth + 1);
+        drawPatchRecursive(node->Children.at(subset.Offset + 1 * subset.Pitch).get(), subset.NormalizedPos, Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), transform, mapper, depth + 1);
+        drawPatchRecursive(node->Children.at(subset.Offset + 2 * subset.Pitch).get(), subset.NormalizedPos, Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), transform, mapper, depth + 1);
+        drawPatchRecursive(node->Children.at(subset.Offset + 3 * subset.Pitch).get(), subset.NormalizedPos, midPos, maxPos, transform, mapper, depth + 1);
     }
 }
 
@@ -234,12 +261,14 @@ void TensorDataModel::renderView(float incidentTheta, float incidentPhi, float r
     auto& drawList = *ImGui::GetWindowDrawList();
 
     // Draw patches
-    if (comp->isRootLeaf()) {
-        IG_ASSERT(comp->root()->isLeaf(), "Invalid root configuration");
-        const Vector4f color = mapper.apply(comp->root()->Values[0]);
-        drawList.AddCircleFilled(center, radius, ImColor(color.x(), color.y(), color.z()));
-    } else {
-        drawPatchRecursive(comp->root(), composePoint(incidentTheta, incidentPhi, mTensorTree->is_isotropic), Vector2f::Zero(), Vector2f::Ones(), transform, mapper);
+    if (comp->root()) {
+        if (comp->isRootLeaf()) {
+            IG_ASSERT(comp->root()->isLeaf(), "Invalid root configuration");
+            const Vector4f color = mapper.apply(comp->root()->Values[0]);
+            drawList.AddCircleFilled(center, radius, ImColor(color.x(), color.y(), color.z()));
+        } else {
+            drawPatchRecursive(comp->root(), composePoint(incidentTheta, incidentPhi, mTensorTree->is_isotropic), Vector2f::Zero(), Vector2f::Ones(), transform, mapper, 0);
+        }
     }
 
     // Draw encircling circle
