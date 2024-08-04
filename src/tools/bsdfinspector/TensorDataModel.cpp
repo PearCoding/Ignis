@@ -28,7 +28,7 @@ static inline Vector2f squareToConcentricDiskAngles(Vector2f p)
             phi -= Pi;
         if (phi < 0)
             phi += 2 * Pi;
-        return Vector2f(std::abs(p.x()), phi);
+        return Vector2f(std::abs(p.x()) * Pi2, phi);
     } else {
         // Bottom half
         float phi = Pi2 - Pi4 * p.x() / p.y();
@@ -38,7 +38,7 @@ static inline Vector2f squareToConcentricDiskAngles(Vector2f p)
             phi -= Pi;
         if (phi < 0)
             phi += 2 * Pi;
-        return Vector2f(std::abs(p.y()), phi);
+        return Vector2f(std::abs(p.y()) * Pi2, phi);
     }
 }
 
@@ -113,6 +113,7 @@ static inline TensorTreeComponent* getComponent(const std::shared_ptr<TensorTree
 
 struct QueryPos {
     const TensorTreeNode* Child;
+    uint32 Offset;
     Vector4f NormalizedPos;
     Vector4f MinPos;
     Vector4f MaxPos;
@@ -120,28 +121,29 @@ struct QueryPos {
 
 [[nodiscard]] static inline QueryPos queryChild(const TensorTreeNode* node, Vector4f pos, Vector4f minPos, Vector4f maxPos)
 {
-    if (node->isLeaf())
-        return QueryPos{ .Child = nullptr, .NormalizedPos = pos, .MinPos = minPos, .MaxPos = maxPos };
+    const bool isIsotropic = node->Children.size() == 8;
+    const int incidentDim  = isIsotropic ? 1 : 2;
+    const bool isLeaf      = node->isLeaf();
+    const Vector4f midPos  = (minPos + maxPos) / 2;
 
-    const bool isIsotropic = node->Children.size() == 4; // Why 4 and not 8??
-    if (isIsotropic) {
-        // TODO
-        return QueryPos{ .Child = nullptr, .NormalizedPos = pos, .MinPos = minPos, .MaxPos = maxPos };
-    } else {
-        int mask = 0;
-        for (int d = 0; d < 4; ++d) {
-            if (pos[d] >= 0.5f) {
-                mask |= (1 << d);
-                pos[d]    = (pos[d] - 0.5f) * 2;
-                minPos[d] = (minPos[d] + maxPos[d]) / 2;
-            } else {
-                pos[d]    = pos[d] * 2;
-                maxPos[d] = (minPos[d] + maxPos[d]) / 2;
-            }
+    pos *= 2;
+
+    uint32 mask = 0;
+    uint32 c    = 0;
+    for (int d = 0; d < 4; ++d) {
+        if (d == 1 && isIsotropic)
+            continue;
+        if (pos[d] >= 1) {
+            mask |= (1 << (isLeaf ? (2 + incidentDim - c + -1) : c));
+            pos[d] -= 1;
+            minPos[d] = midPos[d];
+        } else {
+            maxPos[d] = midPos[d];
         }
-
-        return QueryPos{ .Child = node->Children[mask].get(), .NormalizedPos = pos, .MinPos = minPos, .MaxPos = maxPos };
+        ++c;
     }
+
+    return QueryPos{ .Child = isLeaf ? nullptr : node->Children[mask].get(), .Offset = mask, .NormalizedPos = pos, .MinPos = minPos, .MaxPos = maxPos };
 }
 
 struct QuerySubset {
@@ -155,31 +157,19 @@ struct QuerySubset {
     const bool isIsotropic   = node->Children.size() == 8;
     const uint32 pitchBranch = isIsotropic ? 2 : 4;
     const int incidentDim    = isIsotropic ? 1 : 2;
+    const bool isLeaf        = node->isLeaf();
 
     incidentPos *= 2;
-    if (node->isLeaf()) {
-        // Why is this the other way around?
 
-        uint32 mask = 0;
-        for (int d = 0; d < incidentDim; ++d) {
-            if (incidentPos[d] >= 1) {
-                mask |= (1 << (2 - d + incidentDim - 1));
-                incidentPos[d] -= 1;
-            }
+    uint32 mask = 0;
+    for (int d = 0; d < incidentDim; ++d) {
+        if (incidentPos[d] >= 1) {
+            mask |= (1 << (isLeaf ? (2 + incidentDim - d + -1) : d));
+            incidentPos[d] -= 1;
         }
-
-        return QuerySubset{ .Offset = mask, .NormalizedPos = incidentPos, .Pitch = 1 };
-    } else {
-        uint32 mask = 0;
-        for (int d = 0; d < incidentDim; ++d) {
-            if (incidentPos[d] >= 1) {
-                mask |= (1 << d);
-                incidentPos[d] -= 1;
-            }
-        }
-
-        return QuerySubset{ .Offset = mask, .NormalizedPos = incidentPos, .Pitch = pitchBranch };
     }
+
+    return QuerySubset{ .Offset = mask, .NormalizedPos = incidentPos, .Pitch = isLeaf ? 1 : pitchBranch };
 }
 
 template <typename TransformF>
@@ -201,8 +191,8 @@ static inline void drawPatch(const Vector2f& minPos, const Vector2f& maxPos, con
 
     const auto& transform2 = [&](const Vector2f& p) {
         const Vector2f rPhi = squareToConcentricDiskAngles(p);
-        const float theta   = rPhi.x() * Pi2;
-        const float phi     = rPhi.y() + Pi;// Rotate 180° for outgoing
+        const float theta   = rPhi.x();
+        const float phi     = rPhi.y() + Pi; // Rotate 180° for outgoing
         return transform(theta, phi);
     };
 
@@ -264,7 +254,7 @@ void TensorDataModel::renderView(float incidentTheta, float incidentPhi, float r
     if (comp->root()) {
         if (comp->isRootLeaf()) {
             IG_ASSERT(comp->root()->isLeaf(), "Invalid root configuration");
-            const Vector4f color = mapper.apply(comp->root()->Values[0]);
+            const Vector4f color = mapper.apply(comp->root()->Values.at(0));
             drawList.AddCircleFilled(center, radius, ImColor(color.x(), color.y(), color.z()));
         } else {
             drawPatchRecursive(comp->root(), composePoint(incidentTheta, incidentPhi, mTensorTree->is_isotropic), Vector2f::Zero(), Vector2f::Ones(), transform, mapper, 0);
@@ -278,8 +268,64 @@ void TensorDataModel::renderView(float incidentTheta, float incidentPhi, float r
     drawList.AddCircleFilled(transform(incidentTheta, incidentPhi), 8, ImColor(0, 100, 200));
 }
 
+static inline Vector4f map4StoCDA(const Vector4f& pos)
+{
+    const Vector2f a = squareToConcentricDiskAngles(pos.block<2, 1>(0, 0));
+    const Vector2f b = squareToConcentricDiskAngles(pos.block<2, 1>(2, 0));
+    return Vector4f(a.x(), a.y(), b.x(), b.y());
+}
+
 void TensorDataModel::renderInfo(float incidentTheta, float incidentPhi, float outgoingTheta, float outgoingPhi, DataComponent component)
 {
+    TensorTreeComponent* comp = getComponent(mTensorTree, component);
+    if (!comp)
+        return;
+
+    if (!ImGui::BeginTooltip())
+        return;
+
+    const Vector2f incidentPos  = composePoint(incidentTheta, incidentPhi, mTensorTree->is_isotropic);
+    const Vector2f outgoingPos  = composePoint(outgoingTheta, outgoingPhi + Pi, false);
+    const Vector4f globalPos    = Vector4f(incidentPos.x(), incidentPos.y(), outgoingPos.x(), outgoingPos.y());
+    const Vector4f globalAngles = map4StoCDA(globalPos);
+
+    const TensorTreeNode* node = comp->root();
+    Vector4f currentPos        = globalPos;
+    Vector4f minPos            = Vector4f::Zero();
+    Vector4f maxPos            = Vector4f::Ones();
+    while (node && !node->isLeaf()) {
+        const auto query = queryChild(node, currentPos, minPos, maxPos);
+
+        node       = query.Child;
+        currentPos = query.NormalizedPos;
+        minPos     = query.MinPos;
+        maxPos     = query.MaxPos;
+    }
+
+    if (!node) {
+        ImGui::Text("Invalid query");
+    } else {
+        IG_ASSERT(node->isLeaf(), "Expected leaf");
+        const auto query = queryChild(node, currentPos, minPos, maxPos);
+
+        IG_ASSERT(node->Values.size() == 1 || node->Values.size() == 4 || node->Values.size() == 16, "Expected valid value size");
+        const float value = node->Values.size() == 1 ? node->Values.at(0) : node->Values.at(query.Offset);
+
+        const Vector4f localAngles = map4StoCDA(query.NormalizedPos);
+        const Vector4f minAngles   = map4StoCDA(query.MinPos);
+        const Vector4f maxAngles   = map4StoCDA(query.MaxPos);
+
+        ImGui::Text("Value:  %3.2f", value);
+        ImGui::Separator();
+        ImGui::Text("Global: [%3.2f°, %3.2f°, %3.2f°, %3.2f°]", globalAngles.x() * Rad2Deg, globalAngles.y() * Rad2Deg, globalAngles.z() * Rad2Deg, globalAngles.w() * Rad2Deg);
+        ImGui::Text("Min:    [%3.2f°, %3.2f°, %3.2f°, %3.2f°]", minAngles.x() * Rad2Deg, minAngles.y() * Rad2Deg, minAngles.z() * Rad2Deg, minAngles.w() * Rad2Deg);
+        ImGui::Text("Max:    [%3.2f°, %3.2f°, %3.2f°, %3.2f°]", maxAngles.x() * Rad2Deg, maxAngles.y() * Rad2Deg, maxAngles.z() * Rad2Deg, maxAngles.w() * Rad2Deg);
+        ImGui::Separator();
+        ImGui::Text("Global: [%3.2f,  %3.2f,  %3.2f,  %3.2f]", globalPos.x(), globalPos.y(), globalPos.z(), globalPos.w());
+        ImGui::Text("Min:    [%3.2f,  %3.2f,  %3.2f,  %3.2f]", query.MinPos.x(), query.MinPos.y(), query.MinPos.z(), query.MinPos.w());
+        ImGui::Text("Max:    [%3.2f,  %3.2f,  %3.2f,  %3.2f]", query.MaxPos.x(), query.MaxPos.y(), query.MaxPos.z(), query.MaxPos.w());
+    }
+    ImGui::EndTooltip();
 }
 
 void TensorDataModel::renderProperties(float incidentTheta, float incidentPhi, DataComponent component)
@@ -288,11 +334,15 @@ void TensorDataModel::renderProperties(float incidentTheta, float incidentPhi, D
     if (!comp)
         return;
 
+    const Vector2f incidentPos    = composePoint(incidentTheta, incidentPhi, mTensorTree->is_isotropic);
+    const Vector2f incidentAngles = squareToConcentricDiskAngles(incidentPos);
+
     ImGui::Text("Is Isotropic: %s", mTensorTree->is_isotropic ? "Yes" : "No");
     ImGui::Text("Total:        %3.2f", comp->total());
     ImGui::Text("Min Proj:     %3.2f", comp->minProjSA());
     ImGui::Text("Max Depth:    %zu", comp->maxDepth());
     ImGui::Text("Node Count:   %zu", comp->nodeCount());
     ImGui::Text("Value Count:  %zu", comp->valueCount());
+    ImGui::Text("Incident Pos: [%3.2f°, %3.2f°] | [%3.2f, %3.2f]", incidentAngles.x() * Rad2Deg, incidentAngles.y() * Rad2Deg, incidentPos.x(), incidentPos.y());
 }
 } // namespace IG
