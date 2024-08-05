@@ -160,8 +160,8 @@ void KlemsDataModel::renderInfo(float incidentTheta, float incidentPhi, float ou
         ImGui::Text("Solid Angle: %3.2f", solidAngle);
         ImGui::Text("Entry:       %3.2f", value);
         ImGui::Separator();
-        ImGui::Text("Row:         %i", row);
-        ImGui::Text("Column:      %i", col);
+        ImGui::Text("Row:         %i", row + 1);
+        ImGui::Text("Column:      %i", col + 1);
         ImGui::EndTooltip();
     }
 }
@@ -175,7 +175,7 @@ void KlemsDataModel::renderProperties(float incidentTheta, float incidentPhi, Da
     // Get row of view vector
     const int row = computeIndex(comp->row().get(), incidentTheta, incidentPhi);
 
-    ImGui::Text("Incident Patch: %i", row);
+    ImGui::Text("Incident Patch: %i", row + 1);
     ImGui::Separator();
     ImGui::Text("Total:    %3.2f", comp->computeTotal());
     ImGui::Text("Max Hemi: %3.2f", comp->computeMaxHemisphericalScattering());
