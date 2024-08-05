@@ -31,13 +31,16 @@ static inline KlemsComponent* getComponent(const std::shared_ptr<Klems>& klems, 
 
 static inline int computeIndex(KlemsBasis* basis, float theta, float phi)
 {
+    if (phi < 0)
+        phi += 2 * Pi;
     phi = std::fmod(phi, 2 * Pi);
 
     int ind = 0;
     for (const auto& base : basis->thetaBasis()) {
-        if (theta < base.UpperTheta) {
+        IG_ASSERT(theta >= base.LowerTheta, "Expected an ordered list of thetas");
+        if (theta <= base.UpperTheta) {
             // Find phi
-            ind += std::min(base.PhiCount - 1, (uint32)std::floor(base.PhiCount * phi / (2 * Pi)));
+            ind += std::min(base.PhiCount - 1, (uint32)std::floor(base.PhiCount * phi / (2 * Pi) + 0.5f));
             break;
         } else {
             ind += base.PhiCount;
@@ -90,8 +93,8 @@ void KlemsDataModel::renderView(float incidentTheta, float incidentPhi, float ra
             if (base.PhiCount == 1) { // Circle
                 drawList.AddCircleFilled(center, radiusFromTheta(theta1), color);
             } else {
-                const float phi0 = phiInd / (float)base.PhiCount * 2 * Pi + Pi;
-                const float phi1 = (phiInd + 1) / (float)base.PhiCount * 2 * Pi + Pi;
+                const float phi0 = (phiInd - 0.5f) / (float)base.PhiCount * 2 * Pi + Pi;
+                const float phi1 = (phiInd + 0.5f) / (float)base.PhiCount * 2 * Pi + Pi;
 
                 const int patches = std::max(1, (int)std::floor(64 * (phi1 - phi0) / Pi));
 
@@ -120,7 +123,7 @@ void KlemsDataModel::renderView(float incidentTheta, float incidentPhi, float ra
             continue;
 
         for (uint32 phiInd = 0; phiInd < base.PhiCount; ++phiInd) {
-            const float phi0 = phiInd / (float)base.PhiCount * 2 * Pi + Pi;
+            const float phi0 = (phiInd - 0.5f) / (float)base.PhiCount * 2 * Pi + Pi;
             drawList.AddLine(transform(theta0, phi0), transform(theta1, phi0), LineColor);
         }
     }
