@@ -113,25 +113,24 @@ static inline TensorTreeComponent* getComponent(const std::shared_ptr<TensorTree
 
 struct QueryPos {
     const TensorTreeNode* Child;
-    uint32 Offset;
+    uint32 Index;
     Vector4f NormalizedPos;
     Vector4f MinPos;
     Vector4f MaxPos;
 };
 
-[[nodiscard]] static inline QueryPos queryChild(const TensorTreeNode* node, Vector4f pos, Vector4f minPos, Vector4f maxPos)
+[[nodiscard]] static inline QueryPos queryChild(const TensorTreeNode* node, Vector4f pos, Vector4f minPos, Vector4f maxPos, bool isotropic)
 {
-    const bool isIsotropic = node->Children.size() == 8;
-    const int incidentDim  = isIsotropic ? 1 : 2;
-    const bool isLeaf      = node->isLeaf();
-    const Vector4f midPos  = (minPos + maxPos) / 2;
+    const int incidentDim = isotropic ? 1 : 2;
+    const bool isLeaf     = node->isLeaf();
+    const Vector4f midPos = (minPos + maxPos) / 2;
 
     pos *= 2;
 
     uint32 mask = 0;
     uint32 c    = 0;
     for (int d = 0; d < 4; ++d) {
-        if (d == 1 && isIsotropic)
+        if (d == 1 && isotropic)
             continue;
         if (pos[d] >= 1) {
             mask |= (1 << (isLeaf ? (2 + incidentDim - c + -1) : c));
@@ -143,21 +142,18 @@ struct QueryPos {
         ++c;
     }
 
-    return QueryPos{ .Child = isLeaf ? nullptr : node->Children[mask].get(), .Offset = mask, .NormalizedPos = pos, .MinPos = minPos, .MaxPos = maxPos };
+    return QueryPos{ .Child = isLeaf ? nullptr : node->Children[mask].get(), .Index = mask, .NormalizedPos = pos, .MinPos = minPos, .MaxPos = maxPos };
 }
 
 struct QuerySubset {
-    uint32 Offset;
+    uint32 Mask;
     Vector2f NormalizedPos;
-    uint32 Pitch;
 };
 
-[[nodiscard]] static inline QuerySubset queryChildSubset(const TensorTreeNode* node, Vector2f incidentPos)
+[[nodiscard]] static inline QuerySubset queryChildSubset(const TensorTreeNode* node, Vector2f incidentPos, bool isotropic)
 {
-    const bool isIsotropic   = node->Children.size() == 8;
-    const uint32 pitchBranch = isIsotropic ? 2 : 4;
-    const int incidentDim    = isIsotropic ? 1 : 2;
-    const bool isLeaf        = node->isLeaf();
+    const int incidentDim = isotropic ? 1 : 2;
+    const bool isLeaf     = node->isLeaf();
 
     incidentPos *= 2;
 
@@ -169,7 +165,7 @@ struct QuerySubset {
         }
     }
 
-    return QuerySubset{ .Offset = mask, .NormalizedPos = incidentPos, .Pitch = isLeaf ? 1 : pitchBranch };
+    return QuerySubset{ .Mask = mask, .NormalizedPos = incidentPos };
 }
 
 template <typename TransformF>
@@ -183,7 +179,7 @@ static inline void drawLineSegment(ImDrawList& drawList, const Vector2f& minPos,
 
 static const ImColor LineColor = ImColor(200, 200, 200);
 template <typename TransformF>
-static inline void drawPatch(const Vector2f& minPos, const Vector2f& maxPos, const Vector4f& color, TransformF transform, int depth)
+static inline void drawPatch(const Vector4f& color, const Vector2f& minPos, const Vector2f& maxPos, TransformF transform, int depth)
 {
     auto& drawList = *ImGui::GetWindowDrawList();
 
@@ -206,26 +202,27 @@ static inline void drawPatch(const Vector2f& minPos, const Vector2f& maxPos, con
 }
 
 template <typename TransformF>
-static void drawPatchRecursive(const TensorTreeNode* node, const Vector2f& incidentPos, const Vector2f& minPos, const Vector2f& maxPos, TransformF transform, const Colormapper& mapper, int depth)
+static void drawPatchRecursive(const TensorTreeNode* node, const Vector2f& incidentPos, const Vector2f& minPos, const Vector2f& maxPos, TransformF transform, const Colormapper& mapper, int depth, bool isotropic)
 {
-    const auto subset     = queryChildSubset(node, incidentPos);
-    const Vector2f midPos = (minPos + maxPos) / 2;
+    const uint32 incidentDim = isotropic ? 1 : 2;
+    const auto subset        = queryChildSubset(node, incidentPos, isotropic);
+    const Vector2f midPos    = (minPos + maxPos) / 2;
     if (node->isLeaf()) {
         if (node->Values.size() == 1) {
-            drawPatch(minPos, maxPos, mapper.apply(node->Values.at(0)), transform, depth);
+            drawPatch(mapper.apply(node->Values.at(0)), minPos, maxPos, transform, depth);
         } else {
             IG_ASSERT(node->Values.size() == 4 || node->Values.size() == 16, "Expected valid value size");
             // No idea why the order is reversed in this case (see tt_lookup_leaf in tensortree.art, which is given by bsdf_t.c in Radiance)
-            drawPatch(minPos, midPos, mapper.apply(node->Values.at(subset.Offset + 3 * subset.Pitch)), transform, depth + 1);
-            drawPatch(Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), mapper.apply(node->Values.at(subset.Offset + 2 * subset.Pitch)), transform, depth + 1);
-            drawPatch(Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), mapper.apply(node->Values.at(subset.Offset + 1 * subset.Pitch)), transform, depth + 1);
-            drawPatch(midPos, maxPos, mapper.apply(node->Values.at(subset.Offset + 0 * subset.Pitch)), transform, depth + 1);
+            drawPatch(mapper.apply(node->Values.at(subset.Mask | 0x0)), minPos, midPos, transform, depth + 1);                                                     // 00
+            drawPatch(mapper.apply(node->Values.at(subset.Mask | 0x2)), Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), transform, depth + 1); // 01
+            drawPatch(mapper.apply(node->Values.at(subset.Mask | 0x1)), Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), transform, depth + 1); // 10
+            drawPatch(mapper.apply(node->Values.at(subset.Mask | 0x3)), midPos, maxPos, transform, depth + 1);                                                     // 11
         }
     } else {
-        drawPatchRecursive(node->Children.at(subset.Offset + 0 * subset.Pitch).get(), subset.NormalizedPos, minPos, midPos, transform, mapper, depth + 1);
-        drawPatchRecursive(node->Children.at(subset.Offset + 1 * subset.Pitch).get(), subset.NormalizedPos, Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), transform, mapper, depth + 1);
-        drawPatchRecursive(node->Children.at(subset.Offset + 2 * subset.Pitch).get(), subset.NormalizedPos, Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), transform, mapper, depth + 1);
-        drawPatchRecursive(node->Children.at(subset.Offset + 3 * subset.Pitch).get(), subset.NormalizedPos, midPos, maxPos, transform, mapper, depth + 1);
+        drawPatchRecursive(node->Children.at(subset.Mask | (0x0 << incidentDim)).get(), subset.NormalizedPos, minPos, midPos, transform, mapper, depth + 1, isotropic);                                                     // 00
+        drawPatchRecursive(node->Children.at(subset.Mask | (0x1 << incidentDim)).get(), subset.NormalizedPos, Vector2f(midPos.x(), minPos.y()), Vector2f(maxPos.x(), midPos.y()), transform, mapper, depth + 1, isotropic); // 10
+        drawPatchRecursive(node->Children.at(subset.Mask | (0x2 << incidentDim)).get(), subset.NormalizedPos, Vector2f(minPos.x(), midPos.y()), Vector2f(midPos.x(), maxPos.y()), transform, mapper, depth + 1, isotropic); // 01
+        drawPatchRecursive(node->Children.at(subset.Mask | (0x3 << incidentDim)).get(), subset.NormalizedPos, midPos, maxPos, transform, mapper, depth + 1, isotropic);                                                     // 11
     }
 }
 
@@ -257,7 +254,7 @@ void TensorDataModel::renderView(float incidentTheta, float incidentPhi, float r
             const Vector4f color = mapper.apply(comp->root()->Values.at(0));
             drawList.AddCircleFilled(center, radius, ImColor(color.x(), color.y(), color.z()));
         } else {
-            drawPatchRecursive(comp->root(), composePoint(incidentTheta, incidentPhi, mTensorTree->is_isotropic), Vector2f::Zero(), Vector2f::Ones(), transform, mapper, 0);
+            drawPatchRecursive(comp->root(), composePoint(incidentTheta, incidentPhi, mTensorTree->is_isotropic), Vector2f::Zero(), Vector2f::Ones(), transform, mapper, 0, mTensorTree->is_isotropic);
         }
     }
 
@@ -294,7 +291,7 @@ void TensorDataModel::renderInfo(float incidentTheta, float incidentPhi, float o
     Vector4f minPos            = Vector4f::Zero();
     Vector4f maxPos            = Vector4f::Ones();
     while (node && !node->isLeaf()) {
-        const auto query = queryChild(node, currentPos, minPos, maxPos);
+        const auto query = queryChild(node, currentPos, minPos, maxPos, mTensorTree->is_isotropic);
 
         node       = query.Child;
         currentPos = query.NormalizedPos;
@@ -306,10 +303,10 @@ void TensorDataModel::renderInfo(float incidentTheta, float incidentPhi, float o
         ImGui::Text("Invalid query");
     } else {
         IG_ASSERT(node->isLeaf(), "Expected leaf");
-        const auto query = queryChild(node, currentPos, minPos, maxPos);
+        const auto query = queryChild(node, currentPos, minPos, maxPos, mTensorTree->is_isotropic);
 
         IG_ASSERT(node->Values.size() == 1 || node->Values.size() == 4 || node->Values.size() == 16, "Expected valid value size");
-        const float value = node->Values.size() == 1 ? node->Values.at(0) : node->Values.at(query.Offset);
+        const float value = node->Values.size() == 1 ? node->Values.at(0) : node->Values.at(query.Index);
 
         const Vector4f minAngles = map4StoCDA(query.MinPos);
         const Vector4f maxAngles = map4StoCDA(query.MaxPos);
