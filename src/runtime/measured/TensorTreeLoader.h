@@ -104,7 +104,7 @@ public:
 
         mTotal     = mRoot->computeTotal(1);
         mMaxDepth  = mRoot->computeMaxDepth(1);
-        mMinProjSA = Pi / (float)(1 << mMaxDepth); // TODO: Validate
+        mMinProjSA = Pi / (float)((1 << mMaxDepth) * (1 << mMaxDepth)); // TODO: Validate (Correct for anisotropic)
     }
 
     inline void write(std::ostream& os) const

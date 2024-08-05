@@ -311,9 +311,8 @@ void TensorDataModel::renderInfo(float incidentTheta, float incidentPhi, float o
         IG_ASSERT(node->Values.size() == 1 || node->Values.size() == 4 || node->Values.size() == 16, "Expected valid value size");
         const float value = node->Values.size() == 1 ? node->Values.at(0) : node->Values.at(query.Offset);
 
-        const Vector4f localAngles = map4StoCDA(query.NormalizedPos);
-        const Vector4f minAngles   = map4StoCDA(query.MinPos);
-        const Vector4f maxAngles   = map4StoCDA(query.MaxPos);
+        const Vector4f minAngles = map4StoCDA(query.MinPos);
+        const Vector4f maxAngles = map4StoCDA(query.MaxPos);
 
         ImGui::Text("Value:  %3.2f", value);
         ImGui::Separator();
@@ -339,7 +338,7 @@ void TensorDataModel::renderProperties(float incidentTheta, float incidentPhi, D
 
     ImGui::Text("Is Isotropic: %s", mTensorTree->is_isotropic ? "Yes" : "No");
     ImGui::Text("Total:        %3.2f", comp->total());
-    ImGui::Text("Min Proj:     %3.2f", comp->minProjSA());
+    ImGui::Text("Min Proj:     %3.6f", comp->minProjSA());
     ImGui::Text("Max Depth:    %zu", comp->maxDepth());
     ImGui::Text("Node Count:   %zu", comp->nodeCount());
     ImGui::Text("Value Count:  %zu", comp->valueCount());
