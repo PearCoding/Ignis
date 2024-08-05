@@ -44,29 +44,6 @@ static inline Vector2f squareToConcentricDiskAngles(Vector2f p)
 
 static inline Vector2f concentricDiskToSquare(const Vector2f& p)
 {
-    // const float phi = std::atan2(p.y(), p.x());
-    // float r         = p.norm();
-
-    // float a, b;
-    // if (std::abs(phi) < Pi4 || std::abs(phi) > 3 * Pi4) {
-    //     a = r = std::copysign(r, p.x());
-    //     if (p.x() < 0) {
-    //         if (p.y() < 0) {
-    //             b = (Pi + phi) * r / Pi4;
-    //         } else {
-    //             b = (phi - Pi) * r / Pi4;
-    //         }
-    //     } else {
-    //         b = (phi * r) / Pi4;
-    //     }
-    // } else {
-    //     b = r = std::copysign(r, p.y());
-    //     if (p.y() < 0) {
-    //         a = -(Pi2 + phi) * r / Pi4;
-    //     } else {
-    //         a = (Pi2 - phi) * r / Pi4;
-    //     }
-    // }
     const bool quadrant = std::fabs(p.x()) > std::fabs(p.y());
     const float r_sign  = quadrant ? p.x() : p.y(); // If quadrant 0 or 2
     const float r       = std::copysign(p.squaredNorm(), r_sign);
@@ -82,16 +59,16 @@ static inline Vector2f concentricDiskToSquare(const Vector2f& p)
     return Vector2f((a + 1) / 2, (b + 1) / 2);
 }
 
-static inline Vector2f composePoint(float incidentTheta, float incidentPhi, bool isotropic)
+static inline Vector2f composePoint(float theta, float phi, bool isotropic)
 {
-    const float r = incidentTheta / Pi2;
+    const float r = theta / Pi2;
 
     if (isotropic) {
-        const float proj = (0.5f - FltEps) - 0.5f * r; //???
+        const float proj = (0.5f - FltEps) - 0.5f * r; //TODO: Missing rotation of the outgoing direction based on the theta
         return concentricDiskToSquare(Vector2f(proj, 0));
     } else {
-        const float x = r * std::cos(incidentPhi);
-        const float y = r * std::sin(incidentPhi);
+        const float x = r * std::cos(phi);
+        const float y = r * std::sin(phi);
         return concentricDiskToSquare(Vector2f(x, y));
     }
 }
