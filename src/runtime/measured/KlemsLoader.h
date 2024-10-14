@@ -269,16 +269,16 @@ public:
 
     inline void write(Serializer& os)
     {
-        constexpr size_t DefaultAlignment = 4 * sizeof(float);
+        constexpr size_t Alignment = 4 * sizeof(float);
 
         mRowBasis->write(os);
-        os.writeAlignmentPad(DefaultAlignment);
+        os.writeAlignmentPad(Alignment);
         mColumnBasis->write(os);
-        os.writeAlignmentPad(DefaultAlignment);
+        os.writeAlignmentPad(Alignment);
 
         os.write(mMatrix);
         os.write(mCDFMatrix);
-        os.writeAlignmentPad(DefaultAlignment);
+        os.writeAlignmentPad(Alignment);
     }
 
 private:
