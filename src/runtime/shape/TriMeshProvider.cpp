@@ -353,7 +353,7 @@ static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::stri
     {
         std::lock_guard<std::mutex> _guard(mutex);
         auto& bvhTable = ctx.Database.FixTables["trimesh_primbvh"];
-        auto& bvhData  = bvhTable.addEntry(DefaultAlignment);
+        auto& bvhData  = bvhTable.addEntry(Pack4Alignment);
         uint64 offset  = bvhTable.currentOffset() / sizeof(float);
         VectorSerializer serializer(bvhData, false);
         serialize_bvh(serializer, bvh);
@@ -573,7 +573,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
     auto& table         = ctx.Database.DynTables["shapes"];
-    auto& meshData      = table.addLookup((uint32)this->id(), 0, DefaultAlignment);
+    auto& meshData      = table.addLookup((uint32)this->id(), 0, Pack4Alignment);
     const size_t offset = table.currentOffset();
 
     VectorSerializer meshSerializer(meshData, false);
@@ -590,8 +590,8 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     meshSerializer.write((float)0);
 
     // Data
-    meshSerializer.writeAligned(mesh.vertices, DefaultAlignment, true);
-    meshSerializer.writeAligned(mesh.normals, DefaultAlignment, true);
+    meshSerializer.writeAligned(mesh.vertices, Pack4Alignment, true);
+    meshSerializer.writeAligned(mesh.normals, Pack4Alignment, true);
     meshSerializer.write(mesh.indices, true);   // Already aligned
     meshSerializer.write(mesh.texcoords, true); // Aligned to 4*2 bytes
 

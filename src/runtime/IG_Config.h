@@ -267,6 +267,8 @@ constexpr float Sqrt2  = 1.41421356237309504880f;
 constexpr float Deg2Rad = Pi / 180.0f;
 constexpr float Rad2Deg = 180.0f * InvPi;
 
+constexpr size_t Pack4Alignment = 4 * sizeof(float);
+
 /// Clamps a between b and c.
 template <typename T>
 [[nodiscard]] inline T clamp(const T& a, const T& b, const T& c)

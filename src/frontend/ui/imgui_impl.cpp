@@ -1,4 +1,10 @@
+#ifndef SDL_MAIN_HANDLED
+#define SDL_MAIN_HANDLED
+#endif
 #include <SDL.h>
+
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#define IMGUI_DISABLE_OBSOLETE_KEYIO
 
 // Include implementation of imgui
 #include "imgui.cpp"
@@ -16,3 +22,9 @@
 // Include implementation of implot
 #include "implot.cpp"
 #include "implot_items.cpp"
+
+// Ensure the following are explicitly instantiated
+namespace ImGui {
+template float ScaleRatioFromValueT<float, float, float>(ImGuiDataType data_type, float v, float v_min, float v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size);
+template float RoundScalarWithFormatT<float>(const char* format, ImGuiDataType data_type, float v);
+} // namespace ImGui

@@ -269,16 +269,14 @@ public:
 
     inline void write(Serializer& os)
     {
-        constexpr size_t Alignment = 4 * sizeof(float);
-
         mRowBasis->write(os);
-        os.writeAlignmentPad(Alignment);
+        os.writeAlignmentPad(Pack4Alignment);
         mColumnBasis->write(os);
-        os.writeAlignmentPad(Alignment);
+        os.writeAlignmentPad(Pack4Alignment);
 
         os.write(mMatrix);
         os.write(mCDFMatrix);
-        os.writeAlignmentPad(Alignment);
+        os.writeAlignmentPad(Pack4Alignment);
     }
 
 private:
@@ -298,6 +296,8 @@ public:
 
 class IG_LIB KlemsLoader {
 public:
+    /// @brief Returns true if the given xml file is a klems. The actual data is not checked and might still be invalid.
+    static bool check(const Path& in_xml);
     static bool load(const Path& in_xml, Klems& klems);
     static bool prepare(const Path& in_xml, const Path& out_data, KlemsSpecification& spec);
 };

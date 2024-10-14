@@ -77,18 +77,63 @@ struct TensorTreeNode {
 
 class TensorTreeComponent {
 public:
-    using NodeValue = int32_t;
-    static_assert(sizeof(NodeValue) == sizeof(float), "Node and Leaf value elements have to have the same size");
-
     inline explicit TensorTreeComponent(uint32 ndim)
         : mNDim(ndim)
         , mMaxValuesPerNode(1 << ndim)
         , mTotal(0)
+        , mMaxDepth(0)
         , mMinProjSA(Pi)
         , mRootIsLeaf(false)
     {
     }
 
+    inline void makeBlack()
+    {
+        mNodes     = std::vector<NodeValue>(mMaxValuesPerNode, 0);
+        mValues    = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
+        mTotal     = 0;
+        mMinProjSA = Pi;
+
+        std::fill(mNodes.begin(), mNodes.end(), -1);
+    }
+
+    inline void setRoot(std::unique_ptr<TensorTreeNode>&& node)
+    {
+        mRoot = std::move(node);
+        addNode(*mRoot, std::nullopt);
+
+        mTotal     = mRoot->computeTotal(1);
+        mMaxDepth  = mRoot->computeMaxDepth(1);
+        mMinProjSA = Pi / (float)((1 << mMaxDepth) * (1 << mMaxDepth)); // TODO: Validate (Correct for anisotropic)
+    }
+
+    inline void write(std::ostream& os) const
+    {
+        auto node_count  = static_cast<uint32>(mNodes.size());
+        auto value_count = static_cast<uint32>(mValues.size());
+
+        // We do not make use of this header, but it might get handy in other applications
+        os.write(reinterpret_cast<const char*>(&mNDim), sizeof(mNDim));
+        os.write(reinterpret_cast<const char*>(&mMaxValuesPerNode), sizeof(mMaxValuesPerNode));
+        os.write(reinterpret_cast<const char*>(&node_count), sizeof(node_count));
+        os.write(reinterpret_cast<const char*>(&value_count), sizeof(value_count));
+
+        os.write(reinterpret_cast<const char*>(mNodes.data()), mNodes.size() * sizeof(NodeValue));
+        os.write(reinterpret_cast<const char*>(mValues.data()), mValues.size() * sizeof(float));
+    }
+
+    [[nodiscard]] inline size_t nodeCount() const { return mNodes.size(); }
+    [[nodiscard]] inline size_t valueCount() const { return mValues.size(); }
+
+    [[nodiscard]] inline float total() const { return mTotal; }
+    [[nodiscard]] inline size_t maxDepth() const { return mMaxDepth; }
+    [[nodiscard]] inline float isRootLeaf() const { return mRootIsLeaf; }
+    [[nodiscard]] inline float minProjSA() const { return mMinProjSA; }
+
+    [[nodiscard]] inline TensorTreeNode* root() { return mRoot.get(); }
+    [[nodiscard]] inline const TensorTreeNode* root() const { return mRoot.get(); }
+
+private:
     inline void addNode(const TensorTreeNode& node, std::optional<size_t> parentOffsetValue)
     {
         if (node.isLeaf()) {
@@ -122,49 +167,19 @@ public:
         }
     }
 
-    inline void makeBlack()
-    {
-        mNodes     = std::vector<NodeValue>(mMaxValuesPerNode, 0);
-        mValues    = std::vector<float>(1, static_cast<float>(std::copysign(0, -1)));
-        mTotal     = 0;
-        mMinProjSA = Pi;
+    using NodeValue = int32_t;
+    static_assert(sizeof(NodeValue) == sizeof(float), "Node and Leaf value elements have to have the same size");
 
-        std::fill(mNodes.begin(), mNodes.end(), -1);
-    }
-
-    inline void write(std::ostream& os) const
-    {
-        auto node_count  = static_cast<uint32>(mNodes.size());
-        auto value_count = static_cast<uint32>(mValues.size());
-
-        // We do not make use of this header, but it might get handy in other applications
-        os.write(reinterpret_cast<const char*>(&mNDim), sizeof(mNDim));
-        os.write(reinterpret_cast<const char*>(&mMaxValuesPerNode), sizeof(mMaxValuesPerNode));
-        os.write(reinterpret_cast<const char*>(&node_count), sizeof(node_count));
-        os.write(reinterpret_cast<const char*>(&value_count), sizeof(value_count));
-
-        os.write(reinterpret_cast<const char*>(mNodes.data()), mNodes.size() * sizeof(NodeValue));
-        os.write(reinterpret_cast<const char*>(mValues.data()), mValues.size() * sizeof(float));
-    }
-
-    [[nodiscard]] inline size_t nodeCount() const { return mNodes.size(); }
-    [[nodiscard]] inline size_t valueCount() const { return mValues.size(); }
-
-    inline void setTotal(float f) { mTotal = f; }
-    [[nodiscard]] inline float total() const { return mTotal; }
-    [[nodiscard]] inline float isRootLeaf() const { return mRootIsLeaf; }
-
-    inline void setMinProjSA(float sa) { mMinProjSA = sa; }
-    [[nodiscard]] inline float minProjSA() const { return mMinProjSA; }
-
-private:
     uint32 mNDim;
     uint32 mMaxValuesPerNode;
     std::vector<NodeValue> mNodes;
     std::vector<float> mValues;
     float mTotal;
+    size_t mMaxDepth;
     float mMinProjSA;
     bool mRootIsLeaf;
+
+    std::unique_ptr<TensorTreeNode> mRoot;
 };
 
 class TensorTree {

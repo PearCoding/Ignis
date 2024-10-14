@@ -15,8 +15,30 @@ static inline void assignSpecification(KlemsComponent& component, KlemsComponent
     spec.entry_count = { component.row()->entryCount(), component.column()->entryCount() };
 }
 
+bool KlemsLoader::check(const Path& in_xml)
+{
+    // Read Radiance based klems BSDF xml document
+    pugi::xml_document doc;
+    pugi::xml_parse_result result = doc.load_file(in_xml.c_str());
+    if (!result)
+        return false;
+
+    const auto layer = doc.child("WindowElement").child("Optical").child("Layer");
+    if (!layer)
+        return false;
+
+    // Extract data definition and therefor also angle basis
+    const auto datadefinition = layer.child("DataDefinition");
+    if (!datadefinition)
+        return false;
+
+    std::string type = datadefinition.child_value("IncidentDataStructure");
+    return type == "Rows" || type == "Columns";
+}
+
 bool KlemsLoader::load(const Path& in_xml, Klems& klems)
-{ // Read Radiance based klems BSDF xml document
+{
+    // Read Radiance based klems BSDF xml document
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(in_xml.c_str());
     if (!result) {

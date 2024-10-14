@@ -1,5 +1,6 @@
 #include "ColorbarGizmo.h"
 #include "Application.h"
+#include "Colormap.h"
 #include "Logger.h"
 
 #include "UI.h"
@@ -37,24 +38,6 @@ void ColorbarGizmo::render(float min, float max)
     ImGui::EndChild();
 }
 
-static inline Vector4f poly6(const Vector4f& c0, const Vector4f& c1, const Vector4f& c2, const Vector4f& c3, const Vector4f& c4, const Vector4f& c5, const Vector4f& c6, float t)
-{
-    return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * (c5 + t * c6)))));
-}
-
-static inline Vector4f computeInferno(float t)
-{
-    static const Vector4f c0 = Vector4f(0.0002189403691192265f, 0.001651004631001012f, -0.01948089843709184f, 1);
-    static const Vector4f c1 = Vector4f(0.1065134194856116f, 0.5639564367884091f, 3.932712388889277f, 1);
-    static const Vector4f c2 = Vector4f(11.60249308247187f, -3.972853965665698f, -15.9423941062914f, 1);
-    static const Vector4f c3 = Vector4f(-41.70399613139459f, 17.43639888205313f, 44.35414519872813f, 1);
-    static const Vector4f c4 = Vector4f(77.162935699427f, -33.40235894210092f, -81.80730925738993f, 1);
-    static const Vector4f c5 = Vector4f(-71.31942824499214f, 32.62606426397723f, 73.20951985803202f, 1);
-    static const Vector4f c6 = Vector4f(25.13112622477341f, -12.24266895238567f, -23.07032500287172f, 1);
-
-    return poly6(c0, c1, c2, c3, c4, c5, c6, t);
-}
-
 void ColorbarGizmo::setupTexture()
 {
     auto texture = SDL_CreateTexture(Application::getRenderer(), SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_STREAMING, ColorbarWidth, ColorbarHeight);
@@ -74,7 +57,7 @@ void ColorbarGizmo::setupTexture()
 
     for (int y = 0; y < ColorbarHeight; ++y) {
         const float t        = 1 - y / float(ColorbarHeight - 1);
-        const Vector4f color = computeInferno(t);
+        const Vector4f color = colormap::inferno(t);
 
         const uint8 r = static_cast<uint8>(std::clamp(color.x(), 0.0f, 1.0f) * 255);
         const uint8 g = static_cast<uint8>(std::clamp(color.y(), 0.0f, 1.0f) * 255);
