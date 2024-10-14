@@ -202,9 +202,12 @@ public:
                 break;
             }
         }
-        if (!hasEnv)
-            scene->addConstantEnvLight();
-        // TODO: Add perez with parameters instead
+
+        if (!hasEnv) {
+            const auto env = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "perez", Path{});
+            env->setProperty("radiance", SceneProperty::fromNumber(1));
+            scene->addLight("__env", env);
+        }
 
         mRuntime = std::make_unique<Runtime>(options);
         if (mRuntime->loadFromScene(scene.get())) {
