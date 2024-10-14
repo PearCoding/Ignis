@@ -1,7 +1,7 @@
 CPMAddPackage(
     NAME Catch2
     GITHUB_REPOSITORY catchorg/Catch2 
-    GIT_TAG v3.6.0
+    GIT_TAG v3.7.1
     EXCLUDE_FROM_ALL YES
     SYSTEM
 )
