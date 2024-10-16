@@ -34,7 +34,7 @@ If (!(Test-Path -Path "llvm-src")) {
 }
 
 Set-Location "llvm-src/"
-& $GIT_BIN apply --directory llvm --ignore-space-change --ignore-whitespace $IGNIS_ROOT/scripts/setup/nvptx_feature.patch
+& $GIT_BIN apply --directory llvm --ignore-space-change --ignore-whitespace "$IGNIS_ROOT/scripts/setup/nvptx_feature.patch".Replace("\", "/")
 
 $BUILD_TYPE = $Config.LLVM.BUILD_TYPE
 $LLVM_ROOT = "$DEPS_ROOT\llvm-install".Replace("\", "/")
