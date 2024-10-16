@@ -7,11 +7,32 @@ namespace IG {
 int TimePoint::dayOfTheYear() const
 {
     tm date      = {};
+    date.tm_sec  = (int)Seconds;
+    date.tm_min  = Minute;
+    date.tm_hour = Hour;
     date.tm_year = Year - 1900;
     date.tm_mon  = Month - 1;
     date.tm_mday = Day;
-    mktime(&date);
+    mktime(&date); // Will set `tm_yday` and `tm_wday`
     return date.tm_yday;
+}
+
+float TimePoint::julianDate(int timezone) const
+{
+    float decHours = decimalHours(timezone);
+
+    // Calculate current Julian Day
+    int liAux1 = (Month - 14) / 12;
+    int liAux2 = (1461 * (Year + 4800 + liAux1)) / 4
+                 + (367 * (Month - 2 - 12 * liAux1)) / 12
+                 - (3 * ((Year + 4900 + liAux1) / 100)) / 4
+                 + Day - 32075;
+    return (float)liAux2 - 0.5 + decHours / 24.0;
+}
+
+float TimePoint::decimalHours(int timezone) const
+{
+    return Hour + timezone + (Minute + Seconds / 60.0) / 60.0;
 }
 
 /* Based on "Computing the Solar Vector" by Manuel Blanco-Muriel,
@@ -25,22 +46,8 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
 
     /* Calculate difference in days between the current Julian Day
        and JD 2451545.0, which is noon 1 January 2000 Universal Time */
-    double elapsedJulianDays = 0, decHours = 0;
-    {
-        // Calculate time of the day in UT decimal hours
-        decHours = timepoint.Hour + location.Timezone + (timepoint.Minute + timepoint.Seconds / 60.0) / 60.0;
-
-        // Calculate current Julian Day
-        int liAux1 = (timepoint.Month - 14) / 12;
-        int liAux2 = (1461 * (timepoint.Year + 4800 + liAux1)) / 4
-                     + (367 * (timepoint.Month - 2 - 12 * liAux1)) / 12
-                     - (3 * ((timepoint.Year + 4900 + liAux1) / 100)) / 4
-                     + timepoint.Day - 32075;
-        double dJulianDate = (double)liAux2 - 0.5 + decHours / 24.0;
-
-        // Calculate difference between current Julian Day and JD 2451545.0
-        elapsedJulianDays = dJulianDate - 2451545.0;
-    }
+    const double elapsedJulianDays = timepoint.julianDate(location.Timezone) - 2451545.0;
+    const double decHours          = timepoint.decimalHours(location.Timezone);
 
     /* Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
        ecliptic in radians but without limiting the angle to be less than 2*Pi

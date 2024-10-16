@@ -1,4 +1,5 @@
 #include "PerezLight.h"
+#include "Logger.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
@@ -22,36 +23,49 @@ float PerezLight::computeFlux(ShadingTree& tree) const
     return Pi * radius * radius;
 }
 
-static std::tuple<PerezModel, float> getModel(SceneObject& obj, float solar_zenith, const TimePoint& timepoint)
+static std::tuple<PerezModel, float, float> getModel(SceneObject& obj, float solar_zenith, const TimePoint& timepoint)
 {
     if (obj.properties().count("clearness") || obj.properties().count("brightness")) {
-        const PerezModel model = PerezModel::fromSky(obj.property("brightness").getNumber(0.2f),
-                                                     obj.property("clearness").getNumber(1.0f),
-                                                     solar_zenith);
+        const float sky_brightness = obj.property("brightness").getNumber(0.2f);
+        const float sky_clearness  = obj.property("clearness").getNumber(1.0f);
+        const PerezModel model     = PerezModel::fromSky(sky_brightness, sky_clearness, solar_zenith);
+
+        const float diff_irrad = PerezModel::computeDiffuseIrradiance(sky_brightness, solar_zenith, timepoint.dayOfTheYear());
         return { model,
-                 PerezModel::computeDiffuseIrradiance(obj.property("brightness").getNumber(0.2f), solar_zenith, timepoint.dayOfTheYear()) };
+                 diff_irrad,
+                 diff_irrad * PerezModel::computeDiffuseEfficacy(sky_brightness, sky_clearness, solar_zenith) };
     } else if (obj.properties().count("direct_irradiance") || obj.properties().count("diffuse_irradiance")) {
-        const PerezModel model = PerezModel::fromIrrad(obj.property("diffuse_irradiance").getNumber(1.0f),
-                                                       obj.property("direct_irradiance").getNumber(1.0f),
-                                                       solar_zenith,
-                                                       timepoint.dayOfTheYear());
+        const float diff_irrad = obj.property("diffuse_irradiance").getNumber(1.0f);
+        const float dir_irrad  = obj.property("direct_irradiance").getNumber(1.0f);
+        const PerezModel model = PerezModel::fromIrrad(diff_irrad, dir_irrad, solar_zenith, timepoint.dayOfTheYear());
+
+        const float sky_brightness = PerezModel::computeSkyBrightness(diff_irrad, solar_zenith, timepoint.dayOfTheYear());
+        const float sky_clearness  = PerezModel::computeSkyClearness(diff_irrad, dir_irrad, solar_zenith);
+
+        // IG_LOG(L_DEBUG) << "Epsilon: " << sky_clearness << " Delta: " << sky_brightness << std::endl;
         return { model,
-                 obj.property("diffuse_irradiance").getNumber(1) };
+                 diff_irrad,
+                 diff_irrad * PerezModel::computeDiffuseEfficacy(sky_brightness, sky_clearness, solar_zenith) };
     } else if (obj.properties().count("direct_illuminance") || obj.properties().count("diffuse_illuminance")) {
+        // TODO: Implement what illu_to_irra_index is doing for illuminance -> irradiance conversion
+        const float diffIllum  = obj.property("diffuse_illuminance").getNumber(1.0f);
         const PerezModel model = PerezModel::fromIllum(obj.property("diffuse_illuminance").getNumber(1.0f),
                                                        obj.property("direct_illuminance").getNumber(1.0f),
                                                        solar_zenith,
                                                        timepoint.dayOfTheYear());
         return { model,
-                 convertIlluminanceToIrradiance(obj.property("diffuse_illuminance").getNumber(1.0f)) /* TODO: Not that simple */ };
+                 convertIlluminanceToIrradiance(diffIllum),
+                 diffIllum };
     } else {
+        const float diffIllum = 1.0f /* TODO */;
         return { PerezModel::fromParameters(
                      obj.property("a").getNumber(1.0f),
                      obj.property("b").getNumber(1.0f),
                      obj.property("c").getNumber(1.0f),
                      obj.property("d").getNumber(1.0f),
                      obj.property("e").getNumber(1.0f)),
-                 1.0f /* TODO*/ };
+                 convertIlluminanceToIrradiance(diffIllum),
+                 diffIllum };
     }
 }
 
@@ -68,9 +82,12 @@ void PerezLight::serialize(const SerializationInput& input) const
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
 
     // Other input specifications
-    const auto [model, diff_irrad] = getModel(*mLight, solar_zenith, mTimePoint);
-    const float diffnorm           = diff_irrad / model.integrate(solar_zenith);
+    const auto [model, diff_irrad, diff_illum] = getModel(*mLight, solar_zenith, mTimePoint);
 
+    // const float diffnorm = diff_irrad / model.integrate(solar_zenith);
+    const float diffnorm = diff_illum / WhiteEfficiency / model.integrate(solar_zenith);
+
+    // IG_LOG(L_DEBUG) << "Diffuse Norm: " << diffnorm << std::endl;
     bool usesLuminance = false;
     if (mLight->properties().count("luminance")) {
         input.Tree.addColor("luminance", *mLight, Vector3f::Ones());

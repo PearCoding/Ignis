@@ -63,6 +63,16 @@ static float sE[BinCount * 4] = {
     1.5000f, -0.6426f, 1.8564f, 0.5636f
 };
 
+static float sDiffuseA[BinCount] = { 97.24f, 107.22f, 104.97f, 102.39f, 100.71f, 106.42f, 141.88f, 152.23f };
+static float sDiffuseB[BinCount] = { -0.46f, 1.15f, 2.96f, 5.59f, 5.94f, 3.83f, 1.90f, 0.35f };
+static float sDiffuseC[BinCount] = { 12.00f, 0.59f, -5.53f, -13.95f, -22.75f, -36.15f, -53.24f, -45.27f };
+static float sDiffuseD[BinCount] = { -8.91f, -3.95f, -8.77f, -13.90f, -23.74f, -28.83f, -14.03f, -7.98f };
+
+static float sDirectA[BinCount] = { 57.20f, 98.99f, 109.83f, 110.34f, 106.36f, 107.19f, 105.75f, 101.18f };
+static float sDirectB[BinCount] = { -4.55f, -3.46f, -4.90f, -5.84f, -3.97f, -1.25f, 0.77f, 1.58f };
+static float sDirectC[BinCount] = { -2.98f, -1.21f, -1.71f, -1.99f, -1.75f, -1.51f, -1.26f, -1.10f };
+static float sDirectD[BinCount] = { 117.12f, 12.38f, -8.81f, -4.56f, -6.16f, -26.73f, -34.44f, -8.29f };
+
 float PerezModel::eval(float cos_sun, float cos_theta) const
 {
     const float sun_a = std::acos(cos_sun); // Angle between sun and direction
@@ -145,6 +155,38 @@ float PerezModel::integrate(const float solar_zenith) const
 #endif
 }
 
+float PerezModel::computeDiffuseEfficacy(float sky_brightness, float sky_clearness, float solar_zenith)
+{
+    // Get bin (this can be optimized by binary search)
+    size_t bin = 0;
+    for (; bin < BinCount; ++bin) {
+        if (sky_clearness >= Ranges[bin] && sky_clearness < Ranges[bin + 1])
+            break;
+    }
+
+    constexpr float Td          = 10.97353115;                   // Dewpoint
+    const float atm_preci_water = std::exp(0.07f * Td - 0.075f); // Atmospheric precipitable water content (=2)
+
+    const float value = sDiffuseA[bin] + sDiffuseB[bin] * atm_preci_water + sDiffuseC[bin] * std::cos(solar_zenith) + sDiffuseD[bin] * std::log(sky_brightness);
+    return value;
+}
+
+float PerezModel::computeDirectEfficacy(float sky_brightness, float sky_clearness, float solar_zenith)
+{
+    // Get bin (this can be optimized by binary search)
+    size_t bin = 0;
+    for (; bin < BinCount; ++bin) {
+        if (sky_clearness >= Ranges[bin] && sky_clearness < Ranges[bin + 1])
+            break;
+    }
+
+    constexpr float Td          = 10.97353115;                   // Dewpoint
+    const float atm_preci_water = std::exp(0.07f * Td - 0.075f); // Atmospheric precipitable water content (=2)
+
+    const float value = sDirectA[bin] + sDirectB[bin] * atm_preci_water + sDirectC[bin] * std::exp(5.73 * solar_zenith - 5) + sDirectD[bin] * sky_brightness;
+    return std::max(0.0f, value);
+}
+
 PerezModel PerezModel::fromParameters(float a, float b, float c, float d, float e)
 {
     IG_LOG(L_DEBUG) << "Perez: " << a << " " << b << " " << c << " " << d << " " << e << std::endl;
@@ -153,6 +195,21 @@ PerezModel PerezModel::fromParameters(float a, float b, float c, float d, float 
 
 PerezModel PerezModel::fromSky(float sky_brightness, float sky_clearness, float solar_zenith)
 {
+    // Validate parametrization (limits defined by J. Wienold - Radiance)
+    constexpr float SkyClearnessMin = 1.0f;
+    constexpr float SkyClearnessMax = 12.01f;
+    if (sky_clearness < SkyClearnessMin)
+        sky_clearness = SkyClearnessMin;
+    if (sky_clearness > SkyClearnessMax)
+        sky_clearness = SkyClearnessMax - 0.001f;
+
+    constexpr float SkyBrightnessMin = 0.01f;
+    constexpr float SkyBrightnessMax = 0.6f;
+    if (sky_brightness < SkyBrightnessMin)
+        sky_brightness = SkyBrightnessMin;
+    if (sky_brightness > SkyBrightnessMax)
+        sky_brightness = SkyBrightnessMax;
+
     // Correction factor in the Perez model
     if ((sky_clearness > 1.065f) && (sky_clearness < 2.8f)) {
         if (sky_brightness < 0.2f)
@@ -220,6 +277,13 @@ float PerezModel::computeDirectIrradiance(float sky_brightness, float sky_clearn
 
 PerezModel PerezModel::fromIrrad(float diffuse_irradiance, float direct_irradiance, float solar_zenith, int day_of_the_year)
 {
+    if (diffuse_irradiance < 0)
+        diffuse_irradiance = 0;
+    if (direct_irradiance < 0)
+        direct_irradiance = 0;
+
+    // TODO: Check against SolarConstantE
+
     return fromSky(computeSkyBrightness(diffuse_irradiance, solar_zenith, day_of_the_year),
                    computeSkyClearness(diffuse_irradiance, direct_irradiance, solar_zenith),
                    solar_zenith);
@@ -227,6 +291,13 @@ PerezModel PerezModel::fromIrrad(float diffuse_irradiance, float direct_irradian
 
 PerezModel PerezModel::fromIllum(float diffuse_illuminance, float direct_illuminance, float solar_zenith, int day_of_the_year)
 {
+    if (diffuse_illuminance < 0)
+        diffuse_illuminance = 0;
+    if (direct_illuminance < 0)
+        direct_illuminance = 0;
+
+    // TODO: Check against SolarConstantL
+
     return fromIrrad(convertIlluminanceToIrradiance(diffuse_illuminance),
                      convertIlluminanceToIrradiance(direct_illuminance),
                      solar_zenith, day_of_the_year);

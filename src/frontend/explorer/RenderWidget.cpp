@@ -205,7 +205,8 @@ public:
 
         if (!hasEnv) {
             const auto env = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "perez", Path{});
-            env->setProperty("radiance", SceneProperty::fromNumber(1));
+            env->setProperty("clearness", SceneProperty::fromNumber(1.0f));
+            env->setProperty("brightness", SceneProperty::fromNumber(0.01f));
             scene->addLight("__env", env);
         }
 
