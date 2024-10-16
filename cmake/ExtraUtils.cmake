@@ -1,8 +1,10 @@
 if(CMAKE_VERSION VERSION_GREATER 3.6)
     # Add iwyu if available
     option(IG_USE_IWYU "Use include-what-you-use while building" OFF)
+
     IF(IG_USE_IWYU)
         find_program(IWYU_EXECUTABLE NAMES include-what-you-use iwyu)
+
         IF(IWYU_EXECUTABLE)
             get_filename_component(IWYU_DIR ${IWYU_EXECUTABLE} DIRECTORY)
             file(TO_NATIVE_PATH "${IWYU_DIR}/../share/include-what-you-use" IWYU_SHARE_DIR)
@@ -10,15 +12,15 @@ if(CMAKE_VERSION VERSION_GREATER 3.6)
                 CACHE PATH "Directory containing default mappings for iwyu")
 
             set(IWYU_ARGS
-            "-Xiwyu" "--no_comments"
-            "-Xiwyu" "--mapping_file=${CMAKE_CURRENT_SOURCE_DIR}/tools/iwyu.imp")
+                "-Xiwyu" "--no_comments"
+                "-Xiwyu" "--mapping_file=${CMAKE_CURRENT_SOURCE_DIR}/tools/iwyu.imp")
 
             if(EXISTS "${IWYU_MAPPINGS_DIR}")
                 set(IWYU_ARGS ${IWYU_ARGS}
-                "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/iwyu.gcc.imp"
-                "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/libcxx.imp"
-                "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/boost-all.imp"
-                "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/qt5_4.imp")
+                    "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/iwyu.gcc.imp"
+                    "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/libcxx.imp"
+                    "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/boost-all.imp"
+                    "-Xiwyu" "--mapping_file=${IWYU_MAPPINGS_DIR}/qt5_4.imp")
             else()
                 message(WARNING "IWYU default mappings could not be added!")
             endif()
@@ -57,7 +59,7 @@ if(CMAKE_VERSION VERSION_GREATER 3.6)
 
         if(CLANG_TIDY_EXECUTABLE)
             message(STATUS "Using Clang-Tidy ${CLANG_TIDY_EXECUTABLE}")
-            set(CLANG_TIDY_ARGS 
+            set(CLANG_TIDY_ARGS
                 "--checks=${CLANG_TIDY_STYLE}"
                 "--quiet")
         endif()
@@ -67,6 +69,7 @@ endif()
 if(CMAKE_VERSION VERSION_GREATER 3.8)
     # Add cpplint if available
     option(IG_USE_CPPLINT "Do style check with cpplint." OFF)
+
     if(IG_USE_CPPLINT)
         find_program(
             CPPLINT_EXECUTABLE
@@ -91,7 +94,7 @@ if(CMAKE_VERSION VERSION_GREATER 3.8)
 
         if(CPPLINT_EXECUTABLE)
             message(STATUS "Using cpplint ${CPPLINT_EXECUTABLE}")
-            set(CPPLINT_ARGS 
+            set(CPPLINT_ARGS
                 "--filter=${IG_CPPLINT_STYLE}"
                 "--counting=detailed"
                 "--extensions=cpp,h,inl"
@@ -104,6 +107,7 @@ endif()
 if(CMAKE_VERSION VERSION_GREATER 3.10)
     # Add cppcheck if available
     option(IG_USE_CPPCHECK "Do checks with cppcheck." OFF)
+
     if(IG_USE_CPPCHECK)
         find_program(
             CPPCHECK_EXECUTABLE
@@ -113,11 +117,13 @@ if(CMAKE_VERSION VERSION_GREATER 3.10)
 
         if(CPPCHECK_EXECUTABLE)
             message(STATUS "Using cppcheck ${CPPCHECK_EXECUTABLE}")
+
             if(WIN32)
                 set(ARCH_ARGS "-DWIN32" "-D_MSC_VER")
             else()
                 set(ARCH_ARGS "-Dlinux" "-D__GNUC__")
             endif()
+
             set(CPPCHECK_ARGS ${ARCH_ARGS}
                 "--quiet"
                 "--enable=warning,style,performance,portability"
@@ -136,13 +142,25 @@ endif()
 
 if(CMAKE_VERSION VERSION_GREATER 3.9)
     if(IG_USE_LTO)
-        include(CheckIPOSupported)
-        check_ipo_supported(RESULT supported OUTPUT error)
-        if( supported )
-            message(STATUS "IPO / LTO enabled")
+        include(CheckLinkerFlag)
+        set(CUSTOM_LTO_FLAGS "-flto=auto") # Minor workaround until https://gitlab.kitware.com/cmake/cmake/-/issues/26353 gets through
+        check_linker_flag(CXX "${CUSTOM_LTO_FLAGS}" HAS_CUSTOM_LTO_FLAGS)
+
+        if(HAS_CUSTOM_LTO_FLAGS)
             set(LTO_ON TRUE)
         else()
-            message(WARNING "IPO / LTO not available")
+            include(CheckIPOSupported)
+            check_ipo_supported(RESULT supported OUTPUT error)
+
+            if(supported)
+                set(LTO_ON TRUE)
+            else()
+                message(WARNING "IPO / LTO not available: ${error}")
+            endif()
+        endif()
+
+        if(LTO_ON)
+            message(STATUS "IPO / LTO enabled")
         endif()
     endif()
 endif()
@@ -156,12 +174,12 @@ function(ig_add_extra_options TARGET)
     if(HAS_NEW_RPATH_FLAGS)
         target_link_options(${TARGET} PRIVATE ${NEW_RPATH_FLAGS})
     endif()
-    
-    if (target_type STREQUAL "EXECUTABLE")
+
+    if(target_type STREQUAL "EXECUTABLE")
         if(MSVC)
             target_link_options(${TARGET} PRIVATE "/STACK:16777216")
-        
-            if (ARG_NO_DEFAULT_CONSOLE)
+
+            if(ARG_NO_DEFAULT_CONSOLE)
                 # Do not open up a console but keep main()
                 target_link_options(${TARGET} PRIVATE "/SUBSYSTEM:WINDOWS" "/ENTRY:mainCRTStartup")
             endif()
@@ -170,8 +188,12 @@ function(ig_add_extra_options TARGET)
 
     if(NOT NO_LTO)
         if(LTO_ON)
-            if (NOT target_type STREQUAL "STATIC_LIBRARY")
-                set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+            if(NOT target_type STREQUAL "STATIC_LIBRARY")
+                if(HAS_CUSTOM_LTO_FLAGS)
+                    target_link_options(${TARGET} PRIVATE ${CUSTOM_LTO_FLAGS})
+                else()
+                    set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+                endif()
             endif()
         endif()
     endif()
@@ -180,12 +202,15 @@ function(ig_add_extra_options TARGET)
         if(IG_USE_IWYU AND IWYU_EXECUTABLE)
             set_property(TARGET ${TARGET} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_EXECUTABLE} ${IWYU_ARGS})
         endif()
+
         if(IG_USE_CLANG_TIDY AND CLANG_TIDY_EXECUTABLE)
             set_property(TARGET ${TARGET} PROPERTY CXX_CLANG_TIDY ${CLANG_TIDY_EXECUTABLE} ${CLANG_TIDY_ARGS})
         endif()
+
         if(IG_USE_CPPLINT AND CPPLINT_EXECUTABLE)
             set_property(TARGET ${TARGET} PROPERTY CXX_CPPLINT ${CPPLINT_EXECUTABLE} ${CPPLINT_ARGS})
         endif()
+
         if(IG_USE_CPPCHECK AND CPPCHECK_EXECUTABLE)
             set_property(TARGET ${TARGET} PROPERTY CXX_CPPCHECK ${CPPCHECK_EXECUTABLE} ${CPPCHECK_ARGS})
         endif()
