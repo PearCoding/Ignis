@@ -180,35 +180,8 @@ public:
         SceneParser parser;
         auto scene = parser.loadFromFile(path);
 
-        auto prevCamera = scene->camera();
-
-        auto cameraObject = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "fisheye", Path{});
-        cameraObject->setProperty("mode", SceneProperty::fromString("circular"));
-        cameraObject->setProperty("mask", SceneProperty::fromBool(true));
-        if (prevCamera && prevCamera->hasProperty("transform"))
-            cameraObject->setProperty("transform", prevCamera->property("transform"));
-        if (prevCamera && prevCamera->hasProperty("fov")) // TODO: Other types?
-            mCurrentParameters.FOV = prevCamera->property("fov").getNumber(mCurrentParameters.FOV);
-
-        scene->setCamera(cameraObject);
-
-        // Add environment map if none is available
-        bool hasEnv = false;
-        for (const auto& pair : scene->lights()) {
-            if (pair.second->pluginType() != "point"
-                && pair.second->pluginType() != "spot"
-                && pair.second->pluginType() != "area") {
-                hasEnv = true;
-                break;
-            }
-        }
-
-        if (!hasEnv) {
-            const auto env = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "perez", Path{});
-            env->setProperty("clearness", SceneProperty::fromNumber(1.0f));
-            env->setProperty("brightness", SceneProperty::fromNumber(0.01f));
-            scene->addLight("__env", env);
-        }
+        injectCamera(scene);
+        injectSkyModel(scene);
 
         mRuntime = std::make_unique<Runtime>(options);
         if (mRuntime->loadFromScene(scene.get())) {
@@ -297,6 +270,8 @@ public:
         if (Runtime::hasDenoiser())
             mUseDenoiser = b;
     }
+
+    inline RenderWidget::SkyModel currrentSkyModel() const { return mSkyModel; }
 
 private:
     void handleInput()
@@ -540,6 +515,93 @@ private:
         return true;
     }
 
+    void injectCamera(const std::shared_ptr<Scene>& scene)
+    {
+        auto prevCamera = scene->camera();
+
+        auto cameraObject = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "fisheye", Path{});
+        cameraObject->setProperty("mode", SceneProperty::fromString("circular"));
+        cameraObject->setProperty("mask", SceneProperty::fromBool(true));
+        if (prevCamera && prevCamera->hasProperty("transform"))
+            cameraObject->setProperty("transform", prevCamera->property("transform"));
+        if (prevCamera && prevCamera->hasProperty("fov")) // TODO: Other types?
+            mCurrentParameters.FOV = prevCamera->property("fov").getNumber(mCurrentParameters.FOV);
+
+        scene->setCamera(cameraObject);
+    }
+
+    /// Modify sky models for control
+    void injectSkyModel(const std::shared_ptr<Scene>& scene)
+    {
+        SceneObject* envPtr = nullptr;
+        for (const auto& pair : scene->lights()) {
+            if (pair.second->pluginType() != "point"
+                && pair.second->pluginType() != "spot"
+                && pair.second->pluginType() != "area") {
+                envPtr = pair.second.get();
+                break;
+            }
+        }
+
+        if (!envPtr) {
+            // Create standard perez if no environment map is available
+            const auto env = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "perez", Path{});
+            scene->addLight("__env", env);
+            envPtr = env.get();
+        }
+
+        // TODO: Transform CIE stuff to perez
+
+        if (!envPtr) {
+            mSkyModel = RenderWidget::SkyModel::None;
+        } else if (envPtr->pluginType() == "perez") {
+            injectPerezSkyModel(scene, envPtr);
+            mSkyModel = RenderWidget::SkyModel::Perez;
+        } else {
+            mSkyModel = RenderWidget::SkyModel::Undefined;
+        }
+    }
+
+    void injectPerezSkyModel(const std::shared_ptr<Scene>& scene, SceneObject* envPtr)
+    {
+        const auto sunDirName = SceneProperty::fromString("sky_sun_dir");
+        auto sunDirParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});
+        sunDirParameter->setProperty("name", sunDirName);
+        sunDirParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::UnitY()));
+
+        const auto brightnessName = SceneProperty::fromString("sky_brightness");
+        auto brightnessParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
+        brightnessParameter->setProperty("name", brightnessName);
+        brightnessParameter->setProperty("value", SceneProperty::fromNumber(0.01f));
+
+        const auto clearnessName = SceneProperty::fromString("sky_clearness");
+        auto clearnessParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
+        clearnessParameter->setProperty("name", clearnessName);
+        clearnessParameter->setProperty("value", SceneProperty::fromNumber(1.00f));
+
+        const auto colorName = SceneProperty::fromString("sky_color");
+        auto colorParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "color", Path{});
+        colorParameter->setProperty("name", colorName);
+        colorParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::Ones()));
+
+        const auto groundName = SceneProperty::fromString("sky_ground_color");
+        auto groundParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "color", Path{});
+        groundParameter->setProperty("name", groundName);
+        groundParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::Ones()));
+
+        scene->addParameter(sunDirName.getString(), std::move(sunDirParameter));
+        scene->addParameter(brightnessName.getString(), std::move(brightnessParameter));
+        scene->addParameter(clearnessName.getString(), std::move(clearnessParameter));
+        scene->addParameter(colorName.getString(), std::move(colorParameter));
+        scene->addParameter(groundName.getString(), std::move(groundParameter));
+
+        envPtr->setProperty("direction", sunDirName);
+        envPtr->setProperty("brightness", brightnessName);
+        envPtr->setProperty("clearness", clearnessName);
+        envPtr->setProperty("color", colorName);
+        envPtr->setProperty("ground", groundName);
+    }
+
     SDL_Texture* mTexture = nullptr;
     // std::vector<uint32> mBuffer;
     size_t mWidth, mHeight;
@@ -571,6 +633,8 @@ private:
     bool mShowColorbar;
 
     bool mUseDenoiser;
+
+    RenderWidget::SkyModel mSkyModel;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
@@ -637,4 +701,6 @@ void RenderWidget::showColorbar(bool b) { mInternal->showColorbar(b); }
 
 bool RenderWidget::isDenoiserEnabled() const { return mInternal->isDenoiserEnabled(); }
 void RenderWidget::enableDenoiser(bool b) { mInternal->enableDenoiser(b); }
+
+RenderWidget::SkyModel RenderWidget::currentSkyModel() const { return mInternal->currrentSkyModel(); }
 }; // namespace IG

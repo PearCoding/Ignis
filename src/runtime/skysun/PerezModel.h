@@ -3,6 +3,7 @@
 #include "IG_Config.h"
 
 namespace IG {
+/// Deprecated. Only available on artic
 class IG_LIB PerezModel {
 public:
     inline float a() const { return mA; }

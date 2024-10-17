@@ -29,6 +29,12 @@ public:
         Albedo
     };
 
+    enum class SkyModel {
+        None,
+        Undefined,
+        Perez
+    };
+
     struct Parameters {
         float FOV;
         float ExposureFactor;
@@ -62,6 +68,8 @@ public:
 
     bool isDenoiserEnabled() const;
     void enableDenoiser(bool b = true);
+
+    SkyModel currentSkyModel() const;
 
 private:
     std::unique_ptr<class RenderWidgetInternal> mInternal;

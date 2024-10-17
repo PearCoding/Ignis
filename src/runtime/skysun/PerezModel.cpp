@@ -216,8 +216,6 @@ PerezModel PerezModel::fromSky(float sky_brightness, float sky_clearness, float 
             sky_brightness = 0.2f;
     }
 
-    sky_brightness = std::min(std::max(sky_brightness, 0.01f), 0.6f);
-
     const auto compute         = [=](const float* x) { return x[0] + x[1] * solar_zenith + sky_brightness * (x[2] + x[3] * solar_zenith); };
     const auto computeSpecialC = [=]() { return std::exp(std::pow(sky_brightness * (sC[0] + sC[1] * solar_zenith), sC[2])) - sC[3]; };
     const auto computeSpecialD = [=]() { return -std::exp(sky_brightness * (sD[0] + sD[1] * solar_zenith)) + sD[2] + sky_brightness * sD[3]; };

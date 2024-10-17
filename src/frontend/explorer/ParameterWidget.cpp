@@ -79,7 +79,7 @@ void ParameterWidget::onRender(Widget*)
                 if (ImGui::Checkbox("Colorbar", &showColorbar))
                     mRenderWidget->showColorbar(showColorbar);
             }
-            
+
             if (!hasTonemapping)
                 ImGui::BeginDisabled();
 
@@ -107,6 +107,34 @@ void ParameterWidget::onRender(Widget*)
 
             if (!hasTonemapping)
                 ImGui::EndDisabled();
+        }
+
+        if (mRenderWidget->currentSkyModel() == RenderWidget::SkyModel::Perez) {
+            if (ImGui::CollapsingHeader("Sky##parameters", HeaderFlags)) {
+                float sky_brightness = runtime->parameters().getFloat("sky_brightness");
+                if (ImGui::SliderFloat("Brightness##Sky", &sky_brightness, 0.01f, 0.6f)) {
+                    runtime->setParameter("sky_brightness", sky_brightness);
+                    runtime->reset();
+                }
+
+                float sky_clearness = runtime->parameters().getFloat("sky_clearness");
+                if (ImGui::SliderFloat("Clearness##Sky", &sky_clearness, 1.0f, 12.0f)) {
+                    runtime->setParameter("sky_clearness", sky_clearness);
+                    runtime->reset();
+                }
+
+                Vector4f sky_color = runtime->parameters().getColor("sky_color");
+                if (ImGui::ColorEdit4("Color##Sky", sky_color.data())) {
+                    runtime->setParameter("sky_color", sky_color);
+                    runtime->reset();
+                }
+
+                Vector4f sky_ground_color = runtime->parameters().getColor("sky_ground_color");
+                if (ImGui::ColorEdit4("Ground##Sky", sky_ground_color.data())) {
+                    runtime->setParameter("sky_ground_color", sky_ground_color);
+                    runtime->reset();
+                }
+            }
         }
 
         if (ImGui::CollapsingHeader("Glare##parameters", 0)) {
