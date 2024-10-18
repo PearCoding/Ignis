@@ -28,7 +28,8 @@ try {
     HandleScene "sky-cloudy"
     HandleScene "sky-intermediate"
     HandleScene "sky-perez1"
-    HandleScene "sky-uniform"
+    HandleScene "sky-perez2"
+    HandleScene "sky-perez3"
 }
 catch {
     Write-Host "Update failed:" -ForegroundColor Red
