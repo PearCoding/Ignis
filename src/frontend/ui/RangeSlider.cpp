@@ -19,7 +19,7 @@ static bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, f
 {
     // Those are the things we can do easily outside the SliderBehaviorT<> template, saves code generation.
     ImGuiContext& g = *GImGui;
-    if ((g.LastItemData.InFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
+    if ((g.LastItemData.ItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
         return false;
 
     const ImGuiStyle& style = g.Style;
@@ -170,7 +170,7 @@ bool RangeSliderFloat(const char* label, float* v1, float* v2, float v_min, floa
     if (single_display_format == nullptr)
         single_display_format = DataTypeGetInfo(ImGuiDataType_Float)->PrintFmt;
 
-    const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
+    const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.ItemFlags);
     const bool clicked = hovered && IsMouseClicked(ImGuiMouseButton_Left, 0, id);
 
     const bool make_active = (clicked || g.NavActivateId == id);
@@ -187,7 +187,7 @@ bool RangeSliderFloat(const char* label, float* v1, float* v2, float v_min, floa
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered
                                                                                             : ImGuiCol_FrameBg);
-    RenderNavHighlight(frame_bb, id);
+    RenderNavCursor(frame_bb, id);
     RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Actual slider behavior + render grab

@@ -143,10 +143,8 @@ public:
 
                 if (mTexture) {
                     runPipeline();
-                    ImGui::Image((void*)mTexture, ImVec2((float)mWidth, (float)mHeight));
+                    ImGui::Image((ImTextureID)(intptr_t)mTexture, ImVec2((float)mWidth, (float)mHeight));
                 }
-
-                handleInput();
 
                 if (mShowColorbar && mCurrentParameters.allowColorbar()) {
                     ImGui::SetCursorPos(topLeft);
@@ -157,6 +155,8 @@ public:
                     const float max = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? mRuntime->parameters().getFloat("glare_max_lum") : (mRuntime->parameters().getFloat("_luminance_softmax") * WhiteEfficiency);
                     mColorbar.render(min, max);
                 }
+                
+                handleInput();
             }
             ImGui::End();
 
@@ -327,7 +327,7 @@ private:
         }
 
         // Note: Not sure why io.WantMouseCapture does not work as intended... or I misunderstood something
-        if (io.WantCaptureMouse && ImGui::IsItemHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
+        if (io.WantCaptureMouse && ImGui::IsItemHovered()) {
             if (io.MouseWheel != 0)
                 mCurrentCamera.move(0, 0, io.MouseWheel * mCurrentTravelSpeed);
 
