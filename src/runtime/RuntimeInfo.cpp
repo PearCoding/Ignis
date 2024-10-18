@@ -23,6 +23,13 @@
 #define APP_NAME "Ignis"
 
 namespace IG {
+
+#if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
+static const std::string ExeSuffix = "";
+#else
+static const std::string ExeSuffix = ".exe";
+#endif
+
 Path RuntimeInfo::executablePath()
 {
 #ifdef IG_OS_LINUX
@@ -55,40 +62,6 @@ Path RuntimeInfo::executablePath()
     GetModuleFileNameW(nullptr, path, MAX_PATH);
     return path;
 #endif
-}
-
-Path RuntimeInfo::igcPath()
-{
-    // Should reside in the same directory!
-    const Path exePath = executablePath();
-    if (exePath.empty())
-        return {};
-
-#if defined(IG_OS_LINUX) || defined(IG_OS_APPLE)
-    const Path igcPath = exePath.parent_path() / "igc";
-#else
-    const Path igcPath     = exePath.parent_path() / "igc.exe";
-#endif
-
-    if (std::filesystem::exists(igcPath))
-        return igcPath;
-    else
-        return {};
-}
-
-Path RuntimeInfo::libdevicePath()
-{
-    // Should reside in the same directory!
-    const Path exePath = executablePath();
-    if (exePath.empty())
-        return {};
-
-    const Path libPath = exePath.parent_path() / "libdevice.10.bc";
-
-    if (std::filesystem::exists(libPath))
-        return libPath;
-    else
-        return {};
 }
 
 Path RuntimeInfo::modulePath(void* func)
@@ -125,17 +98,64 @@ Path RuntimeInfo::modulePath(void* func)
 #endif
 }
 
-Path RuntimeInfo::readonlyDataPath()
+Path RuntimeInfo::rootPath()
 {
+    // Get the current executable and check if the binary resides in the correct folder
     const Path exePath = executablePath();
-    if (exePath.empty())
+    if (!exePath.empty()) {
+        const Path igcPath = exePath.parent_path() / ("igcli" + ExeSuffix);
+
+        if (std::filesystem::exists(igcPath))
+            return exePath.parent_path().parent_path();
+    }
+
+    // If we fail to get it via executablePath() try modulePath()
+    const Path modPath = modulePath();
+    if (!modPath.empty())
+        return modPath.parent_path().parent_path();
+
+    return {};
+}
+
+Path RuntimeInfo::igcPath()
+{
+    const Path root = rootPath();
+    if (root.empty())
         return {};
 
-    const Path dataPath = exePath.parent_path().parent_path() / "data";
+    const Path igcPath = root / "bin" / ("igc" + ExeSuffix);
+
+    if (std::filesystem::exists(igcPath))
+        return igcPath;
+    else
+        return {};
+}
+
+Path RuntimeInfo::libdevicePath()
+{
+    const Path root = rootPath();
+    if (root.empty())
+        return {};
+
+    const Path libPath = root.parent_path() / "bin" / "libdevice.10.bc";
+
+    if (std::filesystem::exists(libPath))
+        return libPath;
+    else
+        return {};
+}
+
+Path RuntimeInfo::readonlyDataPath()
+{
+    const Path root = executablePath();
+    if (root.empty())
+        return {};
+
+    const Path dataPath = root.parent_path() / "data";
     if (std::filesystem::exists(dataPath) && std::filesystem::is_directory(dataPath))
         return dataPath;
 
-    const Path sharePath = exePath.parent_path().parent_path() / "share" / "Ignis";
+    const Path sharePath = root.parent_path() / "share" / "Ignis";
     if (std::filesystem::exists(dataPath) && std::filesystem::is_directory(sharePath))
         return sharePath;
     else
@@ -148,23 +168,14 @@ Path RuntimeInfo::configDirectory()
     const char* cache_home = std::getenv("XDG_CONFIG_HOME");
     if (cache_home == nullptr) {
         const char* home = std::getenv("HOME");
-        if (home == nullptr) {
-            const auto dir = executablePath();
-            if (dir.empty())
-                return modulePath().parent_path() / "config";
-            else
-                return dir.parent_path() / "config";
-        }
+        if (home == nullptr)
+            return rootPath() / "config";
         return Path(home) / ".config" / APP_NAME;
     }
     return Path(cache_home) / APP_NAME;
 #elif defined(IG_OS_APPLE)
     // TODO: Better path?
-    const auto dir = executablePath();
-    if (dir.empty())
-        return modulePath().parent_path() / "config";
-    else
-        return dir.parent_path() / "config";
+    return rootPath() / "config";
 #elif defined(IG_OS_WINDOWS)
     wchar_t* path = nullptr;
     HRESULT res   = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path);
@@ -185,23 +196,14 @@ Path RuntimeInfo::cacheDirectory()
     const char* cache_home = std::getenv("XDG_CACHE_HOME");
     if (cache_home == nullptr) {
         const char* home = std::getenv("HOME");
-        if (home == nullptr) {
-            const auto dir = executablePath();
-            if (dir.empty())
-                return modulePath().parent_path() / "cache";
-            else
-                return dir.parent_path() / "cache";
-        }
+        if (home == nullptr)
+            return rootPath() / "cache";
         return Path(home) / ".cache" / APP_NAME;
     }
     return Path(cache_home) / APP_NAME;
 #elif defined(IG_OS_APPLE)
     // TODO: Better path?
-    const auto dir = executablePath();
-    if (dir.empty())
-        return modulePath().parent_path() / "cache";
-    else
-        return dir.parent_path() / "cache";
+    return rootPath() / "cache";
 #elif defined(IG_OS_WINDOWS)
     wchar_t* path = nullptr;
     HRESULT res   = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path);

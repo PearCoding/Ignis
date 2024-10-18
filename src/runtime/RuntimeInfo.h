@@ -5,6 +5,9 @@
 namespace IG {
 class IG_LIB RuntimeInfo {
 public:
+    /// Path to the root path containing igcli in bin/.
+    [[nodiscard]] static Path rootPath();
+
     /// Path to the current executable.
     [[nodiscard]] static Path executablePath();
     /// Path to the ignis jit compiler 'igc'.
