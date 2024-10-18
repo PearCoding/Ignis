@@ -587,7 +587,7 @@ private:
         const auto groundName = SceneProperty::fromString("sky_ground_color");
         auto groundParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "color", Path{});
         groundParameter->setProperty("name", groundName);
-        groundParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::Ones() * 0.2));
+        groundParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::Ones() * 0.2f));
 
         scene->addParameter(sunDirName.getString(), std::move(sunDirParameter));
         scene->addParameter(brightnessName.getString(), std::move(brightnessParameter));
