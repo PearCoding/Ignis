@@ -218,7 +218,7 @@ mod perez {
     fn @eval(cos_sun: f32, cos_theta: f32, params: ExplicitParameters) -> f32 {
         let sun_a = math_builtins::acos(cos_sun); // Angle between sun and direction
 
-        let A = 1 + params.0 * math_builtins::exp(params.1 / math_builtins::fmax[f32](0.01, cos_theta));
+        let A = 1 + params.0 * math_builtins::exp(params.1 / math_builtins::fmax[f32](1e-5, cos_theta));
         let B = 1 + params.2 * math_builtins::exp(params.3 * sun_a) + params.4 * cos_sun * cos_sun;
         A * B
     }
@@ -271,12 +271,10 @@ mod perez {
 fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint: Color, ground: Color, params: perez::ExplicitParameters, has_ground: bool, transform: Mat3x3)  =
     make_environment_light_function(id, scene_bbox, @|dir|{
         let cos_theta = dir.y; // Cosine between zenith and direction
-        if !has_ground && cos_theta < 0 { return(color_builtins::black) }
-
-        let sun_c = clampf(vec3_dot(dir, sun_dir), -1, 1); // Cosine between sun and direction
-        let fac   = perez::eval(sun_c, cos_theta, params);
+        let sun_c     = clampf(vec3_dot(dir, sun_dir), -1, 1); // Cosine between sun and direction
+        let fac       = perez::eval(sun_c, cos_theta, params);
         cie_wmean(cos_theta, color_mulf(tint, fac), ground)
-}, transform, false);
+}, transform, !has_ground);
 
 fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color: Color, ground: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, transform: Mat3x3) -> Light {
     let g_sun_dir      = mat3x3_left_mul(transform, sun_dir);
@@ -291,7 +289,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color:
     let diffnorm  = model.diffuse_illum / color_builtins::white_efficiency / integrand;
 
     let tint   = color_mulf(color, diffnorm);
-    let zenith = color_mulf(tint, perez::eval(solar_zenith, 1, model.params));
+    let zenith = color_mulf(tint, perez::eval(math_builtins::cos(solar_zenith), 1, model.params));
 
     // Compute factors for the ground
     let normfactor = if model.clearness == 1 { 
