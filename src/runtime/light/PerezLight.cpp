@@ -33,7 +33,7 @@ void PerezLight::serialize(const SerializationInput& input) const
     // TODO: No support for PExpr for Time!
 
     input.Tree.beginClosure(name());
-    input.Tree.addColor("ground", *mLight, Vector3f::Ones());
+    input.Tree.addColor("ground", *mLight, Vector3f::Ones() * 0.2f);
 
     const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
     if (mLight->hasProperty("direction"))

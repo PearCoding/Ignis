@@ -89,16 +89,20 @@ mod perez {
     }
 
     /// Validate parametrization (limits defined by J. Wienold - Radiance)
-    fn @check_brightness(brightness: f32) = all::clampf(brightness, 0.01:f32, 0.6:f32);
-    fn @check_clearness(clearness: f32) = all::clampf(clearness,  1:f32,    12:f32 - 0.001:f32);
+    fn @check_brightness(brightness: f32)       = all::clampf(brightness, 0.01:f32, 0.6:f32);
+    fn @check_clearness(clearness: f32)         = all::clampf(clearness,  1:f32,    12:f32 - 0.001:f32);
+    fn @check_diffuse_irrad(diffuse_irrad: f32) = math_builtins::fmax(diffuse_irrad, 0:f32);
+    fn @check_direct_irrad(direct_irrad: f32)   = all::clampf(direct_irrad, 0:f32, flt_solar_e); // TODO: Radiance prints out an error sky if it exceeds the solar constant
+    fn @check_diffuse_illum(diffuse_illum: f32) = math_builtins::fmax(diffuse_illum, 0:f32);
+    fn @check_direct_illum(direct_illum: f32)   = all::clampf(direct_illum, 0:f32, flt_solar_l); // TODO: Radiance prints out an error sky if it exceeds the solar constant
 
     // gendaylit -P
     fn @make_model_from_brightness_clearness(mut brightness: f32, mut clearness: f32, solar_zenith: f32, day_of_the_year: f32) -> Model {
         brightness = check_brightness(brightness);
         clearness  = check_clearness(clearness);
         
-        let direct_irrad  =  math_builtins::fmax(compute_direct_irrad(brightness, clearness, solar_zenith, day_of_the_year), 0:f32);
-        let diffuse_irrad =  math_builtins::fmax(compute_diffuse_irrad(brightness, solar_zenith, day_of_the_year), 0:f32);
+        let direct_irrad  = check_direct_irrad(compute_direct_irrad(brightness, clearness, solar_zenith, day_of_the_year));
+        let diffuse_irrad = check_diffuse_irrad(compute_diffuse_irrad(brightness, solar_zenith, day_of_the_year));
 
         Model {
             brightness    = brightness,
@@ -113,8 +117,8 @@ mod perez {
 
     // gendaylit -W
     fn @make_model_from_irradiance(mut diffuse_irrad: f32, mut direct_irrad: f32, solar_zenith: f32, day_of_the_year: f32) -> Model {
-        diffuse_irrad = math_builtins::fmax(diffuse_irrad, 0:f32);
-        direct_irrad  = math_builtins::fmax(direct_irrad,  0:f32);
+        diffuse_irrad = check_direct_irrad(diffuse_irrad);
+        direct_irrad  = check_diffuse_irrad(direct_irrad);
 
         let brightness = check_brightness(compute_brightness(diffuse_irrad, solar_zenith, day_of_the_year));
         let clearness  = check_clearness(compute_clearness(diffuse_irrad, direct_irrad, solar_zenith));
@@ -304,7 +308,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color:
 	    norm_sc / f2 / flt_pi
     };
 
-    let actual_ground = color_mul(ground, color_mulf(zenith, normfactor * 0.2 /* gprefl */));
+    let actual_ground = color_mul(ground, color_mulf(zenith, normfactor));
 
     make_perez_light_raw(id, scene_bbox, sun_dir, tint, actual_ground, model.params, has_ground, transform)
 }

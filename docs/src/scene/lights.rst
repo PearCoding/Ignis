@@ -481,9 +481,9 @@ Perez Sky Model (:monosp:`perez`)
     - Tint of the sky model.
   * - ground
     - |color|
-    - :code:`1`
+    - :code:`0.2`
     - Yes
-    - Ground tint of the sky model. Multiplied with :monosp:`color`.
+    - Ground tint of the sky model. Multiplied with :monosp:`color`. Resembled the "-g" parameter in ``gendaylit``.
   * - clearness, brightness
     - |number|
     - :code:`1`, :code:`0.2`
