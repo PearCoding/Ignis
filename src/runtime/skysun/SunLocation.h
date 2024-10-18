@@ -27,12 +27,12 @@ struct IG_LIB TimePoint {
     /// Return the day of the year since the 1st of January
     int dayOfTheYear() const;
     /// Return the day of the year since the 1st of January 4713 BC
-    float julianDate(int timezone) const;
+    float julianDate(float timezone) const;
 
     /// @brief Calcuate the decimal hour
     /// @param timezone 
     /// @return 
-    float decimalHours(int timezone) const;
+    float decimalHours(float timezone) const;
 };
 
 // Default is Saarbrücken, Elevation: 52.87 Azimuth: 323.271 (west of south)

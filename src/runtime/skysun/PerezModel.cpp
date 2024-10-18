@@ -164,7 +164,7 @@ float PerezModel::computeDiffuseEfficacy(float sky_brightness, float sky_clearne
             break;
     }
 
-    constexpr float Td          = 10.97353115;                   // Dewpoint
+    constexpr float Td          = 10.97353115f;                  // Dewpoint
     const float atm_preci_water = std::exp(0.07f * Td - 0.075f); // Atmospheric precipitable water content (=2)
 
     const float value = sDiffuseA[bin] + sDiffuseB[bin] * atm_preci_water + sDiffuseC[bin] * std::cos(solar_zenith) + sDiffuseD[bin] * std::log(sky_brightness);
@@ -180,10 +180,10 @@ float PerezModel::computeDirectEfficacy(float sky_brightness, float sky_clearnes
             break;
     }
 
-    constexpr float Td          = 10.97353115;                   // Dewpoint
+    constexpr float Td          = 10.97353115f;                  // Dewpoint
     const float atm_preci_water = std::exp(0.07f * Td - 0.075f); // Atmospheric precipitable water content (=2)
 
-    const float value = sDirectA[bin] + sDirectB[bin] * atm_preci_water + sDirectC[bin] * std::exp(5.73 * solar_zenith - 5) + sDirectD[bin] * sky_brightness;
+    const float value = sDirectA[bin] + sDirectB[bin] * atm_preci_water + sDirectC[bin] * std::exp(5.73f * solar_zenith - 5) + sDirectD[bin] * sky_brightness;
     return std::max(0.0f, value);
 }
 

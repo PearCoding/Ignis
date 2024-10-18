@@ -17,7 +17,7 @@ int TimePoint::dayOfTheYear() const
     return date.tm_yday;
 }
 
-float TimePoint::julianDate(int timezone) const
+float TimePoint::julianDate(float timezone) const
 {
     float decHours = decimalHours(timezone);
 
@@ -27,12 +27,12 @@ float TimePoint::julianDate(int timezone) const
                  + (367 * (Month - 2 - 12 * liAux1)) / 12
                  - (3 * ((Year + 4900 + liAux1) / 100)) / 4
                  + Day - 32075;
-    return (float)liAux2 - 0.5 + decHours / 24.0;
+    return (float)liAux2 - 0.5f + decHours / 24.0f;
 }
 
-float TimePoint::decimalHours(int timezone) const
+float TimePoint::decimalHours(float timezone) const
 {
-    return Hour + timezone + (Minute + Seconds / 60.0) / 60.0;
+    return Hour + timezone + (Minute + Seconds / 60.0f) / 60.0f;
 }
 
 /* Based on "Computing the Solar Vector" by Manuel Blanco-Muriel,
@@ -46,7 +46,7 @@ ElevationAzimuth computeSunEA(const TimePoint& timepoint, const MapLocation& loc
 
     /* Calculate difference in days between the current Julian Day
        and JD 2451545.0, which is noon 1 January 2000 Universal Time */
-    const double elapsedJulianDays = timepoint.julianDate(location.Timezone) - 2451545.0;
+    const double elapsedJulianDays = timepoint.julianDate(location.Timezone) - 2451545.0f;
     const double decHours          = timepoint.decimalHours(location.Timezone);
 
     /* Calculate ecliptic coordinates (ecliptic longitude and obliquity of the
