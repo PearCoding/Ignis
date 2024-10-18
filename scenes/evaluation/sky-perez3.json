@@ -15,7 +15,7 @@
 	"lights": [
 		{
 			"type":"perez", "name":"Sky",
-			"clearness": 8, "brightness": 0.1,
+			"clearness": 3, "brightness": 0.2,
 			"year": 2020, "month": 5, "day": 6, "hour": 12, "minute": 0, "seconds": 0,
 			"color": 1, "ground": 0.2
 		}
