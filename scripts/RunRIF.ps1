@@ -118,13 +118,15 @@ $TRARGS = "-n $thread_count $DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -ov -ffc 
 
 function RenderView {
     param (
-        [string]$output_name
+        [string]$output_name,
+        [string]$view
     )
 
     Write-Host "Rendering $output_name.exr" -ForegroundColor Cyan
-    #rpict $VIEWS[0] $RPARGS $TMP_OCT > $output_name.hdr
-    $view_params = (vwrays -d $VWARGS $VIEWS[0]).Split()
-    vwrays -ff $VWARGS $VIEWS[0] | rtrace $TRARGS $view_params $TMP_OCT > "$output_name.hdr"
+    $view_p = $view.Trim().Split()
+    # rpict $view_p $RPARGS $TMP_OCT > "$output_name.hdr"
+    $view_params = (vwrays -d $VWARGS $view_p).Split()
+    vwrays -ff $VWARGS $view_p | rtrace $TRARGS $view_params $TMP_OCT > "$output_name.hdr"
     & $IGUTIL_CMD convert "$output_name.hdr" "$output_name.exr"
     Write-Host "Generated output $output_name.exr" -ForegroundColor Cyan
 }
@@ -137,12 +139,12 @@ try {
         oconv $SCENES > $TMP_OCT
 
         if ($VIEWS.Count -eq 1) {
-            RenderView "$Output"
+            RenderView "$Output" $VIEWS[0]
         }
         else {
             $i = 0
             foreach ($view in $VIEWS) {
-                RenderView ($Output + "_$i")
+                RenderView ($Output + "_$i") $view
                 $i += 1
             }
         }
