@@ -25,7 +25,7 @@ def generate_scene(args, brightness, clearness):
     scene["lights"][0]["brightness"] = brightness
     scene["lights"][0]["clearness"] = clearness
     scene["lights"][0]["color"] = 1
-    scene["lights"][0]["ground"] = 1
+    scene["lights"][0]["ground"] = 0.2
     if args.year is not None:
         scene["lights"][0]["year"] = args.year
     if args.month is not None:
