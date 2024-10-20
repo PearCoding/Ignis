@@ -1,7 +1,9 @@
 #include "ParameterWidget.h"
 #include "MenuItem.h"
+#include "PolarSlider.h"
 #include "RenderWidget.h"
 #include "Runtime.h"
+#include "skysun/ElevationAzimuth.h"
 
 #include "UI.h"
 
@@ -111,6 +113,36 @@ void ParameterWidget::onRender(Widget*)
 
         if (mRenderWidget->currentSkyModel() == RenderWidget::SkyModel::Perez) {
             if (ImGui::CollapsingHeader("Sky##parameters", HeaderFlags)) {
+                const Vector3f sun_direction = runtime->parameters().getVector("sky_sun_dir");
+                ElevationAzimuth ea          = ElevationAzimuth::fromDirectionYUp(sun_direction);
+
+                ImGui::TextUnformatted("Sun");
+
+                constexpr float MaxElevation = 88 * Deg2Rad;
+                const float item_width       = ImGui::CalcItemWidth();
+                ImGui::PushItemWidth(item_width * 0.385f);
+                ui::PolarSliderFloat("SunAzimuth", &ea.Azimuth);
+                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                ui::PolarSliderFloat("SunElevation", &ea.Elevation, MaxElevation, 0, 3);
+                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+                ImGui::BeginGroup();
+                float azimuth_deg   = ea.Azimuth * Rad2Deg;
+                float elevation_deg = ea.Elevation * Rad2Deg;
+                ImGui::SliderFloat("Azimuth##SunSky", &azimuth_deg, 0, 360, "%.1f°");
+                ImGui::SliderFloat("Elevation##SunSky", &elevation_deg, 0, MaxElevation * Rad2Deg, "%.1f°");
+                ea.Azimuth   = azimuth_deg * Deg2Rad;
+                ea.Elevation = elevation_deg * Deg2Rad;
+                ImGui::EndGroup();
+                ImGui::PopItemWidth();
+
+                const Vector3f new_dir = ea.toDirectionYUp();
+                if (!sun_direction.isApprox(new_dir, 1e-4f)) {
+                    runtime->setParameter("sky_sun_dir", new_dir);
+                    runtime->reset();
+                }
+
+                ImGui::Separator();
+
                 float sky_brightness = runtime->parameters().getFloat("sky_brightness");
                 if (ImGui::SliderFloat("Brightness##Sky", &sky_brightness, 0.01f, 0.6f)) {
                     runtime->setParameter("sky_brightness", sky_brightness);
