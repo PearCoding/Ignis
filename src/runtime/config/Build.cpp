@@ -13,7 +13,7 @@ namespace IG::Build {
 #if defined(IG_OS_LINUX)
 constexpr const char* const IG_OS_NAME = "Linux";
 #elif defined(IG_OS_WINDOWS_32)
-constexpr const char* const IG_OS_NAME           = "Microsoft Windows 32 Bit";
+constexpr const char* const IG_OS_NAME = "Microsoft Windows 32 Bit";
 #elif defined(IG_OS_WINDOWS_64)
 constexpr const char* const IG_OS_NAME = "Microsoft Windows 64 Bit";
 #else
@@ -25,7 +25,7 @@ constexpr const char* const IG_OS_NAME = "Unknown";
 constexpr const char* const IG_CC_NAME = "Cygwin";
 #elif defined(IG_CC_MINGW32)
 #if !defined(IG_CC_GNU)
-constexpr const char* const IG_CC_NAME           = "MinGW 32";
+constexpr const char* const IG_CC_NAME = "MinGW 32";
 #else
 constexpr const char* const IG_CC_NAME = "GNU C/C++(MinGW 32)";
 #endif
