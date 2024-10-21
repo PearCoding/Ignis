@@ -155,7 +155,7 @@ public:
                     const float max = mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource ? mRuntime->parameters().getFloat("glare_max_lum") : (mRuntime->parameters().getFloat("_luminance_softmax") * WhiteEfficiency);
                     mColorbar.render(min, max);
                 }
-                
+
                 handleInput();
             }
             ImGui::End();

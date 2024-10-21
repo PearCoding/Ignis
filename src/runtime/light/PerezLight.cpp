@@ -13,6 +13,7 @@ PerezLight::PerezLight(const std::string& name, const std::shared_ptr<SceneObjec
     mSunDirection = LoaderUtils::getDirection(*light); // Constant version. Can be adaptive in the calculation though
     mTimePoint    = LoaderUtils::getTimePoint(*light);
     mHasGround    = mLight->property("has_ground").getBool(true);
+    mHasSun       = mLight->property("has_sun").getBool(true);
 }
 
 float PerezLight::computeFlux(ShadingTree& tree) const
@@ -87,6 +88,7 @@ void PerezLight::serialize(const SerializationInput& input) const
     input.Stream
         << ", " << mTimePoint.dayOfTheYear() // TODO: Make it adaptive too!
         << ", " << (mHasGround ? "true" : "false")
+        << ", " << (mHasSun ? "true" : "false")
         << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
 
     input.Tree.endClosure();

@@ -18,6 +18,7 @@ private:
     Vector3f mSunDirection;
     TimePoint mTimePoint;
     bool mHasGround;
+    bool mHasSun;
 
     std::shared_ptr<SceneObject> mLight;
 };
