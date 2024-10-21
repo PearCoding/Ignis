@@ -54,7 +54,7 @@ void SunLight::serialize(const SerializationInput& input) const
     else
         input.Stream << ", math_builtins::cos(rad(" << input.Tree.getInline("angle") << "/2))";
 
-    input.Stream << ", " << input.Tree.getInline("irradiance") << ");" << std::endl;
+    input.Stream << ", " << input.Tree.getInline("irradiance") << ", false);" << std::endl;
 
     input.Tree.endClosure();
 }

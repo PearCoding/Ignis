@@ -43,6 +43,6 @@
 		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.5,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
 	],
 	"lights": [
-		{"type":"directional", "name":"Sun", "sun_radius_scale": 0.1, "direction": [1, -0.25, 0]}
+		{"type":"directional", "name":"Sun", "radius": 100, "direction": [1, -0.25, 0]}
 	]
 }

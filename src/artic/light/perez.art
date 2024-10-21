@@ -277,7 +277,7 @@ fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint: Color, 
     };
 
     if has_sun {
-        let sun_model = make_sun_light(id, vec3_neg(mat3x3_left_mul(transform, sun_dir)), scene_bbox, cos_sun_angle, sun_color);
+        let sun_model = make_sun_light(id, mat3x3_mul(transform, sun_dir), scene_bbox, cos_sun_angle, sun_color, false);
         sun_model.{
             sample_direct = @ |rnd, from_surf| {
                 let sample    = sun_model.sample_direct(rnd, from_surf);
@@ -297,7 +297,7 @@ fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint: Color, 
 }
 
 fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color: Color, ground: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
-    let g_sun_dir      = mat3x3_left_mul(transform, sun_dir);
+    let g_sun_dir      = mat3x3_mul(transform, sun_dir);
     let sin_altitude   = clampf(g_sun_dir.y, -1:f32, 1:f32); // Y-Up
     let solar_altitude = math_builtins::asin(sin_altitude);
     let solar_zenith   = flt_pi / 2 - solar_altitude;
