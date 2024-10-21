@@ -147,15 +147,15 @@ Path RuntimeInfo::libdevicePath()
 
 Path RuntimeInfo::readonlyDataPath()
 {
-    const Path root = executablePath();
+    const Path root = rootPath();
     if (root.empty())
         return {};
 
-    const Path dataPath = root.parent_path() / "data";
+    const Path dataPath = root / "data";
     if (std::filesystem::exists(dataPath) && std::filesystem::is_directory(dataPath))
         return dataPath;
 
-    const Path sharePath = root.parent_path() / "share" / "Ignis";
+    const Path sharePath = root / "share" / "Ignis";
     if (std::filesystem::exists(dataPath) && std::filesystem::is_directory(sharePath))
         return sharePath;
     else
