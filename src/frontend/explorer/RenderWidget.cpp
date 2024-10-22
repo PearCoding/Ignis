@@ -6,6 +6,8 @@
 #include "Runtime.h"
 #include "ShaderGenerator.h"
 #include "extra/OIDN.h"
+#include "skysun/ElevationAzimuth.h"
+#include "skysun/SunLocation.h"
 
 #include "UI.h"
 
@@ -564,10 +566,12 @@ private:
 
     void injectPerezSkyModel(const std::shared_ptr<Scene>& scene, SceneObject* envPtr)
     {
+        static const auto default_ea = computeSunEA(TimePoint(), MapLocation());
+
         const auto sunDirName = SceneProperty::fromString("sky_sun_dir");
         auto sunDirParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});
         sunDirParameter->setProperty("name", sunDirName);
-        sunDirParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::UnitY()));
+        sunDirParameter->setProperty("value", SceneProperty::fromVector3(default_ea.toDirectionYUp()));
 
         const auto upName = SceneProperty::fromString("sky_up");
         auto upParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});

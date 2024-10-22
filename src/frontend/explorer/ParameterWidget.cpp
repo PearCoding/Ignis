@@ -199,7 +199,7 @@ void ParameterWidget::onRender(Widget*)
                 ImGui::PopItemWidth();
 
                 const Vector3f new_dir = ea.toDirectionYUp();
-                if (!sun_direction.isApprox(new_dir, 1e-4f)) {
+                if (runtime->parameters().VectorParameters.contains("sky_sun_dir") /* Only update when loaded */ && !sun_direction.isApprox(new_dir, 1e-4f)) {
                     runtime->setParameter("sky_sun_dir", new_dir);
                     runtime->reset();
                 }
