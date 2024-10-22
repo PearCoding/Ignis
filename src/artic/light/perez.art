@@ -268,12 +268,12 @@ mod perez {
     }
 }
 
-fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint: Color, ground: Color, cos_sun_angle: f32, sun_color: Color, params: perez::ExplicitParameters, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
+fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, sky_color: Color, ground_color: Color, cos_sun_angle: f32, sun_color: Color, params: perez::ExplicitParameters, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
     let sky_function = @|dir: Vec3|{
         let cos_theta = dir.y; // Cosine between zenith and direction
         let sun_c     = clampf(vec3_dot(dir, sun_dir), -1, 1); // Cosine between sun and direction
         let fac       = perez::eval(sun_c, cos_theta, params);
-        cie_wmean(cos_theta, color_mulf(tint, fac), ground)
+        cie_wmean(cos_theta, color_mulf(sky_color, fac), ground_color)
     };
 
     if has_sun {
@@ -296,7 +296,7 @@ fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint: Color, 
     }
 }
 
-fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color: Color, ground: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
+fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint_color: Color, ground_color: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
     let g_sun_dir      = mat3x3_mul(transform, sun_dir);
     let sin_altitude   = clampf(g_sun_dir.y, -1:f32, 1:f32); // Y-Up
     let solar_altitude = math_builtins::asin(sin_altitude);
@@ -308,13 +308,13 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color:
     
     let integrand = perez::integrate(solar_zenith, model.params);
     // let diffnorm  = model.diffuse_irrad / integrand;
-    let diffnorm  = model.diffuse_illum / color_builtins::white_efficiency / integrand;
+    let diffnorm  = safe_div(model.diffuse_illum / color_builtins::white_efficiency, integrand);
 
     let sun_factor = 6.8e-5:f32; // 2 * flt_pi * (1 - math_builtins::cos(rad(flt_sun_radius_deg / 2)));
-    let sun_color  = color_mulf(color, model.direct_illum / color_builtins::white_efficiency);
+    let sun_color  = color_mulf(tint_color, model.direct_illum / color_builtins::white_efficiency);
 
-    let tint   = color_mulf(color, diffnorm);
-    let zenith = color_mulf(tint, perez::eval(sin_altitude, 1, model.params));
+    let sky_color = color_mulf(tint_color, diffnorm);
+    let zenith    = color_mulf(sky_color, perez::eval(sin_altitude, 1, model.params));
 
     // Compute factors for the ground
     let normfactor = if model.clearness == 1 { 
@@ -323,34 +323,34 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color:
         let f2 = (2.739 + 0.9891 * math_builtins::sin(0.3119 + 2.6 * solar_altitude)) * math_builtins::exp(-solar_zenith * (0.4441 + 1.48 * solar_altitude));
         let x  = solar_altitude / (flt_pi / 4) - 1;
         let norm_sc = (((0.60227 * x + 1.0660) * x - 1.3081) * x - 2.7152) * x + 3.5556;
-	    norm_sc / f2 / flt_pi
+	    safe_div(norm_sc, f2) / flt_pi
     } else {
         let f2 = 0.274 * (0.91 + 10 * math_builtins::exp(-3 * solar_zenith) + 0.45 * sin_altitude * sin_altitude);
         let x  = solar_altitude / (flt_pi / 4) - 1;
         let norm_sc = (((0.059229 * x + 0.009237) * x - 0.369832) * x + 0.547665) * x + 2.766521;
-	    norm_sc / f2 / flt_pi
+	    safe_div(norm_sc, f2) / flt_pi
     };
 
-    let actual_ground = color_mul(ground, 
+    let actual_ground = color_mul(ground_color, 
         color_add(if has_sun && model.clearness > 1 { color_mulf(sun_color, math_builtins::fabs(sin_altitude) / flt_pi) } else { color_builtins::black },
                   color_mulf(zenith, normfactor)));
 
     let actual_sun = if model.clearness > 1 { color_mulf(sun_color, sun_factor) } else { color_builtins::black };
 
-    make_perez_light_raw(id, scene_bbox, sun_dir, tint, actual_ground, math_builtins::cos(rad(flt_sun_radius_deg / 2)), actual_sun, model.params, has_ground, has_sun, transform)
+    make_perez_light_raw(id, scene_bbox, sun_dir, sky_color, actual_ground, math_builtins::cos(rad(flt_sun_radius_deg / 2)), actual_sun, model.params, has_ground, has_sun, transform)
 
 }
 
-fn @make_perez_light_from_brightness_clearness(id: i32, scene_bbox: BBox, sun_dir: Vec3, color: Color, ground: Color, brightness: f32, clearness: f32, day_of_the_year: f32, has_ground: bool, has_sun: bool, transform: Mat3x3) =
-    make_perez_light_from_model(id, scene_bbox, sun_dir, color, ground,
+fn @make_perez_light_from_brightness_clearness(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint_color: Color, ground_color: Color, brightness: f32, clearness: f32, day_of_the_year: f32, has_ground: bool, has_sun: bool, transform: Mat3x3) =
+    make_perez_light_from_model(id, scene_bbox, sun_dir, tint_color, ground_color,
         @|sz| perez::make_model_from_brightness_clearness(brightness, clearness, sz, day_of_the_year),
         has_ground,
         has_sun,
         transform
     );
 
-fn @make_perez_light_from_irradiance(id: i32, scene_bbox: BBox, sun_dir: Vec3, color: Color, ground: Color, diffuse_irrad: f32, direct_irrad: f32, day_of_the_year: f32, has_ground: bool, has_sun: bool, transform: Mat3x3) =
-    make_perez_light_from_model(id, scene_bbox, sun_dir, color, ground,
+fn @make_perez_light_from_irradiance(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint_color: Color, ground_color: Color, diffuse_irrad: f32, direct_irrad: f32, day_of_the_year: f32, has_ground: bool, has_sun: bool, transform: Mat3x3) =
+    make_perez_light_from_model(id, scene_bbox, sun_dir, tint_color, ground_color,
         @|sz| perez::make_model_from_irradiance(diffuse_irrad, direct_irrad, sz, day_of_the_year),
         has_ground,
         has_sun,
