@@ -69,9 +69,9 @@ void PerezLight::serialize(const SerializationInput& input) const
                  << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context());
 
     if (mLight->hasProperty("direction"))
-        input.Stream << ", " << input.Tree.getInline("direction");
+        input.Stream << ", vec3_normalize(" << input.Tree.getInline("direction") << ")";
     else
-        input.Stream << ", " << LoaderUtils::inlineVector(mSunDirection);
+        input.Stream << ", vec3_normalize(" << LoaderUtils::inlineVector(mSunDirection) << ")";
 
     input.Stream << ", " << input.Tree.getInline("color")
                  << ", " << input.Tree.getInline("ground");
@@ -93,7 +93,7 @@ void PerezLight::serialize(const SerializationInput& input) const
         << ", " << (mHasSun ? "true" : "false");
 
     if (mLight->hasProperty("up")) {
-        input.Stream << ", make_cie_sky_transform(" << input.Tree.getInline("up") << ")";
+        input.Stream << ", make_cie_sky_transform(vec3_normalize(" << input.Tree.getInline("up") << "))";
     } else {
         const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
         input.Stream << ", " << LoaderUtils::inlineMatrix(trans);

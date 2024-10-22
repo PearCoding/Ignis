@@ -1,7 +1,8 @@
 {
 	"technique": {
 		"type": "path",
-		"max_depth": 64
+		"max_depth": 64,
+		"nee": true
 	},
 	"camera": {
 		"type": "perspective",
@@ -43,6 +44,6 @@
 		{"name":"Pillar","shape":"Pillar", "bsdf":"mat-Pillar", "transform": [ 0.25,0,0,0, 0,0.5,0,-1, 0,0,0.25,0, 0,0,0,1 ]}
 	],
 	"lights": [
-		{"type":"directional", "name":"Sun", "radius": 100, "direction": [1, -0.25, 0]}
+		{"type":"sun", "name":"Sun", "direction": [1, -0.25, 0]}
 	]
 }

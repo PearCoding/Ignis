@@ -44,9 +44,9 @@ void SunLight::serialize(const SerializationInput& input) const
                  << "  let light_" << light_id << " = make_sun_light(" << input.ID;
 
     if (mLight->hasProperty("direction"))
-        input.Stream << ", " << input.Tree.getInline("direction");
+        input.Stream << ", vec3_normalize(" << input.Tree.getInline("direction") << ")";
     else
-        input.Stream << ", " << LoaderUtils::inlineVector(mDirection);
+        input.Stream << ", vec3_normalize(" << LoaderUtils::inlineVector(mDirection) << ")";
 
     input.Stream << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context());
 

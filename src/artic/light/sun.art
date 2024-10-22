@@ -3,7 +3,7 @@ static flt_sun_radius_deg = 0.533:f32; // Sun solid angle seen from earth given 
 fn @sun_cos_angle_from_radius(radius: f32)    = 1 / math_builtins::sqrt(radius * radius + 1);               // cos(atan(R))
 fn @sun_radius_from_cos_angle(cos_angle: f32) = math_builtins::sqrt(1 - cos_angle * cos_angle) / cos_angle; // tan(acos(C))
 
-fn @make_sun_light(id: i32, sun_dir: Vec3, scene_bbox: BBox, cos_sun_angle: f32, color: Color, handle_as_delta: bool) -> Light {
+fn @make_sun_light(id: i32, sun_dir: Vec3 /* Scene to Light */, scene_bbox: BBox, cos_sun_angle: f32, color: Color, handle_as_delta: bool) -> Light {
     let scene_radius = bbox_radius(scene_bbox) * 1.01;
     let frame        = make_orthonormal_mat3x3(sun_dir);
     let sun_radius   = sun_radius_from_cos_angle(cos_sun_angle);
@@ -11,7 +11,7 @@ fn @make_sun_light(id: i32, sun_dir: Vec3, scene_bbox: BBox, cos_sun_angle: f32,
 
     let dir_pdf = uniform_cone_pdf(cos_sun_angle);
 
-    fn @check_if_hit(gdir: Vec3) = mat3x3_left_mul(frame, gdir).z <= cos_sun_angle;
+    fn @check_if_hit(gdir: Vec3) = vec3_dot(sun_dir, gdir) >= cos_sun_angle;
     
     Light {
         id = id,
@@ -26,18 +26,14 @@ fn @make_sun_light(id: i32, sun_dir: Vec3, scene_bbox: BBox, cos_sun_angle: f32,
             let (pos, pos_pdf) = env_sample_pos(rnd, ndir, bbox_center(scene_bbox), scene_radius);
             make_emission_sample(pos, vec3_neg(ndir), color_mulf(color, safe_div(1, pos_pdf * sun_area * sample.pdf)), pos_pdf, sun_area * sample.pdf, sample.dir.z)
         },
-        emission     = @ |ctx| {
-            if handle_as_delta {
-                color_builtins::black
+        emission = @ |ctx| {
+            if !handle_as_delta && check_if_hit(ctx.ray.dir) {
+                color
             } else {
-                if check_if_hit(ctx.ray.dir) {
-                    color
-                } else {
-                    color_builtins::black
-                }
+                color_builtins::black
             }
         },
-        pdf_direct   = @ |ray, _|  {
+        pdf_direct = @ |ray, _|  {
             if handle_as_delta {
                 make_delta_pdf()
             } else {
