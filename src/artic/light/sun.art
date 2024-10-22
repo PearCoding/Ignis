@@ -1,3 +1,5 @@
+static flt_sun_radius_deg = 0.533:f32; // Sun solid angle seen from earth given in degrees
+
 fn @sun_cos_angle_from_radius(radius: f32)    = 1 / math_builtins::sqrt(radius * radius + 1);               // cos(atan(R))
 fn @sun_radius_from_cos_angle(cos_angle: f32) = math_builtins::sqrt(1 - cos_angle * cos_angle) / cos_angle; // tan(acos(C))
 

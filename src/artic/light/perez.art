@@ -310,7 +310,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color:
     // let diffnorm  = model.diffuse_irrad / integrand;
     let diffnorm  = model.diffuse_illum / color_builtins::white_efficiency / integrand;
 
-    let sun_factor = 6.8e-5:f32; // 2 * flt_pi * (1 - math_builtins::cos(rad(0.2665/* Half sun angle */)));
+    let sun_factor = 6.8e-5:f32; // 2 * flt_pi * (1 - math_builtins::cos(rad(flt_sun_radius_deg / 2)));
     let sun_color  = color_mulf(color, model.direct_illum / color_builtins::white_efficiency);
 
     let tint   = color_mulf(color, diffnorm);
@@ -337,7 +337,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, color:
 
     let actual_sun = if model.clearness > 1 { color_mulf(sun_color, sun_factor) } else { color_builtins::black };
 
-    make_perez_light_raw(id, scene_bbox, sun_dir, tint, actual_ground, math_builtins::cos(rad(5.7)), actual_sun, model.params, has_ground, has_sun, transform)
+    make_perez_light_raw(id, scene_bbox, sun_dir, tint, actual_ground, math_builtins::cos(rad(flt_sun_radius_deg / 2)), actual_sun, model.params, has_ground, has_sun, transform)
 
 }
 

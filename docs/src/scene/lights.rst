@@ -187,7 +187,7 @@ Sun Light (:monosp:`sun`)
   * - direction
     - |vector|
     - :code:`(0,0,1)`
-    - No
+    - Yes
     - Direction of the incoming sun towards the scene.
   * - elevation, azimuth
     - |number|
@@ -206,13 +206,13 @@ Sun Light (:monosp:`sun`)
     - Output of the sun in radiometric [W/m^2] or photometric [lm/m^2] units.
   * - radius
     - |number|
-    - :code:`1`
-    - No
+    - :code:`5.2`
+    - Yes
     - Radius of the sun seen from the earth. Can not be specified together with :paramtype:`angle`.
   * - angle
     - |number|
-    - :code:`11.4`
-    - No
+    - :code:`0.533`
+    - Yes
     - Angular diameter of the sun seen from the earth. Can not be specified together with :paramtype:`radius`.
 
 .. subfigstart::
@@ -499,7 +499,23 @@ Perez Sky Model (:monosp:`perez`)
   ..   - :code:`1`, :code:`1`
   ..   - No
   ..   - Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Can not be used with other options specifying Perez parameters.
-   
+
+  * - up
+    - |vector|
+    - :code:`(0,1,0)`
+    - Yes
+    - Up vector for the sky model.
+  * - has_ground
+    - |bool|
+    - |true|
+    - No
+    - Add ground to the sky model.
+  * - has_sun
+    - |bool|
+    - |true|
+    - No
+    - Add sun into the sky model.
+
 .. NOTE:: Output is in W m^-2 sr^-1 visible radiation, which equals the "-O 0" parameter in ``gendaylit`` from the `Radiance <https://www.radiance-online.org/>`_ framework.
 
 .. subfigstart::

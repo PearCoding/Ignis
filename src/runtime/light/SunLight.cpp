@@ -2,6 +2,7 @@
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
+#include "skysun/Illuminance.h"
 
 #include "Logger.h"
 
@@ -33,7 +34,7 @@ void SunLight::serialize(const SerializationInput& input) const
     if (mUseRadius)
         input.Tree.addNumber("radius", *mLight, 5.2f);
     else
-        input.Tree.addNumber("angle", *mLight, 11.4f);
+        input.Tree.addNumber("angle", *mLight, FltSunRadiusDegree);
 
     if (mLight->hasProperty("direction"))
         input.Tree.addVector("direction", *mLight, Vector3f::UnitY());
