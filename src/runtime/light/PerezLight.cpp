@@ -36,7 +36,9 @@ void PerezLight::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
     input.Tree.addColor("ground", *mLight, Vector3f::Ones() * 0.2f);
 
-    const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
+    if (mLight->hasProperty("up"))
+        input.Tree.addVector("up", *mLight, Vector3f::UnitY());
+
     if (mLight->hasProperty("direction"))
         input.Tree.addVector("direction", *mLight, Vector3f::UnitY());
 
@@ -88,8 +90,16 @@ void PerezLight::serialize(const SerializationInput& input) const
     input.Stream
         << ", " << mTimePoint.dayOfTheYear() // TODO: Make it adaptive too!
         << ", " << (mHasGround ? "true" : "false")
-        << ", " << (mHasSun ? "true" : "false")
-        << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+        << ", " << (mHasSun ? "true" : "false");
+
+    if (mLight->hasProperty("up")) {
+        input.Stream << ", make_cie_sky_transform(" << input.Tree.getInline("up") << ")";
+    } else {
+        const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
+        input.Stream << ", " << LoaderUtils::inlineMatrix(trans);
+    }
+
+    input.Stream << ");" << std::endl;
 
     input.Tree.endClosure();
 }

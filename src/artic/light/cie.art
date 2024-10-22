@@ -6,6 +6,12 @@ fn @cie_wmean(cos_theta: f32, c1: Color, c2: Color) -> Color {
     color_add(color_mulf(c1, f1), color_mulf(c2, f2))
 }
 
+// Create a transform from the given up vector to the internal +y up vector
+fn @make_cie_sky_transform(up: Vec3) -> Mat3x3 {
+    let m = make_orthonormal_mat3x3(up);
+    make_mat3x3(vec3_neg(m.col(0)), m.col(2), m.col(1))
+}
+
 // Note: groundBrightness is the same as gensky ... -b (x/0.2) in gensky as gensky makes use of the constant gprefl=0.2!
 fn @make_cie_sky_light(id: i32, scene_bbox: BBox, zenith: Color, ground: Color, groundBrightness: f32, cloudy: bool, has_ground: bool, transform: Mat3x3) =
     make_environment_light_function(id, scene_bbox, @|dir|{

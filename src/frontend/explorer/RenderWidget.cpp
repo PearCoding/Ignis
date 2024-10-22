@@ -569,6 +569,11 @@ private:
         sunDirParameter->setProperty("name", sunDirName);
         sunDirParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::UnitY()));
 
+        const auto upName = SceneProperty::fromString("sky_up");
+        auto upParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});
+        upParameter->setProperty("name", upName);
+        upParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::UnitY()));
+
         const auto brightnessName = SceneProperty::fromString("sky_brightness");
         auto brightnessParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
         brightnessParameter->setProperty("name", brightnessName);
@@ -590,12 +595,14 @@ private:
         groundParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::Ones() * 0.2f));
 
         scene->addParameter(sunDirName.getString(), std::move(sunDirParameter));
+        scene->addParameter(upName.getString(), std::move(upParameter));
         scene->addParameter(brightnessName.getString(), std::move(brightnessParameter));
         scene->addParameter(clearnessName.getString(), std::move(clearnessParameter));
         scene->addParameter(colorName.getString(), std::move(colorParameter));
         scene->addParameter(groundName.getString(), std::move(groundParameter));
 
         envPtr->setProperty("direction", sunDirName);
+        envPtr->setProperty("up", upName);
         envPtr->setProperty("brightness", brightnessName);
         envPtr->setProperty("clearness", clearnessName);
         envPtr->setProperty("color", colorName);

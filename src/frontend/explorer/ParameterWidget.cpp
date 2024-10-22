@@ -26,6 +26,49 @@ static const char* const OverlayMethodOptions[] = {
     "None", "Luminance", "Luminance Squared", "Glare Source", "Normals", "Albedo"
 };
 
+enum class Direction {
+    PositiveX = 0,
+    NegativeX,
+    PositiveY,
+    NegativeY,
+    PositiveZ,
+    NegativeZ
+};
+static const char* const DirectionOptions[] = {
+    "+X", "-X", "+Y", "-Y", "+Z", "-Z"
+};
+
+static inline Direction fromDir(const Vector3f& d)
+{
+    int ind;
+    d.cwiseAbs().maxCoeff(&ind);
+    if (ind == 0)
+        return d[ind] >= 0 ? Direction::PositiveX : Direction::NegativeX;
+    else if (ind == 1)
+        return d[ind] >= 0 ? Direction::PositiveY : Direction::NegativeY;
+    else
+        return d[ind] >= 0 ? Direction::PositiveZ : Direction::NegativeZ;
+}
+
+static inline Vector3f toDir(Direction dir)
+{
+    switch (dir) {
+    case Direction::PositiveX:
+        return Vector3f::UnitX();
+    case Direction::NegativeX:
+        return -Vector3f::UnitX();
+    case Direction::PositiveY:
+        return Vector3f::UnitY();
+    case Direction::NegativeY:
+        return -Vector3f::UnitY();
+    default:
+    case Direction::PositiveZ:
+        return Vector3f::UnitZ();
+    case Direction::NegativeZ:
+        return -Vector3f::UnitZ();
+    }
+}
+
 void ParameterWidget::onRender(Widget*)
 {
     if (mVisibleItem && !mVisibleItem->isSelected())
@@ -114,6 +157,7 @@ void ParameterWidget::onRender(Widget*)
         if (mRenderWidget->currentSkyModel() == RenderWidget::SkyModel::Perez) {
             if (ImGui::CollapsingHeader("Sky##parameters", HeaderFlags)) {
                 const Vector3f sun_direction = runtime->parameters().getVector("sky_sun_dir");
+                const Vector3f sky_up        = runtime->parameters().getVector("sky_up");
                 ElevationAzimuth ea          = ElevationAzimuth::fromDirectionYUp(sun_direction);
 
                 ImGui::TextUnformatted("Sun");
@@ -132,6 +176,25 @@ void ParameterWidget::onRender(Widget*)
                 ImGui::SliderFloat("Elevation##SunSky", &elevation_deg, 0, MaxElevation * Rad2Deg, "%.1f°");
                 ea.Azimuth   = azimuth_deg * Deg2Rad;
                 ea.Elevation = elevation_deg * Deg2Rad;
+
+                const auto up_opt      = fromDir(sky_up);
+                const char* current_up = DirectionOptions[(int)up_opt];
+                if (ImGui::BeginCombo("Up", current_up)) {
+                    for (int i = 0; i < IM_ARRAYSIZE(DirectionOptions); ++i) {
+                        bool is_selected = (current_up == DirectionOptions[i]);
+                        if (ImGui::Selectable(DirectionOptions[i], is_selected)) {
+                            if (up_opt != (Direction)i) {
+                                runtime->setParameter("sky_up", toDir((Direction)i));
+                                runtime->reset();
+                            }
+                        }
+                        if (is_selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+
+                    ImGui::EndCombo();
+                }
+
                 ImGui::EndGroup();
                 ImGui::PopItemWidth();
 
