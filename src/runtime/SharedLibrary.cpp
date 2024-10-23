@@ -19,7 +19,7 @@ struct SharedLibraryInternal {
 
 #ifdef IG_OS_LINUX
     explicit SharedLibraryInternal(const std::string& path)
-        : Handle(dlopen(path.c_str(), RTLD_LAZY))
+        : Handle(dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL))
     {
         if (!Handle)
             throw std::runtime_error(dlerror());
@@ -73,6 +73,7 @@ void* SharedLibrary::symbol(const std::string& name) const
         return nullptr;
 
 #ifdef IG_OS_LINUX
+std::cout  << mInternal->Handle << " " << name << std::endl;
     return dlsym(mInternal->Handle, name.c_str());
 #elif defined(IG_OS_WINDOWS)
     return GetProcAddress(mInternal->Handle, name.c_str());

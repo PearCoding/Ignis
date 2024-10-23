@@ -9,6 +9,7 @@ IG_BEGIN_IGNORE_WARNINGS
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
 IG_END_IGNORE_WARNINGS
 
@@ -134,6 +135,7 @@ void runtime_module(nb::module_& m)
         .def_prop_ro("IsGPU", &Target::isGPU)
         .def_prop_ro("GPUArchitecture", &Target::gpuArchitecture)
         .def_prop_ro("CPUArchitecture", &Target::cpuArchitecture)
+        .def_prop_ro("Architecture", &Target::architecture)
         .def_prop_rw("Device", &Target::device, &Target::setDevice)
         .def_prop_rw("VectorWidth", &Target::vectorWidth, &Target::setVectorWidth)
         .def_prop_rw("ThreadCount", &Target::threadCount, &Target::setThreadCount)
@@ -183,12 +185,14 @@ void runtime_module(nb::module_& m)
             return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, 2, shape, nb::handle());
         })
         .def("reset", &Runtime::reset)
-        .def("getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
+        .def(
+            "getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
                 return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape, nb::handle()); }, nb::arg("aov") = "")
-        .def("getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
+        .def(
+            "getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
@@ -301,7 +305,8 @@ void runtime_module(nb::module_& m)
                 return Image::save(path, (const float*)b.data(), width, height, 3);
             },
             "Save an OpenEXR image to the filesystem")
-        .def("saveExr", [](const Path& path, nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
+        .def(
+            "saveExr", [](const Path& path, nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);
                 size_t height = b.shape(0);
 

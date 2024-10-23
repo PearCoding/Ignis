@@ -98,7 +98,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
 
     const IDeviceInterface* interface = DeviceManager::instance().getDevice(mOptions.Target.architecture());
     if (interface == nullptr)
-        throw std::runtime_error("Could not get requested device");
+        throw std::runtime_error("Could not get requested device: " + mOptions.Target.toString());
 
     // Get compiler interface
     std::shared_ptr<ICompilerDevice> compilerDevice = std::shared_ptr<ICompilerDevice>{ interface->createCompilerDevice() };
