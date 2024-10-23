@@ -1307,9 +1307,13 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
     }
 
     // Some special use functions
-    const bool usesContext = res.find_first_of("check_ray_visibility(ctx.ray") != std::string::npos || res.find_first_of("ctx.coord.to_") != std::string::npos;
+    const bool usesContext = res.find("check_ray_visibility(ctx.ray") != std::string::npos || res.find("ctx.coord.to_") != std::string::npos;
 
-    return Result{ res, std::move(visitor.usedTextures()), visitor.usedVariables(), scalar_output, usesContext };
+    return Result{ .Expr                 = res,
+                   .Textures             = std::move(visitor.usedTextures()),
+                   .Variables            = std::move(visitor.usedVariables()),
+                   .ScalarOutput         = scalar_output,
+                   .UsesSpecialFunctions = usesContext };
 }
 
 bool Transpiler::checkIfColor(const std::string& expr) const

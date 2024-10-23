@@ -20,6 +20,8 @@ public:
         std::unordered_set<std::string> Variables; // Variables used by the expression. Constants will be omitted
         bool ScalarOutput;                         // Else it is a color
         bool UsesSpecialFunctions;                 // Makes use of the ctx structure
+
+        bool isSimple() const { return Textures.empty() && Variables.empty() && !UsesSpecialFunctions; }
     };
 
     /// Transpile the given expression to artic code.

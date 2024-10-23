@@ -168,6 +168,8 @@ private:
     std::pair<size_t, size_t> computeTextureResolution(const std::string& name, const std::string& expr);
     BakeOutputTexture bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options);
     BakeOutputColor bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def, const GenericBakeOptions& options);
+    std::optional<float> bakeSimpleNumber(const std::string& name, const std::string& expr);
+    std::optional<Vector3f> bakeSimpleColor(const std::string& name, const std::string& expr);
     Vector3f computeConstantColor(const std::string& name, const Transpiler::Result& result);
     Image computeImage(const std::string& name, const Transpiler::Result& result, const TextureBakeOptions& options);
     std::string loadTexture(const std::string& tex_name);
