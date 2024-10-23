@@ -97,7 +97,7 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
                 color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));
 
             // No contribution to add, so do not shoot the ray to begin with.
-            if color_average(contrib) < flt_eps {
+            if color_average(contrib) <= flt_eps {
                 return(ShadowRay::None)
             }
 
@@ -181,6 +181,11 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
         // Bounce
         let out_dir = vec3_neg(ctx.ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+            // This should not really happen, but better be safe 
+            if mat_sample.pdf <= flt_eps {
+                return(Option[Ray]::None)
+            }
+
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
             if rnd.next_f32() >= rr_prob {
