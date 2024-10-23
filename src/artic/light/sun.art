@@ -9,7 +9,8 @@ fn @make_sun_light(id: i32, sun_dir: Vec3 /* Scene to Light */, scene_bbox: BBox
     let sun_radius   = sun_radius_from_cos_angle(cos_sun_angle);
     let sun_area     = flt_pi * sun_radius * sun_radius;
 
-    let dir_pdf = uniform_cone_pdf(cos_sun_angle);
+    let dir_pdf   = uniform_cone_pdf(cos_sun_angle);
+    let act_color = color_mulf(color, 1 / sun_area);
 
     fn @check_if_hit(gdir: Vec3) = vec3_dot(sun_dir, gdir) >= cos_sun_angle;
     
@@ -18,17 +19,17 @@ fn @make_sun_light(id: i32, sun_dir: Vec3 /* Scene to Light */, scene_bbox: BBox
         sample_direct = @ |rnd, _| {
             let sample = sample_uniform_cone(rnd.next_f32(), rnd.next_f32(), cos_sun_angle);
             let ndir   = mat3x3_mul(frame, sample.dir);
-            make_direct_sample(vec3_expand(0), ndir, color_mulf(color, 1 / (sun_area * sample.pdf)), if handle_as_delta { make_delta_pdf() } else { make_solid_pdf(sun_area * sample.pdf) }, sample.dir.z, flt_inf)
+            make_direct_sample(vec3_expand(0), ndir, color_mulf(act_color, safe_div(1, sample.pdf)), if handle_as_delta { make_delta_pdf() } else { make_solid_pdf(sample.pdf) }, sample.dir.z, flt_inf)
         },
         sample_emission = @ |rnd| {
             let sample         = sample_uniform_cone(rnd.next_f32(), rnd.next_f32(), cos_sun_angle);
             let ndir           = mat3x3_mul(frame, sample.dir);
             let (pos, pos_pdf) = env_sample_pos(rnd, ndir, bbox_center(scene_bbox), scene_radius);
-            make_emission_sample(pos, vec3_neg(ndir), color_mulf(color, safe_div(1, pos_pdf * sun_area * sample.pdf)), pos_pdf, sun_area * sample.pdf, sample.dir.z)
+            make_emission_sample(pos, vec3_neg(ndir), color_mulf(act_color, safe_div(1, pos_pdf * sample.pdf)), pos_pdf, sample.pdf, sample.dir.z)
         },
         emission = @ |ctx| {
             if !handle_as_delta && check_if_hit(ctx.ray.dir) {
-                color
+                act_color
             } else {
                 color_builtins::black
             }
@@ -37,14 +38,10 @@ fn @make_sun_light(id: i32, sun_dir: Vec3 /* Scene to Light */, scene_bbox: BBox
             if handle_as_delta {
                 make_delta_pdf()
             } else {
-                if check_if_hit(ray.dir) {
-                    make_solid_pdf(sun_area * dir_pdf)
-                } else {
-                    make_null_pdf()
-                }
+                make_solid_pdf(select(check_if_hit(ray.dir), dir_pdf, 0:f32))
             }
         },
-        pdf_emission = @ |_, _| make_emissive_pdf(env_sample_pos_pdf(scene_radius), sun_area * dir_pdf), // TODO: Check if this needs to be selective (if it hits etc)
+        pdf_emission = @ |_, _| make_emissive_pdf(env_sample_pos_pdf(scene_radius), dir_pdf), // TODO: Check if this needs to be selective (if it hits etc)
         delta    = handle_as_delta,
         infinite = true
     }
