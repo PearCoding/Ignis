@@ -106,7 +106,7 @@ if ($Output -eq "output" -and $RIF_TEXT -match "picture\s*=\s*(\d+)") {
 $SS = 0 #TODO: -ss N might be a good indicator for sample count (even while this is more like splitting per ray)
 $AD = 800
 $LW = 1 / $AD
-$DEF = Get-Content "$PSScriptRoot/rtrace_default.txt"
+$DEF = (Get-Content "$PSScriptRoot/rtrace_default.txt").Trim()
 
 # $RPARGS = "$DEF -ad $AD -lw $LW -ss $SS -ab $INDIRECT -x $WIDTH -y $HEIGHT $EXTRA_ARGS".Trim().Split()
 $VWARGS = "-x $WIDTH -y $HEIGHT".Trim().Split()

@@ -1,0 +1,84 @@
+{
+  "technique": {
+    "type": "path",
+    "max_depth": 4
+  },
+  "camera": {
+    "type": "perspective",
+    "fov": 39.597752709049864,
+    "near_clip": 0.10000000149011612,
+    "far_clip": 100.0,
+    "transform": [
+      -1.0000001192092896,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.39835605025291443,
+      0.9172309041023254,
+      -3.67936372756958,
+      0.0,
+      0.9172309041023254,
+      -0.39835619926452637,
+      2.4673123359680176,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "film": {
+    "size": [
+      256.0,
+      256.0
+    ]
+  },
+  "shapes": [
+    {
+      "type": "ply",
+      "name": "Bottom",
+      "filename": "meshes/Bottom.ply"
+    }
+  ],
+  "bsdfs": [
+    {
+      "type": "diffuse",
+      "name": "Bottom",
+      "reflectance": 0.8
+    }
+  ],
+  "entities": [
+    {
+      "name": "Bottom-Bottom",
+      "shape": "Bottom",
+      "bsdf": "Bottom",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "lights": [
+    {
+      "type": "sun",
+      "name": "Sun",
+      "direction": [0.005248, -0.874618, 0.484785],
+      "irradiance": 1e5,
+      "angle": 0.533
+    }
+  ]
+}
