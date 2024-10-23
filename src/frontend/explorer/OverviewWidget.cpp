@@ -28,7 +28,8 @@ void OverviewWidget::onRender(Widget*)
             ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "No scene loaded...");
         } else {
             ImGui::Text("FPS  %.2f", mRenderWidget->currentFPS());
-            ImGui::Text("Iter %zu", runtime->currentIterationCount());
+            if (runtime->currentIterationCount() != runtime->currentSampleCount())
+                ImGui::Text("Iter %zu", runtime->currentIterationCount());
             ImGui::Text("SPP  %zu", runtime->currentSampleCount());
 
             ImGui::Text("Lum Max %8.3f | 95%% %8.3f", runtime->parameters().getFloat("_luminance_max"), runtime->parameters().getFloat("_luminance_softmax"));

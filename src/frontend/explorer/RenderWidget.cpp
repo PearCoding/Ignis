@@ -178,6 +178,7 @@ public:
         options.Denoiser.Enabled     = true;
         options.Denoiser.HighQuality = false;
         options.OverrideFilmSize     = { (uint32)mInternalViewWidth, (uint32)mInternalViewHeight };
+        options.SPI                  = 1; // For better interactivity
 
         SceneParser parser;
         auto scene = parser.loadFromFile(path);
