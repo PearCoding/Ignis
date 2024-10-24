@@ -633,15 +633,13 @@ bool Runtime::compileShaders()
         for (size_t j = 0; j < variant.HitShaders.size(); ++j)
             registerShader(i, "hit shader " + std::to_string(j), "ig_hit_shader", &variant.HitShaders[j], &shaders.HitShaders[j]);
 
-        if (!variant.AdvancedShadowHitShaders.empty()) {
-            shaders.AdvancedShadowHitShaders.resize(variant.AdvancedShadowHitShaders.size());
-            for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j)
-                registerShader(i, "advanced shadow hit shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowHitShaders[j], &shaders.HitShaders[j]);
+        shaders.AdvancedShadowHitShaders.resize(variant.AdvancedShadowHitShaders.size());
+        for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j)
+            registerShader(i, "advanced shadow hit shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowHitShaders[j], &shaders.AdvancedShadowHitShaders[j]);
 
-            shaders.AdvancedShadowMissShaders.resize(variant.AdvancedShadowMissShaders.size());
-            for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j)
-                registerShader(i, "advanced shadow miss shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowMissShaders[j], &shaders.HitShaders[j]);
-        }
+        shaders.AdvancedShadowMissShaders.resize(variant.AdvancedShadowMissShaders.size());
+        for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j)
+            registerShader(i, "advanced shadow miss shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowMissShaders[j], &shaders.AdvancedShadowMissShaders[j]);
 
         for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
             if (variant.CallbackShaders[j].Exec.empty()) {
@@ -653,7 +651,7 @@ bool Runtime::compileShaders()
     }
 
     const auto startJIT = std::chrono::high_resolution_clock::now();
-    const bool result   = manager.compile(mCompiler.get(), threads, mOptions.DumpRegistryFull ? ShaderDumpVerbosity::Full : (mOptions.DumpShader ? ShaderDumpVerbosity::Light : ShaderDumpVerbosity::None));
+    const bool result   = manager.compile(mCompiler.get(), threads, mOptions.DumpShaderFull ? ShaderDumpVerbosity::Full : (mOptions.DumpShader ? ShaderDumpVerbosity::Light : ShaderDumpVerbosity::None));
 
     IG_LOG(L_DEBUG) << "Compiling shaders took " << (std::chrono::high_resolution_clock::now() - startJIT) << std::endl;
 

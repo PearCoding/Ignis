@@ -22,10 +22,10 @@ struct Technique {
 }
 
 fn @TechniqueNoHitFunction       (_: ShadingContext, _: RayPayload, _: Material)                                 = Option[Color]::None;
-fn @TechniqueNoMissFunction      (_: ShadingContext, _: RayPayload)                                          = Option[Color]::None;
+fn @TechniqueNoMissFunction      (_: ShadingContext, _: RayPayload)                                              = Option[Color]::None;
 fn @TechniqueNoShadowFunction    (_: ShadingContext, _: RandomGenerator, _: RayPayload, _: RayPayload, Material) = ShadowRay::None;
 fn @TechniqueNoBounceFunction    (_: ShadingContext, _: RandomGenerator, _: RayPayload, Material)                = Option[Ray]::None;
-fn @TechniqueNoShadowHitFunction (_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)             = Option[Color]::None;
-fn @TechniqueNoShadowMissFunction(_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)             = Option[Color]::None;
+fn @TechniqueNoShadowHitFunction (_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)                 = Option[Color]::None;
+fn @TechniqueNoShadowMissFunction(_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)                 = Option[Color]::None;
 
 type RayEmitter = fn (i32, i32, i32, i32, i32, RayPayload) -> (Option[Ray], RandomGenerator);
