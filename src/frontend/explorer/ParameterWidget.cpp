@@ -156,7 +156,7 @@ void ParameterWidget::onRender(Widget*)
 
         if (mRenderWidget->currentSkyModel() == RenderWidget::SkyModel::Perez) {
             if (ImGui::CollapsingHeader("Sky##parameters", HeaderFlags)) {
-                const Vector3f sun_direction = runtime->parameters().getVector("sky_sun_dir");
+                const Vector3f sun_direction = -runtime->parameters().getVector("sky_sun_dir");
                 const Vector3f sky_up        = runtime->parameters().getVector("sky_up");
                 ElevationAzimuth ea          = ElevationAzimuth::fromDirectionYUp(sun_direction);
 
@@ -200,7 +200,7 @@ void ParameterWidget::onRender(Widget*)
 
                 const Vector3f new_dir = ea.toDirectionYUp();
                 if (runtime->parameters().VectorParameters.contains("sky_sun_dir") /* Only update when loaded */ && !sun_direction.isApprox(new_dir, 1e-4f)) {
-                    runtime->setParameter("sky_sun_dir", new_dir);
+                    runtime->setParameter("sky_sun_dir", (-new_dir).eval());
                     runtime->reset();
                 }
 

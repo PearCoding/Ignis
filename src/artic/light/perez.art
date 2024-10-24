@@ -268,10 +268,10 @@ mod perez {
     }
 }
 
-fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, sky_color: Color, ground_color: Color, cos_sun_angle: f32, sun_color: Color, params: perez::ExplicitParameters, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
+fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3 /* Light to Scene */, sky_color: Color, ground_color: Color, cos_sun_angle: f32, sun_color: Color, params: perez::ExplicitParameters, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
     let sky_function = @|dir: Vec3|{
         let cos_theta = dir.y; // Cosine between zenith and direction
-        let sun_c     = clampf(vec3_dot(dir, sun_dir), -1, 1); // Cosine between sun and direction
+        let sun_c     = clampf(-vec3_dot(dir, sun_dir), -1, 1); // Cosine between sun and direction
         let fac       = perez::eval(sun_c, cos_theta, params);
         cie_wmean(cos_theta, color_mulf(sky_color, fac), ground_color)
     };
@@ -296,9 +296,9 @@ fn @make_perez_light_raw(id: i32, scene_bbox: BBox, sun_dir: Vec3, sky_color: Co
     }
 }
 
-fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3, tint_color: Color, ground_color: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
+fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, sun_dir: Vec3 /* Light to Scene */, tint_color: Color, ground_color: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
     let g_sun_dir      = mat3x3_mul(transform, sun_dir);
-    let sin_altitude   = clampf(g_sun_dir.y, -1:f32, 1:f32); // Y-Up
+    let sin_altitude   = clampf(-g_sun_dir.y, -1:f32, 1:f32); // Y-Up
     let solar_altitude = math_builtins::asin(sin_altitude);
     let solar_zenith   = flt_pi / 2 - solar_altitude;
 
