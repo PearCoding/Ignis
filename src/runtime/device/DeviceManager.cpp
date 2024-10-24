@@ -235,7 +235,7 @@ bool DeviceManager::loadModule(const Path& path)
         if (!target.has_value())
             return false;
 
-        mLoadedDevices[*target] = library;
+        mLoadedDevices[*target] = std::move(library);
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl;
         return false;

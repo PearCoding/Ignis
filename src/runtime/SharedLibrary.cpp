@@ -73,7 +73,6 @@ void* SharedLibrary::symbol(const std::string& name) const
         return nullptr;
 
 #ifdef IG_OS_LINUX
-std::cout  << mInternal->Handle << " " << name << std::endl;
     return dlsym(mInternal->Handle, name.c_str());
 #elif defined(IG_OS_WINDOWS)
     return GetProcAddress(mInternal->Handle, name.c_str());
