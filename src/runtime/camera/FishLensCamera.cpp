@@ -9,7 +9,8 @@ FishLensCamera::FishLensCamera(SceneObject& camera)
     : Camera("fishlens")
     , mMode(Mode::Circular)
 {
-    mTransform = camera.property("transform").getTransform();
+    if (camera.property("transform").isValid())
+        mTransform = camera.property("transform").getTransform();
 
     mNearClip = camera.property("near_clip").getNumber(0);
     mFarClip  = camera.property("far_clip").getNumber(std::numeric_limits<float>::max());
@@ -64,13 +65,38 @@ void FishLensCamera::serialize(const SerializationInput& input) const
                  << "    " << (mMask ? "true" : "false") << ");" << std::endl;
 }
 
-CameraOrientation FishLensCamera::getOrientation(const LoaderContext&) const
+CameraOrientation FishLensCamera::getOrientation(const LoaderContext& ctx) const
 {
     CameraOrientation orientation;
-    orientation.Eye = mTransform * Vector3f::Zero();
-    orientation.Dir = mTransform.linear().col(2);
-    orientation.Up  = mTransform.linear().col(1);
-    // TODO: Maybe add a scene dependent orientation?
+    if (mTransform.has_value()) {
+        const auto cameraTransform = *mTransform;
+        orientation.Eye            = cameraTransform * Vector3f::Zero();
+        orientation.Dir            = cameraTransform.linear().col(2);
+        orientation.Up             = cameraTransform.linear().col(1);
+    } else {
+        const auto sceneBBox = ctx.SceneBBox;
+
+        // Special case when the scene is completely empty
+        if (sceneBBox.isEmpty()) {
+            orientation.Dir = -Vector3f::UnitZ();
+            orientation.Up  = Vector3f::UnitY();
+            orientation.Eye = Vector3f::Zero();
+            return orientation;
+        }
+
+        // Try to setup a view over the whole scene
+        const float a = sceneBBox.diameter().x() / 2;
+        const float b = sceneBBox.diameter().y() / 2;
+        const float s = std::sin(Deg2Rad * 60.0f / 2);
+        const float d = std::abs(s) <= FltEps ? 0 : std::max(a, b) * std::sqrt(1 / (s * s) - 1);
+
+        orientation.Dir = -Vector3f::UnitZ();
+        orientation.Up  = Vector3f::UnitY();
+        orientation.Eye = Vector3f::UnitX() * sceneBBox.center().x()
+                          + Vector3f::UnitY() * sceneBBox.center().y()
+                          + Vector3f::UnitZ() * (sceneBBox.max.z() + d);
+    }
+
     return orientation;
 }
 } // namespace IG

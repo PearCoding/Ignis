@@ -559,7 +559,7 @@ std::shared_ptr<Scene> SceneParser::loadFromFile(const Path& path, uint32 flags)
                 scene->setTechnique(std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "volpath", path.parent_path()));
 
             // Add light to the scene if no light is available (preview style)
-            if (scene->lights().empty()) {
+            if (scene->lights().empty() && (flags & F_NoDefaultLight) != F_NoDefaultLight) {
                 IG_LOG(L_WARNING) << "No lights available in " << path << ". Adding default environment light" << std::endl;
                 scene->addConstantEnvLight();
             }

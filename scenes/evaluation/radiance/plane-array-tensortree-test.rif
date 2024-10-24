@@ -1,0 +1,18 @@
+OCTREE=plane-array-tensortree.oct
+
+materials=plane-array-tensortree-test.rad
+scene=plane-array-base.rad
+
+view=-vta -vp 0.0000 1.1500 1.1500 -vd 1.0000 0.0000 0.0000 -vu 0.0000 0.0000 -1.0000 -vh 180 -vv 180 -vo 0 -va 0 -vs 0 -vl 0
+
+RESOLUTION=256 256 0
+INDIRECT=0
+QUALITY=MEDIUM
+DETAIL=MEDIUM
+VARIABILITY=MEDIUM
+EXPOSURE=1
+
+RAWFILE=plane-array-tensortree-test_raw
+PICTURE=plane-array-tensortree-test
+
+REPORT=0.1

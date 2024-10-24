@@ -19,7 +19,7 @@ private:
     };
 
     Mode mMode;
-    Transformf mTransform;
+    std::optional<Transformf> mTransform;
     float mNearClip;
     float mFarClip;
     bool mMask;

@@ -23,7 +23,9 @@ public:
         F_LoadExternals  = 0x1000,
         F_LoadParameters = 0x2000,
 
-        F_LoadAll = F_LoadCamera | F_LoadFilm | F_LoadTechnique | F_LoadBSDFs | F_LoadTextures | F_LoadLights | F_LoadMedia | F_LoadShapes | F_LoadEntities | F_LoadExternals | F_LoadParameters
+        F_LoadAll = F_LoadCamera | F_LoadFilm | F_LoadTechnique | F_LoadBSDFs | F_LoadTextures | F_LoadLights | F_LoadMedia | F_LoadShapes | F_LoadEntities | F_LoadExternals | F_LoadParameters,
+
+        F_NoDefaultLight = 0x10000
     };
 
     inline SceneParser() = default;

@@ -181,7 +181,7 @@ public:
         options.SPI                  = 1; // For better interactivity
 
         SceneParser parser;
-        auto scene = parser.loadFromFile(path);
+        auto scene = parser.loadFromFile(path, SceneParser::F_LoadAll | SceneParser::F_NoDefaultLight);
 
         injectCamera(scene);
         injectSkyModel(scene);

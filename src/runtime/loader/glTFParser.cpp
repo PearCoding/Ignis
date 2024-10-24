@@ -964,6 +964,7 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
     for (const auto& mesh : model.meshes) {
         size_t primCount = 0;
         for (const auto& prim : mesh.primitives) {
+            // TODO: Maybe embed directly into the scene structure?
             const std::string name = mesh.name + "_" + std::to_string(meshCount) + "_" + std::to_string(primCount);
             const Path ply_path    = cache_dir / "meshes" / (name + ".ply");
 
