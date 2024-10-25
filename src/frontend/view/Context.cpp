@@ -589,11 +589,7 @@ public:
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
         out_file << "screenshot_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".exr";
 
-        CameraOrientation orientation;
-        orientation.Eye = LastCameraPose.Eye;
-        orientation.Up  = LastCameraPose.Up;
-        orientation.Dir = LastCameraPose.Dir;
-        if (!saveImageOutput(out_file.str(), *Runtime, &orientation))
+        if (!Runtime->saveFramebuffer(out_file.str()))
             IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
         else
             IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;

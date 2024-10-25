@@ -3,7 +3,6 @@
 #include "ExplorerOptions.h"
 #include "HelpAboutWidget.h"
 #include "HelpControlWidget.h"
-#include "IO.h"
 #include "Logger.h"
 #include "Menu.h"
 #include "MenuItem.h"
@@ -154,8 +153,7 @@ static void exportFileDialogCallback(Runtime* runtime)
     if (path.empty()) // Canceled
         return;
 
-    const CameraOrientation orientation = runtime->getCameraOrientation();
-    if (!saveImageOutput(path, *runtime, &orientation))
+    if (!runtime->saveFramebuffer(path))
         IG_LOG(L_ERROR) << "Failed to save EXR file '" << path << "'" << std::endl;
     else
         IG_LOG(L_INFO) << "Screenshot saved to '" << path << "'" << std::endl;

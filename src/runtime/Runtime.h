@@ -152,6 +152,9 @@ public:
     /// The current framebuffer height
     [[nodiscard]] inline size_t framebufferHeight() const { return mFilmHeight; }
 
+    /// Save the current framebuffer as a multilayered exr file with metadata attached
+    bool saveFramebuffer(const Path& path) const;
+
     /// The initial camera orientation the scene was loaded with. Can be used to reset in later iterations
     [[nodiscard]] inline CameraOrientation initialCameraOrientation() const { return mInitialCameraOrientation; }
     /// Set internal parameters for the camera orientation. This is only a convenient wrapper around multiple setParameter calls

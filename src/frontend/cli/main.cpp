@@ -1,5 +1,4 @@
 #include "CameraProxy.h"
-#include "IO.h"
 #include "Logger.h"
 #include "ProgramOptions.h"
 #include "Runtime.h"
@@ -144,7 +143,7 @@ int main(int argc, char** argv)
 
     SectionTimer timer_saving;
     timer_saving.start();
-    if (!saveImageOutput(cmd.Output, *runtime, nullptr))
+    if (!runtime->saveFramebuffer(cmd.Output))
         IG_LOG(L_ERROR) << "Failed to save EXR file " << cmd.Output << std::endl;
     else
         IG_LOG(L_INFO) << "Result saved to " << cmd.Output << std::endl;
