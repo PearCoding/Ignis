@@ -32,6 +32,22 @@ EXRAttribute makeStringAttribute(const std::string_view& name, const std::string
 }
 
 // attr.value has to be deleted!
+EXRAttribute makeVec2Attribute(const std::string_view& name, const Vector2f& data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, "v2f");
+
+    const float xy[2] = { data.x(), data.y() };
+    attr.value        = new unsigned char[2 * sizeof(float)];
+    memcpy(attr.value, reinterpret_cast<const unsigned char*>(xy), 2 * sizeof(float));
+
+    attr.size = 2 * sizeof(float);
+
+    return attr;
+}
+
+// attr.value has to be deleted!
 EXRAttribute makeVec3Attribute(const std::string_view& name, const Vector3f& data)
 {
     EXRAttribute attr;
@@ -53,6 +69,21 @@ EXRAttribute makeIntAttribute(const std::string_view& name, int data)
     EXRAttribute attr;
     strcpy(attr.name, name.data());
     strcpy(attr.type, "int");
+
+    attr.value = new unsigned char[sizeof(data)];
+    memcpy(attr.value, reinterpret_cast<unsigned char*>(&data), sizeof(data));
+
+    attr.size = sizeof(data);
+
+    return attr;
+}
+
+// attr.value has to be deleted!
+EXRAttribute makeFloatAttribute(const std::string_view& name, float data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, "float");
 
     attr.value = new unsigned char[sizeof(data)];
     memcpy(attr.value, reinterpret_cast<unsigned char*>(&data), sizeof(data));
@@ -145,6 +176,17 @@ bool ImageIO::save(const Path& path, size_t width, size_t height,
         attributes.emplace_back(makeIntAttribute("igRendertimeMS", (int)metaData.RendertimeInMilliseconds.value()));
     if (metaData.RendertimeInSeconds.has_value())
         attributes.emplace_back(makeIntAttribute("igRendertimeS", (int)metaData.RendertimeInSeconds.value()));
+
+    for (const auto& attrib : metaData.CustomStrings)
+        attributes.emplace_back(makeStringAttribute(attrib.first, attrib.second));
+    for (const auto& attrib : metaData.CustomIntegers)
+        attributes.emplace_back(makeIntAttribute(attrib.first, attrib.second));
+    for (const auto& attrib : metaData.CustomFloats)
+        attributes.emplace_back(makeFloatAttribute(attrib.first, attrib.second));
+    for (const auto& attrib : metaData.CustomVec2s)
+        attributes.emplace_back(makeVec2Attribute(attrib.first, attrib.second));
+    for (const auto& attrib : metaData.CustomVec3s)
+        attributes.emplace_back(makeVec3Attribute(attrib.first, attrib.second));
 
     if (!attributes.empty()) {
         header.custom_attributes     = attributes.data();

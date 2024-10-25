@@ -18,6 +18,12 @@ struct ImageMetaData {
     std::optional<std::string> TechniqueType;
     std::optional<std::string> CameraType;
     std::optional<std::string> TargetString;
+
+    std::unordered_map<std::string, std::string> CustomStrings;
+    std::unordered_map<std::string, float> CustomFloats;
+    std::unordered_map<std::string, size_t> CustomIntegers;
+    std::unordered_map<std::string, Vector2f> CustomVec2s;
+    std::unordered_map<std::string, Vector3f> CustomVec3s;
 };
 
 class IG_LIB ImageIO {

@@ -374,6 +374,13 @@ static inline std::string getStringAttribute(const EXRAttribute& attr)
     return str;
 }
 
+static inline Vector2f getVec2Attribute(const EXRAttribute& attr)
+{
+    float xy[2];
+    memcpy(xy, attr.value, 2 * sizeof(float));
+    return Vector2f(xy[0], xy[1]);
+}
+
 static inline Vector3f getVec3Attribute(const EXRAttribute& attr)
 {
     float xyz[3];
@@ -384,6 +391,11 @@ static inline Vector3f getVec3Attribute(const EXRAttribute& attr)
 static inline int getIntAttribute(const EXRAttribute& attr)
 {
     return *reinterpret_cast<const int*>(attr.value);
+}
+
+static inline float getFloatAttribute(const EXRAttribute& attr)
+{
+    return *reinterpret_cast<const float*>(attr.value);
 }
 
 Image Image::load(const Path& path, ImageMetaData* metaData)
@@ -442,6 +454,19 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
                     metaData->RendertimeInMilliseconds = getIntAttribute(attr);
                 else if (strcmp(attr.name, "igRendertime") == 0 && strcmp(attr.type, "int") == 0) // Deprecated
                     metaData->RendertimeInSeconds = getIntAttribute(attr);
+                else {
+                    // Custom stuff
+                    if (strcmp(attr.type, "string") == 0)
+                        metaData->CustomStrings[attr.name] = getStringAttribute(attr);
+                    else if (strcmp(attr.type, "int") == 0)
+                        metaData->CustomIntegers[attr.name] = getIntAttribute(attr);
+                    else if (strcmp(attr.type, "float") == 0)
+                        metaData->CustomFloats[attr.name] = getFloatAttribute(attr);
+                    else if (strcmp(attr.type, "v2f") == 0)
+                        metaData->CustomVec2s[attr.name] = getVec2Attribute(attr);
+                    else if (strcmp(attr.type, "v3f") == 0)
+                        metaData->CustomVec3s[attr.name] = getVec3Attribute(attr);
+                }
             }
         }
 

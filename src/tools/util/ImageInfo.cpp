@@ -39,6 +39,17 @@ bool dump_metadata(const Path& input)
     if (metaData.CameraDir.has_value())
         std::cout << "  Dir:      " << FormatVector(metaData.CameraDir.value()) << std::endl;
 
+    for (const auto& attrib : metaData.CustomStrings)
+        std::cout << attrib.first << ": " << attrib.second << std::endl;
+    for (const auto& attrib : metaData.CustomIntegers)
+        std::cout << attrib.first << ": " << attrib.second << std::endl;
+    for (const auto& attrib : metaData.CustomFloats)
+        std::cout << attrib.first << ": " << attrib.second << std::endl;
+    for (const auto& attrib : metaData.CustomVec2s)
+        std::cout << attrib.first << ": " << FormatVector(attrib.second) << std::endl;
+    for (const auto& attrib : metaData.CustomVec3s)
+        std::cout << attrib.first << ": " << FormatVector(attrib.second) << std::endl;
+
     return true;
 }
 } // namespace IG
