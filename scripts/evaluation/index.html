@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ignis Evaluation</title>
+    <meta name="description"
+        content="Evaluation results for Ignis">
+    <meta name="author" content="Anonymous">
+    <link href="css/reset.css" rel="stylesheet">
+    <link href="css/main.css" rel="stylesheet">
+    <script type="text/javascript" src="js/data.js"></script>
+    <script type="text/javascript" src="js/comparison.js"></script>
+    <script type="text/javascript" src="js/info.js"></script>
+</head>
+
+<body>
+    <div id="wrapper">
+        <noscript>
+            This viewer requires Javascript to work.
+        </noscript>
+        <div class="sidebar">
+            <label for="scene">Select scene:</label>
+            <br />
+            <select class="sidebar-list" name="scene">
+            </select>
+        </div>
+        <div class="image-list">
+        </div>
+        <div class="content">
+            <div class="help">
+                <p>You can drag images from the list on the top into the comparison field below.</p>
+            </div>
+            <div class="image-content">
+                <div class="content-block">
+                    <div class="img-labels">
+                        <p class="left">GPU</p>
+                        <p class="right">Reference</p>
+                    </div>
+                    <div class="img-comp-area">
+                        <div class="img-comp-img" ondrop="drop(event, false)" ondragover="allowDrop(event)">
+                            <img class="method-image" src="imgs/gpu-cycles-principled.jpg" width="1280" height="720">
+                        </div>
+                        <div class="img-comp-img img-comp-overlay" ondrop="drop(event, true)"
+                            ondragover="allowDrop(event)">
+                            <img class="method-image" src="imgs/ref-cycles-principled.jpg" width="1280" height="720">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="help">
+                <p>You can click on the header of the method below to change the error pivot.</p>
+            </div>
+            <div class="metrics">
+                <div class="content-block">
+                    <table class="error-table"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        populateData();
+    </script>
+</body>
+
+</html>

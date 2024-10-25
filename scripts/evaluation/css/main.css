@@ -1,0 +1,267 @@
+:root {
+    --text-light-color:#fff;
+    --text-dark-color:#000;
+    --main-color:#4999f5;
+    --background-color:#eee;
+    --slider-color:#2196F3;
+
+    --hover-brightness: 0.8;
+}
+
+
+header {
+    background-color: var(--main-color);
+    padding: 1em 0.5em;
+}
+
+header p {
+    color: var(--text-light-color);
+}
+
+header a {
+    color: #4999f5;
+    text-decoration: none;
+}
+
+.arrow-left {
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    display: inline-block;
+    padding: 4px;
+    transform: rotate(135deg);
+    -webkit-transform: rotate(135deg);
+}
+
+#wrapper h1 {
+    margin-top: 1em;
+    font-weight: bold;
+    font-size: larger;
+}
+
+.content {
+    grid-column: 1 / 3;
+    grid-row: 2;
+    margin: 0 auto auto auto;
+    overflow: hidden;
+}
+
+.img-comp-area,
+.img-mask-area {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.img-comp-img {
+    position: absolute;
+    overflow: hidden;
+}
+
+.img-comp-img img {
+    display: block;
+}
+
+.img-comp-slider {
+    position: absolute;
+    z-index: 9;
+    cursor: ew-resize;
+    /*set the appearance of the slider:*/
+    width: 5px;
+    height: 100%;
+    background-color: var(--slider-color);
+    opacity: 0.7;
+    border-radius: 3px;
+}
+
+.image-content,
+.metrics {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 95vw;
+    /* Bit more then two times the width of an image (TODO: Get rid of this :() */
+}
+
+body {
+    margin: 0;
+    background-color: var(--background-color);
+    font-family: sans-serif;
+}
+
+.sidebar {
+    grid-column: 1;
+    grid-row: 1;
+    background-color: var(--main-color);
+    height: 100%;
+    border-radius: 0 0 3px 3px;
+}
+
+.sidebar label {
+    margin: 0 10px;
+    font-size: large;
+    font-weight: bold;
+
+    display: inline-block;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    color: #fff;
+    border-radius: 3px;
+    outline: none;
+}
+
+.sidebar-list {
+    height: 40px;
+    font-size: large;
+    border-radius: 3px;
+    outline: none;
+    width: calc(100% - 10px);
+    margin: 0 5px;
+}
+
+.sidebar-list option {
+    font-size: large;
+}
+
+.sidebar-list option:hover {
+    filter: brightness(var(--hover-brightness));
+}
+
+#wrapper {
+    margin: 0 auto;
+    width: fit-content;
+    min-height: 100vh;
+    display: grid;
+    grid-gap: 10px;
+    grid-auto-rows: auto 1fr;
+}
+
+.help {
+    background-color: var(--main-color);
+    border-radius: 3px;
+    padding: 5px;
+    text-align: center;
+    color: var(--text-light-color);
+    margin-bottom: 10px;
+}
+
+.image-label {
+    margin-top: 0;
+    margin-bottom: 0;
+    height: 20px;
+    text-align: center;
+    vertical-align: middle;
+    padding-top: 5px;
+    color: var(--text-light-color);
+    background-color: var(--main-color);
+    border-radius: 3px 3px 0 0;
+}
+
+.image-list {
+    grid-column: 2;
+    grid-row: 1;
+
+    height: fit-content;
+    overflow-y: auto;
+    padding: 5px 0;
+}
+
+.image-list ul {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.image-list li {
+    display: inline;
+    margin: 0;
+}
+
+.img-labels {
+    width: 100%;
+}
+
+.img-labels p {
+    display: inline-block;
+    color: var(--text-light-color);
+    background-color: var(--main-color);
+    border-radius: 3px 3px 0 0;
+    text-align: center;
+    margin: 0;
+    height: 20px;
+    width: 200px;
+    padding: 5px 5px 0 5px;
+}
+
+.img-labels .left {
+    margin-right: auto;
+}
+
+.img-labels .right {
+    float: right;
+    margin-left: auto;
+}
+
+.metrics {
+    width: 100%;
+    padding-bottom: 10px;
+}
+
+table {
+    margin: 0 auto;
+    border-collapse: collapse;
+    overflow: hidden;
+    border-radius: 3px;
+}
+
+thead th,
+tbody td {
+    padding: 15px;
+    text-align: left;
+}
+
+thead th {
+    background-color: var(--main-color);
+    color: var(--text-light-color);
+}
+
+tbody {
+    background-color: #fff;
+}
+
+tbody tr {
+    background-color: #fff;
+}
+
+tbody tr:hover {
+    filter: brightness(var(--hover-brightness));
+}
+
+tbody td em {
+    font-weight: bold;
+}
+
+tbody td.best {
+    background-color: #ccc;
+}
+
+td.error-pt {
+    border-left: 1px solid #333b3d;
+    border-right: 1px solid #333b3d;
+}
+
+td.error-vcm-start {
+    border-left: 1px solid #333b3d;
+}
+
+thead th.error-header:hover {
+    cursor: pointer;
+}
+
+thead th.active {
+    font-weight: bold;
+    text-decoration: underline;
+}
