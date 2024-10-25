@@ -51,8 +51,7 @@ def render(ignis, scene, args, hour):
         while runtime.SampleCount < args.spp:
             runtime.step()
 
-        img = np.divide(runtime.getFramebufferForHost(), runtime.IterationCount)
-        ignis.saveExr(out_file_exr, img)
+        runtime.saveFramebuffer(out_file_exr)
 
 
 def render_time(ignis, args, hour):

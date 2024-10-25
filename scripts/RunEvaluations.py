@@ -53,8 +53,7 @@ def evaluate_target(ignis, scene_file, out_dir, spp, target):
         while runtime.SampleCount < spp:
             runtime.step()
 
-        ignis.saveExr(out_file, np.divide(
-            runtime.getFramebufferForHost(), runtime.IterationCount))
+        runtime.saveFramebuffer(out_file)
 
 
 def evaluate(ignis, scene_file, args):

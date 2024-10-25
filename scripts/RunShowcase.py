@@ -40,8 +40,9 @@ def render(ignis, scene_file, prefix, args):
         while runtime.SampleCount < args.spp:
             runtime.step()
 
+        runtime.saveFramebuffer(out_file_exr)
+
         img = np.divide(runtime.getFramebufferForHost(), runtime.IterationCount)
-        ignis.saveExr(out_file_exr, img)
         sio.write(str(out_file_jpg), img)
 
 
