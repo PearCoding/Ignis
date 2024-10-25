@@ -1,5 +1,4 @@
 #include "Image.h"
-#include "ImageIO.h"
 #include "ImageUtils.h"
 
 IG_BEGIN_IGNORE_WARNINGS

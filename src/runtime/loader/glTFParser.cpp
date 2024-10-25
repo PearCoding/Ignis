@@ -1,5 +1,4 @@
 #include "glTFParser.h"
-#include "ImageIO.h"
 #include "Logger.h"
 
 #include <algorithm>

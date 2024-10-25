@@ -56,7 +56,7 @@ void ImagePattern::serialize(const SerializationInput& input) const
     // Anonymize lookup by using the local registry
     input.Tree.context().LocalRegistry.IntParameters["img_" + tex_id] = (int32)res_id;
 
-    const size_t channel_count = Image::extractChannelCount(filename);
+    const size_t channel_count = Image::loadResolution(filename).Channels == 1 ? 1 : 4;
 
     input.Stream << "  let img_" << tex_id << "_res_id = registry::get_local_parameter_i32(\"img_" << tex_id << "\", 0);" << std::endl;
     if (!force_unpacked && Image::isPacked(filename))

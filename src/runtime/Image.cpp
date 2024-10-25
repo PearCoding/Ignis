@@ -1,7 +1,8 @@
 #include "Image.h"
-#include "ImageIO.h"
 #include "Logger.h"
 #include "StringUtils.h"
+
+#include <numeric>
 
 IG_BEGIN_IGNORE_WARNINGS
 #define STB_IMAGE_IMPLEMENTATION
@@ -11,7 +12,7 @@ IG_BEGIN_IGNORE_WARNINGS
 #include <zlib.h>
 #define TINYEXR_USE_THREAD (1)
 #define TINYEXR_USE_MINIZ (0)
-// #define TINYEXR_IMPLEMENTATION // Already included in ImageIO.cpp
+#define TINYEXR_IMPLEMENTATION
 #include <tinyexr.h>
 
 #include <tbb/blocked_range.h>
@@ -355,11 +356,22 @@ bool Image::isPacked(const Path& path)
     return !useExr && !useHdr;
 }
 
-size_t Image::extractChannelCount(const Path& path)
+Image Image::createSolidImage(const Vector4f& color, size_t width, size_t height)
 {
-    int width = 0, height = 0, channels = 0;
-    stbi_info(path.generic_string().c_str(), &width, &height, &channels);
-    return channels == 1 ? 1 : 4;
+    Image img;
+    img.width    = width;
+    img.height   = height;
+    img.channels = 4;
+
+    img.pixels.reset(new float[img.width * img.height * 4]);
+    for (size_t k = 0; k < width * height; ++k) {
+        img.pixels[k * 4 + 0] = color.x();
+        img.pixels[k * 4 + 1] = color.y();
+        img.pixels[k * 4 + 2] = color.z();
+        img.pixels[k * 4 + 3] = color.w();
+    }
+
+    return img;
 }
 
 static inline std::string getStringAttribute(const EXRAttribute& attr)
@@ -396,6 +408,85 @@ static inline int getIntAttribute(const EXRAttribute& attr)
 static inline float getFloatAttribute(const EXRAttribute& attr)
 {
     return *reinterpret_cast<const float*>(attr.value);
+}
+
+// attr.value has to be deleted!
+EXRAttribute makeStringAttribute(const std::string_view& name, const std::string_view& data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, "string");
+
+    int len    = (int)data.size();
+    attr.value = new unsigned char[len + sizeof(int)];
+    memcpy(attr.value, reinterpret_cast<unsigned char*>(&len), sizeof(len));
+    strncpy(reinterpret_cast<char*>(attr.value + sizeof(len)), data.data(), len);
+
+    attr.size = sizeof(len) + len;
+
+    return attr;
+}
+
+// attr.value has to be deleted!
+EXRAttribute makeVec2Attribute(const std::string_view& name, const Vector2f& data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, "v2f");
+
+    const float xy[2] = { data.x(), data.y() };
+    attr.value        = new unsigned char[2 * sizeof(float)];
+    memcpy(attr.value, reinterpret_cast<const unsigned char*>(xy), 2 * sizeof(float));
+
+    attr.size = 2 * sizeof(float);
+
+    return attr;
+}
+
+// attr.value has to be deleted!
+EXRAttribute makeVec3Attribute(const std::string_view& name, const Vector3f& data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, "v3f");
+
+    const float xyz[3] = { data.x(), data.y(), data.z() };
+    attr.value         = new unsigned char[3 * sizeof(float)];
+    memcpy(attr.value, reinterpret_cast<const unsigned char*>(xyz), 3 * sizeof(float));
+
+    attr.size = 3 * sizeof(float);
+
+    return attr;
+}
+
+// attr.value has to be deleted!
+EXRAttribute makeIntAttribute(const std::string_view& name, int data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, "int");
+
+    attr.value = new unsigned char[sizeof(data)];
+    memcpy(attr.value, reinterpret_cast<unsigned char*>(&data), sizeof(data));
+
+    attr.size = sizeof(data);
+
+    return attr;
+}
+
+// attr.value has to be deleted!
+EXRAttribute makeFloatAttribute(const std::string_view& name, float data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, "float");
+
+    attr.value = new unsigned char[sizeof(data)];
+    memcpy(attr.value, reinterpret_cast<unsigned char*>(&data), sizeof(data));
+
+    attr.size = sizeof(data);
+
+    return attr;
 }
 
 Image Image::load(const Path& path, ImageMetaData* metaData)
@@ -737,12 +828,12 @@ Image::Resolution Image::loadResolution(const Path& path)
     }
 }
 
-bool Image::save(const Path& path)
+bool Image::save(const Path& path, const ImageMetaData* metaData)
 {
-    return save(path, pixels.get(), width, height, channels);
+    return save(path, pixels.get(), width, height, channels, false, metaData);
 }
 
-bool Image::save(const Path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha)
+bool Image::save(const Path& path, const float* data, size_t width, size_t height, size_t channels, bool skip_alpha, const ImageMetaData* metaData)
 {
     std::string ext = path.extension().generic_string();
     bool useExr     = string_ends_with(ext, ".exr");
@@ -754,8 +845,7 @@ bool Image::save(const Path& path, const float* data, size_t width, size_t heigh
     }
 
     if (channels == 1) {
-        return ImageIO::save(path, width, height, std::vector<const float*>{ data },
-                             std::vector<std::string>{ "A" });
+        return save(path, width, height, std::vector<const float*>{ data }, std::vector<std::string>{ "A" }, metaData);
     } else if (channels == 3) {
         std::vector<std::vector<float>> images(channels);
         for (size_t i = 0; i < channels; ++i)
@@ -775,8 +865,7 @@ bool Image::save(const Path& path, const float* data, size_t width, size_t heigh
         for (size_t i = 0; i < channels; ++i)
             image_ptrs[i] = &(images[channels - i - 1].at(0));
 
-        return ImageIO::save(path, width, height, image_ptrs,
-                             std::vector<std::string>{ "B", "G", "R" });
+        return save(path, width, height, image_ptrs, std::vector<std::string>{ "B", "G", "R" }, metaData);
     } else {
         IG_ASSERT(channels == 4, "Expected four, three or one channel images");
 
@@ -799,27 +888,130 @@ bool Image::save(const Path& path, const float* data, size_t width, size_t heigh
         for (size_t i = 0; i < channels2; ++i)
             image_ptrs[i] = &(images[channels2 - i - 1].at(0));
 
-        return ImageIO::save(path, width, height, image_ptrs,
-                             skip_alpha ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A", "B", "G", "R" });
+        return save(path, width, height, image_ptrs, skip_alpha ? std::vector<std::string>{ "B", "G", "R" } : std::vector<std::string>{ "A", "B", "G", "R" }, metaData);
     }
 }
 
-Image Image::createSolidImage(const Vector4f& color, size_t width, size_t height)
+bool Image::save(const Path& path, size_t width, size_t height,
+                 const std::vector<const float*>& layer_ptrs, const std::vector<std::string>& layer_names,
+                 const ImageMetaData* metaData)
 {
-    Image img;
-    img.width    = width;
-    img.height   = height;
-    img.channels = 4;
+    IG_ASSERT(layer_ptrs.size() == layer_names.size(), "Expected layer pointers and layer names of the same size");
 
-    img.pixels.reset(new float[img.width * img.height * 4]);
-    for (size_t k = 0; k < width * height; ++k) {
-        img.pixels[k * 4 + 0] = color.x();
-        img.pixels[k * 4 + 1] = color.y();
-        img.pixels[k * 4 + 2] = color.z();
-        img.pixels[k * 4 + 3] = color.w();
+    // Make sure the directory containing the new file exists
+    if (!path.parent_path().empty())
+        std::filesystem::create_directories(path.parent_path());
+
+    // Sort layers
+    std::vector<size_t> layer_indices(layer_names.size());
+    std::iota(std::begin(layer_indices), std::end(layer_indices), 0);
+    std::sort(std::begin(layer_indices), std::end(layer_indices), [&](size_t a, size_t b) { return layer_names[a] < layer_names[b]; });
+
+    std::vector<const float*> sorted_layer_ptrs(layer_ptrs.size());
+    for (size_t i = 0; i < layer_indices.size(); ++i)
+        sorted_layer_ptrs[i] = layer_ptrs[layer_indices[i]];
+
+    // Init
+    EXRHeader header;
+    InitEXRHeader(&header);
+    if (width <= 8 || height <= 8) {
+        // Seems like there is an issue with PIZ for tiny exr's (FIXME: Report this issue)
+        header.compression_type = TINYEXR_COMPRESSIONTYPE_ZIP;
+    } else {
+        header.compression_type = TINYEXR_COMPRESSIONTYPE_PIZ;
     }
 
-    return img;
+    EXRImage image;
+    InitEXRImage(&image);
+
+    image.num_channels = (int)sorted_layer_ptrs.size();
+    image.images       = (unsigned char**)sorted_layer_ptrs.data();
+    image.width        = (int)width;
+    image.height       = (int)height;
+
+    header.num_channels = image.num_channels;
+    header.channels     = new EXRChannelInfo[header.num_channels];
+
+    constexpr size_t BUFFER_MAX = 255;
+    for (int i = 0; i < image.num_channels; ++i) {
+        const auto& name = layer_names[layer_indices[i]];
+        strncpy(header.channels[i].name, name.c_str(), BUFFER_MAX);
+        if (name.length() >= BUFFER_MAX)
+            header.channels[i].name[BUFFER_MAX - 1] = '\0';
+    }
+
+    header.pixel_types           = new int[header.num_channels];
+    header.requested_pixel_types = new int[header.num_channels];
+    for (int i = 0; i < header.num_channels; ++i) {
+        header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
+        header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
+    }
+
+    // Handle meta data
+    std::vector<EXRAttribute> attributes;
+    if (metaData) {
+        if (metaData->CameraType.has_value())
+            attributes.emplace_back(makeStringAttribute("igCameraType", metaData->CameraType.value()));
+        if (metaData->TechniqueType.has_value())
+            attributes.emplace_back(makeStringAttribute("igTechniqueType", metaData->TechniqueType.value()));
+        if (metaData->TargetString.has_value())
+            attributes.emplace_back(makeStringAttribute("igTarget", metaData->TargetString.value()));
+        if (metaData->CameraEye.has_value())
+            attributes.emplace_back(makeVec3Attribute("igCameraEye", metaData->CameraEye.value()));
+        if (metaData->CameraUp.has_value())
+            attributes.emplace_back(makeVec3Attribute("igCameraUp", metaData->CameraUp.value()));
+        if (metaData->CameraDir.has_value())
+            attributes.emplace_back(makeVec3Attribute("igCameraDir", metaData->CameraDir.value()));
+        if (metaData->Seed.has_value())
+            attributes.emplace_back(makeIntAttribute("igSeed", (int)metaData->Seed.value()));
+        if (metaData->SamplePerPixel.has_value())
+            attributes.emplace_back(makeIntAttribute("igSPP", (int)metaData->SamplePerPixel.value()));
+        if (metaData->SamplePerIteration.has_value())
+            attributes.emplace_back(makeIntAttribute("igSPI", (int)metaData->SamplePerIteration.value()));
+        if (metaData->Iteration.has_value())
+            attributes.emplace_back(makeIntAttribute("igIteration", (int)metaData->Iteration.value()));
+        if (metaData->Frame.has_value())
+            attributes.emplace_back(makeIntAttribute("igFrame", (int)metaData->Frame.value()));
+        if (metaData->RendertimeInMilliseconds.has_value())
+            attributes.emplace_back(makeIntAttribute("igRendertimeMS", (int)metaData->RendertimeInMilliseconds.value()));
+        if (metaData->RendertimeInSeconds.has_value())
+            attributes.emplace_back(makeIntAttribute("igRendertimeS", (int)metaData->RendertimeInSeconds.value()));
+
+        for (const auto& attrib : metaData->CustomStrings)
+            attributes.emplace_back(makeStringAttribute(attrib.first, attrib.second));
+        for (const auto& attrib : metaData->CustomIntegers)
+            attributes.emplace_back(makeIntAttribute(attrib.first, attrib.second));
+        for (const auto& attrib : metaData->CustomFloats)
+            attributes.emplace_back(makeFloatAttribute(attrib.first, attrib.second));
+        for (const auto& attrib : metaData->CustomVec2s)
+            attributes.emplace_back(makeVec2Attribute(attrib.first, attrib.second));
+        for (const auto& attrib : metaData->CustomVec3s)
+            attributes.emplace_back(makeVec3Attribute(attrib.first, attrib.second));
+    }
+
+    if (!attributes.empty()) {
+        header.custom_attributes     = attributes.data();
+        header.num_custom_attributes = (int)attributes.size();
+    }
+
+    const char* err = nullptr;
+    int ret         = SaveEXRImageToFile(&image, &header, path.generic_string().c_str(), &err);
+
+    for (auto& attr : attributes)
+        delete[] attr.value;
+
+    delete[] header.channels;
+    delete[] header.pixel_types;
+    delete[] header.requested_pixel_types;
+
+    if (ret != TINYEXR_SUCCESS) {
+        std::string _err = err;
+        FreeEXRErrorMessage(err); // free's buffer for an error message
+        throw ImageSaveException(_err, path);
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace IG

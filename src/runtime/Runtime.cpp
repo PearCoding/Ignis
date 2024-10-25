@@ -1,5 +1,5 @@
 #include "Runtime.h"
-#include "ImageIO.h"
+#include "Image.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "StringUtils.h"
@@ -869,6 +869,6 @@ bool Runtime::saveFramebuffer(const Path& path) const
     metaData.CameraUp  = orientation.Up;
     metaData.CameraDir = orientation.Dir;
 
-    return ImageIO::save(path, width, height, image_ptrs, image_names, metaData);
+    return Image::save(path, width, height, image_ptrs, image_names, &metaData);
 }
 } // namespace IG
