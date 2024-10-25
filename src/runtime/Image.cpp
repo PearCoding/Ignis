@@ -980,7 +980,7 @@ bool Image::save(const Path& path, size_t width, size_t height,
         for (const auto& attrib : metaData->CustomStrings)
             attributes.emplace_back(makeStringAttribute(attrib.first, attrib.second));
         for (const auto& attrib : metaData->CustomIntegers)
-            attributes.emplace_back(makeIntAttribute(attrib.first, attrib.second));
+            attributes.emplace_back(makeIntAttribute(attrib.first, (int)attrib.second));
         for (const auto& attrib : metaData->CustomFloats)
             attributes.emplace_back(makeFloatAttribute(attrib.first, attrib.second));
         for (const auto& attrib : metaData->CustomVec2s)
