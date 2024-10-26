@@ -814,8 +814,10 @@ Image::Resolution Image::loadResolution(const Path& path)
     const bool useExr = string_ends_with(ext, ".exr");
 
     if (useExr) {
+        auto memData = readAll(path);
+
         EXRVersion exr_version;
-        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_string().c_str());
+        int ret = ParseEXRVersionFromMemory(&exr_version, memData.data(), memData.size());
         if (ret != 0)
             throw ImageLoadException("Could not extract exr version information", path);
 
@@ -823,7 +825,7 @@ Image::Resolution Image::loadResolution(const Path& path)
         InitEXRHeader(&exr_header);
 
         const char* err = nullptr;
-        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_string().c_str(), &err);
+        ret             = ParseEXRHeaderFromMemory(&exr_header, &exr_version, memData.data(), memData.size(), &err);
         if (ret != 0) {
             std::string _err = err;
             FreeEXRErrorMessage(err);

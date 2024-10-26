@@ -38,6 +38,7 @@ static void handleListCLIOptions(const CLI::App& app)
 UtilOptions::UtilOptions(int argc, char** argv, const std::string& desc)
 {
     CLI::App app{ desc, argc >= 1 ? argv[0] : "unknown" };
+    argv = app.ensure_utf8(argv);
 
     app.positionals_at_end(false);
     app.set_version_flag("--version", Build::getBuildString());
