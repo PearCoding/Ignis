@@ -360,6 +360,7 @@ OIDN::OIDN(Runtime* runtime)
     : mInternal()
 #endif
 {
+    IG_UNUSED(runtime);
 }
 
 OIDN::~OIDN()
