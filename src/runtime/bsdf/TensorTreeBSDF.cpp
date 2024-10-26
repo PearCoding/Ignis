@@ -15,7 +15,7 @@ TensorTreeBSDF::TensorTreeBSDF(const std::string& name, const std::shared_ptr<Sc
 using TTExportedData = std::pair<Path, TensorTreeSpecification>;
 static TTExportedData setup_tensortree(const std::string& name, const std::shared_ptr<SceneObject>& bsdf, LoaderContext& ctx)
 {
-    auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
+    auto filename = ctx.getPath(*bsdf, "filename");
 
     const std::string exported_id = "_tt_" + filename.generic_string();
 

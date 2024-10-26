@@ -80,7 +80,8 @@ public:
     BoundingBox SceneBBox;
     float SceneDiameter = 0.0f;
 
-    Path handlePath(const Path& path, const SceneObject& obj) const;
+    Path getPath(SceneObject& obj, const std::string& propertyName) const;
+    Path handlePath(const SceneObject& obj, const std::string& u8string) const;
 
     std::unordered_map<std::string, size_t> RegisteredResources;
     inline size_t registerExternalResource(const Path& path)

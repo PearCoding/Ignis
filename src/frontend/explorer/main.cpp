@@ -122,7 +122,7 @@ static void openFileCallback(const Path& path)
         Context::instance().renderWidget()->openFile(path);
 
     if (Context::instance().app())
-        Context::instance().app()->setTitle("Ignis | " + std::filesystem::weakly_canonical(path).generic_string());
+        Context::instance().app()->setTitle("Ignis | " + std::string((const char*)std::filesystem::weakly_canonical(path).u8string().data()));
 }
 
 static void openFileDialogCallback()

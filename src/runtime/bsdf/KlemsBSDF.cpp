@@ -16,7 +16,7 @@ KlemsBSDF::KlemsBSDF(const std::string& name, const std::shared_ptr<SceneObject>
 using KlemsExportedData = std::pair<Path, KlemsSpecification>;
 static KlemsExportedData setup_klems(const std::string& name, const std::shared_ptr<SceneObject>& bsdf, LoaderContext& ctx)
 {
-    auto filename = ctx.handlePath(bsdf->property("filename").getString(), *bsdf);
+    auto filename = ctx.getPath(*bsdf, "filename");
 
     const std::string exported_id = "_klems_" + filename.generic_string();
 

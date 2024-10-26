@@ -21,7 +21,7 @@ void DJMeasuredBSDF::serialize(const SerializationInput& input) const
     auto last_sep = full_path.find_last_of('/');
     // extract bsdf name by also getting rid of file extension (.bsdf)
     auto bsdf_name          = full_path.substr(last_sep + 1, full_path.length() - last_sep - 6);
-    auto filename           = input.Tree.context().handlePath(full_path, *mBSDF);
+    auto filename           = input.Tree.context().handlePath(*mBSDF, full_path);
     std::string buffer_name = "buffer_" + bsdf_name;
 
     // saving of converted brdf data in /data directory (taken from klems loader)

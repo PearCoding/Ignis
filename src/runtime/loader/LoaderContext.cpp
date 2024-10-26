@@ -33,8 +33,16 @@ LoaderContext LoaderContext::copyForBake() const
     return ctx;
 }
 
-Path LoaderContext::handlePath(const Path& path, const SceneObject& obj) const
+Path LoaderContext::getPath(SceneObject& obj, const std::string& propertyName) const
 {
+    return handlePath(obj, obj.property(propertyName).getString());
+}
+
+Path LoaderContext::handlePath(const SceneObject& obj, const std::string& nstring) const
+{
+    const std::u8string u8string = std::u8string((const char8_t*)nstring.data());
+
+    const Path path = Path(u8string);
     if (path.is_absolute())
         return path;
 

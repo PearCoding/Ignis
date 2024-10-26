@@ -138,7 +138,7 @@ inline TriMesh setup_mesh_gauss_lobe(SceneObject& elem)
 inline TriMesh setup_mesh_obj(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     int shape_index     = elem.property("shape_index").getInteger(-1);
-    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
+    const auto filename = ctx.getPath(elem, "filename");
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load obj file " << filename << std::endl;
     auto trimesh = obj::load(filename, shape_index < 0 ? std::nullopt : std::make_optional(shape_index));
     if (trimesh.vertices.empty()) {
@@ -151,7 +151,7 @@ inline TriMesh setup_mesh_obj(const std::string& name, SceneObject& elem, const 
 
 inline TriMesh setup_mesh_ply(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
-    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
+    const auto filename = ctx.getPath(elem, "filename");
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load ply file " << filename << std::endl;
     auto trimesh = ply::load(filename);
     if (trimesh.vertices.empty()) {
@@ -164,7 +164,7 @@ inline TriMesh setup_mesh_ply(const std::string& name, SceneObject& elem, const 
 inline TriMesh setup_mesh_mitsuba(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
     size_t shape_index  = elem.property("shape_index").getInteger(0);
-    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
+    const auto filename = ctx.getPath(elem, "filename");
     // IG_LOG(L_DEBUG) << "Shape '" << name << "': Trying to load serialized mitsuba file " << filename << std::endl;
     auto trimesh = mts::load(filename, shape_index);
     if (trimesh.vertices.empty()) {
@@ -176,7 +176,7 @@ inline TriMesh setup_mesh_mitsuba(const std::string& name, SceneObject& elem, co
 
 inline TriMesh setup_mesh_external(const std::string& name, SceneObject& elem, const LoaderContext& ctx)
 {
-    const auto filename = ctx.handlePath(elem.property("filename").getString(), elem);
+    const auto filename = ctx.getPath(elem, "filename");
     if (filename.empty()) {
         IG_LOG(L_ERROR) << "Shape '" << name << "': No filename given" << std::endl;
         return {};
@@ -419,7 +419,7 @@ static void handleDisplacement(TriMesh& mesh, const LoaderContext& ctx, SceneObj
     if (!displacementProp.isValid() || displacementProp.type() != SceneProperty::PT_STRING)
         return;
 
-    const auto filename = ctx.handlePath(displacementProp.getString(), elem);
+    const auto filename = ctx.getPath(elem, "displacement");
     const Image image   = Image::load(filename);
 
     if (!image.isValid())
