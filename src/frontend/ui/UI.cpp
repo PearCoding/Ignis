@@ -164,6 +164,7 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
         config.PixelSnapH    = true;
         config.GlyphOffset.y = 1.0f * std::floor(config.SizePixels / (float)DefaultFontSize); // Add +1 offset per 13 units
 
+        // TODO: Load to memory for unicode paths and load via AddFontFromMemoryTTF
         io.Fonts->AddFontFromFileTTF(fontFile.generic_string().c_str(), config.SizePixels, &config);
 #ifdef IG_OS_WINDOWS
         // Why is this needed on Windows but not on other systems??

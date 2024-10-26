@@ -212,10 +212,8 @@ bool DeviceManager::addModule(const Path& path)
         mAvailableDevices[*target] = path;
 
         library.unload();
-
     } catch (const std::exception& e) {
-        IG_LOG(L_DEBUG) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl
-                        << "Ignoring it." << std::endl;
+        IG_LOG(L_DEBUG) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl;
         return false;
     }
     return true;

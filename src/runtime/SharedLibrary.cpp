@@ -31,6 +31,12 @@ struct SharedLibraryInternal {
         if (!Handle)
             throw std::runtime_error("Could not load library: " + std::system_category().message(GetLastError()));
     }
+    explicit SharedLibraryInternal(const std::wstring& path)
+        : Handle(LoadLibraryW(path.c_str()))
+    {
+        if (!Handle)
+            throw std::runtime_error("Could not load library: " + std::system_category().message(GetLastError()));
+    }
 #endif
 
     ~SharedLibraryInternal()
@@ -48,20 +54,10 @@ SharedLibrary::SharedLibrary() {}
 SharedLibrary::SharedLibrary(const Path& file)
     : mPath(file)
 {
-    const std::string u8 = file.generic_string();
-
 #ifdef IG_OS_LINUX
-    try {
-        mInternal.reset(new SharedLibraryInternal(u8 + ".so"));
-    } catch (...) {
-        mInternal.reset(new SharedLibraryInternal(u8));
-    }
+    mInternal.reset(new SharedLibraryInternal(file.native()));
 #elif defined(IG_OS_WINDOWS)
-    try {
-        mInternal.reset(new SharedLibraryInternal(u8 + ".dll"));
-    } catch (...) {
-        mInternal.reset(new SharedLibraryInternal(u8));
-    }
+    mInternal.reset(new SharedLibraryInternal(file.native()));
 #endif
 }
 
