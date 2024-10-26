@@ -79,7 +79,7 @@ public:
         mPropertyWidget->setModel(mLoadedModel);
 
         if (mApplication)
-            mApplication->setTitle("Ignis | " + std::filesystem::weakly_canonical(path).generic_string());
+            mApplication->setTitle("Ignis | " + std::string((const char*)std::filesystem::weakly_canonical(path).u8string().data()));
     }
 
 private:

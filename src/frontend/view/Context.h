@@ -23,7 +23,7 @@ public:
     Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi);
     ~Context();
 
-    void setTitle(const char* str);
+    void setTitle(const std::string& str);
 
     enum class InputResult {
         Continue, // Continue, nothing of importance changed

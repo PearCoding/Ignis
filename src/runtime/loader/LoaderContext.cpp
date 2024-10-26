@@ -40,6 +40,7 @@ Path LoaderContext::getPath(SceneObject& obj, const std::string& propertyName) c
 
 Path LoaderContext::handlePath(const SceneObject& obj, const std::string& nstring) const
 {
+    // Note: Not the best way, but C++20 really has no other "options"
     const std::u8string u8string = std::u8string((const char8_t*)nstring.data());
 
     const Path path = Path(u8string);

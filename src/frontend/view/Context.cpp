@@ -939,7 +939,7 @@ Context::~Context()
     mInternal->Buffer.clear();
 }
 
-void Context::setTitle(const char* str)
+void Context::setTitle(const std::string& str)
 {
     std::stringstream sstream;
 

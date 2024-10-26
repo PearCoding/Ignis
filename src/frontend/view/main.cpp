@@ -199,7 +199,7 @@ int main(int argc, char** argv)
                        << samples_sec << " SPS, "
                        << runtime->currentSampleCount() << " "
                        << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
-                    ui->setTitle(os.str().c_str());
+                    ui->setTitle(os.str());
 
                     frames = 0;
                     timing = 0;
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
                 os << "Ignis [Capped, "
                    << runtime->currentSampleCount() << " "
                    << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
-                ui->setTitle(os.str().c_str());
+                ui->setTitle(os.str());
             }
         } else {
             frames++;
@@ -219,7 +219,7 @@ int main(int argc, char** argv)
                 os << "Ignis [Paused, "
                    << runtime->currentSampleCount() << " "
                    << "sample" << (runtime->currentSampleCount() > 1 ? "s" : "") << "]";
-                ui->setTitle(os.str().c_str());
+                ui->setTitle(os.str());
                 frames = 0;
                 timing = 0;
             }
