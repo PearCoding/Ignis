@@ -25,14 +25,15 @@ struct SharedLibraryInternal {
             throw std::runtime_error(dlerror());
     }
 #elif defined(IG_OS_WINDOWS)
+#define IG_DLLFLAGS (LOAD_WITH_ALTERED_SEARCH_PATH)
     explicit SharedLibraryInternal(const std::string& path)
-        : Handle(LoadLibraryA(path.c_str()))
+        : Handle(LoadLibraryExA(path.c_str(), nullptr, IG_DLLFLAGS))
     {
         if (!Handle)
             throw std::runtime_error("Could not load library: " + std::system_category().message(GetLastError()));
     }
     explicit SharedLibraryInternal(const std::wstring& path)
-        : Handle(LoadLibraryW(path.c_str()))
+        : Handle(LoadLibraryExW(path.c_str(), nullptr, IG_DLLFLAGS))
     {
         if (!Handle)
             throw std::runtime_error("Could not load library: " + std::system_category().message(GetLastError()));

@@ -68,6 +68,8 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
     if (!force && !mAvailableDevices.empty())
         return true;
 
+    const auto rootPath = RuntimeInfo::rootPath();
+
     const auto libdevicePath = RuntimeInfo::libdevicePath();
     if (!libdevicePath.empty()) {
         IG_LOG(L_DEBUG) << "Setting libdevice path " << libdevicePath << " to environment variable " << ANYDSL_CUDA_LIBDEVICE_PATH_ENV << std::endl;
@@ -91,12 +93,8 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
     }
 
     if (!skipSystem) {
-        auto exePath = RuntimeInfo::modulePath();
-        if (exePath.empty())
-            exePath = RuntimeInfo::executablePath();
-
-        paths.insert(exePath.parent_path().parent_path() / "lib");
-        paths.insert(exePath.parent_path().parent_path() / "bin");
+        // paths.insert(rootPath / "lib");
+        paths.insert(rootPath / "bin");
     }
 
     if (!dir.empty())
@@ -213,7 +211,7 @@ bool DeviceManager::addModule(const Path& path)
 
         library.unload();
     } catch (const std::exception& e) {
-        IG_LOG(L_DEBUG) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl;
+        IG_LOG(L_WARNING) << "Loading error for module " << path << " when adding to the list of available devices: " << e.what() << std::endl;
         return false;
     }
     return true;

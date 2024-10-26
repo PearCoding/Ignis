@@ -97,6 +97,7 @@ foreach(var ${VARIANTS})
     set_target_properties(${_target_name} PROPERTIES PREFIX "")
     ig_add_extra_options(${_target_name})
     set_target_properties(${_target_name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    set_target_properties(${_target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
     install(TARGETS ${_target_name} ${_IG_RUNTIME_SET} LIBRARY DESTINATION bin COMPONENT runtime)
 
     # Some of the compilation process requires a lot of memory.

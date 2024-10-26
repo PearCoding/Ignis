@@ -13,10 +13,6 @@ def __handle_dll():
         if bin_dir.exists():
             added_dirs.append(os.add_dll_directory(str(bin_dir)))
 
-        lib_dir = script_dir.parent.parent.joinpath("lib").absolute()
-        if lib_dir.exists():
-            added_dirs.append(os.add_dll_directory(str(lib_dir)))
-
         for p in os.environ["PATH"].split(';'):
             if p and os.path.exists(p):
                 added_dirs.append(os.add_dll_directory(p))
