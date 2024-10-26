@@ -8,7 +8,9 @@ CPMAddPackage(
 
 set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/api")
 
-set(SRC api.cpp runtime.cpp scene.cpp)
+file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "*.cpp")
+file(GLOB_RECURSE SRC_PY CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "ignis/*.py")
+
 nanobind_add_module(pyignis STABLE_ABI LTO ${SRC})
 # pybind11_add_module(pyignis MODULE ${SRC})
 # add_library(pyignis MODULE ${SRC})
@@ -22,10 +24,11 @@ set_target_properties(pyignis PROPERTIES
                       )
 ig_add_extra_options(pyignis)
 add_custom_command(TARGET pyignis POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ignis "${OUTPUT_DIR}/ignis"
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml "${OUTPUT_DIR}/pyproject.toml"
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${Ignis_SOURCE_DIR}/README.md "${OUTPUT_DIR}/README.md"
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${Ignis_SOURCE_DIR}/LICENSE.txt "${OUTPUT_DIR}/LICENSE")
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${Ignis_SOURCE_DIR}/LICENSE.txt "${OUTPUT_DIR}/LICENSE"
+                   DEPENDS ${SRC_PY})
 # add_checks(pyignis)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ignis DESTINATION api/ COMPONENT python)
 install(TARGETS pyignis ${_IG_RUNTIME_SET} COMPONENT python LIBRARY DESTINATION api/ignis RUNTIME DESTINATION api/ignis)
