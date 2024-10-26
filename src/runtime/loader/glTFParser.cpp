@@ -87,7 +87,7 @@ static Path exportImage(const tinygltf::Image& img, const tinygltf::Model& model
         std::string extension = "." + tinygltf::MimeToExt(img.mimeType);
 
         Path path = cache_dir / ("_img_" + std::to_string(id) + extension);
-        std::ofstream out(path.generic_string(), std::ios::binary);
+        std::ofstream out(path, std::ios::binary);
         out.write(reinterpret_cast<const char*>(buffer.data.data() + view.byteOffset), view.byteLength);
 
         return path;
@@ -95,7 +95,7 @@ static Path exportImage(const tinygltf::Image& img, const tinygltf::Model& model
         std::string extension = "." + tinygltf::MimeToExt(img.mimeType);
 
         Path path = cache_dir / ("_img_" + std::to_string(id) + extension);
-        std::ofstream out(path.generic_string(), std::ios::binary);
+        std::ofstream out(path, std::ios::binary);
         out.write(reinterpret_cast<const char*>(img.image.data()), img.image.size());
 
         return path;
@@ -177,7 +177,7 @@ static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, 
         texData       = (texBuffer->data.data() + texBufferView->byteOffset + textures->byteOffset);
     }
 
-    std::ofstream out(path.generic_string(), std::ios::binary);
+    std::ofstream out(path, std::ios::binary);
 
     out << "ply\n"
         << "format binary_little_endian 1.0\n"

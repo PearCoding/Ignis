@@ -2,9 +2,11 @@
 #include "Logger.h"
 #include "StringUtils.h"
 
+#include <fstream>
 #include <numeric>
 
 IG_BEGIN_IGNORE_WARNINGS
+#define STBI_NO_STDIO
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -20,6 +22,12 @@ IG_BEGIN_IGNORE_WARNINGS
 IG_END_IGNORE_WARNINGS
 
 namespace IG {
+
+static inline std::vector<unsigned char> readAll(const Path& path)
+{
+    std::ifstream input(path, std::ios::binary | std::ios::in);
+    return std::vector<unsigned char>(std::istreambuf_iterator<char>(input), {});
+}
 
 static inline float srgb_gamma(float c)
 {
@@ -497,8 +505,10 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
     Image img;
 
     if (useExr) {
+        auto memData = readAll(path);
+
         EXRVersion exr_version;
-        int ret = ParseEXRVersionFromFile(&exr_version, path.generic_string().c_str());
+        int ret = ParseEXRVersionFromMemory(&exr_version, memData.data(), memData.size());
         if (ret != 0)
             throw ImageLoadException("Could not extract exr version information", path);
 
@@ -506,7 +516,7 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
         InitEXRHeader(&exr_header);
 
         const char* err = nullptr;
-        ret             = ParseEXRHeaderFromFile(&exr_header, &exr_version, path.generic_string().c_str(), &err);
+        ret             = ParseEXRHeaderFromMemory(&exr_header, &exr_version, memData.data(), memData.size(), &err);
         if (ret != 0) {
             std::string _err = err;
             FreeEXRErrorMessage(err);
@@ -569,7 +579,7 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
 
         EXRImage exr_image;
         InitEXRImage(&exr_image);
-        ret = LoadEXRImageFromFile(&exr_image, &exr_header, path.generic_string().c_str(), &err);
+        ret = LoadEXRImageFromMemory(&exr_image, &exr_header, memData.data(), memData.size(), &err);
         if (ret != TINYEXR_SUCCESS) {
             std::string _err = err;
             FreeEXRErrorMessage(err);
@@ -643,15 +653,20 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
         stbi_set_unpremultiply_on_load(1);
         stbi_set_flip_vertically_on_load(0);
 
+        auto memData = readAll(path);
+
         int width = 0, height = 0, channels = 0;
-        float* data = stbi_loadf(path.generic_string().c_str(), &width, &height, &channels, 0);
+        float* data = stbi_loadf_from_memory(memData.data(), (int)memData.size(), &width, &height, &channels, 0);
 
         // If we got a weird channel number, map to RGBA
         if (channels != 1 && channels != 3 && channels != 4) {
             stbi_image_free(data);
-            data     = stbi_loadf(path.generic_string().c_str(), &width, &height, &channels, 4);
+            data     = stbi_loadf_from_memory(memData.data(), (int)memData.size(), &width, &height, &channels, 4);
             channels = 4;
         }
+
+        // Clear loaded file
+        std::vector<unsigned char>().swap(memData);
 
         if (data == nullptr)
             throw ImageLoadException("Could not load image: " + std::string(stbi_failure_reason()), path);
@@ -708,18 +723,23 @@ void Image::loadAsPacked(const Path& path, std::vector<uint8>& dst, size_t& widt
     stbi_set_unpremultiply_on_load(1);
     stbi_set_flip_vertically_on_load(1);
 
+    auto memData = readAll(path);
+
     int width2 = 0, height2 = 0, channels2 = 0;
-    stbi_uc* data = stbi_load(path.generic_string().c_str(), &width2, &height2, &channels2, 0);
+    stbi_uc* data = stbi_load_from_memory(memData.data(), (int)memData.size(), &width2, &height2, &channels2, 0);
 
     // If we got a weird channel number, map to RGBA
     if (channels2 != 1 && channels2 != 3 && channels2 != 4) {
         stbi_image_free(data);
-        data      = stbi_load(path.generic_string().c_str(), &width2, &height2, &channels2, 4);
+        data      = stbi_load_from_memory(memData.data(), (int)memData.size(), &width2, &height2, &channels2, 4);
         channels2 = 4;
     }
 
     width  = static_cast<size_t>(width2);
     height = static_cast<size_t>(height2);
+
+    // Clear loaded file
+    std::vector<unsigned char>().swap(memData);
 
     if (data == nullptr)
         throw ImageLoadException("Could not load image: " + std::string(stbi_failure_reason()), path);
@@ -818,8 +838,9 @@ Image::Resolution Image::loadResolution(const Path& path)
         FreeEXRHeader(&exr_header);
         return res;
     } else {
+        const auto memData = readAll(path); // A bit overkill
         int width = 0, height = 0, channels = 0;
-        int good = stbi_info(path.generic_string().c_str(), &width, &height, &channels);
+        int good = stbi_info_from_memory(memData.data(), (int)memData.size(), &width, &height, &channels);
 
         if ((bool)good)
             return Resolution{ (size_t)width, (size_t)height, (size_t)channels };
@@ -994,8 +1015,21 @@ bool Image::save(const Path& path, size_t width, size_t height,
         header.num_custom_attributes = (int)attributes.size();
     }
 
-    const char* err = nullptr;
-    int ret         = SaveEXRImageToFile(&image, &header, path.generic_string().c_str(), &err);
+    const char* err    = nullptr;
+    unsigned char* mem = nullptr;
+    size_t mem_size    = SaveEXRImageToMemory(&image, &header, &mem, &err);
+    if (mem_size == 0) {
+        std::string _err = err;
+        FreeEXRErrorMessage(err); // free's buffer for an error message
+        throw ImageSaveException(_err, path);
+        return false;
+    }
+
+    if ((mem_size > 0) && mem) {
+        std::ofstream stream(path, std::ios::binary | std::ios::out);
+        stream.write((const char*)mem, mem_size);
+    }
+    free(mem);
 
     for (auto& attr : attributes)
         delete[] attr.value;
@@ -1003,13 +1037,6 @@ bool Image::save(const Path& path, size_t width, size_t height,
     delete[] header.channels;
     delete[] header.pixel_types;
     delete[] header.requested_pixel_types;
-
-    if (ret != TINYEXR_SUCCESS) {
-        std::string _err = err;
-        FreeEXRErrorMessage(err); // free's buffer for an error message
-        throw ImageSaveException(_err, path);
-        return false;
-    }
 
     return true;
 }

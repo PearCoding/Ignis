@@ -92,7 +92,7 @@ CacheManager::HashMap CacheManager::load()
     if (!std::filesystem::exists(file))
         return {}; // No cache file means nothing was cached yet
 
-    std::ifstream ifs(file.generic_string());
+    std::ifstream ifs(file);
     if (!ifs.good()) {
         IG_LOG(L_ERROR) << "Could not open file '" << file << "'" << std::endl;
         return {};
@@ -132,7 +132,7 @@ void CacheManager::save(const HashMap& map)
         return; // Nothing to cache
 
     const Path file = mCacheDir / "cache.json";
-    std::ofstream ofs(file.generic_string());
+    std::ofstream ofs(file);
     if (!ofs.good()) {
         IG_LOG(L_ERROR) << "Could not open file '" << file << "'" << std::endl;
         return;

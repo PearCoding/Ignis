@@ -25,7 +25,7 @@ using Arguments = std::unordered_map<std::string, std::string>;
 // ------------- File IO
 static inline bool doesFileExist(const Path& fileName)
 {
-    return std::ifstream(fileName.generic_string()).good();
+    return std::ifstream(fileName).good();
 }
 
 static inline Path resolvePath(const Path& path, const Path& baseDir)
@@ -567,7 +567,7 @@ std::shared_ptr<Scene> SceneParser::loadFromFile(const Path& path, uint32 flags)
         return scene;
     }
 
-    std::ifstream ifs(path.generic_string());
+    std::ifstream ifs(path);
     if (!ifs.good()) {
         IG_LOG(L_ERROR) << "Could not open file '" << path << "'" << std::endl;
         return nullptr;

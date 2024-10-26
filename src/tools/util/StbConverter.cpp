@@ -1,12 +1,20 @@
 #include "Image.h"
 #include "ImageUtils.h"
 
+#include <fstream>
+
 IG_BEGIN_IGNORE_WARNINGS
+// #define STBI_WRITE_NO_STDIO (needed for stbiw__write_hdr_scanline)
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 IG_END_IGNORE_WARNINGS
 
 namespace IG {
+
+static void sWriteFunc(void* context, void* data, int size)
+{
+    ((std::ofstream*)context)->write((const char*)data, size);
+};
 
 static inline float gamma(float c)
 {
@@ -48,16 +56,12 @@ static int write_hdr_core(stbi__write_context* s, int x, int y, int comp, float*
     }
 }
 
-static int write_hdr(char const* filename, int x, int y, int comp, const float* data, const std::string_view& cmd_line)
+static int write_hdr(stbi_write_func* func, void* context, int x, int y, int comp, const float* data, const std::string_view& cmd_line)
 {
     stbi__write_context s;
     memset(&s, 0, sizeof(s));
-    if (stbi__start_write_file(&s, filename)) {
-        int r = write_hdr_core(&s, x, y, comp, (float*)data, cmd_line);
-        stbi__end_write_file(&s);
-        return r;
-    } else
-        return 0;
+    stbi__start_write_callbacks(&s, func, context);
+    return write_hdr_core(&s, x, y, comp, (float*)data, cmd_line);
 }
 
 static std::string genCommandLine(const ImageMetaData& metaData)
@@ -111,19 +115,21 @@ bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, 
         data[i * 3 + 2] = static_cast<uint8>(std::max(0.0f, std::min(255.0f, gamma(image.pixels[i * 4 + 2]) * 255)));
     }
 
+    std::ofstream stream(output, std::ios::binary | std::ios::binary);
+
     int ret = 0;
     switch (type) {
     case ConvertToStdImage::PNG:
-        ret = stbi_write_png(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data(), static_cast<int>(sizeof(uint8) * 3 * image.width));
+        ret = stbi_write_png_to_func(sWriteFunc, (void*)&stream, (int)image.width, (int)image.height, 3, data.data(), static_cast<int>(sizeof(uint8) * 3 * image.width));
         break;
     case ConvertToStdImage::JPG:
-        ret = stbi_write_jpg(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data(), jpg_quality);
+        ret = stbi_write_jpg_to_func(sWriteFunc, (void*)&stream, (int)image.width, (int)image.height, 3, data.data(), jpg_quality);
         break;
     case ConvertToStdImage::BMP:
-        ret = stbi_write_bmp(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data());
+        ret = stbi_write_bmp_to_func(sWriteFunc, (void*)&stream, (int)image.width, (int)image.height, 3, data.data());
         break;
     case ConvertToStdImage::TGA:
-        ret = stbi_write_tga(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data());
+        ret = stbi_write_tga_to_func(sWriteFunc, (void*)&stream, (int)image.width, (int)image.height, 3, data.data());
         break;
     default:
         IG_ASSERT(false, "Invalid type!");
@@ -153,8 +159,10 @@ bool convert_hdr(const Path& input, const Path& output, float exposure, float of
         data[i * 3 + 2] = image.pixels[i * 4 + 2];
     }
 
+    std::ofstream stream(output, std::ios::binary | std::ios::binary);
+
     std::string cmd_line = genCommandLine(metaData);
-    int ret              = write_hdr(output.generic_string().c_str(), (int)image.width, (int)image.height, 3, data.data(), cmd_line);
+    int ret              = write_hdr(sWriteFunc, (void*)&stream, (int)image.width, (int)image.height, 3, data.data(), cmd_line);
     return ret > 0;
 }
 } // namespace IG

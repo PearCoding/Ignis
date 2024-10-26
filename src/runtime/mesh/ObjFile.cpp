@@ -216,7 +216,7 @@ bool save(const TriMesh& mesh, const Path& path)
     const bool hasNormals = mesh.normals.size() == mesh.vertices.size();
     const bool hasTexture = mesh.texcoords.size() == mesh.vertices.size();
 
-    std::ofstream out(path.generic_string());
+    std::ofstream out(path);
 
     out << "# Exported with Ignis" << std::endl;
 
