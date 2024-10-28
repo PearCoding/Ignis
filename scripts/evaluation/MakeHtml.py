@@ -133,7 +133,7 @@ if __name__ == "__main__":
         for _, target_info in info.items():
             del target_info["filename"]
 
-    print(scenes)
+    # print(scenes)
 
     with open(os.path.join(js_out_dir, "info.js"), "w") as f:
         data = json.dumps(scenes, separators=(',', ':'))
