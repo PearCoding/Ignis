@@ -135,6 +135,8 @@ int main(int argc, char** argv)
     size_t totalIter = 0; // Total number of iterations, without ever reseting
     std::vector<double> samples_stats;
 
+    bool request_reset = false;
+
     SectionTimer timer_input;
     SectionTimer timer_ui;
     SectionTimer timer_render;
@@ -153,7 +155,7 @@ int main(int argc, char** argv)
             break;
         case Context::InputResult::Reset:
             runtime->setCameraOrientation(camera.asOrientation());
-            runtime->reset();
+            request_reset = true;
             break;
         default:
             break;
@@ -161,7 +163,7 @@ int main(int argc, char** argv)
 
         if (lastDebugMode != ui->currentDebugMode()) {
             runtime->setParameter("__debug_mode", (int)ui->currentDebugMode());
-            runtime->reset();
+            request_reset = true;
             lastDebugMode = ui->currentDebugMode();
         }
         timer_input.stop();
@@ -171,6 +173,10 @@ int main(int argc, char** argv)
                 if (cmd.SPPMode == SPPMode::Continuous && runtime->currentIterationCount() >= desired_iter) {
                     runtime->reset();
                     runtime->incFrameCount(); // Not affected by reset
+                    request_reset = false;
+                } else if (request_reset) {
+                    runtime->reset();
+                    request_reset = false;
                 }
 
                 auto ticks = std::chrono::high_resolution_clock::now();
@@ -228,7 +234,7 @@ int main(int argc, char** argv)
         timer_ui.start();
         switch (ui->update()) {
         case Context::UpdateResult::Reset:
-            runtime->reset();
+            request_reset = true;
             break;
         default:
             break;
