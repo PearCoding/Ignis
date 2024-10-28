@@ -76,8 +76,8 @@
     {
       "type": "sun",
       "name": "Sun",
-      "direction": [0.005248, -0.874618, 0.484785],
-      "irradiance": 1e5,
+      "direction": [-0.005248, 0.874618, -0.484785], // Flipped direction compared to Radiance
+      "radiance": 1e5,
       "angle": 0.533
     }
   ]
