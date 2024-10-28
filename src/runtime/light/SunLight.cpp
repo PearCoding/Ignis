@@ -12,7 +12,6 @@ SunLight::SunLight(const std::string& name, const std::shared_ptr<SceneObject>& 
     , mLight(light)
 {
     mDirection   = LoaderUtils::getDirection(*light);
-    mUseRadius   = light->hasProperty("radius");
     mUseRadiance = light->hasProperty("radiance");
 
     IG_LOG(L_DEBUG) << "Light '" << name << "' has direction " << FormatVector(mDirection) << std::endl;
@@ -23,8 +22,7 @@ float SunLight::computeFlux(ShadingTree& tree) const
     IG_UNUSED(tree);
     // TODO: This is only an approximation
 
-    constexpr float radius = 0.01f;
-    return tree.computeNumber("irradiance", *mLight, 1.0f).Value * Pi * radius * radius;
+    return tree.computeNumber("irradiance", *mLight, 1.0f).Value * Pi * (FltSunRadiusDegree * Deg2Rad / 2) * (FltSunRadiusDegree * Deg2Rad / 2);
 }
 
 void SunLight::serialize(const SerializationInput& input) const
@@ -36,10 +34,7 @@ void SunLight::serialize(const SerializationInput& input) const
     else
         input.Tree.addColor("irradiance", *mLight, Vector3f::Ones());
 
-    if (mUseRadius)
-        input.Tree.addNumber("radius", *mLight, 0.01f);
-    else
-        input.Tree.addNumber("angle", *mLight, FltSunRadiusDegree);
+    input.Tree.addNumber("angle", *mLight, FltSunRadiusDegree);
 
     if (mLight->hasProperty("direction"))
         input.Tree.addVector("direction", *mLight, Vector3f::UnitY());
@@ -53,23 +48,16 @@ void SunLight::serialize(const SerializationInput& input) const
     else
         input.Stream << ", vec3_normalize(" << LoaderUtils::inlineVector(mDirection) << ")";
 
-    input.Stream << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context());
+    input.Stream << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
+                 << ", math_builtins::cos(rad(" << input.Tree.getInline("angle") << "/2))";
 
-    if (mUseRadius)
-        input.Stream << ", sun_cos_angle_from_radius(" << input.Tree.getInline("radius") << ")";
-    else
-        input.Stream << ", math_builtins::cos(rad(" << input.Tree.getInline("angle") << "/2))";
-
-    if(mUseRadiance) {
+    if (mUseRadiance) {
         input.Stream << ", " << input.Tree.getInline("radiance");
     } else {
-        input.Stream << ", color_mulf(" << input.Tree.getInline("irradiance");
-        if (mUseRadius)
-            input.Stream << ",1 / sun_area_from_radius(" << input.Tree.getInline("radius") << "))";
-        else
-            input.Stream << ",1 / sun_area_from_cos_angle(math_builtins::cos(rad(" << input.Tree.getInline("angle") << "/2))))";
+        input.Stream << ", color_mulf(" << input.Tree.getInline("irradiance")
+                     << ", 1 / sun_area_from_srad(rad(" << input.Tree.getInline("angle") << "/2)))";
     }
-        
+
     input.Stream << ", false);" << std::endl;
 
     input.Tree.endClosure();

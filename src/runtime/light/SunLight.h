@@ -16,7 +16,6 @@ public:
 
 private:
     Vector3f mDirection;
-    bool mUseRadius;
     bool mUseRadiance;
 
     std::shared_ptr<SceneObject> mLight;

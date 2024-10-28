@@ -1,24 +1,24 @@
 static flt_sun_radius_deg = 0.533:f32; // Sun solid angle seen from earth given in degrees
 
-fn @sun_cos_angle_from_radius(radius: f32)    = 1 / math_builtins::sqrt(radius * radius + 1);               // cos(atan(R))
-fn @sun_radius_from_cos_angle(cos_angle: f32) = math_builtins::sqrt(1 - cos_angle * cos_angle) / cos_angle; // tan(acos(C))
-fn @sun_area_from_radius(radius: f32)         = flt_pi * radius * radius;
-fn @sun_area_from_cos_angle(cos_angle: f32)   = sun_area_from_radius(sun_radius_from_cos_angle(cos_angle));
+fn @sun_cos_angle_from_srad(srad: f32)      = 1 / math_builtins::sqrt(srad * srad + 1);                   // cos(atan(R))
+fn @sun_srad_from_cos_angle(cos_angle: f32) = math_builtins::sqrt(1 - cos_angle * cos_angle) / cos_angle; // tan(acos(C))
+fn @sun_area_from_srad(srad: f32)           = flt_pi * srad * srad;
+fn @sun_area_from_cos_angle(cos_angle: f32) = sun_area_from_srad(sun_srad_from_cos_angle(cos_angle));
 
-fn @make_sun_light(id: i32, sun_dir: Vec3 /* Light to Scene */, scene_bbox: BBox, cos_sun_angle: f32, radiance: Color, handle_as_delta: bool) -> Light {
+fn @make_sun_light(id: i32, glb_sun_dir: Vec3 /* Light to Scene */, scene_bbox: BBox, cos_sun_angle: f32, radiance: Color, handle_as_delta: bool) -> Light {
     let scene_radius = bbox_radius(scene_bbox) * 1.01;
-    let frame        = make_orthonormal_mat3x3(sun_dir);
+    let frame        = make_orthonormal_mat3x3(glb_sun_dir);
 
     let dir_pdf = uniform_cone_pdf(cos_sun_angle);
 
-    fn @check_if_hit(gdir: Vec3) = -vec3_dot(sun_dir, gdir) >= cos_sun_angle;
+    fn @check_if_hit(glb_dir: Vec3 /* From surface towards light */) = -vec3_dot(glb_sun_dir, glb_dir) >= cos_sun_angle;
     
     Light {
         id = id,
         sample_direct = @ |rnd, _| {
             let sample = sample_uniform_cone(rnd.next_f32(), rnd.next_f32(), cos_sun_angle);
             let ndir   = mat3x3_mul(frame, sample.dir);
-            make_direct_sample(vec3_expand(0), vec3_neg(ndir), color_mulf(radiance, safe_div(1, sample.pdf)), if handle_as_delta { make_delta_pdf() } else { make_solid_pdf(sample.pdf) }, sample.dir.z, flt_inf)
+            make_direct_sample(vec3_expand(0) /* Does not matter */, vec3_neg(ndir), color_mulf(radiance, safe_div(1, sample.pdf)), if handle_as_delta { make_delta_pdf() } else { make_solid_pdf(sample.pdf) }, sample.dir.z, flt_inf)
         },
         sample_emission = @ |rnd| {
             let sample         = sample_uniform_cone(rnd.next_f32(), rnd.next_f32(), cos_sun_angle);

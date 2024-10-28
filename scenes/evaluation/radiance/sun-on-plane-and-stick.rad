@@ -1,0 +1,24 @@
+void plastic diffuse_bsdf
+0
+0
+5 0.8 0.8 0.8 0 1
+
+diffuse_bsdf mesh bottom
+1 bottom.rtm
+0
+0
+
+diffuse_bsdf mesh stick
+1 stick.rtm
+0
+0
+
+void light solar
+0
+0
+3 1e5 1e5 1e5
+
+solar source sun
+0
+0
+4 0.707106781 -0.707106781 0 0.533

@@ -209,16 +209,11 @@ Sun Light (:monosp:`sun`)
     - :code:`1`
     - Yes
     - Output of the sun in radiometric [W/m^2] or photometric [lm/m^2] units. Can not be specified with :paramtype:`radiance`.
-  * - radius
-    - |number|
-    - :code:`0.01`
-    - Yes
-    - Radius of the sun seen from the earth. Can not be specified together with :paramtype:`angle`.
   * - angle
     - |number|
     - :code:`0.533`
     - Yes
-    - Angular diameter of the sun seen from the earth. Can not be specified together with :paramtype:`radius`.
+    - Solid angle of the sun given in degrees seen from the earth.
 
 .. subfigstart::
   

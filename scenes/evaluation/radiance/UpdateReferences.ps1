@@ -32,6 +32,7 @@ try {
     HandleScene "sky-perez2"
     HandleScene "sky-perez3"
     HandleScene "sun-on-plane"
+    HandleScene "sun-on-plane-and-stick"
 }
 catch {
     Write-Host "Update failed:" -ForegroundColor Red
