@@ -589,6 +589,11 @@ private:
         clearnessParameter->setProperty("name", clearnessName);
         clearnessParameter->setProperty("value", SceneProperty::fromNumber(1.00f));
 
+        const auto dayOfTheYearName = SceneProperty::fromString("sky_day_of_the_year");
+        auto dayOfTheYearParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
+        dayOfTheYearParameter->setProperty("name", dayOfTheYearName);
+        dayOfTheYearParameter->setProperty("value", SceneProperty::fromNumber(TimePoint().dayOfTheYear()));
+
         const auto colorName = SceneProperty::fromString("sky_color");
         auto colorParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "color", Path{});
         colorParameter->setProperty("name", colorName);
@@ -603,6 +608,7 @@ private:
         scene->addParameter(upName.getString(), std::move(upParameter));
         scene->addParameter(brightnessName.getString(), std::move(brightnessParameter));
         scene->addParameter(clearnessName.getString(), std::move(clearnessParameter));
+        scene->addParameter(dayOfTheYearName.getString(), std::move(dayOfTheYearParameter));
         scene->addParameter(colorName.getString(), std::move(colorParameter));
         scene->addParameter(groundName.getString(), std::move(groundParameter));
 
@@ -610,6 +616,7 @@ private:
         envPtr->setProperty("up", upName);
         envPtr->setProperty("brightness", brightnessName);
         envPtr->setProperty("clearness", clearnessName);
+        envPtr->setProperty("day_of_the_year", dayOfTheYearName);
         envPtr->setProperty("color", colorName);
         envPtr->setProperty("ground", groundName);
     }

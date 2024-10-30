@@ -42,6 +42,9 @@ void PerezLight::serialize(const SerializationInput& input) const
     if (mLight->hasProperty("direction"))
         input.Tree.addVector("direction", *mLight, Vector3f::UnitY());
 
+    if (mLight->hasProperty("day_of_the_year"))
+        input.Tree.addNumber("day_of_the_year", *mLight, mTimePoint.dayOfTheYear());
+
     input.Tree.addColor("color", *mLight, Vector3f::Ones()); // Tint color
 
     CallType callType = CallType::BrightnessClearness;
@@ -87,8 +90,12 @@ void PerezLight::serialize(const SerializationInput& input) const
         break;
     }
 
+    if (mLight->hasProperty("direction"))
+        input.Stream << ", " << input.Tree.getInline("day_of_the_year");
+    else
+        input.Stream << ", " << mTimePoint.dayOfTheYear();
+
     input.Stream
-        << ", " << mTimePoint.dayOfTheYear() // TODO: Make it adaptive too!
         << ", " << (mHasGround ? "true" : "false")
         << ", " << (mHasSun ? "true" : "false");
 

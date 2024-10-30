@@ -4,6 +4,7 @@
 #include "RenderWidget.h"
 #include "Runtime.h"
 #include "skysun/ElevationAzimuth.h"
+#include "skysun/PerezModel.h"
 #include "skysun/SunLocation.h"
 
 #include "UI.h"
@@ -200,6 +201,12 @@ void ParameterWidget::onRender(Widget*)
                 ImGui::EndGroup();
                 ImGui::PopItemWidth();
 
+                float day_of_the_year = runtime->parameters().getFloat("sky_day_of_the_year");
+                if (ImGui::InputFloat("Day of the Year##SunSky", &day_of_the_year, 0, 360, "%.1f")) {
+                    runtime->setParameter("sky_day_of_the_year", day_of_the_year);
+                    runtime->reset();
+                }
+
                 static bool sunPopup = false;
                 if (ImGui::Button("Load from Date")) {
                     ImGui::OpenPopup("Sun Orientation");
@@ -231,6 +238,12 @@ void ParameterWidget::onRender(Widget*)
 
                     if (ImGui::Button("Load##SunDirPopup")) {
                         ea = computeSunEA(tp, ml);
+                        if (tp.dayOfTheYear() != day_of_the_year) {
+                            day_of_the_year = tp.dayOfTheYear();
+                            runtime->setParameter("sky_day_of_the_year", day_of_the_year);
+                            runtime->reset();
+                        }
+
                         ImGui::CloseCurrentPopup();
                         sunPopup = false;
                     }
@@ -267,6 +280,8 @@ void ParameterWidget::onRender(Widget*)
                     runtime->setParameter("sky_clearness", sky_clearness);
                     runtime->reset();
                 }
+
+                // float sky_irrad_diff = PerezModel::computeDiffuseIrradiance(sky_brightness, sun_direction.y(), ea.)
 
                 Vector4f sky_color = runtime->parameters().getColor("sky_color");
                 if (ImGui::ColorEdit4("Color##Sky", sky_color.data())) {
