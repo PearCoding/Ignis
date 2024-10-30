@@ -35,6 +35,21 @@ float TimePoint::decimalHours(float timezone) const
     return Hour + timezone + (Minute + Seconds / 60.0f) / 60.0f;
 }
 
+TimePoint TimePoint::nowUTC()
+{
+    const time_t time = std::time(0);
+    std::tm* tm       = std::gmtime(&time);
+
+    TimePoint tp;
+    tp.Year    = tm->tm_year + 1900;
+    tp.Month   = tm->tm_mon + 1;
+    tp.Day     = tm->tm_mday;
+    tp.Hour    = tm->tm_hour;
+    tp.Minute  = tm->tm_min;
+    tp.Seconds = tm->tm_sec;
+    return tp;
+}
+
 /* Based on "Computing the Solar Vector" by Manuel Blanco-Muriel,
  * Diego C. Alarcon-Padilla, Teodoro Lopez-Moratalla, and Martin Lara-Coira,
  * in "Solar energy", vol 27, number 5, 2001 by Pergamon Press.

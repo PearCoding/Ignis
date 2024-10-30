@@ -33,6 +33,8 @@ struct IG_LIB TimePoint {
     /// @param timezone 
     /// @return 
     float decimalHours(float timezone) const;
+
+    static TimePoint nowUTC();
 };
 
 // Default is Saarbrücken, Elevation: 52.87 Azimuth: 323.271 (west of south)

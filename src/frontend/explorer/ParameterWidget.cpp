@@ -4,6 +4,7 @@
 #include "RenderWidget.h"
 #include "Runtime.h"
 #include "skysun/ElevationAzimuth.h"
+#include "skysun/SunLocation.h"
 
 #include "UI.h"
 
@@ -169,6 +170,7 @@ void ParameterWidget::onRender(Widget*)
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 ui::PolarSliderFloat("SunElevation", &ea.Elevation, MaxElevation, 0, 3);
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+
                 ImGui::BeginGroup();
                 float azimuth_deg   = ea.Azimuth * Rad2Deg;
                 float elevation_deg = ea.Elevation * Rad2Deg;
@@ -197,6 +199,54 @@ void ParameterWidget::onRender(Widget*)
 
                 ImGui::EndGroup();
                 ImGui::PopItemWidth();
+
+                static bool sunPopup = false;
+                if (ImGui::Button("Load from Date")) {
+                    ImGui::OpenPopup("Sun Orientation");
+                    sunPopup = true;
+                }
+
+                if (ImGui::BeginPopupModal("Sun Orientation", &sunPopup, ImGuiWindowFlags_AlwaysAutoResize)) {
+                    // TODO: Make this more fancy
+                    static TimePoint tp;
+                    static MapLocation ml;
+                    static bool once = false;
+
+                    if (!once) {
+                        tp          = TimePoint::nowUTC();
+                        ml          = MapLocation(); // Note: Would be cool to get the users location... but that is privacy ;)
+                        ml.Timezone = 0;
+                        once        = true;
+                    }
+
+                    ImGui::DragInt("Year", &tp.Year, 1.0f, 1800, 2200);
+                    ImGui::DragInt("Month", &tp.Month, 1.0f, 1, 12);
+                    ImGui::DragInt("Day", &tp.Day, 1.0f, 1, 31);
+                    ImGui::DragInt("Hour", &tp.Hour, 1.0f, 0, 23);
+                    ImGui::DragInt("Minute", &tp.Minute, 1.0f, 0, 59);
+                    ImGui::DragFloat("Second", &tp.Seconds, 1.0f, 0, 59, "%.1f");
+                    ImGui::DragFloat("Timezone (GMT Shift Hours)", &ml.Timezone, 1.0f, -12.0f, 12.0f);
+                    ImGui::DragFloat("Longitude (West)", &ml.Longitude, 1.0f, -180.0f, 180.0f);
+                    ImGui::DragFloat("Latitude (North)", &ml.Latitude, 1.0f, -90.0f, 90.0f);
+
+                    if (ImGui::Button("Load##SunDirPopup")) {
+                        ea = computeSunEA(tp, ml);
+                        ImGui::CloseCurrentPopup();
+                        sunPopup = false;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Close##SunDirPopup")) {
+                        ImGui::CloseCurrentPopup();
+                        sunPopup = false;
+                    }
+                    ImGui::SameLine(ImGui::GetContentRegionAvail().x - 30);
+                    if (ImGui::Button("Now##SunDirPopup")) {
+                        tp          = TimePoint::nowUTC();
+                        ml.Timezone = 0;
+                    }
+
+                    ImGui::EndPopup();
+                }
 
                 const Vector3f new_dir = ea.toDirectionYUp();
                 if (runtime->parameters().VectorParameters.contains("sky_sun_dir") /* Only update when loaded */ && !sun_direction.isApprox(new_dir, 1e-4f)) {
