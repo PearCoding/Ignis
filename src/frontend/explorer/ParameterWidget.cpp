@@ -281,7 +281,25 @@ void ParameterWidget::onRender(Widget*)
                     runtime->reset();
                 }
 
-                // float sky_irrad_diff = PerezModel::computeDiffuseIrradiance(sky_brightness, sun_direction.y(), ea.)
+                bool recompute_bc        = false;
+                const float solar_zenith = Pi2 - ea.Elevation;
+                float sky_irrad_diff     = PerezModel::computeDiffuseIrradiance(sky_brightness, solar_zenith, day_of_the_year);
+                if (ImGui::SliderFloat("Diffuse Irradiance##Sky", &sky_irrad_diff, 0.01f, 1000.0f)) {
+                    recompute_bc = true;
+                }
+
+                float sky_irrad_dir = PerezModel::computeDirectIrradiance(sky_brightness, sky_clearness, solar_zenith, day_of_the_year);
+                if (ImGui::SliderFloat("Direct Irradiance##Sky", &sky_irrad_dir, 0.01f, 1000.0f)) {
+                    recompute_bc = true;
+                }
+
+                if (recompute_bc) {
+                    sky_brightness = PerezModel::computeSkyBrightness(sky_irrad_diff, solar_zenith, day_of_the_year);
+                    sky_clearness  = PerezModel::computeSkyClearness(sky_irrad_diff, sky_irrad_dir, solar_zenith);
+                    runtime->setParameter("sky_brightness", sky_brightness);
+                    runtime->setParameter("sky_clearness", sky_clearness);
+                    runtime->reset();
+                }
 
                 Vector4f sky_color = runtime->parameters().getColor("sky_color");
                 if (ImGui::ColorEdit4("Color##Sky", sky_color.data())) {
