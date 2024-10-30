@@ -81,10 +81,10 @@ mod perez {
     struct Model {
         brightness:    f32,
         clearness:     f32,
-        direct_irrad:  f32,
-        diffuse_irrad: f32,
-        direct_illum:  f32,
-        diffuse_illum: f32,
+        direct_irrad:  f32, // Direct normal irradiance       [W/m^2]
+        diffuse_irrad: f32, // Diffuse horizontal irradiance  [W/m^2]
+        direct_illum:  f32, // Direct normal illuminance      [Lux]
+        diffuse_illum: f32, // Diffuse horizontal illuminance [Lux]
         params:        ExplicitParameters
     }
 
@@ -133,6 +133,10 @@ mod perez {
             params        = compute_explicit_parameters(brightness, clearness, solar_zenith)
         }
     }
+
+    // gendaylit -G
+    fn @make_model_from_irradiance_hori(diffuse_irrad: f32, direct_hori_irrad: f32, solar_zenith: f32, day_of_the_year: f32) 
+        = make_model_from_irradiance(diffuse_irrad, direct_hori_irrad / math_builtins::cos(solar_zenith), solar_zenith, day_of_the_year);
 
     fn @compute_diffuse_irrad(brightness: f32, solar_zenith: f32, day_of_the_year: f32) 
         = brightness * flt_solar_e * compute_eccentricity(day_of_the_year) / compute_air_mass(solar_zenith);
@@ -302,6 +306,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Li
     let solar_zenith   = flt_pi / 2 - solar_altitude;
 
     // ! x = cos(pi/2 - asin(x))
+    // ! cos(a) = sin(pi/2 - a)
 
     let model = model_gen(solar_zenith);
     

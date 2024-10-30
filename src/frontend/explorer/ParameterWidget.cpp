@@ -208,7 +208,7 @@ void ParameterWidget::onRender(Widget*)
                 }
 
                 static bool sunPopup = false;
-                if (ImGui::Button("Load from Date")) {
+                if (ImGui::Button("Pick Date")) {
                     ImGui::OpenPopup("Sun Orientation");
                     sunPopup = true;
                 }
@@ -284,13 +284,19 @@ void ParameterWidget::onRender(Widget*)
                 bool recompute_bc        = false;
                 const float solar_zenith = Pi2 - ea.Elevation;
                 float sky_irrad_diff     = PerezModel::computeDiffuseIrradiance(sky_brightness, solar_zenith, day_of_the_year);
-                if (ImGui::SliderFloat("Diffuse Irradiance##Sky", &sky_irrad_diff, 0.01f, 1000.0f)) {
+                if (ImGui::SliderFloat("Diffuse Horizontal##Sky", &sky_irrad_diff, 0.01f, 1000.0f, "%.3f W/m2")) {
                     recompute_bc = true;
                 }
 
                 float sky_irrad_dir = PerezModel::computeDirectIrradiance(sky_brightness, sky_clearness, solar_zenith, day_of_the_year);
-                if (ImGui::SliderFloat("Direct Irradiance##Sky", &sky_irrad_dir, 0.01f, 1000.0f)) {
+                if (ImGui::SliderFloat("Direct Normal##Sky", &sky_irrad_dir, 0.01f, 1000.0f, "%.3f W/m2")) {
                     recompute_bc = true;
+                }
+
+                float sky_irrad_dir_hori = sky_irrad_dir * std::sin(ea.Elevation);
+                if (ImGui::SliderFloat("Direct Horizontal##Sky", &sky_irrad_dir_hori, 0.01f, 1000.0f, "%.3f W/m2")) {
+                    sky_irrad_dir = sky_irrad_dir_hori / std::sin(ea.Elevation);
+                    recompute_bc  = true;
                 }
 
                 if (recompute_bc) {
