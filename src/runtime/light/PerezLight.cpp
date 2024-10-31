@@ -28,6 +28,7 @@ void PerezLight::serialize(const SerializationInput& input) const
     enum class CallType {
         BrightnessClearness,
         Irradiance,
+        IrradianceHori
         // Illuminance // TODO
     };
 
@@ -48,8 +49,12 @@ void PerezLight::serialize(const SerializationInput& input) const
     input.Tree.addColor("color", *mLight, Vector3f::Ones()); // Tint color
 
     CallType callType = CallType::BrightnessClearness;
-    if (mLight->hasProperty("direct_irradiance") || mLight->hasProperty("diffuse_irradiance"))
-        callType = CallType::Irradiance;
+    if (mLight->hasProperty("direct_irradiance") || mLight->hasProperty("diffuse_irradiance")) {
+        if (mLight->hasProperty("direct_horizontal_irradiance") && !mLight->hasProperty("direct_irradiance"))
+            callType = CallType::IrradianceHori;
+        else
+            callType = CallType::Irradiance;
+    }
 
     switch (callType) {
     default:
@@ -60,11 +65,17 @@ void PerezLight::serialize(const SerializationInput& input) const
         input.Tree.addNumber("diffuse_irradiance", *mLight, 1.0f);
         input.Tree.addNumber("direct_irradiance", *mLight, 1.0f);
         break;
+    case CallType::IrradianceHori:
+        input.Tree.addNumber("diffuse_irradiance", *mLight, 1.0f);
+        input.Tree.addNumber("direct_horizontal_irradiance", *mLight, 1.0f);
+        break;
     }
 
     const char* method_name = "make_perez_light_from_brightness_clearness";
     if (callType == CallType::Irradiance)
         method_name = "make_perez_light_from_irradiance";
+    else if (callType == CallType::IrradianceHori)
+        method_name = "make_perez_light_from_irradiance_hori";
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
@@ -87,6 +98,10 @@ void PerezLight::serialize(const SerializationInput& input) const
     case CallType::Irradiance:
         input.Stream << ", " << input.Tree.getInline("diffuse_irradiance")
                      << ", " << input.Tree.getInline("direct_irradiance");
+        break;
+    case CallType::IrradianceHori:
+        input.Stream << ", " << input.Tree.getInline("diffuse_irradiance")
+                     << ", " << input.Tree.getInline("direct_horizontal_irradiance");
         break;
     }
 

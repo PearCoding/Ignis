@@ -361,4 +361,12 @@ fn @make_perez_light_from_irradiance(id: i32, scene_bbox: BBox, l_sun_dir: Vec3,
         transform
     );
 
+fn @make_perez_light_from_irradiance_hori(id: i32, scene_bbox: BBox, l_sun_dir: Vec3, tint_color: Color, ground_color: Color, diffuse_irrad: f32, direct_hori_irrad: f32, day_of_the_year: f32, has_ground: bool, has_sun: bool, transform: Mat3x3) =
+    make_perez_light_from_model(id, scene_bbox, l_sun_dir, tint_color, ground_color,
+        @|sz| perez::make_model_from_irradiance_hori(diffuse_irrad, direct_hori_irrad, sz, day_of_the_year),
+        has_ground,
+        has_sun,
+        transform
+    );
+
 // TODO: Illuminance
