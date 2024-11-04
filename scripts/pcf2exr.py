@@ -1,5 +1,5 @@
 #!/bin/python3
-# Converts pcf files to exr
+# Converts (LMK) pcf files to exr
 
 import argparse
 import simpleimageio as sio
