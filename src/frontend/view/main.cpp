@@ -179,14 +179,14 @@ int main(int argc, char** argv)
                     request_reset = false;
                 }
 
-                auto ticks = std::chrono::high_resolution_clock::now();
+                const auto ticks = std::chrono::high_resolution_clock::now();
 
                 timer_render.start();
                 runtime->step();
                 ++totalIter;
                 timer_render.stop();
 
-                auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
+                const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
                 if (cmd.SPPMode == SPPMode::Fixed && desired_iter != 0) {
                     samples_stats.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));

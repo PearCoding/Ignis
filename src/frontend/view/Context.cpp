@@ -530,11 +530,17 @@ public:
     void analyzeLuminance()
     {
         const std::string aov_name = currentAOVName();
-        ImageInfoSettings settings{ aov_name.c_str(),
-                                    1.0f, HISTOGRAM_SIZE,
-                                    Histogram.data() + 0 * HISTOGRAM_SIZE, Histogram.data() + 1 * HISTOGRAM_SIZE,
-                                    Histogram.data() + 2 * HISTOGRAM_SIZE, Histogram.data() + 3 * HISTOGRAM_SIZE,
-                                    true, true };
+        ImageInfoSettings settings{
+            .AOV               = aov_name.c_str(),
+            .Scale             = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f,
+            .Bins              = HISTOGRAM_SIZE,
+            .HistogramR        = Histogram.data() + 0 * HISTOGRAM_SIZE,
+            .HistogramG        = Histogram.data() + 1 * HISTOGRAM_SIZE,
+            .HistogramB        = Histogram.data() + 2 * HISTOGRAM_SIZE,
+            .HistogramL        = Histogram.data() + 3 * HISTOGRAM_SIZE,
+            .AcquireErrorStats = true,
+            .AcquireHistogram  = true
+        };
 
         const ImageInfoOutput output = Runtime->imageinfo(settings);
 
@@ -558,10 +564,14 @@ public:
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
-        Runtime->tonemap(buf, TonemapSettings{ aov_name.c_str(), (size_t)ToneMappingMethod, ToneMappingGamma,
-                                               1.0f,
-                                               ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
-                                               ToneMapping_Automatic ? 0 : ToneMapping_Offset });
+        Runtime->tonemap(buf,
+                         TonemapSettings{
+                             .AOV            = aov_name.c_str(),
+                             .Method         = (size_t)ToneMappingMethod,
+                             .UseGamma       = ToneMappingGamma,
+                             .Scale          = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f,
+                             .ExposureFactor = ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
+                             .ExposureOffset = ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }
@@ -1033,6 +1043,7 @@ Context::UpdateResult Context::update()
     default:
         break;
     }
+
     SDL_RenderClear(mInternal->Renderer);
     SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
 

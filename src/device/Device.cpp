@@ -1768,16 +1768,15 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& driver_setting
 {
     enterDevice();
 
-    const auto acc       = sInterface->getAOVImageForDevice(driver_settings.AOV);
-    float* in_pixels     = acc.Data;
-    const float inv_iter = sInterface->currentRenderSettings().iteration > 0 ? 1.0f / sInterface->currentRenderSettings().iteration : 0.0f;
+    const auto acc   = sInterface->getAOVImageForDevice(driver_settings.AOV);
+    float* in_pixels = acc.Data;
 
     uint32_t* device_out_pixels = sInterface->isGPU() ? sInterface->getTonemapImageGPU() : out_pixels;
 
     ::TonemapSettings settings;
     settings.method          = (int)driver_settings.Method;
     settings.use_gamma       = driver_settings.UseGamma;
-    settings.scale           = driver_settings.Scale * inv_iter;
+    settings.scale           = driver_settings.Scale;
     settings.exposure_factor = driver_settings.ExposureFactor;
     settings.exposure_offset = driver_settings.ExposureOffset;
 
@@ -1795,12 +1794,11 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& driver_settings)
 {
     enterDevice();
 
-    const auto acc       = sInterface->getAOVImageForDevice(driver_settings.AOV);
-    float* in_pixels     = acc.Data;
-    const float inv_iter = sInterface->currentRenderSettings().iteration > 0 ? 1.0f / sInterface->currentRenderSettings().iteration : 0.0f;
+    const auto acc   = sInterface->getAOVImageForDevice(driver_settings.AOV);
+    float* in_pixels = acc.Data;
 
     ::ImageInfoSettings settings;
-    settings.scale               = driver_settings.Scale * inv_iter;
+    settings.scale               = driver_settings.Scale;
     settings.bins                = (int)driver_settings.Bins;
     settings.histogram_r         = driver_settings.HistogramR;
     settings.histogram_g         = driver_settings.HistogramG;
