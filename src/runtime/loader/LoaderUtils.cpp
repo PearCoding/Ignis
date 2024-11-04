@@ -45,17 +45,6 @@ std::string LoaderUtils::inlineTransformAs2d(const Transformf& t)
     return inlineMatrix(mat);
 }
 
-std::string LoaderUtils::inlineMatrix2d(const Matrix2f& mat)
-{
-    if (mat.isIdentity()) {
-        return "mat2x2_identity()";
-    } else {
-        std::stringstream stream;
-        stream << "make_mat2x2(" << inlineVector2d(mat.col(0)) << ", " << inlineVector2d(mat.col(1)) << ")";
-        return stream.str();
-    }
-}
-
 std::string LoaderUtils::inlineMatrix(const Matrix3f& mat)
 {
     if (mat.isIdentity()) {
@@ -67,13 +56,6 @@ std::string LoaderUtils::inlineMatrix(const Matrix3f& mat)
     }
 }
 
-std::string LoaderUtils::inlineVector2d(const Vector2f& pos)
-{
-    std::stringstream stream;
-    stream << "make_vec2(" << pos.x() << ", " << pos.y() << ")";
-    return stream.str();
-}
-
 std::string LoaderUtils::inlineVector(const Vector3f& pos)
 {
     std::stringstream stream;
@@ -81,15 +63,9 @@ std::string LoaderUtils::inlineVector(const Vector3f& pos)
     return stream.str();
 }
 
-std::string LoaderUtils::inlineColor(const Vector3f& color)
-{
-    std::stringstream stream;
-    stream << "make_color(" << color.x() << ", " << color.y() << ", " << color.z() << ", 1)";
-    return stream.str();
-}
-
 TimePoint LoaderUtils::getTimePoint(SceneObject& obj)
 {
+    // TODO: Use shading tree to precompute the numbers
     TimePoint timepoint;
     timepoint.Year    = obj.property("year").getInteger(timepoint.Year);
     timepoint.Month   = obj.property("month").getInteger(timepoint.Month);
@@ -102,6 +78,7 @@ TimePoint LoaderUtils::getTimePoint(SceneObject& obj)
 
 MapLocation LoaderUtils::getLocation(SceneObject& obj)
 {
+    // TODO: Use shading tree to precompute the numbers
     MapLocation location;
     location.Latitude  = obj.property("latitude").getNumber(location.Latitude);
     location.Longitude = obj.property("longitude").getNumber(location.Longitude);
@@ -111,6 +88,7 @@ MapLocation LoaderUtils::getLocation(SceneObject& obj)
 
 ElevationAzimuth LoaderUtils::getEA(SceneObject& obj)
 {
+    // TODO: Use shading tree to precompute the numbers
     if (obj.property("direction").isValid()) {
         return ElevationAzimuth::fromDirectionYUp(obj.property("direction").getVector3(Vector3f(0, 0, 1)).normalized());
     } else if (obj.property("sun_direction").isValid()) {

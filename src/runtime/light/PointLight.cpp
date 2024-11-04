@@ -37,11 +37,12 @@ void PointLight::serialize(const SerializationInput& input) const
         input.Tree.addColor("power", *mLight, Vector3f::Constant(SR));
     else
         input.Tree.addColor("intensity", *mLight, Vector3f::Ones());
+    input.Tree.addVector("origin", *mLight, mPosition);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
                  << "  let light_" << light_id << " = make_point_light(" << input.ID
-                 << ", " << LoaderUtils::inlineVector(mPosition);
+                 << ", " << input.Tree.getInline("origin");
 
     if (mUsingPower)
         input.Stream << ", color_mulf(" << input.Tree.getInline("power") << ", 1 / (4*flt_pi)));" << std::endl;

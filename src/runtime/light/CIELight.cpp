@@ -46,6 +46,7 @@ void CIELight::serialize(const SerializationInput& input) const
     input.Tree.addColor("ground", *mLight, Vector3f::Ones());
     input.Tree.addNumber("ground_brightness", *mLight, 0.2f);
     input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
+    input.Tree.addVector("direction", *mLight, mSunDirection);
 
     if (mClassification == CIEType::Uniform || mClassification == CIEType::Cloudy) {
         bool cloudy = mClassification == CIEType::Cloudy;
@@ -101,7 +102,7 @@ void CIELight::serialize(const SerializationInput& input) const
                      << ", " << input.Tree.getInline("ground_brightness")
                      << ", " << (mClassification == CIEType::Clear ? "true" : "false")
                      << ", " << (mHasGround ? "true" : "false")
-                     << ", " << LoaderUtils::inlineVector(mSunDirection)
+                     << ", " << input.Tree.getInline("direction")
                      << ", " << c2
                      << ", " << input.Tree.getInlineMatrix3("_transform") << ");" << std::endl;
     }

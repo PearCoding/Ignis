@@ -49,12 +49,14 @@ void SpotLight::serialize(const SerializationInput& input) const
 
     input.Tree.addNumber("cutoff", *mLight, 30.0f);
     input.Tree.addNumber("falloff", *mLight, 20.0f);
+    input.Tree.addVector("origin", *mLight, mPosition);
+    input.Tree.addVector("direction", *mLight, mDirection);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
                  << "  let light_" << light_id << " = make_spot_light(" << input.ID
-                 << ", " << LoaderUtils::inlineVector(mPosition)
-                 << ", " << LoaderUtils::inlineVector(mDirection)
+                 << ", " << input.Tree.getInline("origin")
+                 << ", " << input.Tree.getInline("direction")
                  << ", rad(" << input.Tree.getInline("cutoff") << ")"
                  << ", rad(" << input.Tree.getInline("falloff") << ")";
 
