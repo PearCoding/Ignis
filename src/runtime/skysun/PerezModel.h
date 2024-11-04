@@ -21,11 +21,11 @@ public:
     /// @param solar_zenith Solar zenith given radians
     float integrate(float solar_zenith) const;
 
-    static float computeSkyBrightness(float diffuse_irradiance, float solar_zenith, int day_of_the_year);
+    static float computeSkyBrightness(float diffuse_irradiance, float solar_zenith, float day_of_the_year);
     static float computeSkyClearness(float diffuse_irradiance, float direct_irradiance, float solar_zenith);
 
-    static float computeDiffuseIrradiance(float sky_brightness, float solar_zenith, int day_of_the_year);
-    static float computeDirectIrradiance(float sky_brightness, float sky_clearness, float solar_zenith, int day_of_the_year);
+    static float computeDiffuseIrradiance(float sky_brightness, float solar_zenith, float day_of_the_year);
+    static float computeDirectIrradiance(float sky_brightness, float sky_clearness, float solar_zenith, float day_of_the_year);
 
     static float computeDiffuseEfficacy(float sky_brightness, float sky_clearness, float solar_zenith);
     static float computeDirectEfficacy(float sky_brightness, float sky_clearness, float solar_zenith);
@@ -44,14 +44,14 @@ public:
     /// @param direct_irradiance Direct normal irradiance [W/m^2]
     /// @param solar_zenith Solar zenith given radians
     /// @param day_of_the_year Day of the year between [0, 365]
-    static PerezModel fromIrrad(float diffuse_irradiance, float direct_irradiance, float solar_zenith, int day_of_the_year);
+    static PerezModel fromIrrad(float diffuse_irradiance, float direct_irradiance, float solar_zenith, float day_of_the_year);
 
     /// @brief Setup perez model using diffuse and direct illuminance values
     /// @param diffuse_irradiance Diffuse horizontal illuminance [Lux]
     /// @param direct_irradiance Direct normal illuminance [Lux]
     /// @param solar_zenith Solar zenith given radians
     /// @param day_of_the_year Day of the year between [0, 365]
-    static PerezModel fromIllum(float diffuse_illuminance, float direct_illuminance, float solar_zenith, int day_of_the_year);
+    static PerezModel fromIllum(float diffuse_illuminance, float direct_illuminance, float solar_zenith, float day_of_the_year);
 
 private:
     PerezModel(float a, float b, float c, float d, float e)

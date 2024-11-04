@@ -243,13 +243,13 @@ static inline float computeAirMass(float solar_zenith)
     return 1 / (std::cos(Deg2Rad * solar_zenith_deg) + 0.15f * std::exp(std::log(93.885f - solar_zenith_deg) * -1.253f));
 }
 
-static inline float computeEccentricity(int day_of_the_year)
+static inline float computeEccentricity(float day_of_the_year)
 {
     float day_angle = 2 * Pi * std::min(std::max(day_of_the_year / 365.0f, 0.0f), 1.0f);
     return 1.00011f + 0.034221f * std::cos(day_angle) + 0.00128f * std::sin(day_angle) + 0.000719f * std::cos(2 * day_angle) + 0.000077f * std::sin(2 * day_angle);
 }
 
-float PerezModel::computeSkyBrightness(float diff_irrad, float solar_zenith, int day_of_the_year)
+float PerezModel::computeSkyBrightness(float diff_irrad, float solar_zenith, float day_of_the_year)
 {
     return diff_irrad * computeAirMass(solar_zenith) / (SolarConstantE * computeEccentricity(day_of_the_year));
 }
@@ -260,12 +260,12 @@ float PerezModel::computeSkyClearness(float diff_irrad, float direct_irrad, floa
     return ((diff_irrad + direct_irrad) / diff_irrad + A) / (1 + A);
 }
 
-float PerezModel::computeDiffuseIrradiance(float sky_brightness, float solar_zenith, int day_of_the_year)
+float PerezModel::computeDiffuseIrradiance(float sky_brightness, float solar_zenith, float day_of_the_year)
 {
     return sky_brightness * SolarConstantE * computeEccentricity(day_of_the_year) / computeAirMass(solar_zenith);
 }
 
-float PerezModel::computeDirectIrradiance(float sky_brightness, float sky_clearness, float solar_zenith, int day_of_the_year)
+float PerezModel::computeDirectIrradiance(float sky_brightness, float sky_clearness, float solar_zenith, float day_of_the_year)
 {
     const float diff_irrad = computeDiffuseIrradiance(sky_brightness, solar_zenith, day_of_the_year);
     const float A          = 1.041f * solar_zenith * solar_zenith * solar_zenith;
@@ -273,7 +273,7 @@ float PerezModel::computeDirectIrradiance(float sky_brightness, float sky_clearn
     return (sky_clearness * (1 + A) - A) * diff_irrad - diff_irrad;
 }
 
-PerezModel PerezModel::fromIrrad(float diffuse_irradiance, float direct_irradiance, float solar_zenith, int day_of_the_year)
+PerezModel PerezModel::fromIrrad(float diffuse_irradiance, float direct_irradiance, float solar_zenith, float day_of_the_year)
 {
     if (diffuse_irradiance < 0)
         diffuse_irradiance = 0;
@@ -287,7 +287,7 @@ PerezModel PerezModel::fromIrrad(float diffuse_irradiance, float direct_irradian
                    solar_zenith);
 }
 
-PerezModel PerezModel::fromIllum(float diffuse_illuminance, float direct_illuminance, float solar_zenith, int day_of_the_year)
+PerezModel PerezModel::fromIllum(float diffuse_illuminance, float direct_illuminance, float solar_zenith, float day_of_the_year)
 {
     if (diffuse_illuminance < 0)
         diffuse_illuminance = 0;

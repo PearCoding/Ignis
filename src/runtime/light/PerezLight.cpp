@@ -43,7 +43,7 @@ void PerezLight::serialize(const SerializationInput& input) const
         input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
 
     input.Tree.addVector("direction", *mLight, mSunDirection);
-    input.Tree.addNumber("day_of_the_year", *mLight, mTimePoint.dayOfTheYear());
+    input.Tree.addNumber("day_of_the_year", *mLight, (float)mTimePoint.dayOfTheYear());
     input.Tree.addColor("color", *mLight, Vector3f::Ones()); // Tint color
 
     CallType callType = CallType::BrightnessClearness;

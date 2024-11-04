@@ -46,7 +46,7 @@ TimePoint TimePoint::nowUTC()
     tp.Day     = tm->tm_mday;
     tp.Hour    = tm->tm_hour;
     tp.Minute  = tm->tm_min;
-    tp.Seconds = tm->tm_sec;
+    tp.Seconds = (float)tm->tm_sec;
     return tp;
 }
 

@@ -114,7 +114,7 @@ std::string ShaderUtils::generateMaterialShader(ShadingTree& tree, size_t mat_id
     if (isLight && requireLights) {
         const size_t light_id = tree.context().Lights->getAreaLightID(material.Entity);
 
-        tree.context().LocalRegistry.IntParameters["_light_id"] = light_id;
+        tree.context().LocalRegistry.IntParameters["_light_id"] = (int)light_id;
 
         stream << "  let light_id = registry::get_local_parameter_i32(\"_light_id\", 0);" << std::endl
                << "  let " << output_var << " : MaterialShader = @|ctx| make_emissive_material(mat_id, bsdf_" << bsdf_id << "(ctx), medium_interface,"

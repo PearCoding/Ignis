@@ -592,7 +592,7 @@ private:
         const auto dayOfTheYearName = SceneProperty::fromString("sky_day_of_the_year");
         auto dayOfTheYearParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
         dayOfTheYearParameter->setProperty("name", dayOfTheYearName);
-        dayOfTheYearParameter->setProperty("value", SceneProperty::fromNumber(TimePoint().dayOfTheYear()));
+        dayOfTheYearParameter->setProperty("value", SceneProperty::fromNumber((float)TimePoint().dayOfTheYear()));
 
         const auto colorName = SceneProperty::fromString("sky_color");
         auto colorParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "color", Path{});

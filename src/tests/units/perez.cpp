@@ -13,12 +13,12 @@ TEST_CASE("Crosscheck with Radiance gendaylit", "[Perez]")
     const Vector3f sunDir     = Vector3f(-0.615494f, -0.757725f, 0.216842f);
     const float solar_zenith  = std::acos(sunDir.z()); // Note: Ignis uses +Y as Up vector by default not +Z like here
     const int day_of_the_year = TimePoint(2022, 11, 18, 13).dayOfTheYear();
-    PerezModel model          = PerezModel::fromIrrad(diffirrad, dirirrad, solar_zenith, day_of_the_year);
+    PerezModel model          = PerezModel::fromIrrad(diffirrad, dirirrad, solar_zenith, (float)day_of_the_year);
     const float integrand     = model.integrate(solar_zenith);
     const float diffnorm      = diffirrad / integrand;
     // const float diffillumnorm = convertIrradianceToIlluminance(diffirrad) / (integrand * WhiteEfficiency); // TODO: Not that simple
     const float epsilon       = PerezModel::computeSkyClearness(diffirrad, dirirrad, solar_zenith);
-    const float delta         = PerezModel::computeSkyBrightness(diffirrad, solar_zenith, day_of_the_year);
+    const float delta         = PerezModel::computeSkyBrightness(diffirrad, solar_zenith, (float)day_of_the_year);
 
     // gendaylit 11 18 13 -y 2022 -a +49.235422 -o -6.9965744 -m 15 -s -W 0.38999998569488525 57.029998779296875 -O 1
     // -> 1.064e+01 4.560e+00 0.597123 -0.562370 0.828195 -0.625727 0.009207 -0.615494 -0.757725 0.216842

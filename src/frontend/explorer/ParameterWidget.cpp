@@ -239,7 +239,7 @@ void ParameterWidget::onRender(Widget*)
                     if (ImGui::Button("Load##SunDirPopup")) {
                         ea = computeSunEA(tp, ml);
                         if (tp.dayOfTheYear() != day_of_the_year) {
-                            day_of_the_year = tp.dayOfTheYear();
+                            day_of_the_year = (float)tp.dayOfTheYear();
                             runtime->setParameter("sky_day_of_the_year", day_of_the_year);
                             runtime->reset();
                         }
