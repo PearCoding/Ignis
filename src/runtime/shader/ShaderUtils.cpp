@@ -148,10 +148,12 @@ std::string ShaderUtils::inlineSPI(const LoaderOptions& opts)
 {
     std::stringstream stream;
 
-    if (opts.SamplesPerIteration == 1 && opts.Specialization != RuntimeOptions::SpecializationMode::Disable) // Hardcode this case as some optimizations might apply
-        stream << opts.SamplesPerIteration << " : i32";
-    else // Fallback to dynamic spi
-        stream << "settings.spi";
+    IG_UNUSED(opts);
+    // Note: Reevaluate, but it seems not worth it...
+    // if (opts.SamplesPerIteration == 1 && opts.Specialization != RuntimeOptions::SpecializationMode::Disable) // Hardcode this case as some optimizations might apply
+    //     stream << opts.SamplesPerIteration << " : i32";
+    // else // Fallback to dynamic spi
+    stream << "settings.spi";
 
     // We do not hardcode the spi as default to prevent recompilations if spi != 1
     return stream.str();
