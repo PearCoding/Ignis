@@ -45,8 +45,7 @@ void CIELight::serialize(const SerializationInput& input) const
     input.Tree.addColor("zenith", *mLight, Vector3f::Ones());
     input.Tree.addColor("ground", *mLight, Vector3f::Ones());
     input.Tree.addNumber("ground_brightness", *mLight, 0.2f);
-
-    const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
+    input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
 
     if (mClassification == CIEType::Uniform || mClassification == CIEType::Cloudy) {
         bool cloudy = mClassification == CIEType::Cloudy;
@@ -60,7 +59,7 @@ void CIELight::serialize(const SerializationInput& input) const
                      << ", " << input.Tree.getInline("ground_brightness")
                      << ", " << (cloudy ? "true" : "false")
                      << ", " << (mHasGround ? "true" : "false")
-                     << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+                     << ", " << input.Tree.getInlineMatrix3("_transform") << ");" << std::endl;
     } else {
         auto ea = LoaderUtils::getEA(*mLight);
         if (ea.Elevation > 87 * Deg2Rad) {
@@ -104,7 +103,7 @@ void CIELight::serialize(const SerializationInput& input) const
                      << ", " << (mHasGround ? "true" : "false")
                      << ", " << LoaderUtils::inlineVector(mSunDirection)
                      << ", " << c2
-                     << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+                     << ", " << input.Tree.getInlineMatrix3("_transform") << ");" << std::endl;
     }
 
     input.Tree.endClosure();

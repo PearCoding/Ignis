@@ -197,6 +197,15 @@ void ShadingTree::addNumber(const std::string& name, SceneObject& obj, const std
     currentClosure().Parameters[name] = inline_str;
 }
 
+void ShadingTree::addComputedNumber(const std::string& prop_name, float number, const NumberOptions& options)
+{
+    if (hasParameter(prop_name)) {
+        IG_LOG(L_ERROR) << "Multiple use of parameter '" << prop_name << "'" << std::endl;
+        signalError();
+    }
+    currentClosure().Parameters[prop_name] = acquireNumber(prop_name, number, options);
+}
+
 void ShadingTree::addColor(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def, const ColorOptions& options)
 {
     if (hasParameter(name)) {
@@ -234,6 +243,15 @@ void ShadingTree::addColor(const std::string& name, SceneObject& obj, const std:
     currentClosure().Parameters[name] = inline_str;
 }
 
+void ShadingTree::addComputedColor(const std::string& prop_name, const Vector3f& color, const ColorOptions& options)
+{
+    if (hasParameter(prop_name)) {
+        IG_LOG(L_ERROR) << "Multiple use of parameter '" << prop_name << "'" << std::endl;
+        signalError();
+    }
+    currentClosure().Parameters[prop_name] = acquireColor(prop_name, color, options);
+}
+
 void ShadingTree::addVector(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def, const VectorOptions& options)
 {
     if (hasParameter(name)) {
@@ -267,6 +285,38 @@ void ShadingTree::addVector(const std::string& name, SceneObject& obj, const std
 
     currentClosure().Parameters[name] = inline_str;
 }
+
+void ShadingTree::addComputedVector(const std::string& prop_name, const Vector3f& vec, const VectorOptions& options)
+{
+    if (hasParameter(prop_name)) {
+        IG_LOG(L_ERROR) << "Multiple use of parameter '" << prop_name << "'" << std::endl;
+        signalError();
+    }
+    currentClosure().Parameters[prop_name] = acquireVector(prop_name, vec, options);
+}
+
+void ShadingTree::addComputedMatrix3(const std::string& prop_name, const Matrix3f& mat, const VectorOptions& options)
+{
+    addComputedVector(prop_name + "_c0", mat.col(0), options);
+    addComputedVector(prop_name + "_c1", mat.col(1), options);
+    addComputedVector(prop_name + "_c2", mat.col(2), options);
+}
+
+void ShadingTree::addComputedMatrix34(const std::string& prop_name, const Matrix34f& mat, const VectorOptions& options)
+{
+    addComputedVector(prop_name + "_c0", mat.col(0), options);
+    addComputedVector(prop_name + "_c1", mat.col(1), options);
+    addComputedVector(prop_name + "_c2", mat.col(2), options);
+    addComputedVector(prop_name + "_c3", mat.col(3), options);
+}
+
+// void ShadingTree::addComputedMatrix44(const std::string& prop_name, const Matrix4f& mat, const VectorOptions& options)
+// {
+//     addComputedVector(prop_name + "_c0", mat.col(0), options);
+//     addComputedVector(prop_name + "_c1", mat.col(1), options);
+//     addComputedVector(prop_name + "_c2", mat.col(2), options);
+//     addComputedVector(prop_name + "_c3", mat.col(3), options);
+// }
 
 // Only use this if no basic color information suffices
 void ShadingTree::addTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def, const TextureOptions& options)
@@ -559,7 +609,7 @@ ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::str
 }
 
 ShadingTree::BakeOutputColor ShadingTree::bakeTextureExpressionAverage(const std::string& name, const std::string& expr, const Vector3f& def, const GenericBakeOptions& options)
-{    
+{
     auto res = mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
@@ -659,6 +709,23 @@ std::string ShadingTree::getInline(const std::string& name)
     IG_LOG(L_ERROR) << "Trying to access unknown parameter '" << name << "'" << std::endl;
     signalError();
     return "";
+}
+
+std::string ShadingTree::getInlineMatrix3(const std::string& name)
+{
+    const std::string c0 = getInline(name + "_c0");
+    const std::string c1 = getInline(name + "_c1");
+    const std::string c2 = getInline(name + "_c2");
+    return "make_mat3x3(" + c0 + "," + c1 + "," + c2 + ")";
+}
+
+std::string ShadingTree::getInlineMatrix34(const std::string& name)
+{
+    const std::string c0 = getInline(name + "_c0");
+    const std::string c1 = getInline(name + "_c1");
+    const std::string c2 = getInline(name + "_c2");
+    const std::string c3 = getInline(name + "_c3");
+    return "make_mat3x4(" + c0 + "," + c1 + "," + c2 + "," + c3 + ")";
 }
 
 void ShadingTree::registerTextureUsage(const std::string& name)

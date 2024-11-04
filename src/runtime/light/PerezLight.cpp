@@ -39,13 +39,11 @@ void PerezLight::serialize(const SerializationInput& input) const
 
     if (mLight->hasProperty("up"))
         input.Tree.addVector("up", *mLight, Vector3f::UnitY());
+    else
+        input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
 
-    if (mLight->hasProperty("direction"))
-        input.Tree.addVector("direction", *mLight, Vector3f::UnitY());
-
-    if (mLight->hasProperty("day_of_the_year"))
-        input.Tree.addNumber("day_of_the_year", *mLight, mTimePoint.dayOfTheYear());
-
+    input.Tree.addVector("direction", *mLight, mSunDirection);
+    input.Tree.addNumber("day_of_the_year", *mLight, mTimePoint.dayOfTheYear());
     input.Tree.addColor("color", *mLight, Vector3f::Ones()); // Tint color
 
     CallType callType = CallType::BrightnessClearness;
@@ -80,14 +78,9 @@ void PerezLight::serialize(const SerializationInput& input) const
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
                  << "  let light_" << light_id << " = " << method_name << "(" << input.ID
-                 << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context());
-
-    if (mLight->hasProperty("direction"))
-        input.Stream << ", vec3_normalize(" << input.Tree.getInline("direction") << ")";
-    else
-        input.Stream << ", vec3_normalize(" << LoaderUtils::inlineVector(mSunDirection) << ")";
-
-    input.Stream << ", " << input.Tree.getInline("color")
+                 << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
+                 << ", vec3_normalize(" << input.Tree.getInline("direction") << ")"
+                 << ", " << input.Tree.getInline("color")
                  << ", " << input.Tree.getInline("ground");
 
     switch (callType) {
@@ -105,20 +98,14 @@ void PerezLight::serialize(const SerializationInput& input) const
         break;
     }
 
-    if (mLight->hasProperty("direction"))
-        input.Stream << ", " << input.Tree.getInline("day_of_the_year");
-    else
-        input.Stream << ", " << mTimePoint.dayOfTheYear();
-
-    input.Stream
-        << ", " << (mHasGround ? "true" : "false")
-        << ", " << (mHasSun ? "true" : "false");
+    input.Stream << ", " << input.Tree.getInline("day_of_the_year")
+                 << ", " << (mHasGround ? "true" : "false")
+                 << ", " << (mHasSun ? "true" : "false");
 
     if (mLight->hasProperty("up")) {
         input.Stream << ", make_cie_sky_transform(vec3_normalize(" << input.Tree.getInline("up") << "))";
     } else {
-        const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
-        input.Stream << ", " << LoaderUtils::inlineMatrix(trans);
+        input.Stream << ", " << input.Tree.getInlineMatrix3("_transform");
     }
 
     input.Stream << ");" << std::endl;

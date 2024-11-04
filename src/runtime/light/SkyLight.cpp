@@ -56,7 +56,7 @@ void SkyLight::serialize(const SerializationInput& input) const
     const Path path = setup_sky(input.Tree.context(), name(), mLight);
     const auto cdf  = LoaderUtils::setup_cdf2d(input.Tree.context(), path, true, false);
 
-    const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
+    input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
 
     const size_t res_img_id    = input.Tree.context().registerExternalResource(path);
     const size_t res_cdf_id    = input.Tree.context().registerExternalResource(std::get<0>(cdf));
@@ -69,7 +69,7 @@ void SkyLight::serialize(const SerializationInput& input) const
                  << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                  << ", " << input.Tree.getInline("scale")
                  << ", sky_tex_" << light_id << ", sky_cdf_" << light_id
-                 << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+                 << ", " << input.Tree.getInlineMatrix3("_transform") << ");" << std::endl;
 
     input.Tree.endClosure();
 }

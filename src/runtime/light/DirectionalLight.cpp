@@ -22,11 +22,12 @@ void DirectionalLight::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
 
     input.Tree.addColor("irradiance", *mLight, Vector3f::Ones());
+    input.Tree.addVector("direction", *mLight, mDirection);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
                  << "  let light_" << light_id << " = make_directional_light(" << input.ID
-                 << ", " << LoaderUtils::inlineVector(mDirection)
+                 << ", vec3_normalize(" << input.Tree.getInline("direction") << ")"
                  << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                  << ", " << input.Tree.getInline("irradiance") << ");" << std::endl;
 

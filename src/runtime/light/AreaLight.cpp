@@ -38,7 +38,7 @@ AreaLight::AreaLight(const std::string& name, const LoaderContext& ctx, const st
     : Light(name, light->pluginType())
     , mLight(light)
 {
-    mEntity   = light->property("entity").getString();
+    mEntity     = light->property("entity").getString();
     mUsingPower = light->hasProperty("power");
 
     const auto entity = ctx.Entities->getEmissiveEntity(mEntity);
@@ -127,34 +127,65 @@ void AreaLight::serialize(const SerializationInput& input) const
         return;
     }
 
-    const std::string light_id = input.Tree.currentClosureID();
-    input.Stream << input.Tree.pullHeader();
+    const std::string light_id     = input.Tree.currentClosureID();
+    const std::string light_prefix = "ae_" + light_id;
+
+    const Matrix34f localMat  = entity->Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
+    const Matrix34f globalMat = entity->Transform.matrix().block<3, 4>(0, 0);                       // To Global
+    const Matrix3f normalMat  = entity->Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
 
     switch (mRepresentation) {
     case RepresentationType::Plane: {
-        const auto& shape = input.Tree.context().Shapes->getPlaneShape(entity->ShapeID);
-        Vector3f origin   = entity->Transform * shape.Origin;
-        Vector3f x_axis   = entity->Transform.linear() * shape.XAxis;
-        Vector3f y_axis   = entity->Transform.linear() * shape.YAxis;
-        Vector3f normal   = x_axis.cross(y_axis).normalized();
-        float area        = x_axis.cross(y_axis).norm();
+        const auto& shape     = input.Tree.context().Shapes->getPlaneShape(entity->ShapeID);
+        const Vector3f origin = entity->Transform * shape.Origin;
+        const Vector3f x_axis = entity->Transform.linear() * shape.XAxis;
+        const Vector3f y_axis = entity->Transform.linear() * shape.YAxis;
+        const Vector3f normal = x_axis.cross(y_axis).normalized();
+        const float area      = x_axis.cross(y_axis).norm();
 
-        input.Stream << "  let ae_" << light_id << " = make_plane_area_emitter(" << LoaderUtils::inlineVector(origin)
-                     << ", " << LoaderUtils::inlineVector(x_axis)
-                     << ", " << LoaderUtils::inlineVector(y_axis)
-                     << ", " << LoaderUtils::inlineVector(normal)
-                     << ", " << area
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[0])
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[1])
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[2])
-                     << ", " << LoaderUtils::inlineVector2d(shape.TexCoords[3])
-                     << ");" << std::endl;
+        input.Tree.addComputedVector(light_prefix + "_origin", origin, ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedVector(light_prefix + "_tangent", x_axis);
+        input.Tree.addComputedVector(light_prefix + "_bitangent", y_axis);
+        input.Tree.addComputedVector(light_prefix + "_normal", normal);
+        input.Tree.addComputedNumber(light_prefix + "_area", area);
+
+        input.Tree.addComputedVector(light_prefix + "_t0", Vector3f(shape.TexCoords[0].x(), shape.TexCoords[0].y(), 0), ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedVector(light_prefix + "_t1", Vector3f(shape.TexCoords[1].x(), shape.TexCoords[1].y(), 0), ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedVector(light_prefix + "_t2", Vector3f(shape.TexCoords[2].x(), shape.TexCoords[2].y(), 0), ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedVector(light_prefix + "_t3", Vector3f(shape.TexCoords[3].x(), shape.TexCoords[3].y(), 0), ShadingTree::VectorOptions::Dynamic());
+
+        input.Stream << input.Tree.pullHeader();
+        input.Stream
+            << "  let ae_" << light_id << " = make_plane_area_emitter("
+            << input.Tree.getInline(light_prefix + "_origin")
+            << ", " << input.Tree.getInline(light_prefix + "_tangent")
+            << ", " << input.Tree.getInline(light_prefix + "_bitangent")
+            << ", " << input.Tree.getInline(light_prefix + "_normal")
+            << ", " << input.Tree.getInline(light_prefix + "_area")
+            << ", vec3_to_2(" << input.Tree.getInline(light_prefix + "_t0") << ")"
+            << ", vec3_to_2(" << input.Tree.getInline(light_prefix + "_t1") << ")"
+            << ", vec3_to_2(" << input.Tree.getInline(light_prefix + "_t2") << ")"
+            << ", vec3_to_2(" << input.Tree.getInline(light_prefix + "_t3") << ")"
+            << ");" << std::endl;
     } break;
     case RepresentationType::Sphere: {
-        const auto& shape = input.Tree.context().Shapes->getSphereShape(entity->ShapeID);
+        const auto& shape     = input.Tree.context().Shapes->getSphereShape(entity->ShapeID);
+        const Vector3f origin = entity->Transform * shape.Origin;
 
-        input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter(" << LoaderUtils::inlineEntity(*entity)
-                     << ",  Sphere{ origin = " << LoaderUtils::inlineVector(shape.Origin)
+        input.Tree.addComputedVector(light_prefix + "_origin", origin, ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedMatrix34(light_prefix + "_local", localMat, ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedMatrix34(light_prefix + "_global", globalMat, ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedMatrix3(light_prefix + "_normal", normalMat, ShadingTree::VectorOptions::Dynamic());
+
+        input.Stream << input.Tree.pullHeader();
+        input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter("
+                     << "Entity{ id = " << entity->ID
+                     << ", mat_id = " << entity->MatID
+                     << ", local_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_local")
+                     << ", global_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_global")
+                     << ", normal_mat = " << input.Tree.getInlineMatrix3(light_prefix + "_normal")
+                     << ", shape_id = " << entity->ShapeID << " }"
+                     << ",  Sphere{ origin = " << input.Tree.getInline(light_prefix + "_origin")
                      << ", radius = " << shape.Radius
                      << " });" << std::endl;
     } break;
@@ -163,13 +194,25 @@ void AreaLight::serialize(const SerializationInput& input) const
         if (input.Tree.context().Shapes->isTriShape(entity->ShapeID)) {
             const auto& shape = input.Tree.context().Shapes->getShape(entity->ShapeID);
             const auto& tri   = input.Tree.context().Shapes->getTriShape(entity->ShapeID);
+
+            input.Tree.addComputedMatrix34(light_prefix + "_local", localMat, ShadingTree::VectorOptions::Dynamic());
+            input.Tree.addComputedMatrix34(light_prefix + "_global", globalMat, ShadingTree::VectorOptions::Dynamic());
+            input.Tree.addComputedMatrix3(light_prefix + "_normal", normalMat, ShadingTree::VectorOptions::Dynamic());
+
+            input.Stream << input.Tree.pullHeader();
             input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device, "
                          << shape.TableOffset
                          << ", " << tri.FaceCount
                          << ", " << tri.VertexCount
                          << ", " << tri.NormalCount
                          << ", " << tri.TexCount << ");" << std::endl
-                         << "  let ae_" << light_id << " = make_shape_area_emitter(" << LoaderUtils::inlineEntity(*entity)
+                         << "  let ae_" << light_id << " = make_shape_area_emitter("
+                         << "Entity{ id = " << entity->ID
+                         << ", mat_id = " << entity->MatID
+                         << ", local_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_local")
+                         << ", global_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_global")
+                         << ", normal_mat = " << input.Tree.getInlineMatrix3(light_prefix + "_normal")
+                         << ", shape_id = " << entity->ShapeID << " }"
                          << ", make_trimesh_shape(trimesh_" << light_id << "));" << std::endl;
         } else {
             // Error already messaged

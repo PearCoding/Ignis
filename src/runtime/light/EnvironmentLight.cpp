@@ -54,9 +54,10 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
 
     input.Tree.addColor("scale", *mLight, Vector3f::Ones());
     input.Tree.addTexture("radiance", *mLight, Vector3f::Ones());
-    const Matrix3f trans = mLight->property("transform").getTransform().linear().transpose().inverse();
+    input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
 
     const std::string light_id = input.Tree.currentClosureID();
+
     if (mCDFMethod != CDFMethod::None && baked.has_value() && baked.value()->width > 1 && baked.value()->height > 1) {
         input.Stream << input.Tree.pullHeader();
         switch (mCDFMethod) {
@@ -85,14 +86,14 @@ void EnvironmentLight::serialize(const SerializationInput& input) const
                      << ", " << input.Tree.getInline("scale")
                      << ", " << input.Tree.getInline("radiance")
                      << ", cdf_" << light_id
-                     << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+                     << ", " << input.Tree.getInlineMatrix3("_transform") << ");" << std::endl;
     } else {
         input.Stream << input.Tree.pullHeader()
                      << "  let light_" << light_id << " = make_environment_light(" << input.ID
                      << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                      << ", " << input.Tree.getInline("scale")
                      << ", " << input.Tree.getInline("radiance")
-                     << ", " << LoaderUtils::inlineMatrix(trans) << ");" << std::endl;
+                     << ", " << input.Tree.getInlineMatrix3("_transform") << ");" << std::endl;
     }
 
     input.Tree.endClosure();

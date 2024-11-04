@@ -119,6 +119,13 @@ public:
     void addVector(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
 
+    void addComputedNumber(const std::string& prop_name, float number, const NumberOptions& options = NumberOptions::Full());
+    void addComputedColor(const std::string& prop_name, const Vector3f& color, const ColorOptions& options = ColorOptions::Full());
+    void addComputedVector(const std::string& prop_name, const Vector3f& vec, const VectorOptions& options = VectorOptions::Full());
+    void addComputedMatrix3(const std::string& prop_name, const Matrix3f& mat, const VectorOptions& options = VectorOptions::Full());
+    void addComputedMatrix34(const std::string& prop_name, const Matrix34f& mat, const VectorOptions& options = VectorOptions::Full());
+    // void addComputedMatrix4(const std::string& prop_name, const Matrix4f& mat, const VectorOptions& options = VectorOptions::Full());
+
     BakeOutputNumber computeNumber(const std::string& name, SceneObject& obj, float def = 0, const GenericBakeOptions& options = GenericBakeOptions::Default());
     BakeOutputColor computeColor(const std::string& name, SceneObject& obj, const Vector3f& def = Vector3f::Zero(), const GenericBakeOptions& options = GenericBakeOptions::Default());
 
@@ -135,6 +142,9 @@ public:
     void registerTextureUsage(const std::string& name);
     std::string pullHeader();
     std::string getInline(const std::string& name);
+    std::string getInlineMatrix3(const std::string& name);
+    std::string getInlineMatrix34(const std::string& name);
+    // std::string getInlineMatrix4(const std::string& name);
     inline bool hasParameter(const std::string& name) const { return currentClosure().Parameters.count(name) > 0; }
 
     inline LoaderContext& context() { return mContext; }

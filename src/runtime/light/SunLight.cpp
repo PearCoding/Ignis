@@ -35,20 +35,14 @@ void SunLight::serialize(const SerializationInput& input) const
         input.Tree.addColor("irradiance", *mLight, Vector3f::Ones());
 
     input.Tree.addNumber("angle", *mLight, FltSunRadiusDegree);
-
-    if (mLight->hasProperty("direction"))
-        input.Tree.addVector("direction", *mLight, Vector3f::UnitY());
+    input.Tree.addVector("direction", *mLight, mDirection);
 
     const std::string light_id = input.Tree.currentClosureID();
     input.Stream << input.Tree.pullHeader()
                  << "  let light_" << light_id << " = make_sun_light(" << input.ID;
 
-    if (mLight->hasProperty("direction"))
-        input.Stream << ", vec3_normalize(" << input.Tree.getInline("direction") << ")";
-    else
-        input.Stream << ", vec3_normalize(" << LoaderUtils::inlineVector(mDirection) << ")";
-
-    input.Stream << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
+    input.Stream << ", vec3_normalize(" << input.Tree.getInline("direction") << ")"
+                 << ", " << LoaderUtils::inlineSceneBBox(input.Tree.context())
                  << ", math_builtins::cos(rad(" << input.Tree.getInline("angle") << "/2))";
 
     if (mUseRadiance) {

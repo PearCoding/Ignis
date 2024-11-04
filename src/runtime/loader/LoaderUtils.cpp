@@ -19,23 +19,6 @@ std::string LoaderUtils::inlineSceneBBox(const LoaderContext& ctx)
 #endif
 }
 
-std::string LoaderUtils::inlineEntity(const Entity& entity)
-{
-    // TODO: Might be beneficial to put this into the registry?
-    const Matrix34f localMat  = entity.Transform.inverse().matrix().block<3, 4>(0, 0);             // To Local
-    const Matrix34f globalMat = entity.Transform.matrix().block<3, 4>(0, 0);                       // To Global
-    const Matrix3f normalMat  = entity.Transform.matrix().block<3, 3>(0, 0).transpose().inverse(); // To Global [Normal]
-
-    std::stringstream stream;
-    stream << "Entity{ id = " << entity.ID
-           << ", mat_id = " << entity.MatID
-           << ", local_mat = " << LoaderUtils::inlineMatrix34(localMat)
-           << ", global_mat = " << LoaderUtils::inlineMatrix34(globalMat)
-           << ", normal_mat = " << LoaderUtils::inlineMatrix(normalMat)
-           << ", shape_id = " << entity.ShapeID << " }";
-    return stream.str();
-}
-
 std::string LoaderUtils::escapeIdentifier(const std::string& name)
 {
     IG_ASSERT(!name.empty(), "Given string should not be empty");
@@ -80,17 +63,6 @@ std::string LoaderUtils::inlineMatrix(const Matrix3f& mat)
     } else {
         std::stringstream stream;
         stream << "make_mat3x3(" << inlineVector(mat.col(0)) << ", " << inlineVector(mat.col(1)) << ", " << inlineVector(mat.col(2)) << ")";
-        return stream.str();
-    }
-}
-
-std::string LoaderUtils::inlineMatrix34(const Matrix34f& mat)
-{
-    if (mat.isIdentity()) {
-        return "mat3x4_identity()";
-    } else {
-        std::stringstream stream;
-        stream << "make_mat3x4(" << inlineVector(mat.col(0)) << ", " << inlineVector(mat.col(1)) << ", " << inlineVector(mat.col(2)) << ", " << inlineVector(mat.col(3)) << ")";
         return stream.str();
     }
 }
