@@ -2082,7 +2082,7 @@ IG_EXPORT void ignis_handle_callback_shader(int type)
 }
 
 // Registry stuff
-IG_EXPORT int ignis_get_parameter_i32(const char* name, int def, bool global)
+IG_EXPORT int ignis_get_parameter_i32(const char* name, int32_t def, bool global)
 {
     return sInterface->getParameterInt(name, def, global);
 }
@@ -2107,7 +2107,7 @@ IG_EXPORT const char* ignis_get_parameter_string(const char* name, const char* d
     return sInterface->getParameterString(name, def, global);
 }
 
-IG_EXPORT void ignis_set_parameter_i32(const char* name, int value, bool global)
+IG_EXPORT void ignis_set_parameter_i32(const char* name, int32_t value, bool global)
 {
     sInterface->setParameterInt(name, value, global);
 }
@@ -2128,7 +2128,7 @@ IG_EXPORT void ignis_set_parameter_color(const char* name, float valueR, float v
 }
 
 // Stats
-IG_EXPORT void ignis_stats_begin_section(int id)
+IG_EXPORT void ignis_stats_begin_section(int32_t id)
 {
     if (!sInterface->hasStatisticAquisition())
         return;
@@ -2136,7 +2136,7 @@ IG_EXPORT void ignis_stats_begin_section(int id)
     sInterface->getThreadData()->stats.beginSection((IG::SectionType)id);
 }
 
-IG_EXPORT void ignis_stats_end_section(int id)
+IG_EXPORT void ignis_stats_end_section(int32_t id)
 {
     if (!sInterface->hasStatisticAquisition())
         return;
@@ -2144,7 +2144,7 @@ IG_EXPORT void ignis_stats_end_section(int id)
     sInterface->getThreadData()->stats.endSection((IG::SectionType)id);
 }
 
-IG_EXPORT void ignis_stats_add(int id, int value)
+IG_EXPORT void ignis_stats_add(int32_t id, int32_t value)
 {
     if (!sInterface->hasStatisticAquisition())
         return;
