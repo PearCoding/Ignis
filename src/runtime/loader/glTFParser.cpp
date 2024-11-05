@@ -25,6 +25,8 @@ IG_END_IGNORE_WARNINGS
 [[maybe_unused]] constexpr std::string_view KHR_materials_clearcoat            = "KHR_materials_clearcoat";
 [[maybe_unused]] constexpr std::string_view KHR_materials_emissive_strength    = "KHR_materials_emissive_strength";
 [[maybe_unused]] constexpr std::string_view KHR_materials_ior                  = "KHR_materials_ior";
+[[maybe_unused]] constexpr std::string_view KHR_materials_anisotropy           = "KHR_materials_anisotropy";
+[[maybe_unused]] constexpr std::string_view KHR_materials_specular             = "KHR_materials_specular"; // TODO
 [[maybe_unused]] constexpr std::string_view KHR_materials_sheen                = "KHR_materials_sheen";
 [[maybe_unused]] constexpr std::string_view KHR_materials_translucency         = "KHR_materials_translucency";
 [[maybe_unused]] constexpr std::string_view KHR_materials_diffuse_transmission = "KHR_materials_diffuse_transmission";
@@ -32,17 +34,23 @@ IG_END_IGNORE_WARNINGS
 [[maybe_unused]] constexpr std::string_view KHR_materials_unlit                = "KHR_materials_unlit";
 [[maybe_unused]] constexpr std::string_view KHR_materials_volume               = "KHR_materials_volume";
 [[maybe_unused]] constexpr std::string_view KHR_texture_transform              = "KHR_texture_transform";
-// [[maybe_unused]] constexpr std::string_view KHR_materials_anisotropy                = "KHR_materials_anisotropy";                // TODO: This is easy to add if the spec would be more clear and useful for RT
 // [[maybe_unused]] constexpr std::string_view MSFT_packing_occlusionRoughnessMetallic = "MSFT_packing_occlusionRoughnessMetallic"; // TODO: This is simple to add
 // [[maybe_unused]] constexpr std::string_view MSFT_packing_normalRoughnessMetallic    = "MSFT_packing_normalRoughnessMetallic";    // TODO: This is simple to add
 // [[maybe_unused]] constexpr std::string_view ADOBE_materials_thin_transparency       = "ADOBE_materials_thin_transparency";       // TODO: We basically do this already
 // [[maybe_unused]] constexpr std::string_view KHR_mesh_quantization                   = "KHR_mesh_quantization";                   // TODO: Easy to do if dequantized while loading (not used in rendering)
 static const std::vector<std::string_view> gltf_supported_extensions = {
-    KHR_lights_punctual, KHR_materials_clearcoat,
-    KHR_materials_emissive_strength, KHR_materials_ior,
-    KHR_materials_sheen, KHR_materials_translucency,
-    KHR_materials_transmission, KHR_materials_unlit,
-    KHR_materials_volume, KHR_texture_transform
+    KHR_lights_punctual,
+    KHR_materials_clearcoat,
+    KHR_materials_emissive_strength,
+    KHR_materials_ior,
+    KHR_materials_anisotropy,
+    KHR_materials_specular,
+    KHR_materials_sheen,
+    KHR_materials_translucency,
+    KHR_materials_transmission,
+    KHR_materials_unlit,
+    KHR_materials_volume,
+    KHR_texture_transform,
 };
 
 // Uncomment this to map unlit materials to area lights. This can explode shading complexity and is therefore not really recommended
@@ -110,7 +118,7 @@ static Path exportImage(const tinygltf::Image& img, const tinygltf::Model& model
 
 static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, const tinygltf::Primitive& primitive)
 {
-    if (primitive.attributes.count("POSITION") == 0) {
+    if (!primitive.attributes.contains("POSITION")) {
         IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as it does not contain a valid POSITION attribute" << std::endl;
         return;
     }
@@ -121,8 +129,8 @@ static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, 
         return;
     }
 
-    bool hasNormal  = primitive.attributes.count("NORMAL") > 0;
-    bool hasTexture = primitive.attributes.count("TEXCOORD_0") > 0;
+    bool hasNormal  = primitive.attributes.contains("NORMAL");
+    bool hasTexture = primitive.attributes.contains("TEXCOORD_0");
     bool hasIndices = primitive.indices >= 0 && primitive.indices < (int)model.accessors.size();
 
     const tinygltf::Accessor* vertices = &model.accessors[primitive.attributes.at("POSITION")];
@@ -712,6 +720,52 @@ static void loadTextures(Scene& scene, const tinygltf::Model& model, const Path&
     }
 }
 
+static inline void handleAnisotropicRoughness(SceneObject* bsdf, const tinygltf::Material& mat, const std::string& rawRoughness,
+                                              Scene& scene, const tinygltf::Model& model, const Path& directory)
+{
+    const auto& ext = mat.extensions.at(KHR_materials_anisotropy.data());
+
+    float rotation = 0;
+    float strength = 0;
+
+    if (ext.Has("anisotropyStrength") && ext.Get("anisotropyStrength").IsNumber())
+        strength = ext.Get("anisotropyStrength").GetNumberAsDouble();
+    if (ext.Has("anisotropyRotation") && ext.Get("anisotropyRotation").IsNumber())
+        rotation = ext.Get("anisotropyRotation").GetNumberAsDouble();
+
+    if (std::abs(strength) <= FltEps) {
+        bsdf->setProperty("roughness", SceneProperty::fromString(rawRoughness));
+        return;
+    }
+
+    const std::string tex = handleTexture(ext, "anisotropyTexture", scene, model, directory);
+
+    const std::string f_u = std::to_string(std::cos(rotation));
+    const std::string f_v = std::to_string(std::sin(rotation));
+
+    std::string a_u, a_v;
+    if (!tex.empty()) {
+        const std::string r = "(2*" + tex + ".r - 1)";
+        const std::string g = "(2*" + tex + ".g - 1)";
+
+        a_u = f_u + "*" + r + " + " + f_v + "*" + g;
+        a_v = f_u + "*" + g + " - " + f_v + "*" + r;
+    } else {
+        a_u = f_u;
+        a_v = f_v;
+    }
+
+    std::string s_strength = std::to_string(strength);
+    if (!tex.empty())
+        s_strength += " * " + tex + ".b";
+
+    const std::string s_u = rawRoughness + " * mix(1, " + a_u + ", " + s_strength + ")";
+    const std::string s_v = rawRoughness + " * mix(1, " + a_v + ", " + s_strength + ")";
+
+    bsdf->setProperty("roughness_u", SceneProperty::fromString(s_u));
+    bsdf->setProperty("roughness_v", SceneProperty::fromString(s_v));
+}
+
 static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path& directory)
 {
     size_t matCounter = 0;
@@ -732,14 +786,21 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
         if (mat.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0) {
             const std::string mrtex = handleTexture(mat.pbrMetallicRoughness.metallicRoughnessTexture, scene, model, directory);
             bsdf->setProperty("metallic", SceneProperty::fromString(mrtex + ".b*" + std::to_string((float)mat.pbrMetallicRoughness.metallicFactor)));
-            bsdf->setProperty("roughness", SceneProperty::fromString(mrtex + ".g*" + std::to_string((float)mat.pbrMetallicRoughness.roughnessFactor)));
+            if (mat.extensions.contains(KHR_materials_anisotropy.data()))
+                handleAnisotropicRoughness(bsdf.get(), mat, mrtex + ".g*" + std::to_string((float)mat.pbrMetallicRoughness.roughnessFactor), scene, model, directory);
+            else
+                bsdf->setProperty("roughness", SceneProperty::fromString(mrtex + ".g*" + std::to_string((float)mat.pbrMetallicRoughness.roughnessFactor)));
         } else {
             bsdf->setProperty("metallic", SceneProperty::fromNumber((float)mat.pbrMetallicRoughness.metallicFactor));
-            bsdf->setProperty("roughness", SceneProperty::fromNumber((float)mat.pbrMetallicRoughness.roughnessFactor));
+
+            if (mat.extensions.contains(KHR_materials_anisotropy.data()))
+                handleAnisotropicRoughness(bsdf.get(), mat, std::to_string((float)mat.pbrMetallicRoughness.roughnessFactor), scene, model, directory);
+            else
+                bsdf->setProperty("roughness", SceneProperty::fromNumber((float)mat.pbrMetallicRoughness.roughnessFactor));
         }
 
         // Extensions
-        if (mat.extensions.count(KHR_materials_ior.data()) > 0) {
+        if (mat.extensions.contains(KHR_materials_ior.data())) {
             const auto& ext = mat.extensions.at(KHR_materials_ior.data());
             if (ext.Has("ior") && ext.Get("ior").IsNumber())
                 bsdf->setProperty("ior", SceneProperty::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
@@ -747,7 +808,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
             bsdf->setProperty("ior", SceneProperty::fromNumber(1.5));
         }
 
-        if (mat.extensions.count(KHR_materials_sheen.data()) > 0) {
+        if (mat.extensions.contains(KHR_materials_sheen.data())) {
             const auto& ext       = mat.extensions.at(KHR_materials_sheen.data());
             const std::string tex = handleTexture(ext, "sheenColorTexture", scene, model, directory);
 
@@ -763,7 +824,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
         }
 
         // Only support for transmissionFactor & transmissionTexture
-        if (mat.extensions.count(KHR_materials_transmission.data()) > 0) {
+        if (mat.extensions.contains(KHR_materials_transmission.data())) {
             const auto& ext       = mat.extensions.at(KHR_materials_transmission.data());
             const std::string tex = handleTexture(ext, "transmissionTexture", scene, model, directory);
 
@@ -777,7 +838,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
                 bsdf->setProperty("specular_transmission", SceneProperty::fromNumber(factor));
 
             bool is_thin = true;
-            if (mat.extensions.count(KHR_materials_volume.data()) > 0) {
+            if (mat.extensions.contains(KHR_materials_volume.data())) {
                 const auto& ext2 = mat.extensions.at(KHR_materials_volume.data());
 
                 // TODO: No support for textures
@@ -788,7 +849,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
             }
 
             bsdf->setProperty("thin", SceneProperty::fromBool(is_thin));
-        } else if (mat.extensions.count(KHR_materials_diffuse_transmission.data()) > 0) {
+        } else if (mat.extensions.contains(KHR_materials_diffuse_transmission.data())) {
             // Not ratified yet, but who cares
             const auto& ext       = mat.extensions.at(KHR_materials_diffuse_transmission.data());
             const std::string tex = handleTexture(ext, "diffuseTransmissionTexture", scene, model, directory);
@@ -802,7 +863,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
                 bsdf->setProperty("diffuse_transmission", SceneProperty::fromString(tex + ".a*" + std::to_string(factor)));
             else
                 bsdf->setProperty("diffuse_transmission", SceneProperty::fromNumber(factor));
-        } else if (mat.extensions.count(KHR_materials_translucency.data()) > 0) {
+        } else if (mat.extensions.contains(KHR_materials_translucency.data())) {
             // Old, deprecated name?
             const auto& ext       = mat.extensions.at(KHR_materials_translucency.data());
             const std::string tex = handleTexture(ext, "translucencyTexture", scene, model, directory);
@@ -818,7 +879,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
         }
 
         // No support for thickness as this is a raytracer
-        if (mat.extensions.count(KHR_materials_volume.data()) > 0) {
+        if (mat.extensions.contains(KHR_materials_volume.data())) {
             const auto& ext = mat.extensions.at(KHR_materials_volume.data());
 
             float thickness = 0;
@@ -841,7 +902,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
         }
 
         // No support for clearcoatNormalTexture
-        if (mat.extensions.count(KHR_materials_clearcoat.data()) > 0) {
+        if (mat.extensions.contains(KHR_materials_clearcoat.data())) {
             const auto& ext       = mat.extensions.at(KHR_materials_clearcoat.data());
             const std::string tex = handleTexture(ext, "clearcoatTexture", scene, model, directory);
 
@@ -945,8 +1006,7 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
 
     // Check required extensions (but carryon nevertheless)
     for (const auto& ext : model.extensionsRequired) {
-        const auto it = std::find(gltf_supported_extensions.begin(), gltf_supported_extensions.end(), ext);
-        if (it == gltf_supported_extensions.end())
+        if (const auto it = std::find(gltf_supported_extensions.begin(), gltf_supported_extensions.end(), ext); it == gltf_supported_extensions.end())
             IG_LOG(L_WARNING) << "glTF '" << path << "': Required extension '" << ext << "' is yet not supported." << std::endl;
     }
 
