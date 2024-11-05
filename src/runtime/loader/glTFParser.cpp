@@ -800,7 +800,41 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
         }
 
         // Extensions
-        if (mat.extensions.contains(KHR_materials_ior.data())) {
+        if (mat.extensions.contains(KHR_materials_specular.data())) {
+            float ior = 1.5;
+            if (mat.extensions.contains(KHR_materials_ior.data())) {
+                const auto& ext2 = mat.extensions.at(KHR_materials_ior.data());
+                if (ext2.Has("ior") && ext2.Get("ior").IsNumber())
+                    ior = (float)ext2.Get("ior").GetNumberAsDouble();
+            }
+            const float ior_f = std::pow((ior - 1) / (ior + 1), 2.0f);
+
+            const auto& ext          = mat.extensions.at(KHR_materials_specular.data());
+            const std::string tex_f  = handleTexture(ext, "specularTexture", scene, model, directory);
+            const std::string tex_cf = handleTexture(ext, "specularColorTexture", scene, model, directory);
+
+            float factor = 1;
+            if (ext.Has("specularFactor") && ext.Get("specularFactor").IsNumber())
+                factor = (float)ext.Get("specularFactor").GetNumberAsDouble();
+
+            std::string s_specular = std::to_string(factor);
+            if (!tex_f.empty())
+                s_specular += "*" + tex_f + ".a";
+
+            Vector3f color = Vector3f::Ones();
+            if (ext.Has("specularColorFactor") && ext.Get("specularColorFactor").IsArray())
+                color = extractVector<3>(ext, "specularColorFactor", color);
+
+            std::string s_color = "color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ")";
+            if (!tex_cf.empty())
+                s_color += "*" + tex_cf;
+
+            // Rather an approximation, but it kinda works...
+            bsdf->setProperty("ior", SceneProperty::fromString("2/(1-sqrt(2*" + std::to_string(ior_f) + "*" + s_specular + "*avg(min(" + s_color + ", color(1)).rgb)))-1"));
+
+            // FIXME: We actually expect a factor to tint the specular component from white to the base_color...
+            bsdf->setProperty("specular_tint", SceneProperty::fromString("avg(min(" + s_color + ", color(1)).rgb)"));
+        } else if (mat.extensions.contains(KHR_materials_ior.data())) {
             const auto& ext = mat.extensions.at(KHR_materials_ior.data());
             if (ext.Has("ior") && ext.Get("ior").IsNumber())
                 bsdf->setProperty("ior", SceneProperty::fromNumber((float)ext.Get("ior").GetNumberAsDouble()));
@@ -823,7 +857,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
                 bsdf->setProperty("sheen", SceneProperty::fromNumber(factor));
         }
 
-        // Only support for transmissionFactor & transmissionTexture
+        // Only support for transmissionFactor & transmissionTexture (TODO: Specular)
         if (mat.extensions.contains(KHR_materials_transmission.data())) {
             const auto& ext       = mat.extensions.at(KHR_materials_transmission.data());
             const std::string tex = handleTexture(ext, "transmissionTexture", scene, model, directory);
