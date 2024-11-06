@@ -149,6 +149,12 @@ void runtime_module(nb::module_& m)
         .def_static("pickCPU", &Target::pickCPU)
         .def_static("pickGPU", &Target::pickGPU, nb::arg("device") = 0);
 
+    nb::class_<DenoiserSettings>(m, "DenoiserSettings", "Settings for the denoiser")
+        .def(nb::init<>())
+        .def_rw("Enabled", &DenoiserSettings::Enabled, "Enable or disable the denoiser")
+        .def_rw("HighQuality", &DenoiserSettings::HighQuality, "Set True if denoiser should be high quality or interactive")
+        .def_rw("Prefilter", &DenoiserSettings::Prefilter, "Set True if normal and albedo layer should be prefiltered");
+
     nb::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
         .def(nb::init<>())
         .def_static("makeDefault", &RuntimeOptions::makeDefault, nb::arg("trace") = false)
@@ -162,6 +168,7 @@ void runtime_module(nb::module_& m)
         .def_rw("OverrideTechnique", &RuntimeOptions::OverrideTechnique, "Type of technique to use instead of the one used by the scene")
         .def_rw("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize, "Type of film size to use instead of the one used by the scene")
         .def_rw("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
+        .def_rw("Denoiser", &RuntimeOptions::Denoiser, "Settings for the denoiser")
         .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries");
 
     nb::class_<Ray>(m, "Ray", "Single ray traced into the scene")
@@ -255,6 +262,7 @@ void runtime_module(nb::module_& m)
         .def_prop_ro("Camera", &Runtime::camera)
         .def_prop_ro("Target", &Runtime::target)
         .def_prop_ro("SPI", &Runtime::samplesPerIteration)
+        .def_prop_ro("AOVs", &Runtime::aovs)
         .def_prop_ro_static("AvailableCameraTypes", &Runtime::getAvailableCameraTypes)
         .def_prop_ro_static("AvailableTechniqueTypes", &Runtime::getAvailableTechniqueTypes);
 
