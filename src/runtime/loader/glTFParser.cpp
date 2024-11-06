@@ -26,7 +26,7 @@ IG_END_IGNORE_WARNINGS
 [[maybe_unused]] constexpr std::string_view KHR_materials_emissive_strength    = "KHR_materials_emissive_strength";
 [[maybe_unused]] constexpr std::string_view KHR_materials_ior                  = "KHR_materials_ior";
 [[maybe_unused]] constexpr std::string_view KHR_materials_anisotropy           = "KHR_materials_anisotropy";
-[[maybe_unused]] constexpr std::string_view KHR_materials_specular             = "KHR_materials_specular"; // TODO
+[[maybe_unused]] constexpr std::string_view KHR_materials_specular             = "KHR_materials_specular";
 [[maybe_unused]] constexpr std::string_view KHR_materials_sheen                = "KHR_materials_sheen";
 [[maybe_unused]] constexpr std::string_view KHR_materials_translucency         = "KHR_materials_translucency";
 [[maybe_unused]] constexpr std::string_view KHR_materials_diffuse_transmission = "KHR_materials_diffuse_transmission";
