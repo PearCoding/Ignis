@@ -315,6 +315,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Li
     let diffnorm  = safe_div(model.diffuse_illum / color_builtins::white_efficiency, integrand);
 
     let sun_factor = 6.8e-5:f32; // 2 * flt_pi * (1 - math_builtins::cos(rad(flt_sun_radius_deg / 2)));
+    // let sun_color  = color_mulf(tint_color, model.direct_irrad);
     let sun_color  = color_mulf(tint_color, model.direct_illum / color_builtins::white_efficiency);
 
     let sky_color = color_mulf(tint_color, diffnorm);
