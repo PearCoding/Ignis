@@ -15,10 +15,17 @@ public:
     virtual void serialize(const SerializationInput& input) const override;
 
 private:
+    enum class OutputMode {
+        VisibleRadiance,
+        SolarRadiance,
+        Luminance
+    };
+
     Vector3f mSunDirection;
     TimePoint mTimePoint;
     bool mHasGround;
     bool mHasSun;
+    OutputMode mOutputMode;
 
     std::shared_ptr<SceneObject> mLight;
 };

@@ -1,5 +1,6 @@
 #include "PerezLight.h"
 #include "Logger.h"
+#include "StringUtils.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
@@ -14,6 +15,14 @@ PerezLight::PerezLight(const std::string& name, const std::shared_ptr<SceneObjec
     mTimePoint    = LoaderUtils::getTimePoint(*light);
     mHasGround    = mLight->property("has_ground").getBool(true);
     mHasSun       = mLight->property("has_sun").getBool(true);
+
+    const std::string mode = to_lowercase(mLight->property("output").getString("visibleradiance"));
+    if (mode == "visibleradiance")
+        mOutputMode = OutputMode::VisibleRadiance;
+    else if (mode == "solarradiance")
+        mOutputMode = OutputMode::SolarRadiance;
+    else
+        mOutputMode = OutputMode::Luminance;
 }
 
 float PerezLight::computeFlux(ShadingTree& tree) const
@@ -106,6 +115,19 @@ void PerezLight::serialize(const SerializationInput& input) const
         input.Stream << ", make_cie_sky_transform(vec3_normalize(" << input.Tree.getInline("up") << "))";
     } else {
         input.Stream << ", " << input.Tree.getInlineMatrix3("_transform");
+    }
+
+    switch (mOutputMode) {
+    default:
+    case OutputMode::VisibleRadiance:
+        input.Stream << ", PerezOutputMode::VisibleRadiance";
+        break;
+    case OutputMode::SolarRadiance:
+        input.Stream << ", PerezOutputMode::SolarRadiance";
+        break;
+    case OutputMode::Luminance:
+        input.Stream << ", PerezOutputMode::Luminance";
+        break;
     }
 
     input.Stream << ");" << std::endl;
