@@ -729,9 +729,9 @@ static inline void handleAnisotropicRoughness(SceneObject* bsdf, const tinygltf:
     float strength = 0;
 
     if (ext.Has("anisotropyStrength") && ext.Get("anisotropyStrength").IsNumber())
-        strength = ext.Get("anisotropyStrength").GetNumberAsDouble();
+        strength = (float)ext.Get("anisotropyStrength").GetNumberAsDouble();
     if (ext.Has("anisotropyRotation") && ext.Get("anisotropyRotation").IsNumber())
-        rotation = ext.Get("anisotropyRotation").GetNumberAsDouble();
+        rotation = (float)ext.Get("anisotropyRotation").GetNumberAsDouble();
 
     if (std::abs(strength) <= FltEps) {
         bsdf->setProperty("roughness", SceneProperty::fromString(rawRoughness));
