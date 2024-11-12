@@ -183,8 +183,10 @@ bool TensorTreeLoader::load(const Path& in_xml, TensorTree& tree)
         transmissionFront = transmissionBack;
 
     if (!transmissionFront && !transmissionBack) {
-        IG_LOG(L_ERROR) << "While parsing " << in_xml << ": No transmission data found" << std::endl;
-        return false;
+        // IG_LOG(L_WARNING) << "While parsing " << in_xml << ": No transmission data found" << std::endl;
+        transmissionFront = std::make_shared<TensorTreeComponent>(4);
+        transmissionFront->makeBlack();
+        transmissionBack = transmissionFront;
     }
 
     if (!reflectionFront || !reflectionBack || !transmissionFront || !transmissionBack) {
