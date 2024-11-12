@@ -31,6 +31,16 @@ fn @make_orthonormal_mat3x3(n: Vec3) -> Mat3x3 {
     make_mat3x3(t, bt, n)
 }
 
+fn @make_orthonormal_mat3x3_y(n: Vec3) -> Mat3x3 {
+    let sign = math_builtins::copysign[f32](1, n.y);
+    let a    = -1 / (sign + n.y);
+    let b    = n.x * n.z * a;
+
+    let t  = make_vec3(1 + sign * n.x * n.x * a, -sign * n.x, sign * b);
+    let bt = make_vec3(b, -n.z, sign + n.z * n.z * a);
+    make_mat3x3(t, n, bt)
+}
+
 fn @flip_orthonormal_mat3x3(m: Mat3x3) = make_mat3x3(m.col(0), vec3_neg(m.col(1)), vec3_neg(m.col(2)));
 
 fn @make_mat3x4(c0: Vec3, c1: Vec3, c2: Vec3, c3: Vec3) = Mat3x4 { col = [c0, c1, c2, c3] };

@@ -20,7 +20,7 @@ public:
     static TimePoint getTimePoint(SceneObject& obj);
     static MapLocation getLocation(SceneObject& obj);
     static ElevationAzimuth getEA(SceneObject& obj);
-    static Vector3f getDirection(SceneObject& obj);
+    static Vector3f getDirection(SceneObject& obj); // Scene to Light
 
     using CDF2DData = std::tuple<Path, size_t, size_t>;
     static CDF2DData setup_cdf2d(LoaderContext& ctx, const Path& filename, bool premultiplySin, bool compensate = false);

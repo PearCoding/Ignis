@@ -1,6 +1,7 @@
 mod perez {
     use super as all;
     use super::math_builtins;
+    use super::color_builtins;
 
     static flt_solar_e = 1367:f32;
     static flt_solar_l = 127500:f32;
@@ -272,10 +273,10 @@ mod perez {
     }
 }
 
-fn @make_perez_light_raw(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Light to Scene */, sky_color: Color, ground_color: Color, cos_sun_angle: f32, sun_color: Color, params: perez::ExplicitParameters, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
+fn @make_perez_light_raw(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Scene to Light */, sky_color: Color, ground_color: Color, cos_sun_angle: f32, sun_color: Color, params: perez::ExplicitParameters, has_ground: bool, has_sun: bool, transform: Mat3x3) -> Light {
     let sky_function = @|dir: Vec3|{
         let cos_theta = dir.y; // Cosine between zenith and direction
-        let sun_c     = clampf(-vec3_dot(dir, l_sun_dir), -1, 1); // Cosine between sun and direction
+        let sun_c     = clampf(vec3_dot(dir, l_sun_dir), -1, 1); // Cosine between sun and direction
         let fac       = perez::eval(sun_c, cos_theta, params);
         cie_wmean(cos_theta, color_mulf(sky_color, fac), ground_color)
     };
@@ -285,15 +286,15 @@ fn @make_perez_light_raw(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Light to 
         sun_model.{
             sample_direct = @ |rnd, from_surf| {
                 let sample    = sun_model.sample_direct(rnd, from_surf);
-                let intensity = color_add(sample.intensity, color_mulf(sky_function(mat3x3_mul(transform, sample.dir)), 1 / sample.pdf.value));
+                let intensity = color_add(sample.intensity, color_mulf(sky_function(mat3x3_left_mul(transform, sample.dir)), 1 / sample.pdf.value));
                 sample.{ intensity = intensity }
             },
             sample_emission = @ |rnd| {
                 let sample    = sun_model.sample_emission(rnd);
-                let intensity = color_add(sample.intensity, color_mulf(sky_function(mat3x3_mul(transform, vec3_neg(sample.dir))), 1 / (sample.pdf_area * sample.pdf_dir)));
+                let intensity = color_add(sample.intensity, color_mulf(sky_function(mat3x3_left_mul(transform, vec3_neg(sample.dir))), 1 / (sample.pdf_area * sample.pdf_dir)));
                 sample.{ intensity = intensity }
             },
-            emission = @ |ctx| color_add(sun_model.emission(ctx), sky_function(mat3x3_mul(transform, ctx.ray.dir))),
+            emission = @ |ctx| color_add(sun_model.emission(ctx), sky_function(mat3x3_left_mul(transform, ctx.ray.dir))),
         }
     } else {
         make_environment_light_function(id, scene_bbox, sky_function, transform, !has_ground)
@@ -306,8 +307,8 @@ enum PerezOutputMode {
     Luminance        // gendaylit -O 2
 }
 
-fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Light to Scene (Local) */, tint_color: Color, ground_color: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, has_sun: bool, transform: Mat3x3, output: PerezOutputMode) -> Light {
-    let sin_altitude   = clampf(-l_sun_dir.y, -1:f32, 1:f32); // Y-Up
+fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Scene to Light (Local) */, tint_color: Color, ground_color: Color, model_gen: fn(f32) -> perez::Model, has_ground: bool, has_sun: bool, transform: Mat3x3, output: PerezOutputMode) -> Light {
+    let sin_altitude   = clampf(l_sun_dir.y, -1:f32, 1:f32); // Y-Up
     let solar_altitude = math_builtins::asin(sin_altitude);
     let solar_zenith   = flt_pi / 2 - solar_altitude;
 
@@ -323,7 +324,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Li
         PerezOutputMode::Luminance       => model.diffuse_illum,
     }, integrand);
 
-    let sun_factor = 6.8e-5:f32; // 2 * flt_pi * (1 - math_builtins::cos(rad(flt_sun_radius_deg / 2)));
+    let sun_factor = 2 * flt_pi * (1 - math_builtins::cos(rad(flt_sun_radius_deg / 2)));
     let sun_color  = color_mulf(tint_color, match(output) {
         PerezOutputMode::VisibleRadiance => model.direct_illum / color_builtins::white_efficiency,
         PerezOutputMode::SolarRadiance   => model.direct_irrad,
@@ -352,7 +353,7 @@ fn @make_perez_light_from_model(id: i32, scene_bbox: BBox, l_sun_dir: Vec3 /* Li
         color_add(if has_sun && model.clearness > 1 { color_mulf(sun_color, math_builtins::fabs(sin_altitude) / flt_pi) } else { color_builtins::black },
                   color_mulf(zenith, normfactor)));
 
-    let actual_sun = if has_sun && model.clearness > 1 { color_mulf(sun_color, sun_factor) } else { color_builtins::black };
+    let actual_sun = if has_sun && model.clearness > 1 { color_mulf(sun_color, 1 / sun_factor) } else { color_builtins::black };
 
     make_perez_light_raw(id, scene_bbox, l_sun_dir, sky_color, actual_ground, math_builtins::cos(rad(flt_sun_radius_deg / 2)), actual_sun, model.params, has_ground, has_sun, transform)
 }

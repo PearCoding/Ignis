@@ -158,9 +158,12 @@ void ParameterWidget::onRender(Widget*)
 
         if (mRenderWidget->currentSkyModel() == RenderWidget::SkyModel::Perez) {
             if (ImGui::CollapsingHeader("Sky##parameters", HeaderFlags)) {
-                const Vector3f sun_direction = -runtime->parameters().getVector("sky_sun_dir");
+                const Vector3f sun_direction = runtime->parameters().getVector("sky_sun_dir");
                 const Vector3f sky_up        = runtime->parameters().getVector("sky_up");
                 ElevationAzimuth ea          = ElevationAzimuth::fromDirectionYUp(sun_direction);
+
+                // ea.Azimuth = ea.azimuthEastOfNorth();
+                ea.Azimuth = 2 * Pi - ea.Azimuth;
 
                 ImGui::TextUnformatted("Sun");
 
@@ -179,6 +182,9 @@ void ParameterWidget::onRender(Widget*)
                 ImGui::SliderFloat("Elevation##SunSky", &elevation_deg, 0, MaxElevation * Rad2Deg, "%.1f°");
                 ea.Azimuth   = azimuth_deg * Deg2Rad;
                 ea.Elevation = elevation_deg * Deg2Rad;
+
+                // ea.Azimuth = ea.azimuthEastOfNorth();
+                ea.Azimuth = 2 * Pi - ea.Azimuth;
 
                 const auto up_opt      = fromDir(sky_up);
                 const char* current_up = DirectionOptions[(int)up_opt];
@@ -223,7 +229,9 @@ void ParameterWidget::onRender(Widget*)
                         tp          = TimePoint::nowUTC();
                         ml          = MapLocation(); // Note: Would be cool to get the users location... but that is privacy ;)
                         ml.Timezone = 0;
-                        once        = true;
+                        // tp   = TimePoint(2023, 7, 5, 15, 3, 0);
+                        // ml   = MapLocation(-6.9965744f, 49.235422f, -1);
+                        once = true;
                     }
 
                     ImGui::DragInt("Year", &tp.Year, 1.0f, 1800, 2200);
@@ -263,7 +271,7 @@ void ParameterWidget::onRender(Widget*)
 
                 const Vector3f new_dir = ea.toDirectionYUp();
                 if (runtime->parameters().VectorParameters.contains("sky_sun_dir") /* Only update when loaded */ && !sun_direction.isApprox(new_dir, 1e-4f)) {
-                    runtime->setParameter("sky_sun_dir", (-new_dir).eval());
+                    runtime->setParameter("sky_sun_dir", new_dir);
                     runtime->reset();
                 }
 

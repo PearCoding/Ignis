@@ -46,10 +46,10 @@ void PerezLight::serialize(const SerializationInput& input) const
     input.Tree.beginClosure(name());
     input.Tree.addColor("ground", *mLight, Vector3f::Ones() * 0.2f);
 
-    if (mLight->hasProperty("up"))
-        input.Tree.addVector("up", *mLight, Vector3f::UnitY());
-    else
+    if (mLight->hasProperty("transform"))
         input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
+    else
+        input.Tree.addVector("up", *mLight, Vector3f::UnitY(), ShadingTree::VectorOptions::Dynamic());
 
     input.Tree.addVector("direction", *mLight, mSunDirection);
     input.Tree.addNumber("day_of_the_year", *mLight, (float)mTimePoint.dayOfTheYear());
@@ -111,11 +111,10 @@ void PerezLight::serialize(const SerializationInput& input) const
                  << ", " << (mHasGround ? "true" : "false")
                  << ", " << (mHasSun ? "true" : "false");
 
-    if (mLight->hasProperty("up")) {
-        input.Stream << ", make_cie_sky_transform(vec3_normalize(" << input.Tree.getInline("up") << "))";
-    } else {
+    if (mLight->hasProperty("transform"))
         input.Stream << ", " << input.Tree.getInlineMatrix3("_transform");
-    }
+    else
+        input.Stream << ", make_cie_sky_transform(vec3_normalize(" << input.Tree.getInline("up") << "))";
 
     switch (mOutputMode) {
     default:

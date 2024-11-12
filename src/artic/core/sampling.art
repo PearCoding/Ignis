@@ -103,7 +103,7 @@ fn @sample_uniform_disk(u: f32, v: f32, radius: f32) -> PosSample {
 }
 
 // PDF is with respect to area
-fn @uniform_cone_pdf(cos_angle: f32) = safe_div_one(1, 2 * flt_pi * (1 - cos_angle));
+fn @uniform_cone_pdf(cos_angle: f32) = safe_div(1, 2 * flt_pi * (1 - cos_angle));
 
 // Sample direction on an uniform cone around [0,0,1]
 fn @sample_uniform_cone(u: f32, v: f32, cos_angle: f32) -> DirSample {
