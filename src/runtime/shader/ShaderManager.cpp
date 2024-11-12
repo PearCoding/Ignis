@@ -34,7 +34,7 @@ bool ShaderManager::compile(ScriptCompiler* compiler, size_t threads, ShaderDump
 
     manager.finalize();
 
-    if (!IG_LOGGER.isQuiet() && IG_LOGGER.verbosity() >= L_INFO /* Do not use the progressbar with debug outputs as it might clutter the console */) {
+    if (!IG_LOGGER.isQuiet() && IG_LOGGER.verbosity() == L_INFO /* Do not use the progressbar with debug or above info outputs as it might clutter the console */) {
         ShaderProgressBar pb(IG_LOGGER.isUsingAnsiTerminal(), 2, numberOfUniqueEntries);
         pb.begin();
         while (!manager.isFinished()) {
