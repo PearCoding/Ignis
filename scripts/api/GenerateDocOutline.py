@@ -24,7 +24,7 @@ def dir_class(c):
 
 def cleanup_doc(doc):
     # TODO: Better separate header and actual documentation stuff
-    return doc.replace("ignis.pyignis.", "").strip()
+    return doc.replace("ignis.pyignis.", "").replace(r"/)", ")").replace(", )", ")").strip()
 
 
 single_newline = re.compile(r"([^\n])\n([^\n])")
@@ -50,7 +50,31 @@ def sub_arrays(lines: str):
         "numpy.ndarray[dtype=float32, shape=(*, *, 3), order='C', device='cpu']", "CPUImage")
     lines = lines.replace(
         "numpy.ndarray[dtype=float32, shape=(*, 3)]", "list[Vec3]")
+    lines = lines.replace(
+        "numpy.ndarray[dtype=float32, shape=(*, 3)]", "list[Vec3]")
+    lines = lines.replace(
+        "Eigen::Matrix<float, 4, 1, 0, 4, 1>", "Vec4")
+    lines = lines.replace(
+        "Eigen::Matrix<float, 3, 1, 0, 3, 1>", "Vec3")
+    lines = lines.replace(
+        "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >", "str")
+    lines = lines.replace(
+        "std::unordered_map<str, int, std::hash<str >, std::equal_to<str >, std::allocator<std::pair<str const, int> > >", "dict[str, int]")
+    lines = lines.replace(
+        "std::unordered_map<str, float, std::hash<str >, std::equal_to<str >, std::allocator<std::pair<str const, float> > >", "dict[str, float]")
+    lines = lines.replace(
+        "std::unordered_map<str, str, std::hash<str >, std::equal_to<str >, std::allocator<std::pair<str const, str > > >", "dict[str, str]")
+    lines = lines.replace(
+        "std::unordered_map<str, Vec3, std::hash<str >, std::equal_to<str >, Eigen::aligned_allocator<std::pair<str const, Vec3 > > >", "dict[str, Vec3]")
+    lines = lines.replace(
+        "std::unordered_map<str, Vec4, std::hash<str >, std::equal_to<str >, Eigen::aligned_allocator<std::pair<str const, Vec4 > > >", "dict[str, Vec4]")
+    lines = lines.replace("collections.abc.Sequence", "list")
     lines = lines.replace("IG::", "")
+    lines = lines.replace("SceneObject::", "SceneObject.")
+    lines = lines.replace("SceneProperty::", "SceneProperty.")
+    lines = lines.replace("array([[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]], dtype=float32))", "Mat4x4.Identity")
+    lines = lines.replace("array([0., 0.], dtype=float32)", "Vec2(0)")
+    lines = lines.replace("array([0., 0., 0.], dtype=float32)", "Vec3(0)")
     return lines
 
 
@@ -71,7 +95,7 @@ def link_identifiers(line: str, identifiers, inside_doc=False):
     else:
         for ident in identifiers:
             line = re.sub(r"\b(?<!{)"+re.escape(ident)+r"(?!})",
-                          r"{"+re.escape(ident)+r"}", line)
+                          r"{"+ident+r"}", line)
     return line
 
 
@@ -126,7 +150,8 @@ def generate_doc(root):
     while len(todo) > 0:
         name, cur = todo.pop(0)
 
-        doc_str += f'.. _{name}:\n\n{name}\n{SUBSECTION}\n\n{handle_class_doc(inspect.getdoc(cur))}\n\n'
+        ref_name = name.replace(".", "-")
+        doc_str += f'.. _{ref_name}:\n\n{name}\n{SUBSECTION}\n\n{handle_class_doc(inspect.getdoc(cur))}\n\n'
 
         # Properties
         has_props = False
@@ -138,9 +163,9 @@ def generate_doc(root):
                     doc_str += f"Properties\n{SUBSUBSECTION}\n\n"
                     has_props = True
 
-                lines = escape_func(inner_doc, identifiers, inside_doc=True)
+                lines = escape_func(inner_doc, identifiers, inside_doc=False)
                 doc_str += "".join(
-                    [f'- :pythonfunc:`{prop_name}`: {line}\n\n' for line in lines])
+                    [f'- :pythonfunc:`{prop_name}: {line}`\n\n' for line in lines])
 
         # Methods
         has_funcs = False

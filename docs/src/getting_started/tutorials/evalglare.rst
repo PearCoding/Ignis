@@ -3,7 +3,7 @@ Evalglare Tutorial
 
 A quick and dirty tutorial to run a simple evalglare analysis.
 
-1.  Make sure you have a running setup of Ignis. Have a look at :doc:`../building` to understand how to compile the Ignis framework.  
+1.  Make sure you have a running setup of Ignis. Have a look at :doc:`../setup` to understand how to compile the Ignis framework.  
 2.  Build your own scene using one of the available tools.
 
     1.  We will use the ``scene/radiance/office/office_scene.json`` example.

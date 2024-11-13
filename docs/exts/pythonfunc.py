@@ -8,6 +8,31 @@ import re
 
 matcher = re.compile(r"([^\\])(\{(.*?[^\\])\})")
 
+def mergePoint(tokens):
+        """Merge subsequent tokens via '.'"""
+        tokens = iter(tokens)
+        (lasttype, lastval) = next(tokens)
+        combine = False
+        for ttype, value in tokens:
+            if value == '.':
+                lastval += value
+                pttype = ttype
+                combine = True
+            elif combine:
+                lastval += value
+                combine = False
+            else:
+                yield(lasttype, lastval)
+                (lasttype, lastval) = (ttype, value)
+        if lastval.endswith('\n'):
+            lastval = lastval[:-1]
+        if combine:
+            lastval = lastval[:-1]
+            yield(lasttype, lastval)
+            (lasttype, lastval) = (pttype, '.')
+        if lastval:
+            yield(lasttype, lastval)
+
 
 def pythonfunc_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
     matches = [m[2] for m in re.findall(matcher, text)]
@@ -27,7 +52,7 @@ def pythonfunc_role(role, rawtext, text, lineno, inliner, options={}, content=[]
         classes.append(language)
 
     try:
-        tokens = Lexer(utils.unescape(code_string, True), language,
+        tokens = Lexer(utils.unescape(code_string, True, True), language,
                        inliner.document.settings.syntax_highlight)
     except LexerError as error:
         msg = inliner.reporter.warning(error)
@@ -37,11 +62,11 @@ def pythonfunc_role(role, rawtext, text, lineno, inliner, options={}, content=[]
     node = nodes.literal(rawtext, '', classes=classes)
 
     # analyze content and add nodes for every token
-    for classes, value in tokens:
+    for classes, value in mergePoint(tokens):
         ref_node = node
         if value in matches:
             ref_node = nodes.reference(
-                f":ref:`{value}`", '', refid=f"#{value}")
+                f":ref:`{value}`", '', refid=value.replace('.', '-').lower())
             node += ref_node
 
         if classes:

@@ -25,7 +25,7 @@ HTML5Translator.visit_reference = replacement
 # -- Project information -----------------------------------------------------
 
 project = 'Ignis'
-copyright = '2020-2023, Ignis-Project'
+copyright = '2020-2025, Ignis-Project'
 author = 'Ömercan Yazici'
 
 

@@ -12,7 +12,7 @@ def first_variant(scene_file):
             raise RuntimeError("Could not load scene")
 
         print(f"Loaded {runtime.Target}")
-        for _i in range(16):
+        while runtime.SampleCount < 16:
             runtime.step()
 
         ignis.flushLog()
@@ -31,7 +31,7 @@ def second_variant(scene_file):
     runtime = wrap.instance
 
     print(f"Loaded {runtime.Target}")
-    for _i in range(16):
+    while runtime.SampleCount < 16:
         runtime.step()
 
     ignis.flushLog()

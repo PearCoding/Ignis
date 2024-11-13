@@ -211,7 +211,7 @@ void runtime_module(nb::module_& m)
             size_t shape[] = { rays.size(), 3ul };
             return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, 2, shape, nb::handle());
         })
-        .def("reset", &Runtime::reset)
+        .def("reset", &Runtime::reset, "Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset")
         .def(
             "getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();

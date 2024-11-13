@@ -494,6 +494,7 @@ Perez Sky Model (:monosp:`perez`)
     - :code:`1`, :code:`1`
     - Yes
     - Diffuse horizontal irradiance (W/m^2) and direct normal irradiance (W/m^2). Can not be used with other options specifying Perez parameters.
+  
   .. * - diffuse_illuminance, direct_illuminance
   ..   - |number|
   ..   - :code:`1`, :code:`1`

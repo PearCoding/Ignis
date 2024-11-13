@@ -40,7 +40,7 @@ def run_scene(max_path):
             print("Could not load scene")
             mean = 0
         else:
-            for _i in range(16):
+            while runtime.SampleCount < 16:
                 runtime.step()
 
             mean = image_mean(runtime)

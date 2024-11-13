@@ -16,7 +16,7 @@ if __name__ == "__main__":
             raise RuntimeError("Could not load empty scene")
 
         print(f"Loaded {runtime.Target}")
-        for _i in range(16):
+        while runtime.SampleCount < 16:
             runtime.step()
 
         ignis.flushLog()
