@@ -39,7 +39,7 @@ include(CPack)
 
 cpack_add_component(runtime DISPLAY_NAME "Runtime" DESCRIPTION "Necessary component containing runtime")
 cpack_add_component(frontends DISPLAY_NAME "Frontends" DESCRIPTION "Frontends to interact with the runtime" DEPENDS runtime)
-cpack_add_component(python DISPLAY_NAME "Python API" DESCRIPTION "Python 3+ API" DEPENDS runtime)
+cpack_add_component(python DISPLAY_NAME "Python API" DESCRIPTION "Python 3+ API build for Python ${Python_VERSION}" DEPENDS runtime)
 cpack_add_component(tools DISPLAY_NAME "Extra Tools" DESCRIPTION "Extra tools to work with data provided by the runtime" DEPENDS runtime)
 cpack_add_component(documentation DISPLAY_NAME "Documentation" DESCRIPTION "Offline version of the documentation")
 cpack_add_component(plugins DISPLAY_NAME "Plugins" DESCRIPTION "Plugin for external software like Blender")
