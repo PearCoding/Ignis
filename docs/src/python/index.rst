@@ -51,9 +51,9 @@ Enums
 
 
 
-.. _Ignis (module)-methods:
+.. _Ignis (module)-staticmethods:
 
-Methods
+Static Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`flushLog() -> None`:
@@ -164,9 +164,9 @@ Properties
 
 
 
-.. _BoundingBox-methods:
+.. _BoundingBox-staticmethods:
 
-Methods
+Static Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`MakeEmpty() -> {BoundingBox}`:
@@ -176,6 +176,13 @@ Methods
 - :pythonfunc:`MakeFull() -> {BoundingBox}`:
 
   *No documentation*
+
+
+
+.. _BoundingBox-methods:
+
+Methods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`extend(self, arg: {BoundingBox}) -> {BoundingBox}`:
 
@@ -504,9 +511,9 @@ Properties
 
 
 
-.. _RuntimeOptions-methods:
+.. _RuntimeOptions-staticmethods:
 
-Methods
+Static Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`makeDefault(trace: bool = False) -> {RuntimeOptions}`:
@@ -594,6 +601,21 @@ Properties
 
 
 
+.. _Scene-staticmethods:
+
+Static Methods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- :pythonfunc:`loadFromFile(path: str | os.PathLike, flags: int = 13303) -> {Scene}`:
+
+  *No documentation*
+
+- :pythonfunc:`loadFromString(str: str, opt_dir: str | os.PathLike = '', flags: int = 13303) -> {Scene}`:
+
+  *No documentation*
+
+
+
 .. _Scene-methods:
 
 Methods
@@ -640,14 +662,6 @@ Methods
   *No documentation*
 
 - :pythonfunc:`light(self, arg: str) -> {SceneObject}`:
-
-  *No documentation*
-
-- :pythonfunc:`loadFromFile(path: str | os.PathLike, flags: int = 13303) -> {Scene}`:
-
-  *No documentation*
-
-- :pythonfunc:`loadFromString(str: str, opt_dir: str | os.PathLike = '', flags: int = 13303) -> {Scene}`:
 
   *No documentation*
 
@@ -829,14 +843,10 @@ Properties
 
 
 
-.. _SceneProperty-methods:
+.. _SceneProperty-staticmethods:
 
-Methods
+Static Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- :pythonfunc:`canBeNumber(self) -> bool`:
-
-  *No documentation*
 
 - :pythonfunc:`fromBool(arg: bool) -> {SceneProperty}`:
 
@@ -871,6 +881,17 @@ Methods
   *No documentation*
 
 - :pythonfunc:`fromVector3(arg: Vec3) -> {SceneProperty}`:
+
+  *No documentation*
+
+
+
+.. _SceneProperty-methods:
+
+Methods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- :pythonfunc:`canBeNumber(self) -> bool`:
 
   *No documentation*
 
@@ -966,9 +987,9 @@ Properties
 
 
 
-.. _Target-methods:
+.. _Target-staticmethods:
 
-Methods
+Static Methods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`makeCPU(arg0: int, arg1: int) -> {Target}`:
@@ -998,6 +1019,13 @@ Methods
 - :pythonfunc:`pickGPU(device: int = 0) -> {Target}`:
 
   *No documentation*
+
+
+
+.. _Target-methods:
+
+Methods
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - :pythonfunc:`toString(self) -> str`:
 

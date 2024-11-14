@@ -5,6 +5,7 @@ from utils import load_api
 import inspect
 import enum
 import re
+import types
 
 
 def get_doc(m: object):
@@ -50,11 +51,17 @@ def inspect_method(m: object):
     components = doc.split("\n\n")
     overloads = list(split_methods(components[0]))
     info = components[1:]
+
+    is_static = type(m).__name__ == 'nb_func'
+
     if len(overloads) == 1:
-        return [{
-                "doc": "\n".join(info),
-                "signature": overloads[0]
-            }]
+        return {
+                "static": is_static,
+                "overloads": [{
+                    "doc": "\n".join(info),
+                    "signature": overloads[0]
+                }]
+            }
     else:
         signatures = []
         for o in overloads:
@@ -67,7 +74,10 @@ def inspect_method(m: object):
                 "signature": o
             })
 
-        return signatures
+        return {
+                "static": is_static,
+                "overloads": signatures,
+        }
 
 
 def inspect_module(m: object):
@@ -139,7 +149,7 @@ def cleanup_module(info: dict):
     for c in info['classes'].values():
         cleanup_module(c)
     for m in info['methods'].values():
-        for e in m:
+        for e in m["overloads"]:
             e['doc']       = cleanup_line(e['doc'])
             e['signature'] = cleanup_line(e['signature'])
     for p in info['properties'].values():
@@ -174,7 +184,7 @@ def handle_identifiers(name: str, info: dict, identifiers: list):
     for n, c in info['classes'].items():
         handle_identifiers(n, c, identifiers)
     for m in info['methods'].values():
-        for e in m:
+        for e in m["overloads"]:
             e['doc']       = link_identifiers_doc(e['doc'], identifiers)
             e['signature'] = link_identifiers_code(e['signature'], identifiers)
     for p in info['properties'].values():
@@ -227,15 +237,30 @@ def generate_doc_module(name: str, info: dict) -> str:
         rst += "\n\n"
 
     if len(info["methods"]) > 0:
-        rst += f".. _{ref_name}-methods:\n\n"
-        rst += f"Methods\n{SUBSUBSECTION}\n\n"
-        for n, m in info["methods"].items():
-            for sig in m:
-                rst += f"- :pythonfunc:`{sig['signature']}`:\n\n"
-                rst += "  "
-                rst += sig['doc'] or '*No documentation*'
-                rst += "\n\n"
-        rst += "\n\n"
+        static_methods = [n for n, m in info["methods"].items() if m["static"]]
+        std_methods = [n for n, m in info["methods"].items() if not m["static"]]
+
+        if len(static_methods) > 0:
+            rst += f".. _{ref_name}-staticmethods:\n\n"
+            rst += f"Static Methods\n{SUBSUBSECTION}\n\n"
+            for n in static_methods:
+                for sig in info["methods"][n]["overloads"]:
+                    rst += f"- :pythonfunc:`{sig['signature']}`:\n\n"
+                    rst += "  "
+                    rst += sig['doc'] or '*No documentation*'
+                    rst += "\n\n"
+            rst += "\n\n"
+
+        if len(std_methods) > 0:
+            rst += f".. _{ref_name}-methods:\n\n"
+            rst += f"Methods\n{SUBSUBSECTION}\n\n"
+            for n in std_methods:
+                for sig in info["methods"][n]["overloads"]:
+                    rst += f"- :pythonfunc:`{sig['signature']}`:\n\n"
+                    rst += "  "
+                    rst += sig['doc'] or '*No documentation*'
+                    rst += "\n\n"
+            rst += "\n\n"
 
     return (rst, list(info['classes'].items()))
 
