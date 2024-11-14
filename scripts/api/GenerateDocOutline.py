@@ -5,7 +5,9 @@ from utils import load_api
 import inspect
 import enum
 import re
-import types
+
+
+# TODO: Missing constructor documentation
 
 
 def get_doc(m: object):
