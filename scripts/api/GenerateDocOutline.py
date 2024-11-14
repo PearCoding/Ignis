@@ -206,18 +206,24 @@ def generate_doc_module(name: str, info: dict) -> str:
                 rst += f".. _{ref_name}-{n}:\n\n"
             else:
                 rst += f".. _{n}:\n\n"
-            rst += f"- :pythonfunc:`{n}`: [{', '.join(e['members'])}]\n\n"
+            rst += f"- :pythonfunc:`{n}`:\n\n"
+            if len(e['doc']) > 0:
+                rst += "  " + e['doc'] + "\n\n"
+            rst += "\n"
+            for m in e['members']:
+                rst += f"  - :pythonfunc:`{m}`\n"
+            rst += "\n"
         rst += "\n\n"
 
     if len(info["properties"]) > 0:
         rst += f".. _{ref_name}-properties:\n\n"
         rst += f"Properties\n{SUBSUBSECTION}\n\n"
         for n, p in info["properties"].items():
+            rst += f"- :pythonfunc:`{n}`:\n\n"
             if len(p['doc']) > 0:
-                suffix = p['doc']
+                rst += "  " + p['doc'] + "\n\n"
             else:
-                suffix = f"Returns :pythonfunc:`{p['type']}` "
-            rst += f"- :pythonfunc:`{n}`: {suffix}\n"
+                rst += f"  Returns :pythonfunc:`{p['type']}`\n\n"
         rst += "\n\n"
 
     if len(info["methods"]) > 0:
@@ -225,8 +231,10 @@ def generate_doc_module(name: str, info: dict) -> str:
         rst += f"Methods\n{SUBSUBSECTION}\n\n"
         for n, m in info["methods"].items():
             for sig in m:
-                doc = sig['doc'] or '*No documentation*'
-                rst += f"- :pythonfunc:`{sig['signature']}`: {doc}\n"
+                rst += f"- :pythonfunc:`{sig['signature']}`:\n\n"
+                rst += "  "
+                rst += sig['doc'] or '*No documentation*'
+                rst += "\n\n"
         rst += "\n\n"
 
     return (rst, list(info['classes'].items()))
