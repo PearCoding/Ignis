@@ -572,7 +572,7 @@ private:
         const auto sunDirName = SceneProperty::fromString("sky_sun_dir");
         auto sunDirParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});
         sunDirParameter->setProperty("name", sunDirName);
-        sunDirParameter->setProperty("value", SceneProperty::fromVector3(-default_ea.toDirectionYUp()));
+        sunDirParameter->setProperty("value", SceneProperty::fromVector3(default_ea.toDirectionYUp()));
 
         const auto upName = SceneProperty::fromString("sky_up");
         auto upParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});
