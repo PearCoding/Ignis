@@ -6,7 +6,7 @@ from docutils.utils.code_analyzer import Lexer, LexerError
 import re
 
 
-matcher = re.compile(r"([^\\])(\{(.*?[^\\])\})")
+matcher = re.compile(r"(\{(.*?[^\\])\})")
 
 def mergePoint(tokens):
         """Merge subsequent tokens via '.'"""
@@ -35,8 +35,8 @@ def mergePoint(tokens):
 
 
 def pythonfunc_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
-    matches = [m[2] for m in re.findall(matcher, text)]
-    code_string, number_of_refs = re.subn(matcher, r"\g<1>\g<3>", text)
+    matches = [m[1] for m in re.findall(matcher, text)]
+    code_string, number_of_refs = re.subn(matcher, r"\g<2>", text)
 
     # TODO: This does not work as intended for the general case:
     # The substitution is over all appearances of the identifier inside {...},
