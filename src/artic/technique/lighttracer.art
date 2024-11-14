@@ -130,6 +130,11 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, m
         // Bounce
         let out_dir = vec3_neg(ctx.ray.dir);
         if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, true) {
+            // This should not really happen, but better be safe 
+            if mat_sample.pdf <= flt_eps {
+                return(Option[Ray]::None)
+            }
+
             let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
             let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
             if rnd.next_f32() >= rr_prob {

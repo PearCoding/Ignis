@@ -1,9 +1,9 @@
 struct VPTRayPayload {
-    inv_pdf: f32,
-    contrib: Color,
-    depth:   i32,
-    eta:     f32,
-    medium:  i32,
+    inv_pdf: f32,   // Inverse BSDF pdf
+    contrib: Color, // Current contribution
+    depth:   i32,   // Current depth
+    eta:     f32,   // Current eta (n1 / n2)
+    medium:  i32,   // Current medium id
 }
 
 fn @write_vptraypayload(payload: RayPayload, vpt: VPTRayPayload) -> () {
@@ -100,7 +100,7 @@ fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_select
                 color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));
 
             // No contribution to add, so do not shoot the ray to begin with.
-            if color_average(contrib) < flt_eps {
+            if color_average(contrib) <= flt_eps {
                 return(ShadowRay::None)
             }
 
@@ -213,6 +213,11 @@ fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_select
         } else {
             // Bounce on surface
             if let Option[BsdfSample]::Some(bsdf_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+                // This should not really happen, but better be safe 
+                if bsdf_sample.pdf <= flt_eps {
+                    return(Option[Ray]::None)
+                }
+
                 let vol         = medium.eval(ctx.ray.org, ctx.surf.point);
                 let vol_contrib = color_mul(vol, pt.contrib);
                 let contrib     = color_mul(vol_contrib, bsdf_sample.color/* Pdf and cosine are already applied!*/);
