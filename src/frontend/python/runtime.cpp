@@ -161,6 +161,7 @@ void runtime_module(nb::module_& m)
         .def_rw("Target", &RuntimeOptions::Target, "The target device")
         .def_rw("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
         .def_rw("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
+        .def_rw("DebugTrace", &RuntimeOptions::DebugTrace, "Dump trace information into the logger. Huge negative performance impact")
         .def_rw("AcquireStats", &RuntimeOptions::AcquireStats, "Set True if statistical data should be acquired while rendering")
         .def_rw("SPI", &RuntimeOptions::SPI, "The requested sample per iteration. Can be 0 to set automatically")
         .def_rw("Seed", &RuntimeOptions::Seed, "Seed for the random generators")
@@ -169,7 +170,8 @@ void runtime_module(nb::module_& m)
         .def_rw("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize, "Type of film size to use instead of the one used by the scene")
         .def_rw("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
         .def_rw("Denoiser", &RuntimeOptions::Denoiser, "Settings for the denoiser")
-        .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries");
+        .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries")
+        .def_rw("DisableStandardAOVs", &RuntimeOptions::DisableStandardAOVs, "Disable standard normal and albedo aovs");
 
     nb::class_<Ray>(m, "Ray", "Single ray traced into the scene")
         .def_static("__init__", [](Ray* ray, const Vector3f& org, const Vector3f& dir) { new (ray) Ray{ org, dir, Vector2f(0, FltMax) }; })
