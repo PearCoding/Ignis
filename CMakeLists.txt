@@ -22,7 +22,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(Ignis
-	VERSION 0.3.5
+	VERSION 0.3.6
 	DESCRIPTION "Experimental ray tracer")
 
 # For whatever reason Ignis might be used as a subproject...
