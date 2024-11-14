@@ -329,7 +329,7 @@ public:
         ZeroMemory(&pi, sizeof(pi));
 
         // Start the child process.
-        if (!CreateProcessW(NULL,                                       // No module name (use command line)
+        if (!CreateProcessW(exePath.native().data(),                    // Module name (use command line)
                             cmdLine.data(),                             // Command line
                             NULL,                                       // Process handle not inheritable
                             NULL,                                       // Thread handle not inheritable

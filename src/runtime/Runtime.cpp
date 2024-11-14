@@ -600,9 +600,14 @@ bool Runtime::compileShaders()
     size_t threads = mOptions.ShaderCompileThreads;
     if (threads == 0)
         threads = std::thread::hardware_concurrency() / 2; // Using the compiler might be a heavy task, therefore only use half of the cpu count. TODO: Make this smarter?
-    if (RuntimeInfo::igcPath().empty()) {
-        IG_LOG(L_WARNING) << "Could not find " << RuntimeInfo::igcPath() << ". Falling back to single threaded shader compilation" << std::endl;
-        threads = 1;
+
+    if (threads > 1) {
+        if (RuntimeInfo::igcPath().empty()) {
+            IG_LOG(L_WARNING) << "Could not find " << RuntimeInfo::igcPath() << ". Falling back to single threaded shader compilation" << std::endl;
+            threads = 1;
+        } else {
+            IG_LOG(L_DEBUG) << "Using compiler at " << RuntimeInfo::igcPath() << std::endl;
+        }
     }
 
     threads = std::max<size_t>(1, threads);
