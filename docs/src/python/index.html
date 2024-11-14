@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta property="article:modified_time" content="2024-11-14T14:12:16+00:00" />
+    <meta property="article:modified_time" content="2024-11-14T15:13:57+00:00" />
     <title>Python API &#8212; Ignis  documentation</title>
   
   
@@ -397,8 +397,8 @@
 </li>
 </ul>
 </section>
-<section id="methods">
-<span id="ignis-module-methods"></span><h3>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h3>
+<section id="static-methods">
+<span id="ignis-module-staticmethods"></span><h3>Static Methods<a class="headerlink" href="#static-methods" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">flushLog</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code>:</p>
 <p>Flush internal logs</p>
@@ -480,8 +480,8 @@
 </li>
 </ul>
 </section>
-<section id="boundingbox-methods">
-<span id="id3"></span><h3>Methods<a class="headerlink" href="#boundingbox-methods" title="Link to this heading">#</a></h3>
+<section id="boundingbox-staticmethods">
+<span id="id3"></span><h3>Static Methods<a class="headerlink" href="#boundingbox-staticmethods" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">MakeEmpty</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#boundingbox"><span class="name"><span class="pre">BoundingBox</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
@@ -489,6 +489,11 @@
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">MakeFull</span></span><span class="punctuation"><span class="pre">()</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#boundingbox"><span class="name"><span class="pre">BoundingBox</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
 </li>
+</ul>
+</section>
+<section id="methods">
+<span id="boundingbox-methods"></span><h3>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h3>
+<ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">extend</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="reference internal" href="#boundingbox"><span class="name"><span class="pre">BoundingBox</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#boundingbox"><span class="name"><span class="pre">BoundingBox</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
 </li>
@@ -727,8 +732,8 @@
 </li>
 </ul>
 </section>
-<section id="runtimeoptions-methods">
-<span id="id15"></span><h3>Methods<a class="headerlink" href="#runtimeoptions-methods" title="Link to this heading">#</a></h3>
+<section id="runtimeoptions-staticmethods">
+<span id="id15"></span><h3>Static Methods<a class="headerlink" href="#runtimeoptions-staticmethods" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeDefault</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">trace</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span> <span class="operator"><span class="pre">=</span></span> <span class="keyword constant"><span class="pre">False</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#runtimeoptions"><span class="name"><span class="pre">RuntimeOptions</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
@@ -791,8 +796,19 @@
 </li>
 </ul>
 </section>
+<section id="scene-staticmethods">
+<span id="id21"></span><h3>Static Methods<a class="headerlink" href="#scene-staticmethods" title="Link to this heading">#</a></h3>
+<ul>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromFile</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">path</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">|</span></span> <span class="name"><span class="pre">os.PathLike</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">flags</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">13303</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#scene"><span class="name"><span class="pre">Scene</span></span></a></code>:</p>
+<p><em>No documentation</em></p>
+</li>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">opt_dir</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">|</span></span> <span class="name"><span class="pre">os.PathLike</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal string single"><span class="pre">''</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">flags</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">13303</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#scene"><span class="name"><span class="pre">Scene</span></span></a></code>:</p>
+<p><em>No documentation</em></p>
+</li>
+</ul>
+</section>
 <section id="scene-methods">
-<span id="id21"></span><h3>Methods<a class="headerlink" href="#scene-methods" title="Link to this heading">#</a></h3>
+<span id="id22"></span><h3>Methods<a class="headerlink" href="#scene-methods" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">addBSDF</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <a class="reference internal" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="keyword constant"><span class="pre">None</span></span></code>:</p>
 <p><em>No documentation</em></p>
@@ -827,12 +843,6 @@
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">light</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
 </li>
-<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromFile</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">path</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">|</span></span> <span class="name"><span class="pre">os.PathLike</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">flags</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">13303</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#scene"><span class="name"><span class="pre">Scene</span></span></a></code>:</p>
-<p><em>No documentation</em></p>
-</li>
-<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">opt_dir</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">|</span></span> <span class="name"><span class="pre">os.PathLike</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal string single"><span class="pre">''</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">flags</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">13303</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#scene"><span class="name"><span class="pre">Scene</span></span></a></code>:</p>
-<p><em>No documentation</em></p>
-</li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">medium</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#sceneobject"><span class="name"><span class="pre">SceneObject</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
 </li>
@@ -846,10 +856,10 @@
 </section>
 </section>
 <section id="sceneobject">
-<span id="id22"></span><h2>SceneObject<a class="headerlink" href="#sceneobject" title="Link to this heading">#</a></h2>
+<span id="id23"></span><h2>SceneObject<a class="headerlink" href="#sceneobject" title="Link to this heading">#</a></h2>
 <p>Class representing an object in the scene</p>
 <section id="sceneobject-enums">
-<span id="id23"></span><h3>Enums<a class="headerlink" href="#sceneobject-enums" title="Link to this heading">#</a></h3>
+<span id="id24"></span><h3>Enums<a class="headerlink" href="#sceneobject-enums" title="Link to this heading">#</a></h3>
 <ul id="sceneobject-type">
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Type</span></span></code>:</p>
 <p>Enum holding type of scene object</p>
@@ -868,7 +878,7 @@
 </ul>
 </section>
 <section id="sceneobject-properties">
-<span id="id24"></span><h3>Properties<a class="headerlink" href="#sceneobject-properties" title="Link to this heading">#</a></h3>
+<span id="id25"></span><h3>Properties<a class="headerlink" href="#sceneobject-properties" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">baseDir</span></span></code>:</p>
 <p>Returns <code class="code Python docutils literal notranslate"><span class="name"><span class="pre">pathlib.Path</span></span></code></p>
@@ -885,7 +895,7 @@
 </ul>
 </section>
 <section id="sceneobject-methods">
-<span id="id25"></span><h3>Methods<a class="headerlink" href="#sceneobject-methods" title="Link to this heading">#</a></h3>
+<span id="id26"></span><h3>Methods<a class="headerlink" href="#sceneobject-methods" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">hasProperty</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code>:</p>
 <p><em>No documentation</em></p>
@@ -900,10 +910,10 @@
 </section>
 </section>
 <section id="sceneparser">
-<span id="id26"></span><h2>SceneParser<a class="headerlink" href="#sceneparser" title="Link to this heading">#</a></h2>
+<span id="id27"></span><h2>SceneParser<a class="headerlink" href="#sceneparser" title="Link to this heading">#</a></h2>
 <p>Parser for standard JSON and glTF scene description</p>
 <section id="sceneparser-enums">
-<span id="id27"></span><h3>Enums<a class="headerlink" href="#sceneparser-enums" title="Link to this heading">#</a></h3>
+<span id="id28"></span><h3>Enums<a class="headerlink" href="#sceneparser-enums" title="Link to this heading">#</a></h3>
 <ul id="sceneparser-flags">
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Flags</span></span></code>:</p>
 <p>Flags modifying parsing behaviour and allowing partial scene loads</p>
@@ -924,7 +934,7 @@
 </ul>
 </section>
 <section id="sceneparser-methods">
-<span id="id28"></span><h3>Methods<a class="headerlink" href="#sceneparser-methods" title="Link to this heading">#</a></h3>
+<span id="id29"></span><h3>Methods<a class="headerlink" href="#sceneparser-methods" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">loadFromFile</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">path</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">str</span></span> <span class="operator"><span class="pre">|</span></span> <span class="name"><span class="pre">os.PathLike</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">flags</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">13303</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#scene"><span class="name"><span class="pre">Scene</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
@@ -936,10 +946,10 @@
 </section>
 </section>
 <section id="sceneproperty">
-<span id="id29"></span><h2>SceneProperty<a class="headerlink" href="#sceneproperty" title="Link to this heading">#</a></h2>
+<span id="id30"></span><h2>SceneProperty<a class="headerlink" href="#sceneproperty" title="Link to this heading">#</a></h2>
 <p>Property of an object in the scene</p>
 <section id="sceneproperty-enums">
-<span id="id30"></span><h3>Enums<a class="headerlink" href="#sceneproperty-enums" title="Link to this heading">#</a></h3>
+<span id="id31"></span><h3>Enums<a class="headerlink" href="#sceneproperty-enums" title="Link to this heading">#</a></h3>
 <ul id="sceneproperty-type">
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Type</span></span></code>:</p>
 <p>Enum holding type of scene property</p>
@@ -959,19 +969,16 @@
 </ul>
 </section>
 <section id="sceneproperty-properties">
-<span id="id31"></span><h3>Properties<a class="headerlink" href="#sceneproperty-properties" title="Link to this heading">#</a></h3>
+<span id="id32"></span><h3>Properties<a class="headerlink" href="#sceneproperty-properties" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name builtin"><span class="pre">type</span></span></code>:</p>
 <p>Returns <code class="code Python docutils literal notranslate"><a class="reference internal" href="#sceneproperty-type"><span class="name"><span class="pre">SceneProperty.Type</span></span></a></code></p>
 </li>
 </ul>
 </section>
-<section id="sceneproperty-methods">
-<span id="id32"></span><h3>Methods<a class="headerlink" href="#sceneproperty-methods" title="Link to this heading">#</a></h3>
+<section id="sceneproperty-staticmethods">
+<span id="id33"></span><h3>Static Methods<a class="headerlink" href="#sceneproperty-staticmethods" title="Link to this heading">#</a></h3>
 <ul>
-<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">canBeNumber</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code>:</p>
-<p><em>No documentation</em></p>
-</li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromBool</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
 </li>
@@ -997,6 +1004,14 @@
 <p><em>No documentation</em></p>
 </li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">fromVector3</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name"><span class="pre">Vec3</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#sceneproperty"><span class="name"><span class="pre">SceneProperty</span></span></a></code>:</p>
+<p><em>No documentation</em></p>
+</li>
+</ul>
+</section>
+<section id="sceneproperty-methods">
+<span id="id34"></span><h3>Methods<a class="headerlink" href="#sceneproperty-methods" title="Link to this heading">#</a></h3>
+<ul>
+<li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">canBeNumber</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code>:</p>
 <p><em>No documentation</em></p>
 </li>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">getBool</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">def</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">bool</span></span> <span class="operator"><span class="pre">=</span></span> <span class="keyword constant"><span class="pre">False</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">bool</span></span></code>:</p>
@@ -1033,10 +1048,10 @@
 </section>
 </section>
 <section id="target">
-<span id="id33"></span><h2>Target<a class="headerlink" href="#target" title="Link to this heading">#</a></h2>
+<span id="id35"></span><h2>Target<a class="headerlink" href="#target" title="Link to this heading">#</a></h2>
 <p>Target specification the runtime is using</p>
 <section id="target-properties">
-<span id="id34"></span><h3>Properties<a class="headerlink" href="#target-properties" title="Link to this heading">#</a></h3>
+<span id="id36"></span><h3>Properties<a class="headerlink" href="#target-properties" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">Architecture</span></span></code>:</p>
 <p>Returns <code class="code Python docutils literal notranslate"><a class="reference internal" href="#cpuarchitecture"><span class="name"><span class="pre">CPUArchitecture</span></span></a> <span class="operator"><span class="pre">|</span></span> <a class="reference internal" href="#gpuarchitecture"><span class="name"><span class="pre">GPUArchitecture</span></span></a></code></p>
@@ -1067,8 +1082,8 @@
 </li>
 </ul>
 </section>
-<section id="target-methods">
-<span id="id35"></span><h3>Methods<a class="headerlink" href="#target-methods" title="Link to this heading">#</a></h3>
+<section id="target-staticmethods">
+<span id="id37"></span><h3>Static Methods<a class="headerlink" href="#target-staticmethods" title="Link to this heading">#</a></h3>
 <ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">makeCPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">arg0</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">,</span></span> <span class="name"><span class="pre">arg1</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#target"><span class="name"><span class="pre">Target</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
@@ -1091,6 +1106,11 @@
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">pickGPU</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name"><span class="pre">device</span></span><span class="punctuation"><span class="pre">:</span></span> <span class="name builtin"><span class="pre">int</span></span> <span class="operator"><span class="pre">=</span></span> <span class="literal number integer"><span class="pre">0</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <a class="reference internal" href="#target"><span class="name"><span class="pre">Target</span></span></a></code>:</p>
 <p><em>No documentation</em></p>
 </li>
+</ul>
+</section>
+<section id="target-methods">
+<span id="id38"></span><h3>Methods<a class="headerlink" href="#target-methods" title="Link to this heading">#</a></h3>
+<ul>
 <li><p><code class="code Python docutils literal notranslate"><span class="name"><span class="pre">toString</span></span><span class="punctuation"><span class="pre">(</span></span><span class="name builtin pseudo"><span class="pre">self</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="operator"><span class="pre">-&gt;</span></span> <span class="name builtin"><span class="pre">str</span></span></code>:</p>
 <p><em>No documentation</em></p>
 </li>
@@ -1139,12 +1159,13 @@
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ignis-module">Ignis (module)</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#enums">Enums</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#methods">Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#static-methods">Static Methods</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#boundingbox">BoundingBox</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#properties">Properties</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#boundingbox-methods">Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#boundingbox-staticmethods">Static Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#methods">Methods</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cameraorientation">CameraOrientation</a><ul class="nav section-nav flex-column">
@@ -1166,7 +1187,7 @@
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runtimeoptions">RuntimeOptions</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#runtimeoptions-properties">Properties</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#runtimeoptions-methods">Methods</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#runtimeoptions-staticmethods">Static Methods</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#runtimewrap">RuntimeWrap</a><ul class="nav section-nav flex-column">
@@ -1176,6 +1197,7 @@
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scene">Scene</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#scene-properties">Properties</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#scene-staticmethods">Static Methods</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#scene-methods">Methods</a></li>
 </ul>
 </li>
@@ -1193,11 +1215,13 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sceneproperty">SceneProperty</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sceneproperty-enums">Enums</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sceneproperty-properties">Properties</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sceneproperty-staticmethods">Static Methods</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sceneproperty-methods">Methods</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#target">Target</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-properties">Properties</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-staticmethods">Static Methods</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#target-methods">Methods</a></li>
 </ul>
 </li>
