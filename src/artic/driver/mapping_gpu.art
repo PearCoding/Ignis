@@ -39,10 +39,14 @@ fn @gpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, atomics: Atomics) -> 
 }
 
 fn @gpu_get_framebuffer(spi: i32, use_framebuffer: bool, atomics: Atomics) -> AOVImage {
-    let (film_pixels, film_width, film_height) = gpu_get_film_data();
-    let framebuffer = if !use_framebuffer { make_empty_aov_image() } else { make_atomic_aov_image(film_pixels, film_width, film_height, spi, atomics) };
-    // TODO: Make this configurable!
-    attach_no_filter(framebuffer)
+    if !use_framebuffer {
+        make_empty_aov_image()
+    } else {
+        let (film_pixels, film_width, film_height) = gpu_get_film_data();
+        let framebuffer = make_atomic_aov_image(film_pixels, film_width, film_height, spi, atomics);
+        // TODO: Make this configurable!
+        attach_no_filter(framebuffer)
+    }
 }
 
 fn @gpu_traverse_primary(primary: PrimaryStream
