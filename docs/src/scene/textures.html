@@ -17,17 +17,19 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-
-  
-  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+  <link href="../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -35,13 +37,14 @@
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=b7c27e88" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/lightbox.css?v=1a4ee0e0" />
   
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
 
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
@@ -54,6 +57,7 @@
     <link rel="prev" title="Techniques" href="techniques.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
     <meta name="docbuild:last-update" content="Sep 05, 2023"/>
   </head>
   
@@ -70,19 +74,8 @@
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
 
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
-  
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
-  
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -90,7 +83,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search the docs ..."
          aria-label="Search the docs ..."
          autocomplete="off"
@@ -98,8 +90,8 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
@@ -173,29 +165,21 @@
         <div class="navbar-item navbar-persistent--container">
           
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script>
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
         </div>
       
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
-  </button>
-`);
-</script></div>
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -220,15 +204,11 @@ document.write(`
   
     <div class="navbar-persistent--mobile">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script>
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
     </div>
   
 
@@ -247,7 +227,8 @@ document.write(`
       
       
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -294,15 +275,11 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
-  </button>
-`);
-</script></div>
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -368,8 +345,6 @@ document.write(`
       
         <div class="header-article-item">
 
-
-
 <nav aria-label="Breadcrumb" class="d-print-none">
   <ul class="bd-breadcrumbs">
     
@@ -381,7 +356,7 @@ document.write(`
     
     <li class="breadcrumb-item"><a href="index.html" class="nav-link">Scene Description</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page">Textures</li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Textures</span></li>
   </ul>
 </nav>
 </div>
@@ -462,7 +437,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-image">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id1" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image.jpg" style="width: 60%" data-lightbox="-1613257980140753893" data-title=""><img alt="../../_images/texture_image.jpg" src="../../_images/texture_image.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image.jpg" style="width: 60%" data-lightbox="-3696465686657078074" data-title=""><img alt="../../_images/texture_image.jpg" src="../../_images/texture_image.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Image texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Link to this image">#</a></p>
@@ -470,21 +445,21 @@ The type has to be one of the textures listed at this section below.</p>
 </figure>
 </div><div class="figure subfigure compound align-center" id="fig-image-filters">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id2" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image_nearest.jpg" style="width: 60%" data-lightbox="-3283785790502874006" data-title=""><img alt="../../_images/texture_image_nearest.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/texture_image_nearest.jpg" style="width: 95%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image_nearest.jpg" style="width: 60%" data-lightbox="-1800257181640816743" data-title=""><img alt="../../_images/texture_image_nearest.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/texture_image_nearest.jpg" style="width: 95%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Nearest filter</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id3" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image_bilinear.jpg" style="width: 60%" data-lightbox="-706698036850285727" data-title=""><img alt="../../_images/texture_image_bilinear.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/texture_image_bilinear.jpg" style="width: 95%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image_bilinear.jpg" style="width: 60%" data-lightbox="6598137959066018336" data-title=""><img alt="../../_images/texture_image_bilinear.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/texture_image_bilinear.jpg" style="width: 95%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Bilinear filter</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-center subsubfigure lightbox-image align-center" id="id4" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image_bicubic.jpg" style="width: 60%" data-lightbox="233497542828217588" data-title=""><img alt="../../_images/texture_image_bicubic.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/texture_image_bicubic.jpg" style="width: 95%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_image_bicubic.jpg" style="width: 60%" data-lightbox="-3425548282125927613" data-title=""><img alt="../../_images/texture_image_bicubic.jpg" class="align-center subsubfigure lightbox-image align-center" src="../../_images/texture_image_bicubic.jpg" style="width: 95%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Bicubic filter</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id4" title="Link to this image">#</a></p>
@@ -535,7 +510,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-brick">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id5" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_brick.jpg" style="width: 60%" data-lightbox="-5798466550525971432" data-title=""><img alt="../../_images/texture_brick.jpg" src="../../_images/texture_brick.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_brick.jpg" style="width: 60%" data-lightbox="3451158135267515810" data-title=""><img alt="../../_images/texture_brick.jpg" src="../../_images/texture_brick.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Brick texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id5" title="Link to this image">#</a></p>
@@ -579,7 +554,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-checkerboard">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id6" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_checkerboard.jpg" style="width: 60%" data-lightbox="-6829108157863065707" data-title=""><img alt="../../_images/texture_checkerboard.jpg" src="../../_images/texture_checkerboard.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_checkerboard.jpg" style="width: 60%" data-lightbox="3414645791086861823" data-title=""><img alt="../../_images/texture_checkerboard.jpg" src="../../_images/texture_checkerboard.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Checkerboard texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id6" title="Link to this image">#</a></p>
@@ -615,7 +590,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-noise">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id7" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_noise.jpg" style="width: 60%" data-lightbox="-3712709011845544790" data-title=""><img alt="../../_images/texture_noise.jpg" src="../../_images/texture_noise.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_noise.jpg" style="width: 60%" data-lightbox="69848789320340979" data-title=""><img alt="../../_images/texture_noise.jpg" src="../../_images/texture_noise.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Noise texture, a slight color noise is visible</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id7" title="Link to this image">#</a></p>
@@ -665,7 +640,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-pnoise">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id8" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_pnoise.jpg" style="width: 60%" data-lightbox="1933828244411621860" data-title=""><img alt="../../_images/texture_pnoise.jpg" src="../../_images/texture_pnoise.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_pnoise.jpg" style="width: 60%" data-lightbox="-9076931635788455293" data-title=""><img alt="../../_images/texture_pnoise.jpg" src="../../_images/texture_pnoise.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">PNoise texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id8" title="Link to this image">#</a></p>
@@ -714,7 +689,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-cellnoise">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id9" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_cellnoise.jpg" style="width: 60%" data-lightbox="-4049856117294658727" data-title=""><img alt="../../_images/texture_cellnoise.jpg" src="../../_images/texture_cellnoise.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_cellnoise.jpg" style="width: 60%" data-lightbox="3306068857314834087" data-title=""><img alt="../../_images/texture_cellnoise.jpg" src="../../_images/texture_cellnoise.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Cell noise texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id9" title="Link to this image">#</a></p>
@@ -763,7 +738,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-perlin">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id10" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_perlin.jpg" style="width: 60%" data-lightbox="6261471030324496632" data-title=""><img alt="../../_images/texture_perlin.jpg" src="../../_images/texture_perlin.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_perlin.jpg" style="width: 60%" data-lightbox="-1293313933687018129" data-title=""><img alt="../../_images/texture_perlin.jpg" src="../../_images/texture_perlin.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Perlin noise texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id10" title="Link to this image">#</a></p>
@@ -812,7 +787,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-voronoi">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id11" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_voronoi.jpg" style="width: 60%" data-lightbox="-8138014808456135873" data-title=""><img alt="../../_images/texture_voronoi.jpg" src="../../_images/texture_voronoi.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_voronoi.jpg" style="width: 60%" data-lightbox="8087909958419438379" data-title=""><img alt="../../_images/texture_voronoi.jpg" src="../../_images/texture_voronoi.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Voronoi texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id11" title="Link to this image">#</a></p>
@@ -861,7 +836,7 @@ The type has to be one of the textures listed at this section below.</p>
 </div>
 <div class="figure subfigure compound align-center" id="fig-fbm">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id12" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_fbm.jpg" style="width: 60%" data-lightbox="4337117482993271691" data-title=""><img alt="../../_images/texture_fbm.jpg" src="../../_images/texture_fbm.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_fbm.jpg" style="width: 60%" data-lightbox="2577625099001361544" data-title=""><img alt="../../_images/texture_fbm.jpg" src="../../_images/texture_fbm.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">FBM texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id12" title="Link to this image">#</a></p>
@@ -895,7 +870,7 @@ The parameters used inside the expression have to be prefixed with <code class="
 </div>
 <div class="figure subfigure compound align-center" id="fig-expr">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id13" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_expr.jpg" style="width: 60%" data-lightbox="7086327965962038123" data-title=""><img alt="../../_images/texture_expr.jpg" src="../../_images/texture_expr.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_expr.jpg" style="width: 60%" data-lightbox="6207107167132163118" data-title=""><img alt="../../_images/texture_expr.jpg" src="../../_images/texture_expr.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Custom texture generated by an expression</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id13" title="Link to this image">#</a></p>
@@ -943,7 +918,7 @@ The parameters used inside the expression have to be prefixed with <code class="
 </div>
 <div class="figure subfigure compound align-center" id="fig-expr">
 <figure class="align-center subsubfigure lightbox-image align-center" id="id15" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_transform.jpg" style="width: 60%" data-lightbox="-7205606979778652881" data-title=""><img alt="../../_images/texture_transform.jpg" src="../../_images/texture_transform.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/texture_transform.jpg" style="width: 60%" data-lightbox="-395198321254044855" data-title=""><img alt="../../_images/texture_transform.jpg" src="../../_images/texture_transform.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Transformed texture as a texture</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id15" title="Link to this image">#</a></p>
@@ -987,7 +962,8 @@ The parameters used inside the expression have to be prefixed with <code class="
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1028,8 +1004,8 @@ The parameters used inside the expression have to be prefixed with <code class="
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -1040,7 +1016,7 @@ The parameters used inside the expression have to be prefixed with <code class="
 
   <p class="copyright">
     
-      © Copyright 2020-2023, Ignis-Project.
+      © Copyright 2020-2025, Ignis-Project.
       <br/>
     
   </p>
@@ -1049,7 +1025,7 @@ The parameters used inside the expression have to be prefixed with <code class="
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
     <br/>
   </p>
 </div>
@@ -1062,7 +1038,7 @@ The parameters used inside the expression have to be prefixed with <code class="
       
         <div class="footer-item">
 <p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.4.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
 </p></div>
       
     </div>

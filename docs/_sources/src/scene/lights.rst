@@ -187,7 +187,7 @@ Sun Light (:monosp:`sun`)
   * - direction
     - |vector|
     - :code:`(0,0,1)`
-    - No
+    - Yes
     - Direction of the incoming sun towards the scene.
   * - elevation, azimuth
     - |number|
@@ -199,21 +199,21 @@ Sun Light (:monosp:`sun`)
     - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
     - No
     - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
+  * - radiance
+    - |number|
+    - *None*
+    - Yes
+    - Output of the sun in radiometric [W/sr^-1/m^2] or photometric [lm/sr^-1/m^2] units. Can not be specified with :paramtype:`irradiance`.
   * - irradiance
     - |number|
     - :code:`1`
     - Yes
-    - Output of the sun in radiometric [W/m^2] or photometric [lm/m^2] units.
-  * - radius
-    - |number|
-    - :code:`1`
-    - No
-    - Radius of the sun seen from the earth. Can not be specified together with :paramtype:`angle`.
+    - Output of the sun in radiometric [W/m^2] or photometric [lm/m^2] units. Can not be specified with :paramtype:`radiance`.
   * - angle
     - |number|
-    - :code:`11.4`
-    - No
-    - Angular diameter of the sun seen from the earth. Can not be specified together with :paramtype:`radius`.
+    - :code:`0.533`
+    - Yes
+    - Solid angle of the sun given in degrees seen from the earth.
 
 .. subfigstart::
   
@@ -462,7 +462,7 @@ Perez Sky Model (:monosp:`perez`)
   * - direction
     - |vector|
     - :code:`(0,0,1)`
-    - No
+    - Yes
     - Direction of the light towards the scene.
   * - elevation, azimuth
     - |number|
@@ -474,50 +474,57 @@ Perez Sky Model (:monosp:`perez`)
     - :code:`2020`, :code:`5`, :code:`6`, :code:`12`, :code:`0`, :code:`0`, :code:`49.235422`, :code:`-6.9965744`, :code:`-2`
     - No
     - Instead of :monosp:`direction` the time and location can be used. This will give the approximated direction from the sun. Latitude is given in degrees north. Longitude is given in degrees west. The timezone is given as an offset to the UTC.
-  * - luminance
+  * - color
     - |color|
     - :code:`1`
-    - No
-    - Luminance of the sky model. Set this to 1 to prevent the parameter :monosp:`zenith` to be applied.
-  * - zenith
-    - |color|
-    - :code:`1`
-    - No
-    - Zenith color of the sky model. This can not be used together with :monosp:`luminance`.
+    - Yes
+    - Tint of the sky model.
   * - ground
     - |color|
-    - :code:`1`
-    - No
-    - Ground tint of the sky model. The ground has to be explicitly given.
-  * - a, b, c, d, e
-    - |number|
-    - :code:`1`, :code:`1`, :code:`1`, :code:`1`, :code:`1`
-    - No
-    - Perez explicit parameters. Can not be used with other options specifying Perez parameters.
+    - :code:`0.2`
+    - Yes
+    - Ground tint of the sky model. Multiplied with :monosp:`color`. Resembled the "-g" parameter in ``gendaylit``.
   * - clearness, brightness
     - |number|
     - :code:`1`, :code:`0.2`
-    - No
-    - Perez specified parameters to populate a, b, c, d and e. Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
+    - Yes
+    - Perez specified parameters to populate a, b, c, d and e. Can not be used with other options specifying Perez parameters.
   * - diffuse_irradiance, direct_irradiance
     - |number|
     - :code:`1`, :code:`1`
+    - Yes
+    - Diffuse horizontal irradiance (W/m^2) and direct normal irradiance (W/m^2). Can not be used with other options specifying Perez parameters.
+  
+  .. * - diffuse_illuminance, direct_illuminance
+  ..   - |number|
+  ..   - :code:`1`, :code:`1`
+  ..   - No
+  ..   - Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Can not be used with other options specifying Perez parameters.
+
+  * - up
+    - |vector|
+    - :code:`(0,1,0)`
+    - Yes
+    - Up vector for the sky model.
+  * - has_ground
+    - |bool|
+    - |true|
     - No
-    - Diffuse horizontal irradiance (W/m^2) and direct normal irradiance (W/m^2). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
-  * - diffuse_illuminance, direct_illuminance
-    - |number|
-    - :code:`1`, :code:`1`
+    - Add ground to the sky model.
+  * - has_sun
+    - |bool|
+    - |true|
     - No
-    - Diffuse horizontal illuminance (Lux) and direct normal illuminance (Lux). Will apply a diffuse normalization term. Can not be used with other options specifying Perez parameters.
-   
-.. NOTE:: Output is in W m^-2 sr^-1 solar radiation, which equals the "-O 1" parameter in ``gendaylit`` from the `Radiance <https://www.radiance-online.org/>`_ framework. Support of the default "-O 0" is planned 
+    - Add sun into the sky model.
+
+.. NOTE:: Output is in W m^-2 sr^-1 visible radiation, which equals the "-O 0" parameter in ``gendaylit`` from the `Radiance <https://www.radiance-online.org/>`_ framework.
 
 .. subfigstart::
   
 .. figure:: images/light_perez.jpg
   :width: 90%
 
-  Perez sky model with clearness = 1, brightness = 0.01 and other parameters.
+  Perez sky model with clearness = 1, brightness = 0.01.
 
 .. subfigend::
   :width: 0.6

@@ -20,15 +20,23 @@ Currently, four frontends are available:
 
 ``igview``
 ^^^^^^^^^^
-     
-This is the standard UI interface which displays the scene getting progressively rendered.
+
+This is the standard UI interface which displays the scene getting progressively rendered. 
 
 This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position.
 Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms.
-Switching to the UI-less frontend ``igcli`` might be a good idea if no preview is necessary.
+Switching to the UI-less frontend ``igcli`` might be a good idea if no preview is necessary. 
 
-Note, ``igview`` will be only available if the UI feature is enabled and SDL2 is available on your system.
-Disable this frontend by setting the CMake option ``IG_WITH_VIEWER`` to ``Off``.
+Note, ``igview`` will be only available if the UI feature is enabled and SDL2 is available on your system. Disable this frontend by setting the CMake option ``IG_WITH_VIEWER`` to ``Off``.
+
+``igexplorer``
+^^^^^^^^^^^^^^
+
+A special frontend developed for glare risk assessment.
+Capable of loading scenes and delivering the usual window based application experience.
+This is the only frontend which does not need a scene when opening.
+
+Disable this frontend by setting the CMake option ``IG_WITH_EXPLORER`` to ``Off``.
  
 ``igcli`` 
 ^^^^^^^^^
