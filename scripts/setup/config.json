@@ -53,17 +53,17 @@
     "TBB": {
         // Only on Windows
         "ENABLED": true,
-        "URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-win.zip"
+        "URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2022.0.0/oneapi-tbb-2022.0.0-win.zip"
     },
     "SDL2": {
         // Only on Windows
         "ENABLED": true,
-        "URL": "https://github.com/libsdl-org/SDL/releases/download/release-2.30.8/SDL2-devel-2.30.8-VC.zip"
+        "URL": "https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-devel-2.30.9-VC.zip"
     },
     "OIDN": {
         // Only on Windows
         "ENABLED": true,
-        "URL": "https://github.com/RenderKit/oidn/releases/download/v2.3.0/oidn-2.3.0.x64.windows.zip"
+        "URL": "https://github.com/RenderKit/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip"
     },
     "IGNIS": {
         "ENABLED": true,
