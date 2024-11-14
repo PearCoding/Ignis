@@ -52,12 +52,20 @@ endif()
 # Extra
 if(TARGET OpenImageDenoise::OpenImageDenoise)
   target_link_libraries(ig_runtime PRIVATE OpenImageDenoise::OpenImageDenoise)
-  target_compile_definitions(ig_runtime PRIVATE "IG_HAS_DENOISER")
-  
-  message(STATUS "Building with OIDN support")
+  set(HAS_OIDN ON)
 elseif(TARGET OpenImageDenoise)
   target_link_libraries(ig_runtime PRIVATE OpenImageDenoise)
+  set(HAS_OIDN ON)
+endif()
+
+if(HAS_OIDN)
   target_compile_definitions(ig_runtime PRIVATE "IG_HAS_DENOISER")
+  if (WIN32)
+    file(GLOB OIDN_DEVICES_DLLS "${CMAKE_BINARY_DIR}/bin/OpenImageDenoise_device*.dll")
+    if(OIDN_DEVICES_DLLS)
+      install(FILES ${OIDN_DEVICES_DLLS} TYPE BIN COMPONENT runtime)
+    endif()
+  endif()
   
   message(STATUS "Building with OIDN support")
 endif()
