@@ -53,7 +53,7 @@ fn @make_debug_renderer(debug_mode: i32) -> Technique {
                     make_option(make_gray_color(ctx.hit.distance))
                 },
                 14 => { // DEBUG_AREA
-                    make_option(make_gray_color(safe_div(1, ctx.surf.inv_area)))
+                    make_option(make_gray_color(ctx.surf.area))
                 },
                 15 => { // DEBUG_PRIM_ID_RAW
                     let v = ctx.hit.prim_id as f32;

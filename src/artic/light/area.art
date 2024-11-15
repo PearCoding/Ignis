@@ -52,7 +52,7 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
 
         let surf = shape.surface_element_for_point(f, make_vec2(u, v), pmset);
 
-        (surf, surf.inv_area / (shape.primitive_count as f32), (shape.primitive_count as f32) / surf.inv_area)
+        (surf, surf.inv_area / (shape.primitive_count as f32), surf.area * (shape.primitive_count as f32))
     }
 
     fn @pdf(uv: Vec2) {
@@ -107,7 +107,7 @@ struct SQ {
 fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
                             normal: Vec3, area: f32,
                             t0: Vec2, t1: Vec2, t2: Vec2, t3: Vec2) -> AreaEmitter {
-    let inv_area = 1 / area;
+    let inv_area = safe_div(1, area);
     let width    = vec3_len(x_axis);
     let height   = vec3_len(y_axis);
     let ex       = vec3_mulf(x_axis, 1 / width);
@@ -195,6 +195,7 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
             is_entering = true,
             point       = p,
             face_normal = normal,
+            area        = area,
             inv_area    = inv_area,
             prim_coords = make_vec2(tx, ty),
             tex_coords  = t,
@@ -220,6 +221,7 @@ fn @make_plane_area_emitter(origin: Vec3, x_axis: Vec3, y_axis: Vec3,
             is_entering = true,
             point       = p,
             face_normal = normal,
+            area        = area,
             inv_area    = inv_area,
             prim_coords = uv,
             tex_coords  = t,
@@ -260,7 +262,7 @@ fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
         let lps = vec3_len2(ps);
         
         if lps <= los {
-            (surf, make_area_pdf(2 * surf.inv_area), 1 / (2 * surf.inv_area))
+            (surf, make_area_pdf(2 * surf.inv_area), surf.area / 2)
         } else {
             // Compute new point by offsetting it two times the radius
             let op = vec3_sub(p, glb_org);
@@ -269,7 +271,7 @@ fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
             // Compute normal, which is necessary for the other attributes
             let norm  = vec3_normalize(vec3_sub(np, glb_org));
             let nsurf = sphere_compute_surface_element_for_normal(norm, sphere, pmset);
-            (nsurf, make_area_pdf(2 * surf.inv_area), 1 / (2 * surf.inv_area))
+            (nsurf, make_area_pdf(2 * surf.inv_area), surf.area / 2)
         }
     }
 

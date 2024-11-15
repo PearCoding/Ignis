@@ -30,11 +30,13 @@ fn @sphere_compute_surface_element_for_normal(normal: Vec3, sphere: Sphere, pmse
     let point = vec3_add(sphere.origin, vec3_mulf(normal, sphere.radius));
     let uv    = sphere_map_uv(normal);
     let gn    = vec3_normalize(pmset.to_global_normal(normal));
+    let area  = compute_ellipsoid_area(sphere, pmset);
     SurfaceElement {
         is_entering = true,
         point       = pmset.to_global_point(point),
         face_normal = gn,
-        inv_area    = 1 / compute_ellipsoid_area(sphere, pmset),
+        area        = area,
+        inv_area    = safe_div(1, area),
         prim_coords = uv,
         tex_coords  = uv,
         local       = make_orthonormal_mat3x3(gn)
@@ -49,6 +51,7 @@ fn @make_sphere_shape(sphere: Sphere) -> Shape {
             let dir    = vec3_sub(point, pmset.to_global_point(sphere.origin));
             let len    = vec3_len(dir);
             let normal = vec3_mulf(dir, 1 / len);
+            let area   = compute_ellipsoid_area(sphere, pmset);
 
             let is_entering = true;//len < sphere.radius;
 
@@ -56,7 +59,8 @@ fn @make_sphere_shape(sphere: Sphere) -> Shape {
                 is_entering = is_entering,
                 point       = point,
                 face_normal = normal,
-                inv_area    = 1 / compute_ellipsoid_area(sphere, pmset),
+                area        = area,
+                inv_area    = safe_div(1, area),
                 prim_coords = hit.prim_coords,
                 tex_coords  = hit.prim_coords,
                 local       = make_orthonormal_mat3x3(normal)

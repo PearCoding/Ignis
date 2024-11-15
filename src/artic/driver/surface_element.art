@@ -3,6 +3,7 @@ struct SurfaceElement {
     is_entering: bool,  // True if the path enters the surface
     point:       Vec3,  // Point on the surface
     face_normal: Vec3,  // Geometric normal at the surface point
+    area:        f32,   // Area of surface element
     inv_area:    f32,   // Inverse area of surface element
     prim_coords: Vec2,  // UV coordinates on the surface
     tex_coords:  Vec2,  // Vertex attributes (interpolated)
@@ -13,6 +14,7 @@ fn make_invalid_surface_element() = SurfaceElement {
     is_entering = false,
     point       = vec3_expand(0),
     face_normal = vec3_expand(0),
+    area        = 0,
     inv_area    = 0,
     prim_coords = vec2_expand(0),
     tex_coords  = vec2_expand(0),
