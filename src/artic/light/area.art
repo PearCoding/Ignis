@@ -244,8 +244,9 @@ fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
     let shape = make_sphere_shape(sphere);
     let pmset = make_standard_pointmapperset(shape, entity);
 
-    let area   = compute_ellipsoid_area(sphere, pmset);
-    let origin = sphere.origin;
+    let area     = compute_ellipsoid_area(sphere, pmset);
+    let inv_area = safe_div(1, area);
+    let origin   = sphere.origin;
 
     fn @sample_direct(uv: Vec2, from_point: Vec3) {
         let glb_org = pmset.to_global_point(origin);
@@ -262,7 +263,7 @@ fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
         let lps = vec3_len2(ps);
         
         if lps <= los {
-            (surf, make_area_pdf(2 * surf.inv_area), surf.area / 2)
+            (surf, make_area_pdf(inv_area), area)
         } else {
             // Compute new point by offsetting it two times the radius
             let po = vec3_sub(glb_org, p);
@@ -271,17 +272,17 @@ fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
             // Compute normal, which is necessary for the other attributes
             let norm  = vec3_normalize(vec3_sub(np, glb_org));
             let nsurf = sphere_compute_surface_element_for_normal(pmset.to_local_normal(norm), sphere, pmset);
-            (nsurf, make_area_pdf(2 * nsurf.inv_area), nsurf.area / 2)
+            (nsurf, make_area_pdf(inv_area), area)
         }
     }
 
     fn @sample_emission(uv: Vec2) {
         let surf = sphere_compute_surface_element_for_normal(equal_area_square_to_sphere(uv), sphere, pmset);
-        (surf, surf.inv_area)
+        (surf, inv_area)
     }
 
     fn @pdf_direct(_uv: Vec2, _:Vec3) {
-        make_area_pdf(2 / area)
+        make_area_pdf(inv_area)
     }
 
     fn @pdf_emission(_uv: Vec2, _: Vec3) {
