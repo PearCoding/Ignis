@@ -68,7 +68,7 @@ public:
 
         if (mBeautify && !mFirstTime)
             std::cout << REMOVE_LAST_LINE;
-        std::cout << "Done" << std::setw(120) << " " << std::endl;
+        // std::cout << "Done" << std::setw(120) << " " << std::endl;
     }
 
     inline void update(uint64 current)
