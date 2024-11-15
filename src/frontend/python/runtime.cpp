@@ -171,7 +171,9 @@ void runtime_module(nb::module_& m)
         .def_rw("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
         .def_rw("Denoiser", &RuntimeOptions::Denoiser, "Settings for the denoiser")
         .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries")
-        .def_rw("DisableStandardAOVs", &RuntimeOptions::DisableStandardAOVs, "Disable standard normal and albedo aovs");
+        .def_rw("DisableStandardAOVs", &RuntimeOptions::DisableStandardAOVs, "Disable standard normal and albedo aovs")
+        .def_rw("ShaderOptimizationLevel", &RuntimeOptions::ShaderOptimizationLevel, "Level of optimization for shaders")
+        .def_rw("ShaderCompileThreads", &RuntimeOptions::ShaderCompileThreads, "Number of threads to use for compiling shaders");
 
     nb::class_<Ray>(m, "Ray", "Single ray traced into the scene")
         .def_static("__init__", [](Ray* ray, const Vector3f& org, const Vector3f& dir) { new (ray) Ray{ org, dir, Vector2f(0, FltMax) }; })
