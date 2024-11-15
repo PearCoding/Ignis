@@ -265,13 +265,13 @@ fn @make_sphere_area_emitter(entity: Entity, sphere: Sphere) -> AreaEmitter {
             (surf, make_area_pdf(2 * surf.inv_area), surf.area / 2)
         } else {
             // Compute new point by offsetting it two times the radius
-            let op = vec3_sub(p, glb_org);
-            let np = vec3_sub(p, vec3_mulf(op, 2)); 
+            let po = vec3_sub(glb_org, p);
+            let np = vec3_add(p, vec3_mulf(po, 2)); 
 
             // Compute normal, which is necessary for the other attributes
             let norm  = vec3_normalize(vec3_sub(np, glb_org));
-            let nsurf = sphere_compute_surface_element_for_normal(norm, sphere, pmset);
-            (nsurf, make_area_pdf(2 * surf.inv_area), surf.area / 2)
+            let nsurf = sphere_compute_surface_element_for_normal(pmset.to_local_normal(norm), sphere, pmset);
+            (nsurf, make_area_pdf(2 * nsurf.inv_area), nsurf.area / 2)
         }
     }
 

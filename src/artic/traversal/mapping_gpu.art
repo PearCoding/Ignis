@@ -199,7 +199,7 @@ fn @gpu_traverse_scene( min_max: MinMax
                         let local_hit = scene.handle_local(local_ray, leaf, any_hit); 
                         
                         if local_hit.prim_id != InvalidHitId && local_hit.distance <= hit.distance {
-                            *hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
+                            *hit      = local_hit.{ ent_id = leaf.entity_id & 0x7FFFFFFF };
                             ray2.tmax = hit.distance;
 
                             // Early exit mode

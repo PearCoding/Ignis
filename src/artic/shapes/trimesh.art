@@ -132,7 +132,7 @@ fn @make_cpu_tri_prim(tris: &[Tri4], vector_width: i32) -> fn (i32) -> Prim {
             let tri = make_tri(v0, e1, e2, n);
             if let Option[(f32, f32, f32)]::Some(t, u, v) = intersect_ray_tri_cpu(false /*backface_culling*/, ray, tri, vector_width) {    
                 let prim_id = tri_ptr.prim_id(i) & 0x7FFFFFFF;
-                make_option(make_hit(InvalidHitId, prim_id, t, make_vec2(u, v))) 
+                make_option(make_hit(InvalidHitId/* Will be set later*/, prim_id, t, make_vec2(u, v))) 
             } else {
                 Option[Hit]::None
             }

@@ -492,7 +492,7 @@ fn @cpu_traverse_helper( mut ray: Ray
                             if active {
                                 if local_hit.prim_id != InvalidHitId {
                                     if local_hit.distance <= hit.distance {
-                                        hit      = make_hit(leaf.entity_id & 0x7FFFFFFF, local_hit.prim_id, local_hit.distance, local_hit.prim_coords);
+                                        hit      = local_hit.{ ent_id = leaf.entity_id & 0x7FFFFFFF };
                                         ray.tmax = hit.distance;
                                         
                                         if any_hit {

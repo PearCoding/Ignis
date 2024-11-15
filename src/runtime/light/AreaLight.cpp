@@ -169,10 +169,10 @@ void AreaLight::serialize(const SerializationInput& input) const
             << ");" << std::endl;
     } break;
     case RepresentationType::Sphere: {
-        const auto& shape     = input.Tree.context().Shapes->getSphereShape(entity->ShapeID);
-        const Vector3f origin = entity->Transform * shape.Origin;
+        const auto& shape = input.Tree.context().Shapes->getSphereShape(entity->ShapeID);
 
-        input.Tree.addComputedVector(light_prefix + "_origin", origin, ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedVector(light_prefix + "_origin", shape.Origin, ShadingTree::VectorOptions::Dynamic());
+        input.Tree.addComputedNumber(light_prefix + "_radius", shape.Radius, ShadingTree::NumberOptions::Dynamic());
         input.Tree.addComputedMatrix34(light_prefix + "_local", localMat, ShadingTree::VectorOptions::Dynamic());
         input.Tree.addComputedMatrix34(light_prefix + "_global", globalMat, ShadingTree::VectorOptions::Dynamic());
         input.Tree.addComputedMatrix3(light_prefix + "_normal", normalMat, ShadingTree::VectorOptions::Dynamic());
@@ -186,7 +186,7 @@ void AreaLight::serialize(const SerializationInput& input) const
                      << ", normal_mat = " << input.Tree.getInlineMatrix3(light_prefix + "_normal")
                      << ", shape_id = " << entity->ShapeID << " }"
                      << ",  Sphere{ origin = " << input.Tree.getInline(light_prefix + "_origin")
-                     << ", radius = " << shape.Radius
+                     << ", radius = " << input.Tree.getInline(light_prefix + "_radius")
                      << " });" << std::endl;
     } break;
     default:
