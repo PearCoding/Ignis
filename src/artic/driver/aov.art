@@ -10,11 +10,11 @@ struct AOVImage {
 // Contains all the aov images available
 type AOVTable = fn (i32) -> AOVImage;
 
-fn @make_empty_aov_image() = AOVImage {
-    width        = 0,
-    height       = 0,
-    splat        = @|_, _| -> () {},
-    get          = @|_| -> Color { color_builtins::black }
+fn @make_empty_aov_image(w: i32, h: i32) = AOVImage {
+    width  = w,
+    height = h,
+    splat  = @|_, _| -> () {},
+    get    = @|_| -> Color { color_builtins::black }
 };
 
 fn @make_atomic_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32, atomics: Atomics) -> AOVImage {
@@ -36,7 +36,7 @@ fn @make_std_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32) -> AOVImage
         width  = w,
         height = h,
         splat  = @|coord, color| -> () { accumulate(coord.linear, color); },
-        get = @|coord| -> Color {
+        get    = @|coord| -> Color {
             let ptr2 = &pixels(coord.linear * 3) as &[f32];
             make_color(ptr2(0), ptr2(1), ptr2(2), 1)
         }

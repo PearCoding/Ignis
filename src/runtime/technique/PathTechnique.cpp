@@ -68,7 +68,7 @@ void PathTechnique::generateBody(const SerializationInput& input) const
                      << "      2 => aov_nee," << std::endl;
     }
 
-    input.Stream << "      _ => make_empty_aov_image()" << std::endl
+    input.Stream << "      _ => make_empty_aov_image(0, 0)" << std::endl
                  << "    }" << std::endl
                  << "  };" << std::endl;
 

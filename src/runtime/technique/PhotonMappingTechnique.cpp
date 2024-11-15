@@ -130,7 +130,7 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
     if (is_light_pass) {
         input.Stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
                      << "    match(id) {" << std::endl
-                     << "      _ => make_empty_aov_image()" << std::endl
+                     << "      _ => make_empty_aov_image(0, 0)" << std::endl
                      << "    }" << std::endl
                      << "  };" << std::endl;
     } else {
@@ -147,7 +147,7 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
                          << "      2 => aov_merg," << std::endl;
         }
 
-        input.Stream << "      _ => make_empty_aov_image()" << std::endl
+        input.Stream << "      _ => make_empty_aov_image(0, 0)" << std::endl
                      << "    }" << std::endl
                      << "  };" << std::endl;
     }

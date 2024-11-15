@@ -455,7 +455,7 @@ fn @cpu_splat(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32, s
 fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool, vector_width: i32) -> AOVImage {
     let (film_pixels, film_width, film_height) = cpu_get_film_data();
     if !use_framebuffer {
-        make_empty_aov_image()
+        make_empty_aov_image(film_width, film_height)
     } else if vector_width > 1 { 
         make_rv_aov_image(film_pixels, film_width, film_height, spi)
     } else {
