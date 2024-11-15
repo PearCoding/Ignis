@@ -1,4 +1,4 @@
-!gensky 11 18 13 -y 2022 -a +49.235422 -o -6.9965744 -m -30 -i
+!gensky 5 6 12 -y 2020 -a +49.235422 -o -6.9965744 -m -30 -i
 
 skyfunc glow skyglow
 0

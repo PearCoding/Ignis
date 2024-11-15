@@ -13,6 +13,9 @@
 		"size": [256, 256]
 	},
 	"lights": [
-		{"type":"cieuniform", "name":"Sky"}
+		{
+			"type":"cieuniform", "name":"Sky",
+			"year": 2020, "month": 5, "day": 6, "hour": 12, "minute": 0, "seconds": 0, "timezone": 1
+		}
 	]
 }

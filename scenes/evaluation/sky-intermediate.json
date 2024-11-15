@@ -15,8 +15,7 @@
 	"lights": [
 		{
 			"type":"cieintermediate", "name":"Sky",
-			"year": 2022, "month": 11, "day": 18, "hour": 13, "minute": 0, "seconds": 0,
-			"latitude": 49.235422, "longitude": -6.9965744, "timezone": -1
+			"year": 2020, "month": 5, "day": 6, "hour": 12, "minute": 0, "seconds": 0, "timezone": 1
 		}
 	]
 }
