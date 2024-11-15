@@ -155,12 +155,14 @@ void runtime_module(nb::module_& m)
         .def_rw("HighQuality", &DenoiserSettings::HighQuality, "Set True if denoiser should be high quality or interactive")
         .def_rw("Prefilter", &DenoiserSettings::Prefilter, "Set True if normal and albedo layer should be prefiltered");
 
-    nb::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
+    auto opts = nb::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
         .def(nb::init<>())
         .def_static("makeDefault", &RuntimeOptions::makeDefault, nb::arg("trace") = false)
         .def_rw("Target", &RuntimeOptions::Target, "The target device")
         .def_rw("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
         .def_rw("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
+        .def_rw("DumpRegistry", &RuntimeOptions::DumpRegistry, "Dump the registry into the standard io")
+        .def_rw("DumpRegistryFull", &RuntimeOptions::DumpRegistryFull, "Dump the complete registry into the standard io")
         .def_rw("DebugTrace", &RuntimeOptions::DebugTrace, "Dump trace information into the logger. Huge negative performance impact")
         .def_rw("AcquireStats", &RuntimeOptions::AcquireStats, "Set True if statistical data should be acquired while rendering")
         .def_rw("SPI", &RuntimeOptions::SPI, "The requested sample per iteration. Can be 0 to set automatically")
@@ -173,7 +175,17 @@ void runtime_module(nb::module_& m)
         .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries")
         .def_rw("DisableStandardAOVs", &RuntimeOptions::DisableStandardAOVs, "Disable standard normal and albedo aovs")
         .def_rw("ShaderOptimizationLevel", &RuntimeOptions::ShaderOptimizationLevel, "Level of optimization for shaders")
-        .def_rw("ShaderCompileThreads", &RuntimeOptions::ShaderCompileThreads, "Number of threads to use for compiling shaders");
+        .def_rw("ShaderCompileThreads", &RuntimeOptions::ShaderCompileThreads, "Number of threads to use for compiling shaders")
+        .def_rw("Specialization", &RuntimeOptions::Specialization)
+        .def_rw("EnableCache", &RuntimeOptions::EnableCache, "Enable cache")
+        .def_rw("CacheDir", &RuntimeOptions::CacheDir, "The explicit directory for the runtime cache")
+        .def_rw("ScriptDir", &RuntimeOptions::ScriptDir, "Path to a new script directory, replacing the internal standard library")
+        .def_rw("AddExtraEnvLight", &RuntimeOptions::AddExtraEnvLight, "Option to add a constant environment light (just to see something)");
+
+    nb::enum_<RuntimeOptions::SpecializationMode>(opts, "SpecializationMode", "Enum holding shader specialization modes")
+        .value("Default", RuntimeOptions::SpecializationMode::Default)
+        .value("Force", RuntimeOptions::SpecializationMode::Force)
+        .value("Disable", RuntimeOptions::SpecializationMode::Disable);
 
     nb::class_<Ray>(m, "Ray", "Single ray traced into the scene")
         .def_static("__init__", [](Ray* ray, const Vector3f& org, const Vector3f& dir) { new (ray) Ray{ org, dir, Vector2f(0, FltMax) }; })
