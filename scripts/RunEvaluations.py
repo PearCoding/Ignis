@@ -40,6 +40,7 @@ def evaluate_target(ignis, scene_file, out_dir, spp, target):
 
     opts = ignis.RuntimeOptions.makeDefault()
     opts.Target = ignis.Target.pickCPU() if target == "cpu" else ignis.Target.pickGPU(0)
+    opts.DisableStandardAOVs = True
 
     if not opts.Target.IsValid:
         print(f"Can not setup a target for device type {target}")
