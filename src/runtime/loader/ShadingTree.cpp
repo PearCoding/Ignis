@@ -155,6 +155,59 @@ static inline ShadingTree::ColorOptions mapToColorOptions(const ShadingTree::Tex
     };
 }
 
+std::string ShadingTree::handlePropertyInteger(const std::string& name, const SceneProperty& prop, const IntegerOptions& options)
+{
+    switch (prop.type()) {
+    default:
+    case SceneProperty::PT_NONE:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' has invalid type" << std::endl;
+        return {};
+    case SceneProperty::PT_INTEGER:
+        return acquireInteger(name, prop.getInteger(), options);
+    case SceneProperty::PT_NUMBER:
+        IG_LOG(L_WARNING) << "Parameter '" << name << "' expects an integer but a number was given. Casting to `int` instead" << std::endl;
+        return acquireInteger(name, (int)prop.getNumber(), options);
+    case SceneProperty::PT_VECTOR3:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' expects an integer but a color was given. Can not cast this" << std::endl;
+        signalError();
+        return {};
+    case SceneProperty::PT_STRING:
+        IG_LOG(L_ERROR) << "Parameter '" << name << "' expects an integer but a texture was given. Can not cast this" << std::endl;
+        signalError();
+        return {};
+    }
+}
+
+void ShadingTree::addInteger(const std::string& name, SceneObject& obj, const std::optional<int>& def, const IntegerOptions& options)
+{
+    if (hasParameter(name)) {
+        IG_LOG(L_ERROR) << "Multiple use of parameter '" << name << "'" << std::endl;
+        signalError();
+    }
+
+    const auto prop = obj.property(name);
+
+    std::string inline_str;
+    if (prop.type() == SceneProperty::PT_NONE) {
+        if (!def.has_value())
+            return;
+        inline_str = acquireInteger(name, def.value(), options);
+    } else {
+        inline_str = handlePropertyInteger(name, prop, options);
+    }
+
+    currentClosure().Parameters[name] = inline_str;
+}
+
+void ShadingTree::addComputedInteger(const std::string& prop_name, int number, const IntegerOptions& options)
+{
+    if (hasParameter(prop_name)) {
+        IG_LOG(L_ERROR) << "Multiple use of parameter '" << prop_name << "'" << std::endl;
+        signalError();
+    }
+    currentClosure().Parameters[prop_name] = acquireInteger(prop_name, number, options);
+}
+
 std::string ShadingTree::handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options)
 {
     switch (prop.type()) {
@@ -777,6 +830,28 @@ std::string ShadingTree::handleTexture(const std::string& prop_name, const std::
     }
 }
 
+bool ShadingTree::checkIfEmbed(int val, const IntegerOptions& options) const
+{
+    switch (options.EmbedType) {
+    case EmbedType::Structural:
+        return true;
+    case EmbedType::Dynamic:
+        return false;
+    default:
+    case EmbedType::Default:
+        if (mSpecialization == RuntimeOptions::SpecializationMode::Force || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Force)
+            return true;
+        else if (mSpecialization == RuntimeOptions::SpecializationMode::Disable || mContext.Options.Specialization == RuntimeOptions::SpecializationMode::Disable)
+            return false;
+        else if (options.SpecializeZero && val == 0)
+            return true;
+        else if (options.SpecializeOne && val == 1)
+            return true;
+        else
+            return false;
+    }
+}
+
 bool ShadingTree::checkIfEmbed(float val, const NumberOptions& options) const
 {
     switch (options.EmbedType) {
@@ -843,6 +918,19 @@ bool ShadingTree::checkIfEmbed(const Vector3f& vec, const VectorOptions& options
             return true;
         else
             return false;
+    }
+}
+
+std::string ShadingTree::acquireInteger(const std::string& prop_name, int number, const IntegerOptions& options)
+{
+    if (checkIfEmbed(number, options)) {
+        return std::to_string(number);
+    } else {
+        const std::string id                     = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
+        mContext.LocalRegistry.IntParameters[id] = number;
+
+        mHeaderLines.push_back("  let var_int_" + id + " = registry::get_local_parameter_i32(\"" + id + "\", 0);\n");
+        return "var_int_" + id;
     }
 }
 

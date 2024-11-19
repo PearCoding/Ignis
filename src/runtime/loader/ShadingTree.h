@@ -18,6 +18,18 @@ enum class EmbedType {
     Structural,  // Never uses the local registry for the value
     Default      // Depending on internal state the value will be pulled from local registry or embedded directly
 };
+struct IntegerOptions {
+    _details::EmbedType EmbedType = _details::EmbedType::Default;
+    bool SpecializeZero           = false; // Will embed if constant zero
+    bool SpecializeOne            = false; // Will embed if constant one
+
+    static constexpr IntegerOptions Dynamic() { return IntegerOptions{ EmbedType::Dynamic, false, false }; }
+    static constexpr IntegerOptions Structural() { return IntegerOptions{ EmbedType::Structural, true, true }; }
+    static constexpr IntegerOptions Full() { return IntegerOptions{ EmbedType::Default, true, true }; }
+    static constexpr IntegerOptions Zero() { return IntegerOptions{ EmbedType::Default, true, false }; }
+    static constexpr IntegerOptions One() { return IntegerOptions{ EmbedType::Default, false, true }; }
+    static constexpr IntegerOptions None() { return IntegerOptions{ EmbedType::Default, false, false }; }
+};
 struct NumberOptions {
     _details::EmbedType EmbedType = _details::EmbedType::Default;
     bool SpecializeZero           = false; // Will embed if constant zero
@@ -98,6 +110,7 @@ public:
     // Thanks to this https://stackoverflow.com/questions/53408962/try-to-understand-compiler-error-message-default-member-initializer-required-be
     // we do have to use this workaround
     using EmbedType      = _details::EmbedType;
+    using IntegerOptions = _details::IntegerOptions;
     using NumberOptions  = _details::NumberOptions;
     using ColorOptions   = _details::ColorOptions;
     using VectorOptions  = _details::VectorOptions;
@@ -114,11 +127,13 @@ public:
     void beginClosure(const std::string& name);
     void endClosure();
 
+    void addInteger(const std::string& name, SceneObject& obj, const std::optional<int>& def = std::make_optional<int>(0), const IntegerOptions& options = IntegerOptions::Full());
     void addNumber(const std::string& name, SceneObject& obj, const std::optional<float>& def = std::make_optional<float>(0.0f), const NumberOptions& options = NumberOptions::Full());
     void addColor(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const ColorOptions& options = ColorOptions::Full());
     void addVector(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const VectorOptions& options = VectorOptions::Full());
     void addTexture(const std::string& name, SceneObject& obj, const std::optional<Vector3f>& def = std::make_optional<Vector3f>(Vector3f::Zero()), const TextureOptions& options = TextureOptions::Default());
 
+    void addComputedInteger(const std::string& prop_name, int number, const IntegerOptions& options = IntegerOptions::Full());
     void addComputedNumber(const std::string& prop_name, float number, const NumberOptions& options = NumberOptions::Full());
     void addComputedColor(const std::string& prop_name, const Vector3f& color, const ColorOptions& options = ColorOptions::Full());
     void addComputedVector(const std::string& prop_name, const Vector3f& vec, const VectorOptions& options = VectorOptions::Full());
@@ -165,12 +180,16 @@ private:
     Vector3f handleGlobalParameterVector(const std::string& name, const SceneProperty& prop);
     Vector4f handleGlobalParameterColor(const std::string& name, const SceneProperty& prop);
 
+    std::string handlePropertyInteger(const std::string& name, const SceneProperty& prop, const IntegerOptions& options);
     std::string handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options);
 
     std::string handleTexture(const std::string& prop_name, const std::string& expr, bool needColor);
+    std::string acquireInteger(const std::string& prop_name, int number, const IntegerOptions& options);
     std::string acquireNumber(const std::string& prop_name, float number, const NumberOptions& options);
     std::string acquireColor(const std::string& prop_name, const Vector3f& color, const ColorOptions& options);
     std::string acquireVector(const std::string& prop_name, const Vector3f& vec, const VectorOptions& options);
+
+    bool checkIfEmbed(int val, const IntegerOptions& options) const;
     bool checkIfEmbed(float val, const NumberOptions& options) const;
     bool checkIfEmbed(const Vector3f& color, const ColorOptions& options) const;
     bool checkIfEmbed(const Vector3f& vec, const VectorOptions& options) const;

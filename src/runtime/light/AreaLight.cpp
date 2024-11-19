@@ -177,14 +177,18 @@ void AreaLight::serialize(const SerializationInput& input) const
         input.Tree.addComputedMatrix34(light_prefix + "_global", globalMat, ShadingTree::VectorOptions::Dynamic());
         input.Tree.addComputedMatrix3(light_prefix + "_normal", normalMat, ShadingTree::VectorOptions::Dynamic());
 
+        input.Tree.addComputedInteger(light_prefix + "_ent_id", entity->ID, ShadingTree::IntegerOptions::Dynamic());
+        input.Tree.addComputedInteger(light_prefix + "_ent_mat_id", entity->MatID, ShadingTree::IntegerOptions::Dynamic());
+        input.Tree.addComputedInteger(light_prefix + "_ent_shp_id", entity->ShapeID, ShadingTree::IntegerOptions::Dynamic());
+
         input.Stream << input.Tree.pullHeader();
         input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter("
-                     << "Entity{ id = " << entity->ID
-                     << ", mat_id = " << entity->MatID
+                     << "Entity{ id = " << input.Tree.getInline(light_prefix + "_ent_id")
+                     << ", mat_id = " << input.Tree.getInline(light_prefix + "_ent_mat_id")
                      << ", local_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_local")
                      << ", global_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_global")
                      << ", normal_mat = " << input.Tree.getInlineMatrix3(light_prefix + "_normal")
-                     << ", shape_id = " << entity->ShapeID << " }"
+                     << ", shape_id = " << input.Tree.getInline(light_prefix + "_ent_shp_id") << " }"
                      << ",  Sphere{ origin = " << input.Tree.getInline(light_prefix + "_origin")
                      << ", radius = " << input.Tree.getInline(light_prefix + "_radius")
                      << " });" << std::endl;
@@ -199,20 +203,30 @@ void AreaLight::serialize(const SerializationInput& input) const
             input.Tree.addComputedMatrix34(light_prefix + "_global", globalMat, ShadingTree::VectorOptions::Dynamic());
             input.Tree.addComputedMatrix3(light_prefix + "_normal", normalMat, ShadingTree::VectorOptions::Dynamic());
 
+            input.Tree.addComputedInteger(light_prefix + "_tbl_offset", shape.TableOffset, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_face_count", tri.FaceCount, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_vertex_count", tri.VertexCount, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_normal_count", tri.NormalCount, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_tex_count", tri.TexCount, ShadingTree::IntegerOptions::Dynamic());
+
+            input.Tree.addComputedInteger(light_prefix + "_ent_id", entity->ID, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_ent_mat_id", entity->MatID, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_ent_shp_id", entity->ShapeID, ShadingTree::IntegerOptions::Dynamic());
+
             input.Stream << input.Tree.pullHeader();
-            input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device, "
-                         << shape.TableOffset
-                         << ", " << tri.FaceCount
-                         << ", " << tri.VertexCount
-                         << ", " << tri.NormalCount
-                         << ", " << tri.TexCount << ");" << std::endl
+            input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device"
+                         << ", " << input.Tree.getInline(light_prefix + "_tbl_offset") << " as u64"
+                         << ", " << input.Tree.getInline(light_prefix + "_tbl_face_count")
+                         << ", " << input.Tree.getInline(light_prefix + "_tbl_vertex_count")
+                         << ", " << input.Tree.getInline(light_prefix + "_tbl_normal_count")
+                         << ", " << input.Tree.getInline(light_prefix + "_tbl_tex_count") << ");" << std::endl
                          << "  let ae_" << light_id << " = make_shape_area_emitter("
-                         << "Entity{ id = " << entity->ID
-                         << ", mat_id = " << entity->MatID
+                         << "Entity{ id = " << input.Tree.getInline(light_prefix + "_ent_id")
+                         << ", mat_id = " << input.Tree.getInline(light_prefix + "_ent_mat_id")
                          << ", local_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_local")
                          << ", global_mat = " << input.Tree.getInlineMatrix34(light_prefix + "_global")
                          << ", normal_mat = " << input.Tree.getInlineMatrix3(light_prefix + "_normal")
-                         << ", shape_id = " << entity->ShapeID << " }"
+                         << ", shape_id = " << input.Tree.getInline(light_prefix + "_ent_shp_id") << " }"
                          << ", make_trimesh_shape(trimesh_" << light_id << "));" << std::endl;
         } else {
             // Error already messaged
