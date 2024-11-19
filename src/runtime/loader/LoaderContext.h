@@ -3,6 +3,7 @@
 #include "CacheManager.h"
 #include "LoaderOptions.h"
 #include "LoaderTechnique.h"
+#include "ParameterDescSet.h"
 #include "RuntimeSettings.h"
 #include "device/Target.h"
 #include "math/BoundingBox.h"
@@ -67,6 +68,8 @@ public:
 
     size_t CurrentTechniqueVariant;
     [[nodiscard]] inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return Technique->info().Variants.at(CurrentTechniqueVariant); }
+
+    ParameterDescSet SceneParameterDesc;
 
     ParameterSet GlobalRegistry; // Global registry, will be merged with the user registry at the end (user preceding over)
     ParameterSet LocalRegistry;  // Current local registry for given shader

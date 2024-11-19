@@ -844,8 +844,7 @@ public:
         ImGui::SetNextWindowPos(ImVec2((float)(Width - 5 - PROP_W), 5.0f), ImGuiCond_Once);
         ImGui::SetNextWindowSize(ImVec2((float)PROP_W, (float)PROP_H), ImGuiCond_Once);
         if (ImGui::Begin("Properties", &ShowProperties, WindowFlags)) {
-            const bool changed = ui_property_view(Runtime);
-            if (changed)
+            if (ui_registry_view(Runtime))
                 result = Context::UpdateResult::Reset;
         }
         ImGui::End();

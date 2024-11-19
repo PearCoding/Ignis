@@ -27,8 +27,7 @@ void RegistryWidget::onRender(Widget*)
 
     bool visibility = mVisibleItem ? mVisibleItem->isSelected() : true;
     if (ImGui::Begin("Registry", mVisibleItem ? &visibility : nullptr)) {
-        const bool changed = ui::ui_property_view(runtime, true);
-        if (changed)
+        if (ui::ui_registry_view(runtime, true))
             runtime->reset();
     }
     ImGui::End();

@@ -126,7 +126,7 @@ bool LoaderShape::load(LoaderContext& ctx)
 #endif
     IG_LOG(L_DEBUG) << "Loading of shapes took " << (std::chrono::high_resolution_clock::now() - start1) << std::endl;
 
-    return true;
+    return !ctx.HasError;
 }
 
 uint32 LoaderShape::addShape(const std::string& name, const Shape& shape)

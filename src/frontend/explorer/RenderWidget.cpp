@@ -573,36 +573,43 @@ private:
         auto sunDirParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});
         sunDirParameter->setProperty("name", sunDirName);
         sunDirParameter->setProperty("value", SceneProperty::fromVector3(default_ea.toDirectionYUp()));
+        sunDirParameter->setProperty("internal", SceneProperty::fromBool(true));
 
         const auto upName = SceneProperty::fromString("sky_up");
         auto upParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "vector", Path{});
         upParameter->setProperty("name", upName);
         upParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::UnitY()));
+        upParameter->setProperty("internal", SceneProperty::fromBool(true));
 
         const auto brightnessName = SceneProperty::fromString("sky_brightness");
         auto brightnessParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
         brightnessParameter->setProperty("name", brightnessName);
         brightnessParameter->setProperty("value", SceneProperty::fromNumber(0.01f));
+        brightnessParameter->setProperty("internal", SceneProperty::fromBool(true));
 
         const auto clearnessName = SceneProperty::fromString("sky_clearness");
         auto clearnessParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
         clearnessParameter->setProperty("name", clearnessName);
         clearnessParameter->setProperty("value", SceneProperty::fromNumber(1.00f));
+        clearnessParameter->setProperty("internal", SceneProperty::fromBool(true));
 
         const auto dayOfTheYearName = SceneProperty::fromString("sky_day_of_the_year");
         auto dayOfTheYearParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
         dayOfTheYearParameter->setProperty("name", dayOfTheYearName);
         dayOfTheYearParameter->setProperty("value", SceneProperty::fromNumber((float)TimePoint().dayOfTheYear()));
+        dayOfTheYearParameter->setProperty("internal", SceneProperty::fromBool(true));
 
         const auto colorName = SceneProperty::fromString("sky_color");
         auto colorParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "color", Path{});
         colorParameter->setProperty("name", colorName);
         colorParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::Ones()));
+        colorParameter->setProperty("internal", SceneProperty::fromBool(true));
 
         const auto groundName = SceneProperty::fromString("sky_ground_color");
         auto groundParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "color", Path{});
         groundParameter->setProperty("name", groundName);
         groundParameter->setProperty("value", SceneProperty::fromVector3(Vector3f::Ones() * 0.2f));
+        groundParameter->setProperty("internal", SceneProperty::fromBool(true));
 
         scene->addParameter(sunDirName.getString(), std::move(sunDirParameter));
         scene->addParameter(upName.getString(), std::move(upParameter));

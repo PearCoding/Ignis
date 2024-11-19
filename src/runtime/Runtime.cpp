@@ -88,7 +88,6 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mCurrentFrame(0)
     , mFilmWidth(0)
     , mFilmHeight(0)
-    , mHasSceneParameters(false)
     , mCameraName()
     , mInitialCameraOrientation()
     , mTechniqueName()
@@ -258,8 +257,6 @@ bool Runtime::load(const Path& path, const Scene* scene)
     lopts.Scene         = scene;
     lopts.CachePath     = mOptions.CacheDir.empty() ? (path.parent_path() / ("ignis_cache_" + path.stem().generic_string())) : mOptions.CacheDir;
 
-    mHasSceneParameters = !scene->parameters().empty();
-
     // Print a warning if denoiser was requested but none is available
     if (mOptions.Denoiser.Enabled && !lopts.Denoiser.Enabled && !mOptions.IsTracer && !hasDenoiser())
         IG_LOG(L_WARNING) << "Trying to use denoiser but no denoiser is available" << std::endl;
@@ -301,6 +298,7 @@ bool Runtime::load(const Path& path, const Scene* scene)
     mInitialCameraOrientation = ctx->Camera->getOrientation(*ctx);
     mTechniqueVariants        = std::move(ctx->TechniqueVariants);
     mResourceMap              = ctx->generateResourceMap();
+    mSceneParameterDesc       = ctx->SceneParameterDesc;
 
     if (mOptions.Denoiser.Enabled)
         mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");

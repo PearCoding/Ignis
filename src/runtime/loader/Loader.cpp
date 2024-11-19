@@ -8,6 +8,7 @@
 #include "LoaderTechnique.h"
 #include "LoaderTexture.h"
 #include "Logger.h"
+#include "ParameterDescSet.h"
 #include "shader/AdvancedShadowShader.h"
 #include "shader/DeviceShader.h"
 #include "shader/HitShader.h"
@@ -20,6 +21,66 @@
 #include <functional>
 
 namespace IG {
+static ParameterDescSet handleUserParameters(const LoaderOptions& opts)
+{
+    ParameterDescSet params;
+    for (const auto& pair : opts.Scene->parameters()) {
+        const auto param       = pair.second;
+        const std::string type = param->pluginType();
+
+        const std::string displayName = param->property("display").getString(pair.first);
+        const std::string desc        = param->property("description").getString();
+        const bool internal           = param->property("internal").getBool(false);
+
+        if (type == "int" || type == "integer") {
+            params.add(pair.first,
+                       ParameterDescSet::IntParameter{
+                           .Display     = displayName,
+                           .Description = desc,
+                           .Default     = param->property("value").getInteger(),
+                           .Min         = param->property("min").getInteger(std::numeric_limits<int>::min()),
+                           .Max         = param->property("max").getInteger(std::numeric_limits<int>::max()),
+                           .Step        = param->property("step").getInteger(1),
+                           .Internal    = internal });
+        } else if (type == "number") {
+            params.add(pair.first,
+                       ParameterDescSet::FloatParameter{
+                           .Display     = displayName,
+                           .Description = desc,
+                           .Default     = param->property("value").getNumber(),
+                           .Min         = param->property("min").getNumber(-FltInf),
+                           .Max         = param->property("max").getNumber(FltInf),
+                           .Step        = param->property("step").getNumber(1.0f),
+                           .Internal    = internal });
+        } else if (type == "vector") {
+            params.add(pair.first,
+                       ParameterDescSet::VectorParameter{
+                           .Display     = displayName,
+                           .Description = desc,
+                           .Default     = param->property("value").getVector3(),
+                           .Normalized  = param->property("normalized").getBool(false),
+                           .Internal    = internal });
+        } else if (type == "color") {
+            const Vector3f color = param->property("value").getVector3();
+            params.add(pair.first,
+                       ParameterDescSet::ColorParameter{
+                           .Display     = displayName,
+                           .Description = desc,
+                           .Default     = Vector4f(color.x(), color.y(), color.z(), 1.0f),
+                           .Internal    = internal }); // TODO: Alpha!?
+        } else if (type == "string") {
+            params.add(pair.first,
+                       ParameterDescSet::StringParameter{
+                           .Display     = displayName,
+                           .Description = desc,
+                           .Default     = param->property("value").getString(),
+                           .Internal    = internal });
+        }
+    }
+
+    return params;
+}
+
 std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
 {
     LoaderContext ctx;
@@ -176,6 +237,8 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     ctx.GlobalRegistry.IntParameters["__material_count"]      = (int)ctx.Materials.size();
     ctx.GlobalRegistry.VectorParameters["__scene_bbox_lower"] = ctx.SceneBBox.min;
     ctx.GlobalRegistry.VectorParameters["__scene_bbox_upper"] = ctx.SceneBBox.max;
+
+    ctx.SceneParameterDesc = handleUserParameters(opts);
 
     if (ctx.HasError) {
         IG_LOG(L_ERROR) << "Aborting loading due to previous errors." << std::endl;

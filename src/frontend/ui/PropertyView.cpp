@@ -42,7 +42,7 @@ static inline size_t getPropertyCount(const std::unordered_map<std::string, _Tp,
     }
 }
 
-bool ui_property_view(Runtime* runtime, bool readonly)
+bool ui_registry_view(Runtime* runtime, bool readonly)
 {
     constexpr int TableFlags  = ImGuiTableFlags_PadOuterX;
     constexpr int InputFlags  = ImGuiInputTextFlags_EnterReturnsTrue;
@@ -71,7 +71,7 @@ bool ui_property_view(Runtime* runtime, bool readonly)
                         ImGui::TableNextColumn();
 
                         if (!readonly && is_public) {
-                            const std::string id = "##" + param.first;
+                            const std::string id = "##reg_int_" + param.first;
                             if (ImGui::InputInt(id.c_str(), &param.second, 1, 100, InputFlags))
                                 updated = true;
                         } else {
@@ -102,7 +102,7 @@ bool ui_property_view(Runtime* runtime, bool readonly)
                         if (!readonly && is_public) {
                             const float min      = std::min(0.0f, std::floor(param.second));
                             const float max      = std::max(1.0f, std::ceil(param.second));
-                            const std::string id = "##" + param.first;
+                            const std::string id = "##reg_num_" + param.first;
                             ImGui::SetNextItemWidth(-1);
                             if (ImGui::SliderFloat(id.c_str(), &param.second, min, max, "%.3f", SliderFlags))
                                 updated = true;
@@ -132,7 +132,7 @@ bool ui_property_view(Runtime* runtime, bool readonly)
                         ImGui::TableNextColumn();
 
                         if (!readonly && is_public) {
-                            const std::string id = "##" + param.first;
+                            const std::string id = "##reg_vec_" + param.first;
                             if (ImGui::InputFloat3(id.c_str(), param.second.data(), "%.3f", InputFlags))
                                 updated = true;
                         } else {
@@ -160,7 +160,7 @@ bool ui_property_view(Runtime* runtime, bool readonly)
                         ImGui::TextUnformatted(param.first.c_str());
                         ImGui::TableNextColumn();
 
-                        if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | (!readonly && is_public ? ImGuiColorEditFlags_NoInputs : 0)))
+                        if (ImGui::ColorEdit4(param.first.c_str(), param.second.data(), ColorFlags | ((!readonly && is_public) ? ImGuiColorEditFlags_NoInputs : 0)))
                             updated = true;
                     }
                 }
@@ -186,7 +186,7 @@ bool ui_property_view(Runtime* runtime, bool readonly)
                         ImGui::TableNextColumn();
 
                         if (!readonly && is_public) {
-                            const std::string id = "##" + param.first;
+                            const std::string id = "##reg_str_" + param.first;
                             if (ImGui::InputText(id.c_str(), (char*)param.second.c_str(), param.second.capacity() + 1, InputFlags, inputTextCallback, &param.second))
                                 updated = true;
                         } else {
@@ -198,6 +198,139 @@ bool ui_property_view(Runtime* runtime, bool readonly)
                 ImGui::EndTable();
             }
         }
+    }
+
+    return updated;
+}
+
+bool ui_property_view(Runtime* runtime, bool readonly)
+{
+    if (runtime->sceneParameterDesc().empty(false))
+        return false;
+
+    constexpr int TableFlags  = ImGuiTableFlags_PadOuterX;
+    constexpr int InputFlags  = ImGuiInputTextFlags_EnterReturnsTrue;
+    constexpr int SliderFlags = ImGuiSliderFlags_None;
+    constexpr int ColorFlags  = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview;
+
+    const auto& desc = runtime->sceneParameterDesc();
+    auto& registry   = runtime->accessParameters();
+    bool updated     = false;
+
+    if (ImGui::BeginTable("_table_prop", 2, TableFlags)) {
+        // Header
+        draw_header();
+
+        // Content (Int)
+        for (auto& param : desc.intParameters()) {
+            if (param.second.Internal)
+                continue;
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(param.second.Display.c_str());
+            ImGui::TableNextColumn();
+
+            auto& value = registry.IntParameters[param.first];
+
+            if (!readonly) {
+                const std::string id = "##prop_int_" + param.first;
+
+                if (param.second.Min == std::numeric_limits<int>::min() && param.second.Max == std::numeric_limits<int>::max()) {
+                    if (ImGui::InputInt(id.c_str(), &value, param.second.Step, param.second.Step * 100, InputFlags))
+                        updated = true;
+                } else {
+                    if (ImGui::SliderInt(id.c_str(), &value, param.second.Min, param.second.Max, "%d", SliderFlags))
+                        updated = true;
+                }
+            } else {
+                ImGui::Text("%i", value);
+            }
+        }
+
+        // Content (Float)
+        for (auto& param : desc.floatParameters()) {
+            if (param.second.Internal)
+                continue;
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(param.second.Display.c_str());
+            ImGui::TableNextColumn();
+
+            auto& value = registry.FloatParameters[param.first];
+
+            if (!readonly) {
+                const std::string id = "##prop_num_" + param.first;
+                ImGui::SetNextItemWidth(-1);
+                if (std::isinf(param.second.Min) || std::isinf(param.second.Max)) {
+                    if (ImGui::InputFloat(id.c_str(), &value, param.second.Step, param.second.Step * 100, "%.3f", InputFlags))
+                        updated = true;
+                } else {
+                    if (ImGui::SliderFloat(id.c_str(), &value, param.second.Min, param.second.Max, "%.3f", SliderFlags))
+                        updated = true;
+                }
+            } else {
+                ImGui::Text("%.3f", value);
+            }
+        }
+
+        // Content (Vector)
+        for (auto& param : desc.vectorParameters()) {
+            if (param.second.Internal)
+                continue;
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(param.second.Display.c_str());
+            ImGui::TableNextColumn();
+
+            auto& value = registry.VectorParameters[param.first];
+
+            // TODO
+
+            if (!readonly) {
+                const std::string id = "##prop_vec_" + param.first;
+                if (ImGui::InputFloat3(id.c_str(), value.data(), "%.3f", InputFlags))
+                    updated = true;
+            } else {
+                ImGui::Text("[%.3f, %.3f, %.3f]", value.x(), value.y(), value.z());
+            }
+        }
+
+        // Content (Color)
+        for (auto& param : desc.colorParameters()) {
+            if (param.second.Internal)
+                continue;
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(param.second.Display.c_str());
+            ImGui::TableNextColumn();
+
+            auto& value = registry.ColorParameters[param.first];
+
+            if (ImGui::ColorEdit4(param.first.c_str(), value.data(), ColorFlags | (!readonly ? ImGuiColorEditFlags_NoInputs : 0)))
+                updated = true;
+        }
+
+        // Content (String)
+        for (auto& param : desc.stringParameters()) {
+            if (param.second.Internal)
+                continue;
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(param.second.Display.c_str());
+            ImGui::TableNextColumn();
+
+            auto& value = registry.StringParameters[param.first];
+
+            if (!readonly) {
+                const std::string id = "##prop_str_" + param.first;
+                if (ImGui::InputText(id.c_str(), (char*)value.c_str(), value.capacity() + 1, InputFlags, inputTextCallback, &value))
+                    updated = true;
+            } else {
+                ImGui::TextUnformatted(value.c_str());
+            }
+        }
+
+        ImGui::EndTable();
     }
 
     return updated;

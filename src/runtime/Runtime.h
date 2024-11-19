@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ParameterDescSet.h"
 #include "ParameterSet.h"
 #include "RenderPass.h"
 #include "RuntimeSettings.h"
@@ -166,7 +167,8 @@ public:
     [[nodiscard]] static bool hasDenoiser();
 
     /// True if the scene has entries in the `parameters` section
-    [[nodiscard]] inline bool hasSceneParameters() const { return mHasSceneParameters; }
+    [[nodiscard]] inline bool hasSceneParameters() const { return !sceneParameterDesc().empty(); }
+    [[nodiscard]] inline const ParameterDescSet sceneParameterDesc() const { return mSceneParameterDesc; }
 
     /// Get a list of all available techniques
     [[nodiscard]] static std::vector<std::string> getAvailableTechniqueTypes();
@@ -194,6 +196,7 @@ private:
 
     SceneDatabase mDatabase;
     ParameterSet mGlobalRegistry;
+    ParameterDescSet mSceneParameterDesc; // Optional user parameter description given for a scene
 
     std::unique_ptr<ScriptCompiler> mCompiler;
     std::unique_ptr<IRenderDevice> mDevice;
@@ -210,8 +213,6 @@ private:
 
     size_t mFilmWidth;
     size_t mFilmHeight;
-
-    bool mHasSceneParameters;
 
     std::string mCameraName;
     CameraOrientation mInitialCameraOrientation;

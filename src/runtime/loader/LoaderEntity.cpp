@@ -181,7 +181,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
 
     if (mEntityCount == 0) {
         ctx.SceneDiameter = 0;
-        return true;
+        return !ctx.HasError;
     }
 
     ctx.SceneDiameter = ctx.SceneBBox.diameter().norm();
@@ -201,7 +201,7 @@ bool LoaderEntity::load(LoaderContext& ctx)
     }
     IG_LOG(L_DEBUG) << "Building Scene BVH took " << (std::chrono::high_resolution_clock::now() - start2) << std::endl;
 
-    return true;
+    return !ctx.HasError;
 }
 
 std::optional<Entity> LoaderEntity::getEmissiveEntity(const std::string& name) const

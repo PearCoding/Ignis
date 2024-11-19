@@ -1,6 +1,7 @@
 #include "ParameterWidget.h"
 #include "MenuItem.h"
 #include "PolarSlider.h"
+#include "PropertyView.h"
 #include "RenderWidget.h"
 #include "Runtime.h"
 #include "skysun/ElevationAzimuth.h"
@@ -154,6 +155,13 @@ void ParameterWidget::onRender(Widget*)
 
             if (!hasTonemapping)
                 ImGui::EndDisabled();
+        }
+
+        if (!runtime->sceneParameterDesc().empty(false)) {
+            if (ImGui::CollapsingHeader("Scene##parameters", HeaderFlags)) {
+                if (ui::ui_property_view(runtime, false))
+                    runtime->reset();
+            }
         }
 
         if (mRenderWidget->currentSkyModel() == RenderWidget::SkyModel::Perez) {
