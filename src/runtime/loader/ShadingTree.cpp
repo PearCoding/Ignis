@@ -579,6 +579,8 @@ Vector3f ShadingTree::computeConstantColor(const std::string& name, const Transp
 
 Image ShadingTree::computeImage(const std::string& name, const Transpiler::Result& result, const TextureBakeOptions& options)
 {
+    // Note: Already inside a copied tree for baking purposes!
+
     bool warn = false;
     for (const std::string& var : result.Variables) {
         if (!isTexVariable(var))
@@ -629,23 +631,25 @@ Image ShadingTree::computeImage(const std::string& name, const Transpiler::Resul
 
 ShadingTree::BakeOutputTexture ShadingTree::bakeTextureExpression(const std::string& name, const std::string& expr, const TextureBakeOptions& options)
 {
-    auto res = mTranspiler.transpile(expr);
+    auto copyCtx  = mContext.copyForBake();
+    auto copyTree = ShadingTree(copyCtx);
+
+    auto res = copyTree.mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
         return {};
     } else {
-        auto copy          = mContext.copyForBake();
         const auto& result = res.value();
 
         if (result.isSimple()) {
             if (options.SkipConstant)
                 return {};
 
-            const Vector3f color = ShadingTree(copy).computeConstantColor(name, result);
+            const Vector3f color = copyTree.computeConstantColor(name, result);
             return std::make_shared<Image>(Image::createSolidImage(Vector4f(color.x(), color.y(), color.z(), 1)));
         }
 
-        Image image = ShadingTree(copy).computeImage(name, result, options);
+        Image image = copyTree.computeImage(name, result, options);
         return std::make_shared<Image>(std::move(image));
     }
 }
@@ -659,7 +663,10 @@ ShadingTree::BakeOutputColor ShadingTree::bakeTextureExpressionAverage(const std
         return BakeOutputColor{ output.Value, output.WasConstant };
     }
 
-    auto res = mTranspiler.transpile(expr);
+    auto copyCtx  = mContext.copyForBake();
+    auto copyTree = ShadingTree(copyCtx);
+
+    auto res = copyTree.mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
         return BakeOutputColor::AsConstant(def);
@@ -667,16 +674,14 @@ ShadingTree::BakeOutputColor ShadingTree::bakeTextureExpressionAverage(const std
         const auto& result = res.value();
 
         if (result.isSimple()) {
-            auto copy        = mContext.copyForBake();
-            const auto color = BakeOutputColor::AsConstant(ShadingTree(copy).computeConstantColor(name, result));
+            const auto color = BakeOutputColor::AsConstant(copyTree.computeConstantColor(name, result));
 
             mContext.Cache->ExprComputation[expr_key] = color;
             return color;
         } else if (options.SkipTextures) {
             return BakeOutputColor::AsConstant(def);
         } else {
-            auto copy                                 = mContext.copyForBake();
-            const Image image                         = ShadingTree(copy).computeImage(name, result, TextureBakeOptions{ 0, 0, 1, 1, true });
+            const Image image                         = copyTree.computeImage(name, result, TextureBakeOptions{ 0, 0, 1, 1, true });
             const Vector4f average                    = image.computeAverage();
             const auto color                          = BakeOutputColor::AsConstant(average.block<3, 1>(0, 0));
             mContext.Cache->ExprComputation[expr_key] = color;
@@ -692,7 +697,10 @@ std::optional<float> ShadingTree::bakeSimpleNumber(const std::string& name, cons
     if (const auto it = mContext.Cache->ExprComputation.find(expr_key); it != mContext.Cache->ExprComputation.end())
         return std::any_cast<BakeOutputColor>(it->second).Value.mean();
 
-    const auto res = mTranspiler.transpile(expr);
+    auto copyCtx  = mContext.copyForBake();
+    auto copyTree = ShadingTree(copyCtx);
+
+    const auto res = copyTree.mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
         return std::nullopt;
@@ -700,8 +708,7 @@ std::optional<float> ShadingTree::bakeSimpleNumber(const std::string& name, cons
         const auto& result = res.value();
 
         if (result.isSimple()) {
-            auto copy        = mContext.copyForBake();
-            const auto color = BakeOutputColor::AsConstant(ShadingTree(copy).computeConstantColor(name, result));
+            const auto color = BakeOutputColor::AsConstant(copyTree.computeConstantColor(name, result));
 
             mContext.Cache->ExprComputation[expr_key] = color;
             return color.Value.mean();
@@ -718,7 +725,10 @@ std::optional<Vector3f> ShadingTree::bakeSimpleColor(const std::string& name, co
     if (const auto it = mContext.Cache->ExprComputation.find(expr_key); it != mContext.Cache->ExprComputation.end())
         return std::any_cast<BakeOutputColor>(it->second).Value;
 
-    const auto res = mTranspiler.transpile(expr);
+    auto copyCtx  = mContext.copyForBake();
+    auto copyTree = ShadingTree(copyCtx);
+
+    const auto res = copyTree.mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
         return std::nullopt;
@@ -726,8 +736,7 @@ std::optional<Vector3f> ShadingTree::bakeSimpleColor(const std::string& name, co
         const auto& result = res.value();
 
         if (result.isSimple()) {
-            auto copy        = mContext.copyForBake();
-            const auto color = BakeOutputColor::AsConstant(ShadingTree(copy).computeConstantColor(name, result));
+            const auto color = BakeOutputColor::AsConstant(copyTree.computeConstantColor(name, result));
 
             mContext.Cache->ExprComputation[expr_key] = color;
             return color.Value;
