@@ -177,9 +177,9 @@ void AreaLight::serialize(const SerializationInput& input) const
         input.Tree.addComputedMatrix34(light_prefix + "_global", globalMat, ShadingTree::VectorOptions::Dynamic());
         input.Tree.addComputedMatrix3(light_prefix + "_normal", normalMat, ShadingTree::VectorOptions::Dynamic());
 
-        input.Tree.addComputedInteger(light_prefix + "_ent_id", entity->ID, ShadingTree::IntegerOptions::Dynamic());
-        input.Tree.addComputedInteger(light_prefix + "_ent_mat_id", entity->MatID, ShadingTree::IntegerOptions::Dynamic());
-        input.Tree.addComputedInteger(light_prefix + "_ent_shp_id", entity->ShapeID, ShadingTree::IntegerOptions::Dynamic());
+        input.Tree.addComputedInteger(light_prefix + "_ent_id", (int)entity->ID, ShadingTree::IntegerOptions::Dynamic());
+        input.Tree.addComputedInteger(light_prefix + "_ent_mat_id", (int)entity->MatID, ShadingTree::IntegerOptions::Dynamic());
+        input.Tree.addComputedInteger(light_prefix + "_ent_shp_id", (int)entity->ShapeID, ShadingTree::IntegerOptions::Dynamic());
 
         input.Stream << input.Tree.pullHeader();
         input.Stream << "  let ae_" << light_id << " = make_sphere_area_emitter("
@@ -203,15 +203,15 @@ void AreaLight::serialize(const SerializationInput& input) const
             input.Tree.addComputedMatrix34(light_prefix + "_global", globalMat, ShadingTree::VectorOptions::Dynamic());
             input.Tree.addComputedMatrix3(light_prefix + "_normal", normalMat, ShadingTree::VectorOptions::Dynamic());
 
-            input.Tree.addComputedInteger(light_prefix + "_tbl_offset", shape.TableOffset, ShadingTree::IntegerOptions::Dynamic());
-            input.Tree.addComputedInteger(light_prefix + "_tbl_face_count", tri.FaceCount, ShadingTree::IntegerOptions::Dynamic());
-            input.Tree.addComputedInteger(light_prefix + "_tbl_vertex_count", tri.VertexCount, ShadingTree::IntegerOptions::Dynamic());
-            input.Tree.addComputedInteger(light_prefix + "_tbl_normal_count", tri.NormalCount, ShadingTree::IntegerOptions::Dynamic());
-            input.Tree.addComputedInteger(light_prefix + "_tbl_tex_count", tri.TexCount, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_offset", (int)shape.TableOffset, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_face_count", (int)tri.FaceCount, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_vertex_count", (int)tri.VertexCount, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_normal_count", (int)tri.NormalCount, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_tbl_tex_count", (int)tri.TexCount, ShadingTree::IntegerOptions::Dynamic());
 
-            input.Tree.addComputedInteger(light_prefix + "_ent_id", entity->ID, ShadingTree::IntegerOptions::Dynamic());
-            input.Tree.addComputedInteger(light_prefix + "_ent_mat_id", entity->MatID, ShadingTree::IntegerOptions::Dynamic());
-            input.Tree.addComputedInteger(light_prefix + "_ent_shp_id", entity->ShapeID, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_ent_id", (int)entity->ID, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_ent_mat_id", (int)entity->MatID, ShadingTree::IntegerOptions::Dynamic());
+            input.Tree.addComputedInteger(light_prefix + "_ent_shp_id", (int)entity->ShapeID, ShadingTree::IntegerOptions::Dynamic());
 
             input.Stream << input.Tree.pullHeader();
             input.Stream << "  let trimesh_" << light_id << " = load_trimesh_entry(device"
