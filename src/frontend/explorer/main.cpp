@@ -37,10 +37,10 @@ class Context {
     std::shared_ptr<MenuItem> mRegistryMenuItem;
 
 public:
-    void setup(Application* app)
+    void setup(Application* app, const ExplorerOptions& opts)
     {
         mApplication       = app;
-        mRenderWidget      = std::make_shared<RenderWidget>();
+        mRenderWidget      = std::make_shared<RenderWidget>(opts);
         mHelpAboutWidget   = std::make_shared<HelpAboutWidget>();
         mHelpControlWidget = std::make_shared<HelpControlWidget>();
         mParameterWidget   = std::make_shared<ParameterWidget>(mRenderWidget.get());
@@ -178,7 +178,7 @@ int main(int argc, char** argv)
 
     try {
         Application app(args.WindowWidth, args.WindowHeight, args.DPI.value_or(-1));
-        Context::instance().setup(&app);
+        Context::instance().setup(&app, args);
 
         if (!args.InputFile.empty())
             openFileCallback(args.InputFile);

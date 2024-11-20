@@ -2,6 +2,7 @@
 #include "Application.h"
 #include "CameraProxy.h"
 #include "ColorbarGizmo.h"
+#include "ExplorerOptions.h"
 #include "Logger.h"
 #include "Runtime.h"
 #include "ShaderGenerator.h"
@@ -23,7 +24,7 @@ constexpr float KRSPEED = 10 * RSPEED;
 
 class RenderWidgetInternal {
 public:
-    inline RenderWidgetInternal()
+    inline RenderWidgetInternal(const ExplorerOptions& opts)
         : mTexture(nullptr)
         , mWidth(0)
         , mHeight(0)
@@ -43,6 +44,7 @@ public:
         , mColorbar()
         , mShowColorbar(true)
         , mUseDenoiser(OIDN::hasGPU()) // Enable denoiser by default if GPU is available, else it has too much of a performance impact
+        , mOptions(opts)
     {
     }
 
@@ -171,7 +173,9 @@ public:
 
     inline void loadFromFile(const Path& path)
     {
-        auto options                 = RuntimeOptions::makeDefault();
+        auto options = RuntimeOptions::makeDefault();
+        mOptions.populate(options);
+
         options.IsInteractive        = true;
         options.EnableTonemapping    = false; // We do our own stuff
         options.DisableStandardAOVs  = false;
@@ -661,6 +665,8 @@ private:
     bool mUseDenoiser;
 
     RenderWidget::SkyModel mSkyModel;
+
+    const ExplorerOptions mOptions;
 };
 
 void loaderThread(RenderWidgetInternal* internal, Path scene_file)
@@ -668,8 +674,8 @@ void loaderThread(RenderWidgetInternal* internal, Path scene_file)
     internal->loadFromFile(scene_file);
 }
 
-RenderWidget::RenderWidget()
-    : mInternal(std::make_unique<RenderWidgetInternal>())
+RenderWidget::RenderWidget(const ExplorerOptions& opts)
+    : mInternal(std::make_unique<RenderWidgetInternal>(opts))
 {
 }
 

@@ -45,5 +45,12 @@ struct ElevationAzimuth {
 
         return Vector3f(-cosE * sinA, -cosE * cosA, sinE);
     }
+
+    inline void makeValid()
+    {
+        Elevation = std::max(Elevation, 0.0f);
+        if (Azimuth < 0)
+            Azimuth += 2 * Pi;
+    }
 };
 } // namespace IG

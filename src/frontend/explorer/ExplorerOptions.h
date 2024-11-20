@@ -1,8 +1,12 @@
 #pragma once
 
 #include "Logger.h"
+#include "RuntimeSettings.h"
 
 namespace IG {
+
+struct RuntimeOptions;
+
 class ExplorerOptions {
 public:
     ExplorerOptions(int argc, char** argv, const std::string& desc);
@@ -20,5 +24,24 @@ public:
     size_t WindowHeight = 720;
 
     std::optional<float> DPI; // Only used for UI
+
+    bool AcquireStats     = false;
+    bool AcquireFullStats = false;
+    bool DebugTrace       = false;
+
+    bool DumpShader       = false;
+    bool DumpFullShader   = false;
+    bool DumpRegistry     = false;
+    bool DumpFullRegistry = false;
+
+    RuntimeOptions::SpecializationMode Specialization = RuntimeOptions::SpecializationMode::Default;
+
+    bool NoCache = false;
+    Path CacheDir;
+
+    size_t ShaderOptimizationLevel = 3;
+    size_t ShaderCompileThreads    = 0;
+
+    void populate(RuntimeOptions& options) const;
 };
 } // namespace IG

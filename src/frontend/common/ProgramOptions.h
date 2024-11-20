@@ -17,7 +17,6 @@ enum class ApplicationType {
     Trace
 };
 
-struct RuntimeOptions;
 class ProgramOptions {
 public:
     ProgramOptions(int argc, char** argv, ApplicationType type, const std::string& desc);

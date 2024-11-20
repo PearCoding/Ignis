@@ -4,10 +4,11 @@
 
 namespace IG {
 class Runtime;
+class ExplorerOptions;
 
 class RenderWidget : public Widget {
 public:
-    RenderWidget();
+    RenderWidget(const ExplorerOptions& opts);
     virtual ~RenderWidget();
 
     enum class ToneMappingMethod {
