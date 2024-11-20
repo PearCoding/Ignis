@@ -72,9 +72,9 @@ private:
 
     ObjectMap mTextures;
     ObjectMap mBSDFs;
-    ObjectMap mShapes;
     ObjectMap mLights;
     ObjectMap mMedia;
+    ObjectMap mShapes;
     ObjectMap mEntities;
     ObjectMap mParameters;
 };

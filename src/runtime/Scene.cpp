@@ -16,10 +16,15 @@ void Scene::addFrom(const Scene& other)
         addShape(shape.first, shape.second);
     for (const auto& ent : other.entities())
         addEntity(ent.first, ent.second);
+    for (const auto& param : other.parameters())
+        addParameter(param.first, param.second);
 
-    mTechnique = other.mTechnique;
-    mCamera    = other.mCamera;
-    mFilm      = other.mFilm;
+    if (other.mTechnique)
+        mTechnique = other.mTechnique;
+    if (other.mCamera)
+        mCamera = other.mCamera;
+    if (other.mFilm)
+        mFilm = other.mFilm;
 }
 
 void Scene::addConstantEnvLight()
