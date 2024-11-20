@@ -137,7 +137,7 @@ void ParameterWidget::onRender(Widget*)
                 changed = true;
 
             const char* current_method = ToneMappingMethodOptions[(int)parameters.ToneMappingMethod];
-            if (ImGui::BeginCombo("Method", current_method)) {
+            if (ImGui::BeginCombo("Tonemap", current_method)) {
                 for (int i = 0; i < IM_ARRAYSIZE(ToneMappingMethodOptions); ++i) {
                     bool is_selected = (current_method == ToneMappingMethodOptions[i]);
                     if (ImGui::Selectable(ToneMappingMethodOptions[i], is_selected)) {

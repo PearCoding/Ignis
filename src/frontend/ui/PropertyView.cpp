@@ -245,6 +245,9 @@ bool ui_property_view(Runtime* runtime, bool readonly)
             } else {
                 ImGui::Text("%i", value);
             }
+
+            if (!param.second.Description.empty())
+                ImGui::SetItemTooltip("%s", param.second.Description.c_str());
         }
 
         // Content (Float)
@@ -271,6 +274,9 @@ bool ui_property_view(Runtime* runtime, bool readonly)
             } else {
                 ImGui::Text("%.3f", value);
             }
+
+            if (!param.second.Description.empty())
+                ImGui::SetItemTooltip("%s", param.second.Description.c_str());
         }
 
         // Content (Vector)
@@ -293,6 +299,9 @@ bool ui_property_view(Runtime* runtime, bool readonly)
             } else {
                 ImGui::Text("[%.3f, %.3f, %.3f]", value.x(), value.y(), value.z());
             }
+
+            if (!param.second.Description.empty())
+                ImGui::SetItemTooltip("%s", param.second.Description.c_str());
         }
 
         // Content (Color)
@@ -308,6 +317,9 @@ bool ui_property_view(Runtime* runtime, bool readonly)
 
             if (ImGui::ColorEdit4(param.first.c_str(), value.data(), ColorFlags | (!readonly ? ImGuiColorEditFlags_NoInputs : 0)))
                 updated = true;
+
+            if (!param.second.Description.empty())
+                ImGui::SetItemTooltip("%s", param.second.Description.c_str());
         }
 
         // Content (String)
@@ -328,6 +340,9 @@ bool ui_property_view(Runtime* runtime, bool readonly)
             } else {
                 ImGui::TextUnformatted(value.c_str());
             }
+
+            if (!param.second.Description.empty())
+                ImGui::SetItemTooltip("%s", param.second.Description.c_str());
         }
 
         ImGui::EndTable();
