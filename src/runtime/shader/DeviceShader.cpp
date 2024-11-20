@@ -10,7 +10,7 @@ std::string DeviceShader::setup(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_callback_shader(settings: &Settings) -> () {" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options) << std::endl
+           << ShaderUtils::constructDevice(ctx.Options) << std::endl
            << "  " << ShaderUtils::generateDatabase(ctx) << std::endl
            << "  " << ShaderUtils::inlineScene(ctx, ctx.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl // TODO

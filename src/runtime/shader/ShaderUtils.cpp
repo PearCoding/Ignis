@@ -14,9 +14,9 @@ std::string ShaderUtils::constructDevice(const LoaderOptions& opts)
 {
     std::stringstream stream;
 
-    stream << "let spi = " << ShaderUtils::inlineSPI(opts) << ";" << std::endl
-           << "let render_config = make_render_config_from_settings(settings, spi);" << std::endl
-           << "let device = ";
+    stream << "  let spi = " << ShaderUtils::inlineSPI(opts) << ";" << std::endl
+           << "  let render_config = make_render_config_from_settings(settings, spi);" << std::endl
+           << "  let device = ";
 
     if (opts.Target.isCPU()) {
         const bool compact = false; /*opts.Target.vectorWidth() >= 8;*/ // FIXME: Maybe something wrong with this flag?
@@ -145,7 +145,7 @@ std::string ShaderUtils::beginCallback(const LoaderContext& ctx)
     std::stringstream stream;
 
     stream << "#[export] fn ig_callback_shader(settings: &Settings) -> () {" << std::endl
-           << "  " << ShaderUtils::constructDevice(ctx.Options) << std::endl
+           << ShaderUtils::constructDevice(ctx.Options) << std::endl
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl;
 
     return stream.str();
