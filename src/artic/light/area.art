@@ -42,6 +42,23 @@ fn @make_area_light(id: i32, area: AreaEmitter, color_f: Texture) = Light {
     infinite = false
 };
 
+fn @make_shape_area_emitter_proxy(entity_id: i32, entities: EntityTable, shapes: ShapeTable) -> AreaEmitter {
+    // Indirect load for the GPU
+    fn @get_ae() {
+        let entity = @entities(entity_id);
+        let shape  = @shapes(entity.shape_id);
+        make_shape_area_emitter(entity, shape)
+    }
+
+    AreaEmitter {
+        sample_direct   = @ |uv, p| get_ae().sample_direct(uv, p),
+        sample_emission = @ |uv|    get_ae().sample_emission(uv),
+        normal          = @ |uv|    get_ae().normal(uv),
+        pdf_direct      = @ |uv, p| get_ae().pdf_direct(uv, p),
+        pdf_emission    = @ |uv, p| get_ae().pdf_emission(uv, p)
+    }
+}
+
 fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
     let pmset = make_standard_pointmapperset(shape, entity);
 
@@ -66,11 +83,11 @@ fn @make_shape_area_emitter(entity: Entity, shape: Shape) -> AreaEmitter {
     }
 
     AreaEmitter {
-        sample_direct   = @|uv, _| {
+        sample_direct   = @ |uv, _| {
             let (surf, pdfv, weight) = sample(uv);
             (surf, make_area_pdf(pdfv), weight)
         },
-        sample_emission = @|uv| {
+        sample_emission = @ |uv| {
             let (surf, pdfv, _) = sample(uv);
             (surf, pdfv)
         },

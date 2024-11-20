@@ -71,10 +71,22 @@ std::string ShaderUtils::generateShapeLookup(const LoaderContext& ctx)
     for (const auto& p : ctx.Shapes->providers())
         provs.emplace_back(p.second.get());
 
-    if (provs.size() == 1)
-        return generateShapeLookup("shapes", provs.front(), ctx);
-
     std::stringstream stream;
+
+    // Generate specialized lookups for potential usecases
+    for (size_t i = 0; i < provs.size(); ++i) {
+        const std::string varname = "shapes_" + std::string(provs[i]->identifier());
+        stream << generateShapeLookup(varname, provs[i], ctx) << "  maybe_unused(" << varname << ");" << std::endl;
+    }
+
+    // If there is only one shape type, just use that one
+    if (provs.size() == 1) {
+        const std::string varname = "shapes_" + std::string(provs.front()->identifier());
+        stream << "  let shapes = " << varname << ";" << std::endl;
+        return stream.str();
+    }
+
+    // Construct a generic shape lookup if more than one shape type is available
     stream << "  let shapes = load_shape_table(device, @|type_id, data| { match type_id {" << std::endl;
 
     for (size_t i = 0; i < provs.size() - 1; ++i)
@@ -90,7 +102,7 @@ std::string ShaderUtils::generateShapeLookup(const std::string& varname, ShapePr
 {
     std::stringstream stream;
     stream << "  let " << varname << " = load_shape_table(device, @|_, data| { " << std::endl
-           << provider->generateShapeCode(ctx) << std::endl
+           << "    " << provider->generateShapeCode(ctx) << std::endl
            << "  });" << std::endl;
     return stream.str();
 }
