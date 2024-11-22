@@ -38,6 +38,11 @@
       "type": "ply",
       "name": "Bottom",
       "filename": "meshes/Bottom.ply"
+    },
+    {
+      "type": "rectangle",
+      "name": "Glass",
+      "flip_normals": true
     }
   ],
   "bsdfs": [
@@ -45,6 +50,10 @@
       "type": "diffuse",
       "name": "Bottom",
       "reflectance": 0.8
+    },
+    {
+      "type": "dielectric",
+      "name": "Glass"
     }
   ],
   "entities": [
@@ -52,13 +61,40 @@
       "name": "Bottom-Bottom",
       "shape": "Bottom",
       "bsdf": "Bottom"
+    },
+    {
+      "name": "Glass-Glass",
+      "shape": "Glass",
+      "bsdf": "Glass",
+      
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
     }
   ],
   "lights": [
     {
       "type": "sun",
       "name": "Sun",
-      "direction": [0.005248, -0.874618, 0.484785],
+      "direction": [0, 0, 1],
       "radiance": 1e5,
       "angle": 0.533
     }

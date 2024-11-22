@@ -1,0 +1,331 @@
+struct SGPTRayPayload {
+    inv_bsdf_pdf:   f32,   // Inverse BSDF pdf
+    inv_guided_pdf: f32,   // Inverse Guided pdf
+    contrib:        Color, // Current contribution
+    depth:          i32,   // Current depth
+    eta:            f32,   // Current eta (n1 / n2)
+    gen_technique:  i32,   // Technique which generated the previous vertex (0=BSDF, 1=Guiding)
+}
+
+static AOV_SGPT_BSDF   = 1;
+static AOV_SGPT_GUIDED = 2;
+static AOV_SGPT_NEE    = 3;
+
+fn @write_sgptraypayload(payload: RayPayload, pt: SGPTRayPayload) -> () {
+    payload.set(0, pt.inv_bsdf_pdf);
+    payload.set(1, pt.inv_guided_pdf);
+    payload.set(2, pt.contrib.r);
+    payload.set(3, pt.contrib.g);
+    payload.set(4, pt.contrib.b);
+    payload.set(5, pt.depth as f32);
+    payload.set(6, pt.eta);
+    payload.set(7, pt.gen_technique as f32);
+}
+
+fn @unwrap_sgptraypayload(payload: RayPayload) = SGPTRayPayload {
+    inv_bsdf_pdf   = payload.get(0),
+    inv_guided_pdf = payload.get(1),
+    contrib        = make_color(payload.get(2), payload.get(3), payload.get(4), 1),
+    depth          = payload.get(5) as i32,
+    eta            = payload.get(6),
+    gen_technique  = payload.get(7) as i32,
+};
+
+fn @init_sgpt_raypayload(payload: RayPayload) = write_sgptraypayload(payload, SGPTRayPayload {
+    inv_bsdf_pdf   = 0,
+    inv_guided_pdf = 0,
+    contrib        = color_builtins::white,
+    depth          = 1,
+    eta            = 1,
+    gen_technique  = 0
+});
+
+struct SimpleGuidingTechnique {
+    sample: fn (RandomGenerator, Vec3) -> (Vec3, f32),
+    pdf:    fn (Vec3, Vec3) -> f32,
+    prob:   fn () -> f32 // Probability to use this guider
+}
+
+fn @make_sgpt_renderer(max_path_len: i32, min_path_len: i32, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32, enable_nee: bool, guider: SimpleGuidingTechnique) -> Technique {
+    let offset : f32  = 0.001;
+
+    let aov_bsdf   = @aovs(AOV_SGPT_BSDF);
+    let aov_guided = @aovs(AOV_SGPT_GUIDED);
+    let aov_nee    = @aovs(AOV_SGPT_NEE);
+
+    let handle_color = if clamp_value > 0 {
+        @|c: Color| color_saturate(c, clamp_value)
+    } else {
+        @|c: Color| c
+    };
+
+    fn @on_shadow( ctx: ShadingContext
+                 , rnd: RandomGenerator
+                 , payload: RayPayload
+                 , _: RayPayload
+                 , mat: Material
+                 ) -> ShadowRay {
+        if !enable_nee {
+            return(ShadowRay::None)
+        }
+
+        // No shadow rays for purely specular materials
+        if mat.bsdf.is_all_delta || light_selector.count == 0 {
+            return(ShadowRay::None)
+        }
+        
+        let pt = unwrap_sgptraypayload(payload);
+        if pt.depth + 1 > max_path_len {
+            return(ShadowRay::None)
+        }
+
+        let (light, light_select_pdf) = light_selector.sample(rnd, ctx.surf.point);
+
+        let sample_direct = light.sample_direct;
+        let light_sample  = @sample_direct(rnd, ctx.surf);
+
+        let pdf_l_s = light_sample.pdf.as_solid(light_sample.cos, light_sample.dist * light_sample.dist) * light_select_pdf; // Pdf to sample the light based on NEE
+        if pdf_l_s <= flt_eps {
+            return(ShadowRay::None)
+        }
+
+        let in_dir  = light_sample.dir; 
+        let out_dir = vec3_neg(ctx.ray.dir);
+
+        if light_sample.cos > flt_eps {
+            let mis = if light.delta { 
+                1:f32
+            } else {
+                let guided_prob    = guider.prob();
+                let pdf_e_bsdf_s   = (1 - guided_prob) * mat.bsdf.pdf(in_dir, out_dir); // Pdf to sample the light based on bsdf
+                let pdf_e_guided_s =       guided_prob * guider.pdf(in_dir, out_dir);
+                1 / (1 + pdf_e_bsdf_s / pdf_l_s + pdf_e_guided_s / pdf_l_s)
+            };
+
+            // The intensity is already divided by the pdf, adapt to the (possible) change of domain
+            let factor = light_sample.pdf.value / pdf_l_s;
+
+            let contrib = handle_color(color_mulf(
+                color_mul(light_sample.intensity, color_mul(pt.contrib, mat.bsdf.eval(in_dir, out_dir))), mis * factor));
+
+            // No contribution to add, so do not shoot the ray to begin with.
+            if color_average(contrib) <= flt_eps {
+                return(ShadowRay::None)
+            }
+
+            if light.infinite {
+                return(make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_shadow),
+                    contrib
+                ))
+            } else {
+                return(make_simple_shadow_ray(
+                    make_ray(ctx.surf.point, vec3_sub(light_sample.pos, ctx.surf.point), offset, 1 - offset, ray_flag_shadow),
+                    contrib
+                ))
+            }
+        }
+        ShadowRay::None
+    }
+
+    fn @on_hit( ctx: ShadingContext
+              , payload: RayPayload
+              , mat: Material
+              ) -> Option[Color] {
+        // Hits on a light source
+        if mat.is_emissive && ctx.surf.is_entering {
+            let pt  = unwrap_sgptraypayload(payload);
+            let dot = -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2));
+            if dot > flt_eps { // Only contribute proper aligned directions
+                let emit    = mat.emission(ctx);
+                let pdf_s   = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
+
+                let mis_denom = 1 + if pt.gen_technique == 0 { safe_div(pt.inv_bsdf_pdf, pt.inv_guided_pdf) } else { safe_div(pt.inv_guided_pdf, pt.inv_bsdf_pdf) };
+                let mis       = if enable_nee { 
+                    let inv_pdf_b = if pt.gen_technique == 0 { pt.inv_bsdf_pdf } else { pt.inv_guided_pdf }; // The actual (inverse) pdf used for the previous vertex
+                    let pdf_l_s   = light_selector.pdf(mat.light, ctx.ray.org) * pdf_s;
+                    1 / (mis_denom + inv_pdf_b * pdf_l_s)
+                } else {
+                    1 / mis_denom
+                };
+
+                let contrib = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
+                
+                if pt.gen_technique == 0 {
+                    aov_bsdf.splat(ctx.pixel, contrib);
+                } else {
+                    aov_guided.splat(ctx.pixel, contrib);
+                }
+
+                return(make_option(contrib))
+            }
+        }
+        Option[Color]::None
+    }
+
+    fn @on_miss( ctx: ShadingContext
+               , payload: RayPayload) -> Option[Color] {
+        let mut inflights = 0;
+        let mut color     = color_builtins::black;
+
+        let pt = unwrap_sgptraypayload(payload);
+
+        for light_id in safe_unroll(0, light_selector.infinites.count) {
+            let light = light_selector.infinites.get(light_id);
+            // Do not include delta lights or finite lights
+            if light.infinite && !light.delta {
+                inflights += 1;
+
+                let emit  = light.emission(ctx);
+                let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
+                let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
+                
+                let mis_denom = 1 + if pt.gen_technique == 0 { safe_div(pt.inv_bsdf_pdf, pt.inv_guided_pdf) } else { safe_div(pt.inv_guided_pdf, pt.inv_bsdf_pdf) };
+                let mis       = if enable_nee { 
+                    let inv_pdf_b = if pt.gen_technique == 0 { pt.inv_bsdf_pdf } else { pt.inv_guided_pdf }; // The actual (inverse) pdf used for the previous vertex
+                    let pdf_l_s   = light_selector.pdf(light, ctx.ray.org) * pdf_s;
+                    1 / (mis_denom + inv_pdf_b * pdf_l_s)
+                } else {
+                    1 / mis_denom
+                };
+
+                color = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
+            }
+        }
+
+        if inflights > 0 {
+            if pt.gen_technique == 0 {
+                aov_bsdf.splat(ctx.pixel, color);
+            } else {
+                aov_guided.splat(ctx.pixel, color);
+            }
+            make_option(color)
+        } else {
+            Option[Color]::None
+        }
+    }
+
+    fn @on_bounce( ctx: ShadingContext
+                 , rnd: RandomGenerator
+                 , payload: RayPayload
+                 , mat: Material
+                 ) -> Option[Ray] {
+        let pt = unwrap_sgptraypayload(payload);
+        
+        if pt.depth + 1 > max_path_len {
+            return(Option[Ray]::None)
+        }
+
+        // Bounce
+        let out_dir = vec3_neg(ctx.ray.dir);
+
+        let g_prob = if mat.bsdf.is_all_delta { 0:f32 } else { guider.prob() };
+        if rnd.next_f32() < g_prob {
+            // Guiding Sampling
+            let (in_dir, pdf_g_s) = guider.sample(rnd, out_dir);
+            
+            // This should not really happen, but better be safe 
+            if g_prob * pdf_g_s <= flt_eps {
+                return(Option[Ray]::None)
+            }
+
+            let inv_guided_pdf = 1 / (g_prob * pdf_g_s);
+            let mat_eval       = mat.bsdf.eval(in_dir, out_dir);
+            
+            let contrib = color_mul(pt.contrib, color_mulf(mat_eval, inv_guided_pdf));
+            let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+            if rnd.next_f32() >= rr_prob {
+                return(Option[Ray]::None)
+            }
+
+            let inv_bsdf_pdf   = safe_div(1, (1 - g_prob) * mat.bsdf.pdf(in_dir, out_dir));
+            let new_contrib    = color_mulf(contrib, 1 / rr_prob);
+
+            write_sgptraypayload(payload, SGPTRayPayload {
+                inv_bsdf_pdf   = inv_bsdf_pdf,
+                inv_guided_pdf = inv_guided_pdf,
+                contrib        = new_contrib,
+                depth          = pt.depth + 1,
+                eta            = pt.eta, // * mat_sample.eta (TODO)
+                gen_technique  = 1 /* Guiding */
+            });
+            make_option(
+                make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_bounce)
+            )
+        } else {
+            // BSDF Sampling
+            if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
+                // This should not really happen, but better be safe 
+                if mat_sample.pdf <= flt_eps {
+                    return(Option[Ray]::None)
+                }
+
+                let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+                let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+                if rnd.next_f32() >= rr_prob {
+                    return(Option[Ray]::None)
+                }
+
+                let inv_bsdf_pdf   = if mat_sample.is_delta { 0 } else { 1 / ((1 - g_prob) * mat_sample.pdf) };
+                let inv_guided_pdf = if mat_sample.is_delta { 0 } else { safe_div(1, g_prob * guider.pdf(mat_sample.in_dir, out_dir)) };
+                let new_contrib    = color_mulf(contrib, 1 / (rr_prob * (1 - g_prob)));
+                
+                write_sgptraypayload(payload, SGPTRayPayload {
+                    inv_bsdf_pdf   = inv_bsdf_pdf,
+                    inv_guided_pdf = inv_guided_pdf,
+                    contrib        = new_contrib,
+                    depth          = pt.depth + 1,
+                    eta            = pt.eta * mat_sample.eta,
+                    gen_technique  = 0 /* BSDF */
+                });
+                make_option(
+                    make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
+                )
+            } else {
+                Option[Ray]::None
+            }
+        }
+    }
+
+    fn @on_shadow_miss( ctx: ShadingContext
+                      , _shader: MaterialShader
+                      , _: RayPayload
+                      , color: Color) -> Option[Color] {
+        aov_nee.splat(ctx.pixel, color);
+        make_option(color)
+    }
+
+    Technique {
+        on_hit         = on_hit,
+        on_miss        = on_miss,
+        on_shadow      = on_shadow,
+        on_bounce      = on_bounce,
+        on_shadow_hit  = TechniqueNoShadowHitFunction,
+        on_shadow_miss = on_shadow_miss,
+    }
+}
+
+// Basic Guiding towards one single light (e.g., Sun)
+fn @make_light_sgpt_renderer(max_path_len: i32, min_path_len: i32, light_selector: LightSelector, aovs: AOVTable, clamp_value: f32, enable_nee: bool, light: Light, defensive: f32) -> Technique {
+    // TODO: Assuming it is a infinite light!
+
+    fn @sample(rnd: RandomGenerator, _out_dir: Vec3) {
+        let light_sample = light.sample_direct(rnd, make_invalid_surface_element());
+        let pdf_l_s      = light_sample.pdf.as_solid(light_sample.cos, light_sample.dist * light_sample.dist);
+        (light_sample.dir, pdf_l_s)
+    }
+
+    fn @pdf(in_dir: Vec3, _out_dir: Vec3) {
+        let in_ray = make_ray(vec3_expand(0), in_dir, 0, flt_max, ray_flag_bounce);
+        light.pdf_direct(in_ray, make_invalid_surface_element()).as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */)
+    }
+
+    let guider = SimpleGuidingTechnique {
+        sample = sample,
+        pdf    = pdf,
+        prob   = @|| 1 - defensive
+    };
+
+    make_sgpt_renderer(max_path_len, min_path_len, light_selector, aovs, clamp_value, enable_nee, guider)
+}
+

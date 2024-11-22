@@ -135,8 +135,8 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
                      << "  };" << std::endl;
     } else {
         if (mAOV) {
-            input.Stream << "  let aov_di   = device.load_aov_image(\"Direct Weights\", spi); aov_di.mark_as_used();" << std::endl;
-            input.Stream << "  let aov_merg = device.load_aov_image(\"Merging Weights\", spi); aov_merg.mark_as_used();" << std::endl;
+            input.Stream << "  let aov_di   = device.load_aov_image(\"Direct Weights\", spi);" << std::endl;
+            input.Stream << "  let aov_merg = device.load_aov_image(\"Merging Weights\", spi);" << std::endl;
         }
 
         input.Stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
