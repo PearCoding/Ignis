@@ -26,7 +26,7 @@ static const char* const ToneMappingMethodOptions[] = {
 };
 
 static const char* const OverlayMethodOptions[] = {
-    "None", "Luminance", "Luminance Squared", "Glare Source", "Normals", "Albedo"
+    "None", "Luminance", "Luminance Squared", "Luminance Log", "Glare Source", "Normals", "Albedo"
 };
 
 enum class Direction {

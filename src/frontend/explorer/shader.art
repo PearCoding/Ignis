@@ -130,7 +130,7 @@ fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
     fn @run_method2(proj: Projector) {
         let method = registry::get_global_parameter_i32("_overlay_method", 0); // RenderWidget::OverlayMethod
         match method {
-            4 => run_method(true, proj), // Normals
+            5 => run_method(true, proj), // Normals
             _ => run_method(false, proj) // Albedo
         }
     }
@@ -217,7 +217,7 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
         }
     }
 
-    fn @run_luminance_overlay(squared: bool, proj: Projector) {
+    fn @run_luminance_overlay(modifier: fn (f32) -> f32, proj: Projector) {
         for x, y in device.parallel_range_2d(0, canvas_width, 0, canvas_height) {
             let dstCoord = make_pixelcoord_from_xy(x, y, canvas_width, canvas_height, 0, 0);
 
@@ -229,8 +229,8 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
 
             let lum = color_luminance(color) * scale;
 
-            let rel = clampf((lum - lum_min) / (lum_max - lum_min), 0, 1);
-            let out_color = colormap::inferno(if squared { rel * rel } else { rel });
+            let rel = clampf((modifier(lum) - modifier(lum_min)) / (modifier(lum_max) - modifier(lum_min)), 0, 1);
+            let out_color = colormap::inferno(rel);
 
             output.store_i32(dstCoord.linear, bitcast[i32](make_byte_color(out_color)));
         }
@@ -239,8 +239,9 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
     fn @run_method2(proj: Projector) {
         let method = registry::get_global_parameter_i32("_overlay_method", 0); // RenderWidget::OverlayMethod
         match method {
-            1 => run_luminance_overlay(false, proj),
-            2 => run_luminance_overlay(true, proj),
+            1 => run_luminance_overlay(@|a: f32| a,                            proj),
+            2 => run_luminance_overlay(@|a: f32| a * a,                        proj),
+            3 => run_luminance_overlay(@|a: f32| math_builtins::log(a + 1e-5), proj),
             _ => run_glare_overlay(proj),
         }
     }

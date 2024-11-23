@@ -25,6 +25,7 @@ public:
         None = 0,
         Luminance,
         LuminanceSquared,
+        LuminanceLog,
         GlareSource,
         Normal,
         Albedo
@@ -45,7 +46,10 @@ public:
 
         inline bool allowColorbar() const
         {
-            return OverlayMethod == OverlayMethod::Luminance || OverlayMethod == OverlayMethod::LuminanceSquared || OverlayMethod == OverlayMethod::GlareSource;
+            return OverlayMethod == OverlayMethod::Luminance
+                   || OverlayMethod == OverlayMethod::LuminanceSquared
+                   || OverlayMethod == OverlayMethod::LuminanceLog
+                   || OverlayMethod == OverlayMethod::GlareSource;
         }
     };
 
