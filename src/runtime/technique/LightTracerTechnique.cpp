@@ -7,14 +7,11 @@
 #include "shader/ShaderUtils.h"
 
 namespace IG {
-LightTracerTechnique::LightTracerTechnique(SceneObject& obj)
+LightTracerTechnique::LightTracerTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("lighttracer")
+    , mTechnique(obj)
 {
-    mMaxLightDepth = (size_t)obj.property("max_depth").isValid() ? obj.property("max_depth").getInteger(DefaultMaxRayDepth) : obj.property("max_light_depth").getInteger(DefaultMaxRayDepth);
-    mMinLightDepth = (size_t)obj.property("min_depth").isValid() ? obj.property("min_depth").getInteger(DefaultMinRayDepth) : obj.property("min_light_depth").getInteger(DefaultMinRayDepth);
-
-    mLightSelector = obj.property("light_selector").getString();
-    mClamp         = obj.property("clamp").getNumber(0.0f);
+    mLightSelector = obj->property("light_selector").getString();
 }
 
 static std::string lt_light_camera_generator(LoaderContext& ctx, const std::string& light_selector)
@@ -53,28 +50,20 @@ TechniqueInfo LightTracerTechnique::getInfo(const LoaderContext&) const
 
 void LightTracerTechnique::generateBody(const SerializationInput& input) const
 {
-    // Insert config into global registry
-    input.Tree.context().GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxLightDepth;
-    input.Tree.context().GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMinLightDepth;
-    input.Tree.context().GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
+    const std::string max_depth = mTechnique->hasProperty("max_depth") ? "max_depth" : "max_light_depth";
+    const std::string min_depth = mTechnique->hasProperty("min_depth") ? "min_depth" : "min_light_depth";
 
-    if (mMaxLightDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
-        input.Stream << "  let tech_max_depth = " << mMaxLightDepth << ":i32;" << std::endl;
-    else
-        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
+    input.Tree.addInteger(max_depth, *mTechnique, DefaultMaxRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+    input.Tree.addInteger(min_depth, *mTechnique, DefaultMinRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+    input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
 
-    if (mMinLightDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
-        input.Stream << "  let tech_min_depth = " << mMinLightDepth << ":i32;" << std::endl;
-    else
-        input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 2);" << std::endl;
-
-    if (mClamp <= 0 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
-        input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
-    else
-        input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
-
-    input.Stream << "  let framebuffer = device.load_aov_image(\"\", spi);" << std::endl
-                 << "  let technique = make_lt_renderer(camera, framebuffer, tech_max_depth, tech_min_depth, tech_clamp);" << std::endl;
+    input.Stream << input.Tree.pullHeader()
+                 << "  let framebuffer = device.load_aov_image(\"\", spi);" << std::endl
+                 << "  let technique = make_lt_renderer(camera, framebuffer"
+                 << ", " << input.Tree.getInline(max_depth)
+                 << ", " << input.Tree.getInline(min_depth)
+                 << ", " << input.Tree.getInline("clamp")
+                 << ");" << std::endl;
 }
 
 } // namespace IG

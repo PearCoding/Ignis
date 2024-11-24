@@ -5,7 +5,7 @@
 namespace IG {
 class PerspectiveCamera : public Camera {
 public:
-    PerspectiveCamera(SceneObject& obj);
+    PerspectiveCamera(const std::shared_ptr<SceneObject>& obj);
     ~PerspectiveCamera() = default;
 
     void serialize(const SerializationInput& input) const override;

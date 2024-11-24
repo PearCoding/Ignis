@@ -5,16 +5,15 @@
 namespace IG {
 class LightTracerTechnique : public Technique {
 public:
-    LightTracerTechnique(SceneObject& obj);
+    LightTracerTechnique(const std::shared_ptr<SceneObject>& obj);
     ~LightTracerTechnique() = default;
-    
+
     TechniqueInfo getInfo(const LoaderContext& ctx) const override;
     void generateBody(const SerializationInput& input) const override;
 
 private:
-    size_t mMaxLightDepth;
-    size_t mMinLightDepth;
     std::string mLightSelector;
-    float mClamp;
+
+    const std::shared_ptr<SceneObject> mTechnique;
 };
 } // namespace IG

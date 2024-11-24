@@ -5,15 +5,13 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-PathTechnique::PathTechnique(SceneObject& obj)
+PathTechnique::PathTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("path")
+    , mTechnique(obj)
 {
-    mMaxDepth      = obj.property("max_depth").getInteger(DefaultMaxRayDepth);
-    mMinDepth      = obj.property("min_depth").getInteger(DefaultMinRayDepth);
-    mLightSelector = obj.property("light_selector").getString();
-    mClamp         = obj.property("clamp").getNumber(0.0f);
-    mEnableNEE     = obj.property("nee").getBool(true);
-    mMISAOVs       = obj.property("aov_mis").getBool(false);
+    mLightSelector = obj->property("light_selector").getString();
+    mEnableNEE     = obj->property("nee").getBool(true);
+    mMISAOVs       = obj->property("aov_mis").getBool(false);
 }
 
 TechniqueInfo PathTechnique::getInfo(const LoaderContext&) const
@@ -34,25 +32,9 @@ TechniqueInfo PathTechnique::getInfo(const LoaderContext&) const
 
 void PathTechnique::generateBody(const SerializationInput& input) const
 {
-    // Insert config into global registry
-    input.Tree.context().GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxDepth;
-    input.Tree.context().GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMinDepth;
-    input.Tree.context().GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
-
-    if (mMaxDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization // TODO: Unlikely an optimization. Maybe get rid of it
-        input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
-    else
-        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
-
-    if (mMinDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization // TODO: Unlikely an optimization. Maybe get rid of it
-        input.Stream << "  let tech_min_depth = " << mMinDepth << ":i32;" << std::endl;
-    else
-        input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 2);" << std::endl;
-
-    if (mClamp <= 0 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
-        input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
-    else
-        input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
+    input.Tree.addInteger("max_depth", *mTechnique, DefaultMaxRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+    input.Tree.addInteger("min_depth", *mTechnique, DefaultMinRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+    input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
 
     // Handle AOVs
     if (mMISAOVs) {
@@ -72,10 +54,14 @@ void PathTechnique::generateBody(const SerializationInput& input) const
                  << "    }" << std::endl
                  << "  };" << std::endl;
 
-    ShadingTree tree(input.Tree.context());
-    input.Stream << input.Tree.context().Lights->generateLightSelector(mLightSelector, tree)
-                 << "  let technique = make_path_renderer(tech_max_depth, tech_min_depth, light_selector, aovs, tech_clamp,"
-                 << (mEnableNEE ? "true" : "false") << ");" << std::endl;
+    input.Stream << input.Tree.pullHeader()
+                 << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
+                 << "  let technique = make_path_renderer("
+                 << input.Tree.getInline("max_depth")
+                 << ", " << input.Tree.getInline("min_depth")
+                 << ", light_selector, aovs"
+                 << ", " << input.Tree.getInline("clamp")
+                 << ", " << (mEnableNEE ? "true" : "false") << ");" << std::endl;
 }
 
 } // namespace IG

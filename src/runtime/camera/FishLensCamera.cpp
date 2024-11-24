@@ -6,21 +6,21 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-FishLensCamera::FishLensCamera(SceneObject& camera)
+FishLensCamera::FishLensCamera(const std::shared_ptr<SceneObject>& camera)
     : Camera("fishlens")
     , mMode(Mode::Circular)
 {
-    if (camera.property("transform").isValid())
-        mTransform = camera.property("transform").getTransform();
+    if (camera->property("transform").isValid())
+        mTransform = camera->property("transform").getTransform();
 
-    mNearClip = camera.property("near_clip").getNumber(0);
-    mFarClip  = camera.property("far_clip").getNumber(std::numeric_limits<float>::max());
-    mMask     = camera.property("mask").getBool(false);
+    mNearClip = camera->property("near_clip").getNumber(0);
+    mFarClip  = camera->property("far_clip").getNumber(std::numeric_limits<float>::max());
+    mMask     = camera->property("mask").getBool(false);
 
     if (mFarClip < mNearClip)
         std::swap(mNearClip, mFarClip);
 
-    const std::string mode = to_lowercase(camera.property("mode").getString("circular"));
+    const std::string mode = to_lowercase(camera->property("mode").getString("circular"));
     if (mode == "cropped")
         mMode = Mode::Cropped;
     else if (mode == "full")

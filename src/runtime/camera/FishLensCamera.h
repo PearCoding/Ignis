@@ -5,7 +5,7 @@
 namespace IG {
 class FishLensCamera : public Camera {
 public:
-    FishLensCamera(SceneObject& obj);
+    FishLensCamera(const std::shared_ptr<SceneObject>& obj);
     ~FishLensCamera() = default;
 
     void serialize(const SerializationInput& input) const override;

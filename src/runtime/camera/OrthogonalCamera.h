@@ -5,7 +5,7 @@
 namespace IG {
 class OrthogonalCamera : public Camera {
 public:
-    OrthogonalCamera(SceneObject& obj);
+    OrthogonalCamera(const std::shared_ptr<SceneObject>& obj);
     ~OrthogonalCamera() = default;
 
     void serialize(const SerializationInput& input) const override;

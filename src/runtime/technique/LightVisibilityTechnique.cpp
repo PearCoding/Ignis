@@ -5,12 +5,12 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-LightVisibilityTechnique::LightVisibilityTechnique(SceneObject& obj)
+LightVisibilityTechnique::LightVisibilityTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("lightvisibility")
+    , mTechnique(obj)
 {
-    mMaxDepth           = obj.property("max_depth").getInteger(DefaultMaxRayDepth);
-    mLightSelector      = obj.property("light_selector").getString();
-    mNoConnectionFactor = obj.property("no_connection_factor").getNumber(0.0f); // Set to zero to disable contribution of points not connected to a light
+    mLightSelector      = obj->property("light_selector").getString();
+    mNoConnectionFactor = obj->property("no_connection_factor").getNumber(0.0f); // Set to zero to disable contribution of points not connected to a light
 }
 
 TechniqueInfo LightVisibilityTechnique::getInfo(const LoaderContext&) const
@@ -26,21 +26,11 @@ TechniqueInfo LightVisibilityTechnique::getInfo(const LoaderContext&) const
 
 void LightVisibilityTechnique::generateBody(const SerializationInput& input) const
 {
-    // Insert config into global registry
-    input.Tree.context().GlobalRegistry.IntParameters["__tech_max_depth"]       = (int)mMaxDepth;
-    input.Tree.context().GlobalRegistry.FloatParameters["__tech_no_connection"] = mNoConnectionFactor;
+    input.Tree.addInteger("max_depth", *mTechnique, DefaultMaxRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+    input.Tree.addNumber("no_connection_factor", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
 
-    if (mMaxDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
-        input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
-    else
-        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
-
-    if (mNoConnectionFactor <= 0 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
-        input.Stream << "  let tech_no_connection = " << mNoConnectionFactor << ":f32;" << std::endl;
-    else
-        input.Stream << "  let tech_no_connection = registry::get_global_parameter_f32(\"__tech_no_connection\", 0);" << std::endl;
-
-    input.Stream << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
+    input.Stream << input.Tree.pullHeader()
+                 << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
                  << "  let technique = make_lv_renderer(tech_max_depth, light_selector, tech_no_connection);" << std::endl;
 }
 

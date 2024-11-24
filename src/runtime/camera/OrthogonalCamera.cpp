@@ -5,16 +5,16 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-OrthogonalCamera::OrthogonalCamera(SceneObject& camera)
+OrthogonalCamera::OrthogonalCamera(const std::shared_ptr<SceneObject>& camera)
     : Camera("orthogonal")
 {
-    mTransform = camera.property("transform").getTransform();
-    if (camera.property("aspect_ratio").isValid())
-        mAspectRatio = camera.property("aspect_ratio").getNumber(1);
+    mTransform = camera->property("transform").getTransform();
+    if (camera->property("aspect_ratio").isValid())
+        mAspectRatio = camera->property("aspect_ratio").getNumber(1);
 
-    mNearClip = camera.property("near_clip").getNumber(0);
-    mFarClip  = camera.property("far_clip").getNumber(std::numeric_limits<float>::max());
-    mScale    = camera.property("scale").getNumber(1);
+    mNearClip = camera->property("near_clip").getNumber(0);
+    mFarClip  = camera->property("far_clip").getNumber(std::numeric_limits<float>::max());
+    mScale    = camera->property("scale").getNumber(1);
 
     if (mFarClip < mNearClip)
         std::swap(mNearClip, mFarClip);

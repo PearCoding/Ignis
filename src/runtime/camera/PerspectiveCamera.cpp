@@ -5,20 +5,20 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-PerspectiveCamera::PerspectiveCamera(SceneObject& camera)
+PerspectiveCamera::PerspectiveCamera(const std::shared_ptr<SceneObject>& camera)
     : Camera("perspective")
 {
-    if (camera.property("transform").isValid())
-        mTransform = camera.property("transform").getTransform();
-    if (camera.property("aspect_ratio").isValid())
-        mAspectRatio = camera.property("aspect_ratio").getNumber(1);
+    if (camera->property("transform").isValid())
+        mTransform = camera->property("transform").getTransform();
+    if (camera->property("aspect_ratio").isValid())
+        mAspectRatio = camera->property("aspect_ratio").getNumber(1);
 
-    mFOV = extractFOV(camera);
+    mFOV = extractFOV(*camera);
 
-    mNearClip       = camera.property("near_clip").getNumber(0);
-    mFarClip        = camera.property("far_clip").getNumber(std::numeric_limits<float>::max());
-    mFocalLength    = camera.property("focal_length").getNumber(1);
-    mApertureRadius = camera.property("aperture_radius").getNumber(0);
+    mNearClip       = camera->property("near_clip").getNumber(0);
+    mFarClip        = camera->property("far_clip").getNumber(std::numeric_limits<float>::max());
+    mFocalLength    = camera->property("focal_length").getNumber(1);
+    mApertureRadius = camera->property("aperture_radius").getNumber(0);
 
     if (mFarClip < mNearClip)
         std::swap(mNearClip, mFarClip);

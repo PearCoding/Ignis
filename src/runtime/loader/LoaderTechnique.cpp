@@ -29,7 +29,7 @@ namespace IG {
 
 static std::shared_ptr<Technique> aept_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<AdaptiveEnvPathTechnique>(*obj);
+    return std::make_shared<AdaptiveEnvPathTechnique>(obj);
 }
 static std::shared_ptr<Technique> ao_loader(const std::shared_ptr<SceneObject>&)
 {
@@ -45,19 +45,19 @@ static std::shared_ptr<Technique> ec_loader(const std::shared_ptr<SceneObject>&)
 }
 static std::shared_ptr<Technique> debug_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<DebugTechnique>(*obj);
+    return std::make_shared<DebugTechnique>(obj);
 }
 static std::shared_ptr<Technique> lt_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<LightTracerTechnique>(*obj);
+    return std::make_shared<LightTracerTechnique>(obj);
 }
 static std::shared_ptr<Technique> lv_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<LightVisibilityTechnique>(*obj);
+    return std::make_shared<LightVisibilityTechnique>(obj);
 }
 static std::shared_ptr<Technique> pt_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<PathTechnique>(*obj);
+    return std::make_shared<PathTechnique>(obj);
 }
 static std::shared_ptr<Technique> lsgpt_loader(const std::shared_ptr<SceneObject>& obj)
 {
@@ -69,11 +69,11 @@ static std::shared_ptr<Technique> sungpt_loader(const std::shared_ptr<SceneObjec
 }
 static std::shared_ptr<Technique> ppm_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<PhotonMappingTechnique>(*obj);
+    return std::make_shared<PhotonMappingTechnique>(obj);
 }
 static std::shared_ptr<Technique> vpt_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<VolumePathTechnique>(*obj);
+    return std::make_shared<VolumePathTechnique>(obj);
 }
 static std::shared_ptr<Technique> wf_loader(const std::shared_ptr<SceneObject>&)
 {

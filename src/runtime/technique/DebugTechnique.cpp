@@ -4,11 +4,11 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-DebugTechnique::DebugTechnique(SceneObject& obj)
+DebugTechnique::DebugTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("debug")
     , mInitialDebugMode(DebugMode::Normal)
 {
-    const auto debug = stringToDebugMode(obj.property("mode").getString(""));
+    const auto debug = stringToDebugMode(obj->property("mode").getString(""));
     if (debug.has_value())
         mInitialDebugMode = *debug;
 }

@@ -12,16 +12,16 @@ namespace IG {
 
 static std::shared_ptr<Camera> camera_perspective(const std::shared_ptr<SceneObject>& camera)
 {
-    return std::make_shared<PerspectiveCamera>(*camera);
+    return std::make_shared<PerspectiveCamera>(camera);
 }
 static std::shared_ptr<Camera> camera_orthogonal(const std::shared_ptr<SceneObject>& camera)
 {
-    return std::make_shared<OrthogonalCamera>(*camera);
+    return std::make_shared<OrthogonalCamera>(camera);
 }
 
 static std::shared_ptr<Camera> camera_fishlens(const std::shared_ptr<SceneObject>& camera)
 {
-    return std::make_shared<FishLensCamera>(*camera);
+    return std::make_shared<FishLensCamera>(camera);
 }
 
 using CameraConstructor = std::shared_ptr<Camera> (*)(const std::shared_ptr<SceneObject>&);
