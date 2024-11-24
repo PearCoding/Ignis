@@ -61,7 +61,7 @@ static std::shared_ptr<Technique> pt_loader(const std::shared_ptr<SceneObject>& 
 }
 static std::shared_ptr<Technique> lsgpt_loader(const std::shared_ptr<SceneObject>& obj)
 {
-    return std::make_shared<LightGuidedPathTechnique>(*obj);
+    return std::make_shared<LightGuidedPathTechnique>(obj);
 }
 static std::shared_ptr<Technique> sungpt_loader(const std::shared_ptr<SceneObject>& obj)
 {
@@ -142,17 +142,16 @@ void LoaderTechnique::setup(const LoaderContext& ctx)
         InfoBufferTechnique::enable(mInfo);
 }
 
-std::string LoaderTechnique::generate(LoaderContext& ctx)
+std::string LoaderTechnique::generate(ShadingTree& tree)
 {
     if (!mTechnique)
         return {};
 
     std::stringstream stream;
+    mTechnique->generateBody(Technique::SerializationInput{ stream, tree });
 
-    mTechnique->generateBody(Technique::SerializationInput{ stream, ctx });
-
-    if (!ctx.Options.DisableStandardAOVs)
-        InfoBufferTechnique::insertBody(Technique::SerializationInput{ stream, ctx });
+    if (!tree.context().Options.DisableStandardAOVs)
+        InfoBufferTechnique::insertBody(Technique::SerializationInput{ stream, tree });
     else
         stream << "  let full_technique = technique;" << std::endl;
 

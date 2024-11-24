@@ -54,15 +54,16 @@ void ImagePattern::serialize(const SerializationInput& input) const
     const std::string tex_id = input.Tree.getClosureID(name());
 
     // Anonymize lookup by using the local registry
-    input.Tree.context().LocalRegistry.IntParameters["img_" + tex_id] = (int32)res_id;
+    input.Tree.addComputedInteger(tex_id + "_image_index", (int32)res_id, ShadingTree::IntegerOptions::Dynamic());
 
     const size_t channel_count = Image::loadResolution(filename).Channels == 1 ? 1 : 4;
 
-    input.Stream << "  let img_" << tex_id << "_res_id = registry::get_local_parameter_i32(\"img_" << tex_id << "\", 0);" << std::endl;
+    input.Stream << input.Tree.pullHeader();
+
     if (!force_unpacked && Image::isPacked(filename))
-        input.Stream << "  let img_" << tex_id << " = device.load_packed_image_by_id(img_" << tex_id << "_res_id, " << channel_count << ", " << (linear ? "true" : "false") << ");" << std::endl;
+        input.Stream << "  let img_" << tex_id << " = device.load_packed_image_by_id(" << input.Tree.getInline(tex_id + "_image_index") << ", " << channel_count << ", " << (linear ? "true" : "false") << ");" << std::endl;
     else
-        input.Stream << "  let img_" << tex_id << " = device.load_image_by_id(img_" << tex_id << "_res_id, " << channel_count << ");" << std::endl;
+        input.Stream << "  let img_" << tex_id << " = device.load_image_by_id(" << input.Tree.getInline(tex_id + "_image_index") << ", " << channel_count << ");" << std::endl;
 
     input.Stream << "  let tex_" << tex_id << " : Texture = make_image_texture("
                  << wrap << ", "

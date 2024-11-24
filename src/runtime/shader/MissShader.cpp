@@ -37,10 +37,10 @@ std::string MissShader::setup(LoaderContext& ctx)
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
-        stream << ctx.Camera->generate(ctx) << std::endl;
+        stream << ctx.Camera->generate(tree) << std::endl;
 
     // Will define technique
-    stream << ctx.Technique->generate(ctx) << std::endl
+    stream << ctx.Technique->generate(tree) << std::endl
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl

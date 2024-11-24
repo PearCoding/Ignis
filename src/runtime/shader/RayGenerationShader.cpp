@@ -59,8 +59,9 @@ std::string RayGenerationShader::setup(LoaderContext& ctx)
     if (ctx.Options.IsTracer) {
         stream << "  let emitter = make_list_emitter(device.load_rays(), render_config, init_raypayload);" << std::endl;
     } else {
-        stream << ctx.Camera->generate(ctx) << std::endl // Will set `camera`
-               << generatePixelSampler(ctx) << std::endl // Will set `pixel_sampler`
+        ShadingTree tree(ctx);
+        stream << ctx.Camera->generate(tree) << std::endl // Will set `camera`
+               << generatePixelSampler(ctx) << std::endl  // Will set `pixel_sampler`
                << "  let emitter = make_camera_emitter(camera, render_config, pixel_sampler, init_raypayload);" << std::endl;
     }
 

@@ -16,7 +16,7 @@ namespace IG {
 std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 {
     std::stringstream stream;
-    
+
     stream << "#[export] fn ig_hit_shader(settings: &Settings, mat_id: i32, first: i32, last: i32) -> () {" << std::endl
            << ShaderUtils::constructDevice(ctx.Options) << std::endl
            << "  let payload_info = " << ShaderUtils::inlinePayloadInfo(ctx) << ";" << std::endl
@@ -39,10 +39,10 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
 
     // Include camera if necessary
     if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
-        stream << ctx.Camera->generate(ctx) << std::endl;
+        stream << ctx.Camera->generate(tree) << std::endl;
 
     // Will define technique
-    stream << ctx.Technique->generate(ctx) << std::endl
+    stream << ctx.Technique->generate(tree) << std::endl
            << std::endl;
 
     stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl

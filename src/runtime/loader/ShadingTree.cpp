@@ -935,10 +935,14 @@ std::string ShadingTree::acquireInteger(const std::string& prop_name, int number
     if (checkIfEmbed(number, options)) {
         return std::to_string(number);
     } else {
-        const std::string id                     = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
-        mContext.LocalRegistry.IntParameters[id] = number;
-
-        mHeaderLines.push_back("  let var_int_" + id + " = registry::get_local_parameter_i32(\"" + id + "\", 0);\n");
+        const std::string id = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
+        if (options.Global) {
+            mContext.GlobalRegistry.IntParameters[id] = number;
+            mHeaderLines.push_back("  let var_int_" + id + " = registry::get_global_parameter_i32(\"" + id + "\", 0);\n");
+        } else {
+            mContext.LocalRegistry.IntParameters[id] = number;
+            mHeaderLines.push_back("  let var_int_" + id + " = registry::get_local_parameter_i32(\"" + id + "\", 0);\n");
+        }
         return "var_int_" + id;
     }
 }
@@ -948,10 +952,15 @@ std::string ShadingTree::acquireNumber(const std::string& prop_name, float numbe
     if (checkIfEmbed(number, options)) {
         return std::to_string(number);
     } else {
-        const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
-        mContext.LocalRegistry.FloatParameters[id] = number;
+        const std::string id = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
 
-        mHeaderLines.push_back("  let var_num_" + id + " = registry::get_local_parameter_f32(\"" + id + "\", 0);\n");
+        if (options.Global) {
+            mContext.GlobalRegistry.FloatParameters[id] = number;
+            mHeaderLines.push_back("  let var_num_" + id + " = registry::get_global_parameter_f32(\"" + id + "\", 0);\n");
+        } else {
+            mContext.LocalRegistry.FloatParameters[id] = number;
+            mHeaderLines.push_back("  let var_num_" + id + " = registry::get_local_parameter_f32(\"" + id + "\", 0);\n");
+        }
         return "var_num_" + id;
     }
 }
@@ -961,10 +970,15 @@ std::string ShadingTree::acquireColor(const std::string& prop_name, const Vector
     if (checkIfEmbed(color, options)) {
         return "make_color(" + std::to_string(color.x()) + ", " + std::to_string(color.y()) + ", " + std::to_string(color.z()) + ", 1)";
     } else {
-        const std::string id                       = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
-        mContext.LocalRegistry.ColorParameters[id] = Vector4f(color.x(), color.y(), color.z(), 1);
+        const std::string id = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
 
-        mHeaderLines.push_back("  let var_color_" + id + " = registry::get_local_parameter_color(\"" + id + "\", color_builtins::black);\n");
+        if (options.Global) {
+            mContext.GlobalRegistry.ColorParameters[id] = Vector4f(color.x(), color.y(), color.z(), 1);
+            mHeaderLines.push_back("  let var_color_" + id + " = registry::get_global_parameter_color(\"" + id + "\", color_builtins::black);\n");
+        } else {
+            mContext.LocalRegistry.ColorParameters[id] = Vector4f(color.x(), color.y(), color.z(), 1);
+            mHeaderLines.push_back("  let var_color_" + id + " = registry::get_local_parameter_color(\"" + id + "\", color_builtins::black);\n");
+        }
         return "var_color_" + id;
     }
 }
@@ -974,10 +988,15 @@ std::string ShadingTree::acquireVector(const std::string& prop_name, const Vecto
     if (checkIfEmbed(vec, options)) {
         return "make_vec3(" + std::to_string(vec.x()) + ", " + std::to_string(vec.y()) + ", " + std::to_string(vec.z()) + ")";
     } else {
-        const std::string id                        = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
-        mContext.LocalRegistry.VectorParameters[id] = vec;
+        const std::string id = currentClosureID() + "_" + LoaderUtils::escapeIdentifier(prop_name);
 
-        mHeaderLines.push_back("  let var_vec_" + id + " = registry::get_local_parameter_vec3(\"" + id + "\", vec3_expand(0));\n");
+        if (options.Global) {
+            mContext.GlobalRegistry.VectorParameters[id] = vec;
+            mHeaderLines.push_back("  let var_vec_" + id + " = registry::get_global_parameter_vec3(\"" + id + "\", vec3_expand(0));\n");
+        } else {
+            mContext.LocalRegistry.VectorParameters[id] = vec;
+            mHeaderLines.push_back("  let var_vec_" + id + " = registry::get_local_parameter_vec3(\"" + id + "\", vec3_expand(0));\n");
+        }
         return "var_vec_" + id;
     }
 }

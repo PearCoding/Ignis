@@ -4,6 +4,8 @@
 
 namespace IG {
 class LoaderContext;
+class ShadingTree;
+
 class LoaderTechnique {
 public:
     LoaderTechnique();
@@ -12,7 +14,7 @@ public:
     void setup(const LoaderContext& ctx);
 
     /// Will generate 'full_technique' identifier
-    [[nodiscard]] std::string generate(LoaderContext& ctx);
+    [[nodiscard]] std::string generate(ShadingTree& tree);
 
     [[nodiscard]] inline const TechniqueInfo& info() const { return mInfo; }
     [[nodiscard]] inline bool hasTechnique() const { return mTechnique != nullptr; }

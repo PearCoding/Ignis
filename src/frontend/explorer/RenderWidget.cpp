@@ -187,6 +187,7 @@ public:
         SceneParser parser;
         auto scene = parser.loadFromFile(path, SceneParser::F_LoadAll | SceneParser::F_NoDefaultLight);
 
+        injectTechnique(scene);
         injectCamera(scene);
         injectSkyModel(scene);
 
@@ -522,9 +523,52 @@ private:
         return true;
     }
 
+    inline SceneObject* getEnvironmentLight(const std::shared_ptr<Scene>& scene)
+    {
+        for (const auto& pair : scene->lights()) {
+            if (pair.second->pluginType() != "point"
+                && pair.second->pluginType() != "spot"
+                && pair.second->pluginType() != "area") {
+                return pair.second.get();
+            }
+        }
+        return nullptr;
+    }
+
+    void injectTechnique(const std::shared_ptr<Scene>& scene)
+    {
+        const auto prevTechnique = scene->technique();
+
+        const auto techDefensiveName = SceneProperty::fromString("tech_defensive");
+        auto techDefensiveParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
+        techDefensiveParameter->setProperty("name", techDefensiveName);
+        techDefensiveParameter->setProperty("value", SceneProperty::fromNumber(0.3f));
+        techDefensiveParameter->setProperty("internal", SceneProperty::fromBool(true));
+
+        const auto techClampName = SceneProperty::fromString("tech_clamp");
+        auto techClampParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "number", Path{});
+        techClampParameter->setProperty("name", techClampName);
+        techClampParameter->setProperty("value", SceneProperty::fromNumber(1e10f));
+        techClampParameter->setProperty("internal", SceneProperty::fromBool(true));
+
+        scene->addParameter(techDefensiveName.getString(), std::move(techDefensiveParameter));
+        scene->addParameter(techClampName.getString(), std::move(techClampParameter));
+
+        auto tech = std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "lsgpt", Path{});
+        if (prevTechnique && prevTechnique->hasProperty("max_depth"))
+            tech->setProperty("max_depth", prevTechnique->property("max_depth"));
+        if (prevTechnique && prevTechnique->hasProperty("min_depth"))
+            tech->setProperty("min_depth", prevTechnique->property("min_depth"));
+
+        tech->setProperty("clamp", techClampName);
+        tech->setProperty("defensive", techDefensiveName);
+
+        scene->setTechnique(tech);
+    }
+
     void injectCamera(const std::shared_ptr<Scene>& scene)
     {
-        auto prevCamera = scene->camera();
+        const auto prevCamera = scene->camera();
 
         auto cameraObject = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "fisheye", Path{});
         cameraObject->setProperty("mode", SceneProperty::fromString("circular"));
@@ -540,16 +584,7 @@ private:
     /// Modify sky models for control
     void injectSkyModel(const std::shared_ptr<Scene>& scene)
     {
-        SceneObject* envPtr = nullptr;
-        for (const auto& pair : scene->lights()) {
-            if (pair.second->pluginType() != "point"
-                && pair.second->pluginType() != "spot"
-                && pair.second->pluginType() != "area") {
-                envPtr = pair.second.get();
-                break;
-            }
-        }
-
+        SceneObject* envPtr = getEnvironmentLight(scene);
         if (!envPtr) {
             // Create standard perez if no environment map is available
             const auto env = std::make_shared<SceneObject>(SceneObject::OT_LIGHT, "perez", Path{});

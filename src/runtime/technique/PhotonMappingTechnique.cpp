@@ -87,40 +87,40 @@ TechniqueInfo PhotonMappingTechnique::getInfo(const LoaderContext&) const
 
 void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
 {
-    const bool is_light_pass = input.Context.CurrentTechniqueVariant == 0;
+    const bool is_light_pass = input.Tree.context().CurrentTechniqueVariant == 0;
 
     // Insert config into global registry
-    input.Context.GlobalRegistry.IntParameters["__tech_max_camera_depth"] = (int)mMaxCameraDepth;
-    input.Context.GlobalRegistry.IntParameters["__tech_min_camera_depth"] = (int)mMinCameraDepth;
-    input.Context.GlobalRegistry.IntParameters["__tech_max_light_depth"]  = (int)mMaxLightDepth;
-    input.Context.GlobalRegistry.IntParameters["__tech_photon_count"]     = (int)mPhotonCount;
-    input.Context.GlobalRegistry.FloatParameters["__tech_radius"]         = mMergeRadius * input.Context.SceneDiameter;
-    input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]          = mClamp;
+    input.Tree.context().GlobalRegistry.IntParameters["__tech_max_camera_depth"] = (int)mMaxCameraDepth;
+    input.Tree.context().GlobalRegistry.IntParameters["__tech_min_camera_depth"] = (int)mMinCameraDepth;
+    input.Tree.context().GlobalRegistry.IntParameters["__tech_max_light_depth"]  = (int)mMaxLightDepth;
+    input.Tree.context().GlobalRegistry.IntParameters["__tech_photon_count"]     = (int)mPhotonCount;
+    input.Tree.context().GlobalRegistry.FloatParameters["__tech_radius"]         = mMergeRadius * input.Tree.context().SceneDiameter;
+    input.Tree.context().GlobalRegistry.FloatParameters["__tech_clamp"]          = mClamp;
 
     // Load registry information
     input.Stream << "  let tech_photons = registry::get_global_parameter_i32(\"__tech_photon_count\", 1000);" << std::endl;
     if (!is_light_pass) {
-        if (mMaxCameraDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
+        if (mMaxCameraDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
             input.Stream << "  let tech_max_camera_depth = " << mMaxCameraDepth << ":i32;" << std::endl;
         else
             input.Stream << "  let tech_max_camera_depth = registry::get_global_parameter_i32(\"__tech_max_camera_depth\", 8);" << std::endl;
 
-        if (mMinCameraDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
+        if (mMinCameraDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
             input.Stream << "  let tech_min_camera_depth = " << mMinCameraDepth << ":i32;" << std::endl;
         else
             input.Stream << "  let tech_min_camera_depth = registry::get_global_parameter_i32(\"__tech_min_camera_depth\", 2);" << std::endl;
 
-        if (mMergeRadius <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
-            input.Stream << "  let tech_radius = " << mMergeRadius * input.Context.SceneDiameter << ":f32;" << std::endl;
+        if (mMergeRadius <= 0 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
+            input.Stream << "  let tech_radius = " << mMergeRadius * input.Tree.context().SceneDiameter << ":f32;" << std::endl;
         else
             input.Stream << "  let tech_radius = registry::get_global_parameter_f32(\"__tech_radius\", 0);" << std::endl;
 
-        if (mClamp <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
+        if (mClamp <= 0 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
             input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
         else
             input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
     } else {
-        if (mMaxLightDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
+        if (mMaxLightDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
             input.Stream << "  let tech_max_light_depth = " << mMaxLightDepth << ":i32;" << std::endl;
         else
             input.Stream << "  let tech_max_light_depth = registry::get_global_parameter_i32(\"__tech_max_light_depth\", 8);" << std::endl;
@@ -157,8 +157,8 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
     if (is_light_pass) {
         input.Stream << "  let technique = make_ppm_light_renderer(tech_max_light_depth, aovs, light_cache);" << std::endl;
     } else {
-        ShadingTree tree(input.Context);
-        input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree)
+        ShadingTree tree(input.Tree.context());
+        input.Stream << input.Tree.context().Lights->generateLightSelector(mLightSelector, tree)
                      << "  let ppm_radius = ppm_compute_radius(tech_radius, settings.iter);" << std::endl
                      << "  let technique = make_ppm_path_renderer(tech_max_camera_depth, tech_min_camera_depth, light_selector, ppm_radius, aovs, tech_clamp, light_cache);" << std::endl;
     }

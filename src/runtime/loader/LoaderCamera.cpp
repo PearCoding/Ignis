@@ -67,13 +67,13 @@ void LoaderCamera::setup(const LoaderContext& ctx)
     IG_LOG(L_DEBUG) << "Using camera: '" << mCamera->type() << "'" << std::endl;
 }
 
-std::string LoaderCamera::generate(LoaderContext& ctx) const
+std::string LoaderCamera::generate(ShadingTree& tree) const
 {
     if (!mCamera)
         return "  let camera = make_null_camera(); maybe_unused(camera);";
 
     std::stringstream stream;
-    mCamera->serialize(Camera::SerializationInput{ stream, ctx });
+    mCamera->serialize(Camera::SerializationInput{ stream, tree });
 
     stream << "  maybe_unused(camera);" << std::endl;
 

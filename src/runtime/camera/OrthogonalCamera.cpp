@@ -2,6 +2,7 @@
 #include "loader/LoaderContext.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
+#include "loader/ShadingTree.h"
 
 namespace IG {
 OrthogonalCamera::OrthogonalCamera(SceneObject& camera)
@@ -21,13 +22,13 @@ OrthogonalCamera::OrthogonalCamera(SceneObject& camera)
 
 void OrthogonalCamera::serialize(const SerializationInput& input) const
 {
-    CameraOrientation orientation = getOrientation(input.Context);
+    CameraOrientation orientation = getOrientation(input.Tree.context());
 
     // The following variables are modified by `igview` to allow interactive control
-    input.Context.GlobalRegistry.VectorParameters["__camera_eye"]  = orientation.Eye;
-    input.Context.GlobalRegistry.VectorParameters["__camera_dir"]  = orientation.Dir;
-    input.Context.GlobalRegistry.VectorParameters["__camera_up"]   = orientation.Up;
-    input.Context.GlobalRegistry.FloatParameters["__camera_scale"] = mScale;
+    input.Tree.context().GlobalRegistry.VectorParameters["__camera_eye"]  = orientation.Eye;
+    input.Tree.context().GlobalRegistry.VectorParameters["__camera_dir"]  = orientation.Dir;
+    input.Tree.context().GlobalRegistry.VectorParameters["__camera_up"]   = orientation.Up;
+    input.Tree.context().GlobalRegistry.FloatParameters["__camera_scale"] = mScale;
 
     std::string aspect_ratio = "(settings.width as f32 / settings.height as f32)";
     if (mAspectRatio.has_value())

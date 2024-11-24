@@ -29,27 +29,27 @@ TechniqueInfo VolumePathTechnique::getInfo(const LoaderContext&) const
 void VolumePathTechnique::generateBody(const SerializationInput& input) const
 {
     // Insert config into global registry
-    input.Context.GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxDepth;
-    input.Context.GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMinDepth;
-    input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
+    input.Tree.context().GlobalRegistry.IntParameters["__tech_max_depth"] = (int)mMaxDepth;
+    input.Tree.context().GlobalRegistry.IntParameters["__tech_min_depth"] = (int)mMinDepth;
+    input.Tree.context().GlobalRegistry.FloatParameters["__tech_clamp"]   = mClamp;
 
-    if (mMaxDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
+    if (mMaxDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
         input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
     else
         input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
 
-    if (mMinDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
+    if (mMinDepth < 2 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization
         input.Stream << "  let tech_min_depth = " << mMinDepth << ":i32;" << std::endl;
     else
         input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 2);" << std::endl;
 
-    if (mClamp <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
+    if (mClamp <= 0 && input.Tree.context().Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
         input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
     else
         input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
 
-    ShadingTree tree(input.Context);
-    input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree)
+    ShadingTree tree(input.Tree.context());
+    input.Stream << input.Tree.context().Lights->generateLightSelector(mLightSelector, tree)
                  << "  let aovs = @|_id:i32| make_empty_aov_image(0, 0);" << std::endl
                  << "  let technique = make_volume_path_renderer(tech_max_depth, tech_min_depth, light_selector, media, aovs, tech_clamp,"
                  << (mEnableNEE ? "true" : "false") << ");" << std::endl;

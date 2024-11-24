@@ -3,6 +3,7 @@
 #include "loader/LoaderContext.h"
 #include "loader/LoaderUtils.h"
 #include "loader/Parser.h"
+#include "loader/ShadingTree.h"
 
 namespace IG {
 FishLensCamera::FishLensCamera(SceneObject& camera)
@@ -30,7 +31,7 @@ FishLensCamera::FishLensCamera(SceneObject& camera)
 
 void FishLensCamera::serialize(const SerializationInput& input) const
 {
-    CameraOrientation orientation = getOrientation(input.Context);
+    CameraOrientation orientation = getOrientation(input.Tree.context());
 
     std::string mode;
     switch (mMode) {
@@ -47,9 +48,9 @@ void FishLensCamera::serialize(const SerializationInput& input) const
     }
 
     // The following variables are modified by `igview` to allow interactive control
-    input.Context.GlobalRegistry.VectorParameters["__camera_eye"] = orientation.Eye;
-    input.Context.GlobalRegistry.VectorParameters["__camera_dir"] = orientation.Dir;
-    input.Context.GlobalRegistry.VectorParameters["__camera_up"]  = orientation.Up;
+    input.Tree.context().GlobalRegistry.VectorParameters["__camera_eye"] = orientation.Eye;
+    input.Tree.context().GlobalRegistry.VectorParameters["__camera_dir"] = orientation.Dir;
+    input.Tree.context().GlobalRegistry.VectorParameters["__camera_up"]  = orientation.Up;
 
     input.Stream << "  let camera_eye = registry::get_global_parameter_vec3(\"__camera_eye\", vec3_expand(0));" << std::endl
                  << "  let camera_dir = registry::get_global_parameter_vec3(\"__camera_dir\", vec3_expand(0));" << std::endl

@@ -3,9 +3,10 @@
 #include "CameraOrientation.h"
 
 namespace IG {
-
 class SceneObject;
 class LoaderContext;
+class ShadingTree;
+
 class Camera {
 public:
     inline Camera(const std::string& type)
@@ -18,7 +19,7 @@ public:
 
     struct SerializationInput {
         std::ostream& Stream;
-        LoaderContext& Context;
+        ShadingTree& Tree;
     };
     virtual void serialize(const SerializationInput& input) const = 0;
 

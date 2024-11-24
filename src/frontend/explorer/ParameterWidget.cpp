@@ -362,6 +362,20 @@ void ParameterWidget::onRender(Widget*)
             if (width != (int)internalSize.first || height != (int)internalSize.second)
                 mRenderWidget->resizeInternalView((size_t)std::max(32, width), (size_t)std::max(32, height));
 
+            float clamp = runtime->parameters().getFloat("tech_clamp");
+            if (ImGui::InputFloat("Clamp", &clamp, 0.01f, 1.0f, "%.3e")) {
+                runtime->setParameter("tech_clamp", clamp);
+                runtime->reset();
+            }
+            ImGui::SetItemTooltip("Maximum energy permitted in the computation. Set it to very high to disable it.");
+
+            float defensive = runtime->parameters().getFloat("tech_defensive", 0.3f);
+            if (ImGui::SliderFloat("Defensive", &defensive, 0.0f, 1.0f)) {
+                runtime->setParameter("tech_defensive", defensive);
+                runtime->reset();
+            }
+            ImGui::SetItemTooltip("Defensive Sampling Factor for environment map guiding. Set to 0 to disable it.");
+
             if (Runtime::hasDenoiser()) {
                 bool useDenoiser = mRenderWidget->isDenoiserEnabled();
                 if (ImGui::Checkbox("Denoise", &useDenoiser))

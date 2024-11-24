@@ -5,18 +5,13 @@
 #include "loader/ShadingTree.h"
 
 namespace IG {
-LightGuidedPathTechnique::LightGuidedPathTechnique(SceneObject& obj)
+LightGuidedPathTechnique::LightGuidedPathTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("lsgpt")
+    , mTechnique(obj)
 {
-    mMaxDepth      = obj.property("max_depth").getInteger(DefaultMaxRayDepth);
-    mMinDepth      = obj.property("min_depth").getInteger(DefaultMinRayDepth);
-    mLightSelector = obj.property("light_selector").getString();
-    mClamp         = obj.property("clamp").getNumber(0.0f);
-    mEnableNEE     = obj.property("nee").getBool(true);
-    mMISAOVs       = obj.property("aov_mis").getBool(false);
-
-    // mLight = obj.property("light").getString();
-    mDefensive = obj.property("defensive").getNumber(0.3f);
+    mLightSelector = obj->property("light_selector").getString();
+    mEnableNEE     = obj->property("nee").getBool(true);
+    mMISAOVs       = obj->property("aov_mis").getBool(false);
 }
 
 TechniqueInfo LightGuidedPathTechnique::getInfo(const LoaderContext&) const
@@ -38,28 +33,11 @@ TechniqueInfo LightGuidedPathTechnique::getInfo(const LoaderContext&) const
 
 void LightGuidedPathTechnique::generateBody(const SerializationInput& input) const
 {
-    // Insert config into global registry
-    input.Context.GlobalRegistry.IntParameters["__tech_max_depth"]   = (int)mMaxDepth;
-    input.Context.GlobalRegistry.IntParameters["__tech_min_depth"]   = (int)mMinDepth;
-    input.Context.GlobalRegistry.FloatParameters["__tech_clamp"]     = mClamp;
-    input.Context.GlobalRegistry.FloatParameters["__tech_defensive"] = mDefensive;
+    input.Tree.addInteger("max_depth", *mTechnique, DefaultMaxRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+    input.Tree.addInteger("min_depth", *mTechnique, DefaultMinRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+    input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
+    input.Tree.addNumber("defensive", *mTechnique, 0.3f, ShadingTree::NumberOptions::Dynamic().MakeGlobal());
 
-    if (mMaxDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization // TODO: Unlikely an optimization. Maybe get rid of it
-        input.Stream << "  let tech_max_depth = " << mMaxDepth << ":i32;" << std::endl;
-    else
-        input.Stream << "  let tech_max_depth = registry::get_global_parameter_i32(\"__tech_max_depth\", 8);" << std::endl;
-
-    if (mMinDepth < 2 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 & 1 can be an optimization // TODO: Unlikely an optimization. Maybe get rid of it
-        input.Stream << "  let tech_min_depth = " << mMinDepth << ":i32;" << std::endl;
-    else
-        input.Stream << "  let tech_min_depth = registry::get_global_parameter_i32(\"__tech_min_depth\", 2);" << std::endl;
-
-    if (mClamp <= 0 && input.Context.Options.Specialization != RuntimeOptions::SpecializationMode::Disable) // 0 is a special case
-        input.Stream << "  let tech_clamp = " << mClamp << ":f32;" << std::endl;
-    else
-        input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
-
-    input.Stream << "  let tech_defensive = registry::get_global_parameter_f32(\"__tech_defensive\", 0);" << std::endl;
     // Handle AOVs
     if (mMISAOVs) {
         input.Stream << "  let aov_direct = device.load_aov_image(\"BSDF Weights\", spi);" << std::endl
@@ -80,10 +58,16 @@ void LightGuidedPathTechnique::generateBody(const SerializationInput& input) con
                  << "    }" << std::endl
                  << "  };" << std::endl;
 
-    ShadingTree tree(input.Context);
-    input.Stream << input.Context.Lights->generateLightSelector(mLightSelector, tree)
-                 << "  let technique = make_light_sgpt_renderer(tech_max_depth, tech_min_depth, light_selector, aovs, tech_clamp, "
-                 << (mEnableNEE ? "true" : "false") << ", infinite_lights.get(0) /*TODO*/, tech_defensive);" << std::endl;
+    input.Stream << input.Tree.pullHeader()
+                 << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
+                 << "  let technique = make_light_sgpt_renderer("
+                 << input.Tree.getInline("max_depth")
+                 << ", " << input.Tree.getInline("min_depth")
+                 << ", light_selector, aovs"
+                 << ", " << input.Tree.getInline("clamp")
+                 << ", " << (mEnableNEE ? "true" : "false") << ", infinite_lights.get(0) /*TODO*/"
+                 << ", " << input.Tree.getInline("defensive")
+                 << ");" << std::endl;
 }
 
 } // namespace IG

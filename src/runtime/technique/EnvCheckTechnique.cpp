@@ -20,8 +20,7 @@ TechniqueInfo EnvCheckTechnique::getInfo(const LoaderContext&) const
 
 void EnvCheckTechnique::generateBody(const SerializationInput& input) const
 {
-    ShadingTree tree(input.Context);
-    input.Stream << input.Context.Lights->generateLightSelector("uniform", tree)
+    input.Stream << input.Tree.context().Lights->generateLightSelector("uniform", input.Tree)
                  << "  let technique = make_env_check_renderer(device, spi, light_selector);" << std::endl;
 }
 

@@ -22,49 +22,77 @@ struct IntegerOptions {
     _details::EmbedType EmbedType = _details::EmbedType::Default;
     bool SpecializeZero           = false; // Will embed if constant zero
     bool SpecializeOne            = false; // Will embed if constant one
+    bool Global                   = false;
 
-    static constexpr IntegerOptions Dynamic() { return IntegerOptions{ EmbedType::Dynamic, false, false }; }
-    static constexpr IntegerOptions Structural() { return IntegerOptions{ EmbedType::Structural, true, true }; }
-    static constexpr IntegerOptions Full() { return IntegerOptions{ EmbedType::Default, true, true }; }
-    static constexpr IntegerOptions Zero() { return IntegerOptions{ EmbedType::Default, true, false }; }
-    static constexpr IntegerOptions One() { return IntegerOptions{ EmbedType::Default, false, true }; }
-    static constexpr IntegerOptions None() { return IntegerOptions{ EmbedType::Default, false, false }; }
+    static constexpr IntegerOptions Dynamic() { return IntegerOptions{ EmbedType::Dynamic, false, false, false }; }
+    static constexpr IntegerOptions Structural() { return IntegerOptions{ EmbedType::Structural, true, true, false }; }
+    static constexpr IntegerOptions Full() { return IntegerOptions{ EmbedType::Default, true, true, false }; }
+    static constexpr IntegerOptions Zero() { return IntegerOptions{ EmbedType::Default, true, false, false }; }
+    static constexpr IntegerOptions One() { return IntegerOptions{ EmbedType::Default, false, true, false }; }
+    static constexpr IntegerOptions None() { return IntegerOptions{ EmbedType::Default, false, false, false }; }
+
+    inline IntegerOptions& MakeGlobal(bool b = true)
+    {
+        Global = b;
+        return *this;
+    }
 };
 struct NumberOptions {
     _details::EmbedType EmbedType = _details::EmbedType::Default;
     bool SpecializeZero           = false; // Will embed if constant zero
     bool SpecializeOne            = false; // Will embed if constant one
+    bool Global                   = false;
 
-    static constexpr NumberOptions Dynamic() { return NumberOptions{ EmbedType::Dynamic, false, false }; }
-    static constexpr NumberOptions Structural() { return NumberOptions{ EmbedType::Structural, true, true }; }
-    static constexpr NumberOptions Full() { return NumberOptions{ EmbedType::Default, true, true }; }
-    static constexpr NumberOptions Zero() { return NumberOptions{ EmbedType::Default, true, false }; }
-    static constexpr NumberOptions One() { return NumberOptions{ EmbedType::Default, false, true }; }
-    static constexpr NumberOptions None() { return NumberOptions{ EmbedType::Default, false, false }; }
+    static constexpr NumberOptions Dynamic() { return NumberOptions{ EmbedType::Dynamic, false, false, false }; }
+    static constexpr NumberOptions Structural() { return NumberOptions{ EmbedType::Structural, true, true, false }; }
+    static constexpr NumberOptions Full() { return NumberOptions{ EmbedType::Default, true, true, false }; }
+    static constexpr NumberOptions Zero() { return NumberOptions{ EmbedType::Default, true, false, false }; }
+    static constexpr NumberOptions One() { return NumberOptions{ EmbedType::Default, false, true, false }; }
+    static constexpr NumberOptions None() { return NumberOptions{ EmbedType::Default, false, false, false }; }
+
+    inline NumberOptions& MakeGlobal(bool b = true)
+    {
+        Global = b;
+        return *this;
+    }
 };
 struct ColorOptions {
     _details::EmbedType EmbedType = _details::EmbedType::Default;
     bool SpecializeBlack          = false; // Will embed if constant black
     bool SpecializeWhite          = false; // Will embed if constant white
+    bool Global                   = false;
 
-    static constexpr ColorOptions Dynamic() { return ColorOptions{ EmbedType::Dynamic, false, false }; }
-    static constexpr ColorOptions Structural() { return ColorOptions{ EmbedType::Structural, true, true }; }
-    static constexpr ColorOptions White() { return ColorOptions{ EmbedType::Default, false, true }; }
-    static constexpr ColorOptions Black() { return ColorOptions{ EmbedType::Default, true, false }; }
-    static constexpr ColorOptions Full() { return ColorOptions{ EmbedType::Default, true, true }; }
-    static constexpr ColorOptions None() { return ColorOptions{ EmbedType::Default, false, false }; }
+    static constexpr ColorOptions Dynamic() { return ColorOptions{ EmbedType::Dynamic, false, false, false }; }
+    static constexpr ColorOptions Structural() { return ColorOptions{ EmbedType::Structural, true, true, false }; }
+    static constexpr ColorOptions White() { return ColorOptions{ EmbedType::Default, false, true, false }; }
+    static constexpr ColorOptions Black() { return ColorOptions{ EmbedType::Default, true, false, false }; }
+    static constexpr ColorOptions Full() { return ColorOptions{ EmbedType::Default, true, true, false }; }
+    static constexpr ColorOptions None() { return ColorOptions{ EmbedType::Default, false, false, false }; }
+
+    inline ColorOptions& MakeGlobal(bool b = true)
+    {
+        Global = b;
+        return *this;
+    }
 };
 struct VectorOptions {
     _details::EmbedType EmbedType = _details::EmbedType::Default;
     bool SpecializeZero           = false; // Will embed if constant zero vector
     bool SpecializeOne            = false; // Will embed if constant one vector
     bool SpecializeUnit           = false; // Will embed if constant unit vector ([1,0,0], [0,1,0] or [0,0,1])
+    bool Global                   = false;
 
-    static constexpr VectorOptions Dynamic() { return VectorOptions{ EmbedType::Dynamic, false, false, false }; }
-    static constexpr VectorOptions Structural() { return VectorOptions{ EmbedType::Structural, true, true, true }; }
-    static constexpr VectorOptions FullPlain() { return VectorOptions{ EmbedType::Default, true, true, false }; }
-    static constexpr VectorOptions Full() { return VectorOptions{ EmbedType::Default, true, true, true }; }
-    static constexpr VectorOptions None() { return VectorOptions{ EmbedType::Default, false, false, false }; }
+    static constexpr VectorOptions Dynamic() { return VectorOptions{ EmbedType::Dynamic, false, false, false, false }; }
+    static constexpr VectorOptions Structural() { return VectorOptions{ EmbedType::Structural, true, true, true, false }; }
+    static constexpr VectorOptions FullPlain() { return VectorOptions{ EmbedType::Default, true, true, false, false }; }
+    static constexpr VectorOptions Full() { return VectorOptions{ EmbedType::Default, true, true, true, false }; }
+    static constexpr VectorOptions None() { return VectorOptions{ EmbedType::Default, false, false, false, false }; }
+
+    inline VectorOptions& MakeGlobal(bool b = true)
+    {
+        Global = b;
+        return *this;
+    }
 };
 struct TextureOptions {
     _details::EmbedType EmbedType = _details::EmbedType::Default;

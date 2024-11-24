@@ -4,6 +4,7 @@
 
 namespace IG {
 class SceneObject;
+class ShadingTree;
 
 constexpr int32 DefaultMaxRayDepth = 64; // This is quite large
 constexpr int32 DefaultMinRayDepth = 2;  // The first bounce should not be affected by rr (by default)
@@ -21,7 +22,7 @@ public:
 
     struct SerializationInput {
         std::ostream& Stream;
-        LoaderContext& Context;
+        ShadingTree& Tree;
     };
     virtual void generateBody(const SerializationInput& input) const = 0;
 
