@@ -88,21 +88,23 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
     const std::string max_depth = mTechnique->hasProperty("max_depth") ? "max_depth" : "max_camera_depth";
     const std::string min_depth = mTechnique->hasProperty("min_depth") ? "min_depth" : "min_camera_depth";
 
-    input.Tree.addInteger(max_depth, *mTechnique, DefaultMaxRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
-    input.Tree.addInteger(min_depth, *mTechnique, DefaultMinRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
-    input.Tree.addInteger("max_light_depth", *mTechnique, 8, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
-    input.Tree.addNumber("radius", *mTechnique, 0.01f * input.Tree.context().SceneDiameter, ShadingTree::NumberOptions::Zero().MakeGlobal());
-    input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
     input.Tree.addComputedInteger("photon_count", (int)mPhotonCount, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
 
     // Handle AOVs
     if (is_light_pass) {
+        input.Tree.addInteger("max_light_depth", *mTechnique, 8, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+
         input.Stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
                      << "    match(id) {" << std::endl
                      << "      _ => make_empty_aov_image(0, 0)" << std::endl
                      << "    }" << std::endl
                      << "  };" << std::endl;
     } else {
+        input.Tree.addInteger(max_depth, *mTechnique, DefaultMaxRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+        input.Tree.addInteger(min_depth, *mTechnique, DefaultMinRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
+        input.Tree.addNumber("radius", *mTechnique, 0.01f * input.Tree.context().SceneDiameter, ShadingTree::NumberOptions::Zero().MakeGlobal());
+        input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
+
         if (mAOV) {
             input.Stream << "  let aov_di   = device.load_aov_image(\"Direct Weights\", spi);" << std::endl;
             input.Stream << "  let aov_merg = device.load_aov_image(\"Merging Weights\", spi);" << std::endl;
@@ -121,14 +123,13 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
                      << "  };" << std::endl;
     }
 
-    input.Stream << "  let light_cache = make_ppm_lightcache(device, tech_photons, scene_bbox);" << std::endl;
+    input.Stream << input.Tree.pullHeader()
+                 << "  let light_cache = make_ppm_lightcache(device, " << input.Tree.getInline("photon_count") << ", scene_bbox);" << std::endl;
 
     if (is_light_pass) {
-        input.Stream << input.Tree.pullHeader()
-                     << "  let technique = make_ppm_light_renderer(" << input.Tree.getInline("max_light_depth") << ", aovs, light_cache);" << std::endl;
+        input.Stream << "  let technique = make_ppm_light_renderer(" << input.Tree.getInline("max_light_depth") << ", aovs, light_cache);" << std::endl;
     } else {
-        input.Stream << input.Tree.pullHeader()
-                     << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
+        input.Stream << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
                      << "  let ppm_radius = ppm_compute_radius(" << input.Tree.getInline("radius") << ", settings.iter);" << std::endl
                      << "  let technique = make_ppm_path_renderer("
                      << input.Tree.getInline(max_depth)
