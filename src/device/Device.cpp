@@ -226,7 +226,7 @@ private:
 public:
     inline explicit Interface(Device* device, const Device::SetupSettings& setup)
         : mIGDevice(device)
-        , mDeviceID(computeTargetID(setup.target))
+        , mDeviceID(computeTargetID(setup.Target))
         , mDeviceData()
         , mEntityCount(0)
         , mFramebufferWidth(0)
@@ -234,10 +234,10 @@ public:
         , mSetupSettings(setup)
         , mCurrentDriverSettings()
         , mMainStats()
-        , mIsGPU(setup.target.isGPU())
+        , mIsGPU(setup.Target.isGPU())
     {
-        mCurrentDriverSettings.device       = (int)setup.target.device();
-        mCurrentDriverSettings.thread_count = (int)setup.target.threadCount();
+        mCurrentDriverSettings.device       = (int)setup.Target.device();
+        mCurrentDriverSettings.thread_count = (int)setup.Target.threadCount();
 
         updateSettings(Device::RenderSettings{}); // Initialize with default values
 
@@ -250,7 +250,7 @@ public:
     inline ~Interface() = default;
 
     inline bool isGPU() const { return mIsGPU; }
-    inline Target target() const { return mSetupSettings.target; }
+    inline Target target() const { return mSetupSettings.Target; }
     inline int deviceID() const { return mDeviceID; }
 
     inline size_t framebufferWidth() const { return mFramebufferWidth; }
@@ -371,7 +371,7 @@ public:
         tlThreadData = nullptr;
         mThreadData.clear();
 
-        const size_t req_threads = isGPU() ? 0 : (mSetupSettings.target.threadCount() == 0 ? std::thread::hardware_concurrency() : mSetupSettings.target.threadCount());
+        const size_t req_threads = isGPU() ? 0 : (mSetupSettings.Target.threadCount() == 0 ? std::thread::hardware_concurrency() : mSetupSettings.Target.threadCount());
         const size_t max_threads = req_threads + 1 /* Host */;
 
         mAvailableThreadData.clear();
@@ -1020,7 +1020,7 @@ public:
     inline void runDeviceShader()
     {
         if (mSetupSettings.DebugTrace)
-            IG_LOG(L_DEBUG) << "TRACE> Device Shader" << std::endl;
+            IG_LOG(L_DEBUG) << "TRACE> Device Shader " << mSetupSettings.Target.toString() << std::endl;
 
         if (mSetupSettings.AcquireStats)
             getThreadData()->stats.beginShaderLaunch(ShaderType::Device, 1, {});
@@ -1634,7 +1634,7 @@ Device::Device(const Device::SetupSettings& settings)
 
     IG_LOG(L_INFO) << "Using device " << anydsl_device_name(sInterface->deviceID()) << std::endl;
 
-    if (settings.target.isCPU() && settings.target.vectorWidth() > 1)
+    if (settings.Target.isCPU() && settings.Target.vectorWidth() > 1)
         IG_LOG(L_WARNING) << "CPU device with vector width > 1 is experimental and might crash!" << std::endl;
 }
 

@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 
     // Get render interface
     const std::shared_ptr<IRenderDevice> renderDevice = std::shared_ptr<IRenderDevice>{ interface->createRenderDevice(IRenderDevice::SetupSettings{
-        .target        = target,
+        .Target        = target,
         .AcquireStats  = false,
         .DebugTrace    = false,
         .IsInteractive = false }) };

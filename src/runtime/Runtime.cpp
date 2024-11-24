@@ -130,7 +130,7 @@ Runtime::Runtime(const RuntimeOptions& opts)
     }
 
     IRenderDevice::SetupSettings settings;
-    settings.target        = mOptions.Target;
+    settings.Target        = mOptions.Target;
     settings.AcquireStats  = mOptions.AcquireStats;
     settings.DebugTrace    = mOptions.DebugTrace;
     settings.IsInteractive = mOptions.IsInteractive;

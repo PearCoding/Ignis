@@ -14,7 +14,7 @@ struct SceneDatabase;
 class IG_LIB IRenderDevice {
 public:
     struct SetupSettings {
-        Target target;
+        IG::Target Target;
         bool AcquireStats  = false;
         bool DebugTrace    = false;
         bool IsInteractive = false;
