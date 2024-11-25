@@ -158,10 +158,9 @@ bool DeviceManager::unload(const TargetArchitecture& target)
 
 bool DeviceManager::unloadAll()
 {
-    for (const auto& pair : mAvailableDevices) {
-        if (!unload(pair.first))
-            return false;
-    }
+    for (auto& pair : mLoadedDevices)
+        pair.second.unload();
+    mLoadedDevices.clear();
 
     return true;
 }

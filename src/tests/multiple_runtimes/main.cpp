@@ -9,7 +9,7 @@ using namespace IG;
 // Every even number will be gpu, every odd will be cpu (if possible)
 int main(int argc, char** argv)
 {
-    constexpr int SPP = 8;
+    constexpr int SPP = 1;
 
     std::vector<Path> scenes;
     for (int k = 1; k < argc; ++k) {
@@ -19,6 +19,7 @@ int main(int argc, char** argv)
             scenes.push_back(argv[k]);
     }
 
+    int v = 0;
     for (const Path& scene : scenes) {
         IG_LOG(L_INFO) << "Scene " << scene << std::endl;
 
@@ -26,6 +27,9 @@ int main(int argc, char** argv)
             std::unique_ptr<Runtime> runtime;
             try {
                 RuntimeOptions opts = RuntimeOptions::makeDefault();
+                opts.DebugTrace = v >= 1;
+                opts.DumpShader = v >= 1;
+                opts.ShaderCompileThreads = 1;
                 if (i % 2 == 1) {
                     opts.Target = Target::pickGPU();
                     if (!opts.Target.isValid() || opts.Target.gpuArchitecture() == GPUArchitecture::Unknown)
@@ -48,6 +52,7 @@ int main(int argc, char** argv)
             while (runtime->currentSampleCount() < SPP)
                 runtime->step();
         }
+            ++v;
     }
 
     return EXIT_SUCCESS;

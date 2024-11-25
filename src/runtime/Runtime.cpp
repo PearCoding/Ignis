@@ -106,6 +106,8 @@ Runtime::Runtime(const RuntimeOptions& opts)
     if (interface == nullptr)
         throw std::runtime_error("Could not get requested device: " + mOptions.Target.toString());
 
+    interface->makeCurrent();
+
     // Get compiler interface
     std::shared_ptr<ICompilerDevice> compilerDevice = std::shared_ptr<ICompilerDevice>{ interface->createCompilerDevice() };
     if (compilerDevice == nullptr)
@@ -787,9 +789,9 @@ std::shared_ptr<RenderPass> Runtime::createPass(const std::string& shaderCode)
 bool Runtime::runPass(const RenderPass& pass)
 {
     mDevice->runPass(ShaderOutput<void*>{
-        .Exec          = pass.internalCallback(),
-        .LocalRegistry = pass.parameter() },
-        pass.userData());
+                         .Exec          = pass.internalCallback(),
+                         .LocalRegistry = pass.parameter() },
+                     pass.userData());
     return true;
 }
 

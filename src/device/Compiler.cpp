@@ -1,41 +1,13 @@
 #include "Compiler.h"
 #include "Logger.h"
-#include "RuntimeInfo.h"
 #include "device/IDeviceInterface.h"
 
 #include <anydsl_jit.h>
-#include <anydsl_runtime.hpp>
-
-extern "C" const IG::IDeviceInterface* ig_get_interface(); // Defined in Interface.cpp
 
 namespace IG {
 
 static int compileScript(const ICompilerDevice::Settings& settings, const std::string& script)
 {
-    static std::once_flag once;
-    std::call_once(once, []() {
-        const auto module_path = RuntimeInfo::modulePath((void*)ig_get_interface);
-        if (!module_path.empty()) {
-            IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
-            anydsl_link(module_path.generic_string().c_str());
-        }
-
-        const auto runtime_path = RuntimeInfo::modulePath();
-        if (!runtime_path.empty()) {
-            IG_LOG(L_DEBUG) << "Loading symbolic module " << runtime_path << std::endl;
-            anydsl_link(runtime_path.generic_string().c_str());
-        }
-
-        const auto exe_path = RuntimeInfo::executablePath();
-        if (!exe_path.empty()) {
-            IG_LOG(L_DEBUG) << "Loading symbolic module " << exe_path << std::endl;
-            anydsl_link(exe_path.generic_string().c_str());
-        }
-
-        const auto cache_dir = RuntimeInfo::cacheDirectory();
-        anydsl_set_cache_directory(cache_dir.generic_string().c_str());
-    });
-
 #ifdef IG_DEBUG
     anydsl_set_log_level(settings.Verbose ? 2 /* info */ : 4 /* error */);
 #else

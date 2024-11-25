@@ -139,6 +139,8 @@ static inline int computeTargetID(const Target& target)
     }
 }
 
+// FIXME: Create a interface class for this such that a vtable is used in the extern "C" functions to prevent DLL issues
+
 constexpr size_t GPUStreamBufferCount = 2;
 class Interface {
     IG_CLASS_NON_COPYABLE(Interface);
@@ -1640,6 +1642,7 @@ Device::Device(const Device::SetupSettings& settings)
 
 Device::~Device()
 {
+    IG_ASSERT(sInterface, "Expected valid interface before releasing the interface");
     sInterface.reset();
 }
 
@@ -1863,6 +1866,7 @@ using IG::sInterface;
 extern "C" {
 IG_EXPORT void ignis_get_film_data(float** pixels, int* width, int* height)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     *pixels = sInterface->getMainFramebuffer();
     *width  = (int)sInterface->framebufferWidth();
     *height = (int)sInterface->framebufferHeight();
@@ -1870,11 +1874,13 @@ IG_EXPORT void ignis_get_film_data(float** pixels, int* width, int* height)
 
 IG_EXPORT void ignis_get_aov_image(const char* name, float** aov_pixels)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     *aov_pixels = sInterface->getAOVImageForDevice(name).Data;
 }
 
 IG_EXPORT void ignis_get_work_info(WorkInfo* info)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     if (sInterface->currentDriverSettings().width > 0 && sInterface->currentDriverSettings().height > 0) {
         info->width  = (int)sInterface->currentDriverSettings().width;
         info->height = (int)sInterface->currentDriverSettings().height;
@@ -1890,6 +1896,7 @@ IG_EXPORT void ignis_get_work_info(WorkInfo* info)
 
 IG_EXPORT void ignis_load_bvh2_ent(const char* prim_type, Node2** nodes, EntityLeaf1** objs)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& bvh = sInterface->loadEntityBVH<IG::Bvh2Ent, Node2>(prim_type);
     *nodes    = const_cast<Node2*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
@@ -1897,6 +1904,7 @@ IG_EXPORT void ignis_load_bvh2_ent(const char* prim_type, Node2** nodes, EntityL
 
 IG_EXPORT void ignis_load_bvh4_ent(const char* prim_type, Node4** nodes, EntityLeaf1** objs)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& bvh = sInterface->loadEntityBVH<IG::Bvh4Ent, Node4>(prim_type);
     *nodes    = const_cast<Node4*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
@@ -1904,6 +1912,7 @@ IG_EXPORT void ignis_load_bvh4_ent(const char* prim_type, Node4** nodes, EntityL
 
 IG_EXPORT void ignis_load_bvh8_ent(const char* prim_type, Node8** nodes, EntityLeaf1** objs)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& bvh = sInterface->loadEntityBVH<IG::Bvh8Ent, Node8>(prim_type);
     *nodes    = const_cast<Node8*>(bvh.Nodes.ptr());
     *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
@@ -1922,12 +1931,14 @@ static inline DynTableData assignDynTable(const IG::DynTableProxy& tbl)
 
 IG_EXPORT void ignis_load_dyntable(const char* name, DynTableData* dtb)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& proxy = sInterface->loadDyntable(name);
     *dtb        = assignDynTable(proxy);
 }
 
 IG_EXPORT void ignis_load_fixtable(const char* name, uint8_t** data, int32_t* size)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& buf = sInterface->loadFixtable(name);
     *data     = const_cast<uint8_t*>(buf.Data.data());
     *size     = (int32_t)buf.Data.size();
@@ -1935,11 +1946,13 @@ IG_EXPORT void ignis_load_fixtable(const char* name, uint8_t** data, int32_t* si
 
 IG_EXPORT void ignis_load_rays(StreamRay** list)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     *list = const_cast<StreamRay*>(sInterface->loadRayList().data());
 }
 
 IG_EXPORT void ignis_load_image(const char* file, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& img = sInterface->loadImage(file, expected_channels);
     *pixels   = const_cast<float*>(img.Data.data());
     *width    = (int32_t)img.Width;
@@ -1948,11 +1961,13 @@ IG_EXPORT void ignis_load_image(const char* file, float** pixels, int32_t* width
 
 IG_EXPORT void ignis_load_image_by_id(int32_t id, float** pixels, int32_t* width, int32_t* height, int32_t expected_channels)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     return ignis_load_image(sInterface->lookupResource(id).c_str(), pixels, width, height, expected_channels);
 }
 
 IG_EXPORT void ignis_load_packed_image(const char* file, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& img = sInterface->loadPackedImage(file, expected_channels, linear);
     *pixels   = const_cast<uint8_t*>(img.Data.data());
     *width    = (int32_t)img.Width;
@@ -1961,11 +1976,13 @@ IG_EXPORT void ignis_load_packed_image(const char* file, uint8_t** pixels, int32
 
 IG_EXPORT void ignis_load_packed_image_by_id(int32_t id, uint8_t** pixels, int32_t* width, int32_t* height, int32_t expected_channels, bool linear)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     return ignis_load_packed_image(sInterface->lookupResource(id).c_str(), pixels, width, height, expected_channels, linear);
 }
 
 IG_EXPORT void ignis_load_buffer(const char* file, uint8_t** data, int32_t* size)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& img = sInterface->loadBuffer(file);
     *data     = const_cast<uint8_t*>(img.Data.data());
     *size     = (int32_t)img.Data.size();
@@ -1973,22 +1990,26 @@ IG_EXPORT void ignis_load_buffer(const char* file, uint8_t** data, int32_t* size
 
 IG_EXPORT void ignis_load_buffer_by_id(int32_t id, uint8_t** data, int32_t* size)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     return ignis_load_buffer(sInterface->lookupResource(id).c_str(), data, size);
 }
 
 IG_EXPORT void ignis_request_buffer(const char* name, uint8_t** data, int size, int flags)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& buffer = sInterface->requestBuffer(name, size, flags);
     *data        = const_cast<uint8_t*>(buffer.Data.data());
 }
 
 IG_EXPORT void ignis_dbg_dump_buffer(const char* name, const char* filename)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->dumpBuffer(name, filename);
 }
 
 IG_EXPORT void ignis_get_temporary_storage_host(TemporaryStorageHost* temp)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     const auto& data          = sInterface->getTemporaryStorageHost();
     temp->ray_begins          = const_cast<int32_t*>(data.ray_begins.data());
     temp->ray_ends            = const_cast<int32_t*>(data.ray_ends.data());
@@ -1997,77 +2018,91 @@ IG_EXPORT void ignis_get_temporary_storage_host(TemporaryStorageHost* temp)
 
 IG_EXPORT void ignis_get_primary_stream(int id, PrimaryStream* primary, int size)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& stream = sInterface->getPrimaryStream(id, size);
     IG::get_stream(primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_primary_stream_const(int id, PrimaryStream* primary)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& stream = sInterface->getPrimaryStream(id);
     IG::get_stream(primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream(int id, SecondaryStream* secondary, int size)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& stream = sInterface->getSecondaryStream(id, size);
     IG::get_stream(secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream_const(int id, SecondaryStream* secondary)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     auto& stream = sInterface->getSecondaryStream(id);
     IG::get_stream(secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_gpu_swap_primary_streams()
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->swapGPUPrimaryStreams();
 }
 
 IG_EXPORT void ignis_gpu_swap_secondary_streams()
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->swapGPUSecondaryStreams();
 }
 
 IG_EXPORT void ignis_register_thread()
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     IG::enableMathMode();
     sInterface->registerThread();
 }
 
 IG_EXPORT void ignis_unregister_thread()
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->unregisterThread();
     IG::disableMathMode();
 }
 
 IG_EXPORT void ignis_handle_traverse_primary(int size)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->runPrimaryTraversalShader(size);
 }
 
 IG_EXPORT void ignis_handle_traverse_secondary(int size)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->runSecondaryTraversalShader(size);
 }
 
 IG_EXPORT int ignis_handle_ray_generation(int next_id, int size, int xmin, int ymin, int xmax, int ymax)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     return sInterface->runRayGenerationShader(next_id, size, xmin, ymin, xmax, ymax);
 }
 
 IG_EXPORT void ignis_handle_miss_shader(int first, int last)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->runMissShader(first, last);
 }
 
 IG_EXPORT void ignis_handle_hit_shader(int entity_id, int first, int last)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->runHitShader(entity_id, first, last);
 }
 
 IG_EXPORT void ignis_handle_advanced_shadow_shader(int material_id, int first, int last, bool is_hit)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     if (sInterface->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced)
         sInterface->runAdvancedShadowShader(0 /* Fix to 0 */, first, last, is_hit);
     else
@@ -2076,58 +2111,69 @@ IG_EXPORT void ignis_handle_advanced_shadow_shader(int material_id, int first, i
 
 IG_EXPORT void ignis_handle_callback_shader(int type)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->runCallbackShader(type);
 }
 
 // Registry stuff
 IG_EXPORT int ignis_get_parameter_i32(const char* name, int32_t def, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     return sInterface->getParameterInt(name, def, global);
 }
 
 IG_EXPORT float ignis_get_parameter_f32(const char* name, float def, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     return sInterface->getParameterFloat(name, def, global);
 }
 
 IG_EXPORT void ignis_get_parameter_vector(const char* name, float defX, float defY, float defZ, float* x, float* y, float* z, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->getParameterVector(name, defX, defY, defZ, *x, *y, *z, global);
 }
 
 IG_EXPORT void ignis_get_parameter_color(const char* name, float defR, float defG, float defB, float defA, float* r, float* g, float* b, float* a, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->getParameterColor(name, defR, defG, defB, defA, *r, *g, *b, *a, global);
 }
 
 IG_EXPORT const char* ignis_get_parameter_string(const char* name, const char* def, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     return sInterface->getParameterString(name, def, global);
 }
 
 IG_EXPORT void ignis_set_parameter_i32(const char* name, int32_t value, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->setParameterInt(name, value, global);
 }
 
 IG_EXPORT void ignis_set_parameter_f32(const char* name, float value, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->setParameterFloat(name, value, global);
 }
 
 IG_EXPORT void ignis_set_parameter_vector(const char* name, float valueX, float valueY, float valueZ, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->setParameterVector(name, valueX, valueY, valueZ, global);
 }
 
 IG_EXPORT void ignis_set_parameter_color(const char* name, float valueR, float valueG, float valueB, float valueA, bool global)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     sInterface->setParameterColor(name, valueR, valueG, valueB, valueA, global);
 }
 
 // Stats
 IG_EXPORT void ignis_stats_begin_section(int32_t id)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     if (!sInterface->hasStatisticAquisition())
         return;
 
@@ -2136,6 +2182,7 @@ IG_EXPORT void ignis_stats_begin_section(int32_t id)
 
 IG_EXPORT void ignis_stats_end_section(int32_t id)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     if (!sInterface->hasStatisticAquisition())
         return;
 
@@ -2144,6 +2191,7 @@ IG_EXPORT void ignis_stats_end_section(int32_t id)
 
 IG_EXPORT void ignis_stats_add(int32_t id, int32_t value)
 {
+    IG_ASSERT(sInterface, "Expected valid interface");
     if (!sInterface->hasStatisticAquisition())
         return;
 
