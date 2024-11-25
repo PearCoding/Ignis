@@ -6,6 +6,7 @@ RenderPass::RenderPass(Runtime* runtime, void* callback)
     : mRuntime(runtime)
     , mCallback(callback)
     , mRegistry(std::make_shared<ParameterSet>())
+    , mUserData(nullptr)
 {
 }
 

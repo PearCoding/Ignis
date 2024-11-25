@@ -67,5 +67,5 @@ fn ig_bake_shader(_settings: &Settings, _output: &mut [f32]) -> () {
 }
 
 #[export]
-fn ig_pass_main(_settings: &Settings) -> () {
+fn ig_pass_main(_settings: &Settings, _userData: &mut [i32]) -> () {
 }

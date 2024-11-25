@@ -1,6 +1,6 @@
 
 
-set(SHADER ${CMAKE_CURRENT_SOURCE_DIR}/shader.art ${CMAKE_CURRENT_SOURCE_DIR}/glare.art)
+set(SHADER ${CMAKE_CURRENT_SOURCE_DIR}/shader.art)
 set(SHADER_SRC_FILE ${CMAKE_CURRENT_BINARY_DIR}/shader.cpp)
 add_custom_command(
   OUTPUT ${SHADER_SRC_FILE}

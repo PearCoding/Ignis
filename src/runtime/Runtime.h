@@ -18,6 +18,7 @@ namespace IG {
 
 struct LoaderOptions;
 class Scene;
+class GlareEvaluator;
 
 using AOVAccessor    = IRenderDevice::AOVAccessor;
 using BufferAccessor = IRenderDevice::BufferAccessor;
@@ -182,6 +183,8 @@ public:
 
     [[nodiscard]] std::shared_ptr<RenderPass> createPass(const std::string& src);
     bool runPass(const RenderPass& pass);
+
+    [[nodiscard]] std::shared_ptr<GlareEvaluator> createGlareEvaluator();
 
 private:
     void checkCacheDirectory();

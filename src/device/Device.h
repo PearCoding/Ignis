@@ -36,6 +36,6 @@ public:
     [[nodiscard]] ImageInfoOutput imageinfo(const ImageInfoSettings&) override;
     void bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output) override;
 
-    void runPass(const ShaderOutput<void*>& shader) override;
+    void runPass(const ShaderOutput<void*>& shader, void* userData) override;
 };
 } // namespace IG

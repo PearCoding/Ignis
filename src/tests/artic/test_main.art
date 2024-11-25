@@ -1,6 +1,6 @@
 #[import(cc = "C")] fn ignis_set_error_count(i32) -> ();
 
-#[export] fn test_main(_settings: &Settings) -> () {
+#[export] fn test_main(_settings: &Settings, _userData: &mut [i32]) -> () {
 
     let mut err = test_bbox();
     err += test_matrix();

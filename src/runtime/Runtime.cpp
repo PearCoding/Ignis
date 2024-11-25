@@ -5,6 +5,7 @@
 #include "StringUtils.h"
 #include "device/DeviceManager.h"
 #include "device/IDeviceInterface.h"
+#include "extra/GlareEvaluator.h"
 #include "loader/LoaderCamera.h"
 #include "loader/Parser.h"
 #include "shader/ShaderManager.h"
@@ -787,7 +788,8 @@ bool Runtime::runPass(const RenderPass& pass)
 {
     mDevice->runPass(ShaderOutput<void*>{
         .Exec          = pass.internalCallback(),
-        .LocalRegistry = pass.parameter() });
+        .LocalRegistry = pass.parameter() },
+        pass.userData());
     return true;
 }
 
@@ -873,5 +875,10 @@ bool Runtime::saveFramebuffer(const Path& path) const
     metaData.CameraDir = orientation.Dir;
 
     return Image::save(path, width, height, image_ptrs, image_names, &metaData);
+}
+
+std::shared_ptr<GlareEvaluator> Runtime::createGlareEvaluator()
+{
+    return std::make_shared<GlareEvaluator>(this);
 }
 } // namespace IG

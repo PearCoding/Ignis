@@ -1,11 +1,13 @@
 #include "Runtime.h"
 #include "Image.h"
 #include "Logger.h"
+#include "extra/GlareEvaluator.h"
 
 IG_BEGIN_IGNORE_WARNINGS
 #include <nanobind/eigen/dense.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/filesystem.h>
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
@@ -94,12 +96,12 @@ private:
                 sInstance.reset();
                 return nullptr;
             }
-        } else if (mSource.empty()) {
+        } else if (mSource.empty() && !mPath.empty()) {
             if (!sInstance->loadFromFile(mPath)) {
                 sInstance.reset();
                 return nullptr;
             }
-        } else {
+        } else if (!mPath.empty()) {
             if (!sInstance->loadFromString(mSource, mPath)) {
                 sInstance.reset();
                 return nullptr;
@@ -156,31 +158,31 @@ void runtime_module(nb::module_& m)
         .def_rw("Prefilter", &DenoiserSettings::Prefilter, "Set True if normal and albedo layer should be prefiltered");
 
     auto opts = nb::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
-        .def(nb::init<>())
-        .def_static("makeDefault", &RuntimeOptions::makeDefault, nb::arg("trace") = false)
-        .def_rw("Target", &RuntimeOptions::Target, "The target device")
-        .def_rw("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
-        .def_rw("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
-        .def_rw("DumpRegistry", &RuntimeOptions::DumpRegistry, "Dump the registry into the standard io")
-        .def_rw("DumpRegistryFull", &RuntimeOptions::DumpRegistryFull, "Dump the complete registry into the standard io")
-        .def_rw("DebugTrace", &RuntimeOptions::DebugTrace, "Dump trace information into the logger. Huge negative performance impact")
-        .def_rw("AcquireStats", &RuntimeOptions::AcquireStats, "Set True if statistical data should be acquired while rendering")
-        .def_rw("SPI", &RuntimeOptions::SPI, "The requested sample per iteration. Can be 0 to set automatically")
-        .def_rw("Seed", &RuntimeOptions::Seed, "Seed for the random generators")
-        .def_rw("OverrideCamera", &RuntimeOptions::OverrideCamera, "Type of camera to use instead of the one used by the scene")
-        .def_rw("OverrideTechnique", &RuntimeOptions::OverrideTechnique, "Type of technique to use instead of the one used by the scene")
-        .def_rw("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize, "Type of film size to use instead of the one used by the scene")
-        .def_rw("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
-        .def_rw("Denoiser", &RuntimeOptions::Denoiser, "Settings for the denoiser")
-        .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries")
-        .def_rw("DisableStandardAOVs", &RuntimeOptions::DisableStandardAOVs, "Disable standard normal and albedo aovs")
-        .def_rw("ShaderOptimizationLevel", &RuntimeOptions::ShaderOptimizationLevel, "Level of optimization for shaders")
-        .def_rw("ShaderCompileThreads", &RuntimeOptions::ShaderCompileThreads, "Number of threads to use for compiling shaders")
-        .def_rw("Specialization", &RuntimeOptions::Specialization)
-        .def_rw("EnableCache", &RuntimeOptions::EnableCache, "Enable cache")
-        .def_rw("CacheDir", &RuntimeOptions::CacheDir, "The explicit directory for the runtime cache")
-        .def_rw("ScriptDir", &RuntimeOptions::ScriptDir, "Path to a new script directory, replacing the internal standard library")
-        .def_rw("AddExtraEnvLight", &RuntimeOptions::AddExtraEnvLight, "Option to add a constant environment light (just to see something)");
+                    .def(nb::init<>())
+                    .def_static("makeDefault", &RuntimeOptions::makeDefault, nb::arg("trace") = false)
+                    .def_rw("Target", &RuntimeOptions::Target, "The target device")
+                    .def_rw("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
+                    .def_rw("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
+                    .def_rw("DumpRegistry", &RuntimeOptions::DumpRegistry, "Dump the registry into the standard io")
+                    .def_rw("DumpRegistryFull", &RuntimeOptions::DumpRegistryFull, "Dump the complete registry into the standard io")
+                    .def_rw("DebugTrace", &RuntimeOptions::DebugTrace, "Dump trace information into the logger. Huge negative performance impact")
+                    .def_rw("AcquireStats", &RuntimeOptions::AcquireStats, "Set True if statistical data should be acquired while rendering")
+                    .def_rw("SPI", &RuntimeOptions::SPI, "The requested sample per iteration. Can be 0 to set automatically")
+                    .def_rw("Seed", &RuntimeOptions::Seed, "Seed for the random generators")
+                    .def_rw("OverrideCamera", &RuntimeOptions::OverrideCamera, "Type of camera to use instead of the one used by the scene")
+                    .def_rw("OverrideTechnique", &RuntimeOptions::OverrideTechnique, "Type of technique to use instead of the one used by the scene")
+                    .def_rw("OverrideFilmSize", &RuntimeOptions::OverrideFilmSize, "Type of film size to use instead of the one used by the scene")
+                    .def_rw("EnableTonemapping", &RuntimeOptions::EnableTonemapping, "Set True if any of the two tonemapping functions ``tonemap`` and ``imageinfo`` is to be used")
+                    .def_rw("Denoiser", &RuntimeOptions::Denoiser, "Settings for the denoiser")
+                    .def_rw("WarnUnused", &RuntimeOptions::WarnUnused, "Set False if you want to ignore warnings about unused property entries")
+                    .def_rw("DisableStandardAOVs", &RuntimeOptions::DisableStandardAOVs, "Disable standard normal and albedo aovs")
+                    .def_rw("ShaderOptimizationLevel", &RuntimeOptions::ShaderOptimizationLevel, "Level of optimization for shaders")
+                    .def_rw("ShaderCompileThreads", &RuntimeOptions::ShaderCompileThreads, "Number of threads to use for compiling shaders")
+                    .def_rw("Specialization", &RuntimeOptions::Specialization)
+                    .def_rw("EnableCache", &RuntimeOptions::EnableCache, "Enable cache")
+                    .def_rw("CacheDir", &RuntimeOptions::CacheDir, "The explicit directory for the runtime cache")
+                    .def_rw("ScriptDir", &RuntimeOptions::ScriptDir, "Path to a new script directory, replacing the internal standard library")
+                    .def_rw("AddExtraEnvLight", &RuntimeOptions::AddExtraEnvLight, "Option to add a constant environment light (just to see something)");
 
     nb::enum_<RuntimeOptions::SpecializationMode>(opts, "SpecializationMode", "Enum holding shader specialization modes")
         .value("Default", RuntimeOptions::SpecializationMode::Default)
@@ -218,6 +220,30 @@ void runtime_module(nb::module_& m)
         .def("isOverlapping", &BoundingBox::isOverlapping)
         .def_static("MakeEmpty", &BoundingBox::Empty)
         .def_static("MakeFull", &BoundingBox::Full);
+
+    auto glareEvaluator = nb::class_<GlareEvaluator>(m, "GlareEvaluator", "Optional pass to compute significant glare values")
+                              .def("run", &GlareEvaluator::run)
+                              .def_prop_rw("multiplier", &GlareEvaluator::multiplier, &GlareEvaluator::setMultiplier)
+                              .def_prop_rw("verticalIlluminance", &GlareEvaluator::verticalIlluminance, &GlareEvaluator::setVerticalIlluminance)
+                              .def("setData", [](GlareEvaluator& self, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig> output) {
+                                  self.setUserData(output.data(), output.shape(1), output.shape(2));
+                              });
+
+    nb::class_<GlareEvaluator::Result>(glareEvaluator, "Result", "Result of the glare evaluation")
+        .def_rw("DGP", &GlareEvaluator::Result::DGP)
+        .def_rw("DGI", &GlareEvaluator::Result::DGI)
+        .def_rw("DGImod", &GlareEvaluator::Result::DGImod)
+        .def_rw("DGR", &GlareEvaluator::Result::DGR)
+        .def_rw("VCP", &GlareEvaluator::Result::VCP)
+        .def_rw("UGR", &GlareEvaluator::Result::UGR)
+        .def_rw("UGRexp", &GlareEvaluator::Result::UGRexp)
+        .def_rw("UGP", &GlareEvaluator::Result::UGP)
+        .def_rw("VerticalIlluminance", &GlareEvaluator::Result::VerticalIlluminance)
+        .def_rw("SourceLuminance", &GlareEvaluator::Result::SourceLuminance)
+        .def_rw("SourceOmega", &GlareEvaluator::Result::SourceOmega)
+        .def_rw("BackgroundLuminance", &GlareEvaluator::Result::BackgroundLuminance)
+        .def_rw("TotalOmega", &GlareEvaluator::Result::TotalOmega)
+        .def_rw("TotalLuminance", &GlareEvaluator::Result::TotalLuminance);
 
     // TODO: Add option to insert new "texture" as parameter for Python Interchange with proper device handling
     nb::class_<Runtime>(m, "Runtime", "Renderer runtime allowing control of simulation and access to results")
@@ -279,6 +305,7 @@ void runtime_module(nb::module_& m)
 
             // TODO: Check stride?
             r.tonemap((uint32*)output.data(), settings); })
+        .def("createGlareEvaluator", &Runtime::createGlareEvaluator)
         .def("setParameter", nb::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", nb::overload_cast<const std::string&, float>(&Runtime::setParameter))
         .def("setParameter", nb::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
@@ -348,6 +375,12 @@ void runtime_module(nb::module_& m)
         .def(
             "loadFromScene", [](const Scene* scene, const Path& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); },
             "Generate a runtime with given options from an already loaded scene with directory for external resources")
+        .def(
+            "createEmpty", []() { return RuntimeWrap(RuntimeOptions::makeDefault(), nullptr, {}); },
+            "Generate a runtime without loading a scene")
+        .def(
+            "createEmpty", [](const RuntimeOptions& opts) { return RuntimeWrap(opts, nullptr, {}); },
+            "Generate a runtime without loading a scene")
         .def(
             "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);

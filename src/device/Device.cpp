@@ -1286,7 +1286,7 @@ public:
             getThreadData()->stats.endShaderLaunch(ShaderType::Bake, {});
     }
 
-    inline void runPassShader(const ShaderOutput<void*>& shader)
+    inline void runPassShader(const ShaderOutput<void*>& shader, void* userData)
     {
         IG_ASSERT(shader.Exec != nullptr, "Expected pass shader to be valid");
 
@@ -1300,7 +1300,7 @@ public:
         auto callback  = reinterpret_cast<Callback*>(shader.Exec);
 
         setCurrentShader(1, ShaderKey(0, ShaderType::Pass, 0), shader);
-        callback(&mCurrentDriverSettings);
+        callback(&mCurrentDriverSettings, (int32*)userData);
 
         checkDebugOutput();
 
@@ -1834,11 +1834,11 @@ void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::stri
     leaveDevice();
 }
 
-void Device::runPass(const ShaderOutput<void*>& shader)
+void Device::runPass(const ShaderOutput<void*>& shader, void* userData)
 {
     enterDevice();
 
-    sInterface->runPassShader(shader);
+    sInterface->runPassShader(shader, userData);
 
     leaveDevice();
 }

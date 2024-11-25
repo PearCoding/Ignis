@@ -42,10 +42,14 @@ public:
     [[nodiscard]] inline std::shared_ptr<ParameterSet> parameter() const { return mRegistry; }
     [[nodiscard]] inline void* internalCallback() const { return mCallback; }
 
+    inline void setUserData(void* userData) { mUserData = userData; }
+    [[nodiscard]] inline void* userData() const { return mUserData; }
+
 private:
     Runtime* const mRuntime;
     void* const mCallback;
 
     std::shared_ptr<ParameterSet> mRegistry;
+    void* mUserData;
 };
 } // namespace IG

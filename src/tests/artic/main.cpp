@@ -71,8 +71,9 @@ int main(int argc, char** argv)
     }
 
     renderDevice->runPass(ShaderOutput<void*>{
-        .Exec          = test_main,
-        .LocalRegistry = nullptr });
+                              .Exec          = test_main,
+                              .LocalRegistry = nullptr },
+                          nullptr);
 
     if (error_count != 0)
         std::cout << error_count << " failed tests!" << std::endl;
