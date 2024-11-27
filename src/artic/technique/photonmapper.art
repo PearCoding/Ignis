@@ -253,12 +253,7 @@ fn @ppm_compute_radius(max_radius: f32, iter: i32) -> f32 {
 
 fn @make_ppm_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: LightSelector, radius: f32, aovs: AOVTable, clamp_value: f32, light_cache: LightCache) -> Technique {
     let offset : f32 = 0.001;
-
-    let handle_color = if clamp_value > 0 {
-        @|c: Color| color_saturate(c, clamp_value)
-    } else {
-        @|c: Color| c
-    };
+    let handle_color = make_std_color_handler(clamp_value);
     
     let aov_di      = @aovs(AOV_PPM_DIRECT);
     let aov_merging = @aovs(AOV_PPM_MERGING);

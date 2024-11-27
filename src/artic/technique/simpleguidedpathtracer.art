@@ -53,11 +53,7 @@ fn @make_sgpt_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
     let aov_guided = @aovs(AOV_SGPT_GUIDED);
     let aov_nee    = @aovs(AOV_SGPT_NEE);
 
-    let handle_color = if clamp_value > 0 {
-        @|c: Color| color_saturate(c, clamp_value)
-    } else {
-        @|c: Color| c
-    };
+    let handle_color = make_std_color_handler(clamp_value);
 
     fn @on_shadow( ctx: ShadingContext
                  , rnd: RandomGenerator

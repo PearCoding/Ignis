@@ -4,6 +4,12 @@ fn @russian_roulette(c: Color, clamp: f32) = clampf(2 * color_luminance(c), 0.05
 // Russian roulette used in pbrt v4
 fn @russian_roulette_pbrt(c: Color, clamp: f32) = clampf(color_max_component(c), 0.05, clamp);
 
+fn @make_std_color_handler(clamp_value: f32) = if ?clamp_value &&  clamp_value <= 0 {
+    @|c: Color| c
+} else {
+    @|c: Color| select(clamp_value > 0, color_saturate(c, clamp_value), c)
+};
+
 struct PTRayPayload {
     inv_pdf: f32,   // Inverse BSDF pdf
     contrib: Color, // Current contribution
@@ -43,11 +49,7 @@ fn @make_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: Lig
     let aov_di  = @aovs(AOV_PATH_DIRECT);
     let aov_nee = @aovs(AOV_PATH_NEE);
 
-    let handle_color = if clamp_value > 0 {
-        @|c: Color| color_saturate(c, clamp_value)
-    } else {
-        @|c: Color| c
-    };
+    let handle_color = make_std_color_handler(clamp_value);
 
     fn @on_shadow( ctx: ShadingContext
                  , rnd: RandomGenerator

@@ -34,13 +34,8 @@ fn @init_vpt_raypayload(payload: RayPayload) = write_vptraypayload(payload, VPTR
 
 // TODO: Implement "A null-scattering path integral formulation of light transport", (Miller et. al, 2019)
 fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_selector: LightSelector, media: MediaTable, _aovs: AOVTable, clamp_value: f32, enable_nee: bool) -> Technique {
-    let offset : f32 = 0.001;
-
-    let handle_color = if clamp_value > 0 {
-        @|c: Color| color_saturate(c, clamp_value)
-    } else {
-        @|c: Color| c
-    };
+    let offset : f32 = 0.001;    
+    let handle_color = make_std_color_handler(clamp_value);
 
     fn @get_medium(ctx: ShadingContext, id: i32) -> Medium {
         let gen = @media(id);

@@ -228,11 +228,7 @@ fn @make_adaptive_env_learning_path_renderer(device: Device, max_path_len: i32, 
     let learning = make_adaptive_env_learning_cache(device, GridX, GridY, TileX, TileY, cam_pos);
 
     let offset : f32 = 0.001;
-    let handle_color = if clamp_value > 0 {
-        @|c: Color| color_saturate(c, clamp_value)
-    } else {
-        @|c: Color| c
-    };
+    let handle_color = make_std_color_handler(clamp_value);
 
     // TODO: NEE
 
