@@ -64,10 +64,10 @@ public:
     void makeCurrent() const
     {
         const auto module_path = RuntimeInfo::modulePath((void*)ig_get_interface);
-        // if (!module_path.empty()) {
-        //     IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
-        //     anydsl_link(module_path.generic_string().c_str());
-        // }
+        if (!module_path.empty()) {
+            IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
+            anydsl_link(module_path.generic_string().c_str());
+        }
 
         const auto runtime_path = RuntimeInfo::modulePath();
         if (!runtime_path.empty() && module_path != runtime_path) {
