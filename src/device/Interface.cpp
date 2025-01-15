@@ -8,8 +8,6 @@
 
 #include <anydsl_jit.h>
 
-extern "C" IG_EXPORT const IG::IDeviceInterface* ig_get_interface();
-
 namespace IG {
 #if defined(IG_BUILD_DEVICE_CPU)
 #if defined(IG_CPU_ARM)
@@ -32,6 +30,10 @@ namespace IG {
 #endif
 
 class CLASS_NAME : public IDeviceInterface {
+private:
+    // Function used as a symbol for the current module (device dll)
+    static void anchor_function() {}
+
 public:
     Build::Version getVersion() const
     {
@@ -63,7 +65,7 @@ public:
 
     void makeCurrent() const
     {
-        const auto module_path = RuntimeInfo::modulePath((void*)ig_get_interface);
+        const auto module_path = RuntimeInfo::modulePath((void*)CLASS_NAME::anchor_function);
         if (!module_path.empty()) {
             IG_LOG(L_DEBUG) << "Loading symbolic module " << module_path << std::endl;
             anydsl_link(module_path.generic_string().c_str());

@@ -19,6 +19,11 @@ int main(int argc, char** argv)
             scenes.push_back(argv[k]);
     }
 
+    if (scenes.empty()) {
+        std::cerr << "Provide at least one scene to render." << std::endl;
+        return EXIT_FAILURE;
+    }
+
     int v = 0;
     for (const Path& scene : scenes) {
         IG_LOG(L_INFO) << "Scene " << scene << std::endl;
@@ -26,9 +31,9 @@ int main(int argc, char** argv)
         for (int i = 0; i < 2; ++i) {
             std::unique_ptr<Runtime> runtime;
             try {
-                RuntimeOptions opts = RuntimeOptions::makeDefault();
-                opts.DebugTrace = v >= 1;
-                opts.DumpShader = v >= 1;
+                RuntimeOptions opts       = RuntimeOptions::makeDefault();
+                opts.DebugTrace           = v >= 1;
+                opts.DumpShader           = v >= 1;
                 opts.ShaderCompileThreads = 1;
                 if (i % 2 == 1) {
                     opts.Target = Target::pickGPU();
@@ -52,7 +57,7 @@ int main(int argc, char** argv)
             while (runtime->currentSampleCount() < SPP)
                 runtime->step();
         }
-            ++v;
+        ++v;
     }
 
     return EXIT_SUCCESS;
