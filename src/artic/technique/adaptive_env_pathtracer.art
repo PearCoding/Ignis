@@ -12,6 +12,8 @@
  * It could replace NEE as well, but this would not benefit windows or other interfaces opaque to shadow rays and NEE is quite good enough on its own.
  */
 
+// FIXME: This does not work as intended! Disabled for now
+
 // TODO: Future user parameter
 static GridX =  50:i32;
 static GridY = 100:i32;
