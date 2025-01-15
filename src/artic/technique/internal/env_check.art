@@ -30,12 +30,7 @@ fn @make_env_check_renderer(device: Device, spi: i32, light_selector: LightSelec
         }
     }
 
-    Technique {
-        on_hit         = TechniqueNoHitFunction,
-        on_miss        = on_miss,
-        on_shadow      = TechniqueNoShadowFunction,
-        on_bounce      = TechniqueNoBounceFunction,
-        on_shadow_hit  = TechniqueNoShadowHitFunction,
-        on_shadow_miss = TechniqueNoShadowMissFunction,
+    make_empty_technique().{
+        on_miss = on_miss,
     }
 }

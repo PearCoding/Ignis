@@ -62,12 +62,8 @@ fn @make_wireframe_renderer(camera: Camera) -> Technique {
         }
     }
 
-    Technique {
-        on_hit         = on_hit,
-        on_miss        = TechniqueNoMissFunction,
-        on_shadow      = TechniqueNoShadowFunction,
-        on_bounce      = on_bounce,
-        on_shadow_hit  = TechniqueNoShadowHitFunction,
-        on_shadow_miss = TechniqueNoShadowMissFunction,
+    make_empty_technique().{
+        on_hit    = on_hit,
+        on_bounce = on_bounce,
     }
 }

@@ -1,9 +1,7 @@
 fn @make_ao_renderer() -> Technique {
     let offset:f32 = 0.001;
 
-    Technique {
-        on_hit    = TechniqueNoHitFunction,
-        on_miss   = TechniqueNoMissFunction,
+    make_empty_technique().{
         on_shadow = @ |ctx, rnd, _, _, _| {
             let bsdf    = make_lambertian_bsdf(ctx.surf, color_builtins::white);
             let out_dir = vec3_neg(ctx.ray.dir);
@@ -17,8 +15,5 @@ fn @make_ao_renderer() -> Technique {
                 ShadowRay::None
             }
         },
-        on_bounce      = TechniqueNoBounceFunction,
-        on_shadow_hit  = TechniqueNoShadowHitFunction,
-        on_shadow_miss = TechniqueNoShadowMissFunction,
     }
 }

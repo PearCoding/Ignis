@@ -109,9 +109,7 @@ fn @make_lv_renderer(max_path_len: i32, light_selector: LightSelector, no_connec
         }
     }
 
-    Technique {
-        on_hit         = TechniqueNoHitFunction,
-        on_miss        = TechniqueNoMissFunction,
+    make_empty_technique().{
         on_shadow      = on_shadow,
         on_bounce      = on_bounce,
         on_shadow_hit  = on_advanced_shadow_hit,    

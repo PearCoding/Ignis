@@ -244,12 +244,10 @@ fn @make_volume_path_renderer(max_path_len: i32, min_path_len: i32, light_select
         }
     }
 
-    Technique {
-        on_hit         = on_hit,
-        on_miss        = on_miss,
-        on_shadow      = on_shadow,
-        on_bounce      = on_bounce,
-        on_shadow_hit  = TechniqueNoShadowHitFunction,
-        on_shadow_miss = TechniqueNoShadowMissFunction,
+    make_empty_technique().{
+        on_hit    = on_hit,
+        on_miss   = on_miss,
+        on_shadow = on_shadow,
+        on_bounce = on_bounce,
     }
 }

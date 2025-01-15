@@ -21,11 +21,20 @@ struct Technique {
     on_shadow_miss: fn (ShadingContext, MaterialShader, RayPayload, Color) -> Option[Color], // Will only be called if renderer makes use of ShadowHandlingMode!=Simple
 }
 
-fn @TechniqueNoHitFunction       (_: ShadingContext, _: RayPayload, _: Material)                                 = Option[Color]::None;
-fn @TechniqueNoMissFunction      (_: ShadingContext, _: RayPayload)                                              = Option[Color]::None;
-fn @TechniqueNoShadowFunction    (_: ShadingContext, _: RandomGenerator, _: RayPayload, _: RayPayload, Material) = ShadowRay::None;
-fn @TechniqueNoBounceFunction    (_: ShadingContext, _: RandomGenerator, _: RayPayload, Material)                = Option[Ray]::None;
-fn @TechniqueNoShadowHitFunction (_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)                 = Option[Color]::None;
-fn @TechniqueNoShadowMissFunction(_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)                 = Option[Color]::None;
+fn @TechniqueNoHitFunction        (_: ShadingContext, _: RayPayload, _: Material)                                 = Option[Color]::None;
+fn @TechniqueNoMissFunction       (_: ShadingContext, _: RayPayload)                                              = Option[Color]::None;
+fn @TechniqueNoShadowFunction     (_: ShadingContext, _: RandomGenerator, _: RayPayload, _: RayPayload, Material) = ShadowRay::None;
+fn @TechniqueNoBounceFunction     (_: ShadingContext, _: RandomGenerator, _: RayPayload, Material)                = Option[Ray]::None;
+fn @TechniqueNoShadowHitFunction  (_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)                 = Option[Color]::None;
+fn @TechniqueNoShadowMissFunction (_: ShadingContext, _: MaterialShader, _: RayPayload, _: Color)                 = Option[Color]::None;
+
+fn @make_empty_technique() = Technique {
+    on_hit         = TechniqueNoHitFunction,
+    on_miss        = TechniqueNoMissFunction,
+    on_shadow      = TechniqueNoShadowFunction,
+    on_bounce      = TechniqueNoBounceFunction,
+    on_shadow_hit  = TechniqueNoShadowHitFunction,
+    on_shadow_miss = TechniqueNoShadowMissFunction,
+};
 
 type RayEmitter = fn (i32, i32, i32, i32, i32, RayPayload) -> (Option[Ray], RandomGenerator);

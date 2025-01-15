@@ -1,7 +1,7 @@
 
 
 fn @make_debug_renderer(debug_mode: i32) -> Technique {
-    Technique {
+    make_empty_technique().{
         on_hit    = @ |ctx, _, mat| {
             match debug_mode {
                 1 => { // DEBUG_TANGENT

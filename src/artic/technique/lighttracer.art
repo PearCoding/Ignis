@@ -151,12 +151,9 @@ fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, m
         }
     }
 
-    Technique {
-        on_hit         = TechniqueNoHitFunction,
-        on_miss        = TechniqueNoMissFunction,
+    make_empty_technique().{
         on_shadow      = on_shadow,
         on_bounce      = on_bounce,
-        on_shadow_hit  = TechniqueNoShadowHitFunction,
         on_shadow_miss = on_advanced_shadow_miss,
     }
 }
