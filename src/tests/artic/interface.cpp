@@ -19,7 +19,7 @@ struct Mat4x4 {
     Vec4 col[4];
 };
 
-int IG_EXPORT ignis_test_expect_eq_f32(float a, float b)
+IG_EXPORT int32_t ignis_test_expect_eq_f32(float a, float b)
 {
     constexpr float EPS = 1.5f;
     const bool s        = std::abs(a - b) <= EPS;
@@ -30,37 +30,37 @@ int IG_EXPORT ignis_test_expect_eq_f32(float a, float b)
         return 0;
     }
 }
-void IG_EXPORT ignis_test_fail(const unsigned char* msg)
+IG_EXPORT void ignis_test_fail(const unsigned char* msg)
 {
     IG_LOG(L_ERROR) << "Expression failed: " << reinterpret_cast<const char*>(msg) << std::endl;
 }
 
-void IG_EXPORT ignis_dbg_echo_i32(int a)
+IG_EXPORT void ignis_dbg_echo_i32(int32_t a)
 {
     IG_LOG(L_DEBUG) << a << std::endl;
 }
 
-void IG_EXPORT ignis_dbg_echo_f32(float a)
+IG_EXPORT void ignis_dbg_echo_f32(float a)
 {
     IG_LOG(L_DEBUG) << a << std::endl;
 }
 
-void IG_EXPORT ignis_dbg_echo_vec2(Vec2* v)
+IG_EXPORT void ignis_dbg_echo_vec2(Vec2* v)
 {
     IG_LOG(L_DEBUG) << "[" << v->x << ", " << v->y << "]" << std::endl;
 }
 
-void IG_EXPORT ignis_dbg_echo_vec3(Vec3* v)
+IG_EXPORT void ignis_dbg_echo_vec3(Vec3* v)
 {
     IG_LOG(L_DEBUG) << "[" << v->x << ", " << v->y << ", " << v->z << "]" << std::endl;
 }
 
-void IG_EXPORT ignis_dbg_echo_vec4(Vec4* v)
+IG_EXPORT void ignis_dbg_echo_vec4(Vec4* v)
 {
     IG_LOG(L_DEBUG) << "[" << v->x << ", " << v->y << ", " << v->z << ", " << v->w << "]" << std::endl;
 }
 
-void IG_EXPORT ignis_dbg_echo_mat3x3(Mat3x3* m)
+IG_EXPORT void ignis_dbg_echo_mat3x3(Mat3x3* m)
 {
     IG_LOG(L_DEBUG) << "{" << std::endl
                     << "  [" << m->col[0].x << ", " << m->col[1].x << ", " << m->col[2].x << "]" << std::endl
@@ -69,7 +69,7 @@ void IG_EXPORT ignis_dbg_echo_mat3x3(Mat3x3* m)
                     << "}" << std::endl;
 }
 
-void IG_EXPORT ignis_dbg_echo_mat4x4(Mat4x4* m)
+IG_EXPORT void ignis_dbg_echo_mat4x4(Mat4x4* m)
 {
     IG_LOG(L_DEBUG) << "{" << std::endl
                     << "  [" << m->col[0].x << ", " << m->col[1].x << ", " << m->col[2].x << ", " << m->col[3].x << "]" << std::endl
@@ -80,7 +80,7 @@ void IG_EXPORT ignis_dbg_echo_mat4x4(Mat4x4* m)
 }
 
 int error_count = 0;
-void IG_EXPORT ignis_set_error_count(int a)
+IG_EXPORT void ignis_set_error_count(int32_t a)
 {
     error_count = a;
 }

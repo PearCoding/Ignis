@@ -15,4 +15,5 @@ SET(_FILES
     
 add_executable(ig_test_artic ${_FILES})
 target_link_libraries(ig_test_artic PRIVATE ig_runtime)
+set_target_properties(ig_test_artic PROPERTIES ENABLE_EXPORTS ON) # This is needed for the exported auxillary functions inside the executable
 ig_add_extra_options(ig_test_artic NO_LTO)

@@ -34,6 +34,8 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    interface->makeCurrent();
+
     // Get compiler interface
     const std::shared_ptr<ICompilerDevice> compilerDevice = std::shared_ptr<ICompilerDevice>{ interface->createCompilerDevice() };
     if (compilerDevice == nullptr) {
