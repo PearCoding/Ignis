@@ -101,7 +101,7 @@ private:
                 sInstance.reset();
                 return nullptr;
             }
-        } else if (!mPath.empty()) {
+        } else {
             if (!sInstance->loadFromString(mSource, mPath)) {
                 sInstance.reset();
                 return nullptr;
