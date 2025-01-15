@@ -374,7 +374,7 @@ void ParameterWidget::onRender(Widget*)
                 runtime->setParameter("tech_defensive", defensive);
                 runtime->reset();
             }
-            ImGui::SetItemTooltip("Defensive Sampling Factor for environment map guiding. Set to 0 to disable it.");
+            ImGui::SetItemTooltip("Defensive Sampling Factor for environment map guiding. Set to 1 to disable it.");
 
             if (Runtime::hasDenoiser()) {
                 bool useDenoiser = mRenderWidget->isDenoiserEnabled();
