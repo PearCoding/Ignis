@@ -258,7 +258,6 @@ public:
     inline size_t framebufferWidth() const { return mFramebufferWidth; }
     inline size_t framebufferHeight() const { return mFramebufferHeight; }
     inline size_t framebufferSize() const { return mFramebufferWidth * mFramebufferHeight; }
-    inline bool isInteractive() const { return mSetupSettings.IsInteractive; }
     inline bool hasStatisticAquisition() const { return mSetupSettings.AcquireStats; }
 
     inline const Device::SceneSettings& sceneSettings() const { return mSceneSettings; }
@@ -1651,8 +1650,6 @@ Target Device::target() const { return sInterface->target(); }
 size_t Device::framebufferWidth() const { return sInterface->framebufferWidth(); }
 
 size_t Device::framebufferHeight() const { return sInterface->framebufferHeight(); }
-
-bool Device::isInteractive() const { return sInterface->isInteractive(); }
 
 void Device::assignScene(const SceneSettings& settings)
 {

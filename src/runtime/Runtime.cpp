@@ -133,10 +133,9 @@ Runtime::Runtime(const RuntimeOptions& opts)
     }
 
     IRenderDevice::SetupSettings settings;
-    settings.Target        = mOptions.Target;
-    settings.AcquireStats  = mOptions.AcquireStats;
-    settings.DebugTrace    = mOptions.DebugTrace;
-    settings.IsInteractive = mOptions.IsInteractive;
+    settings.Target       = mOptions.Target;
+    settings.AcquireStats = mOptions.AcquireStats;
+    settings.DebugTrace   = mOptions.DebugTrace;
 
     IG_LOG(L_DEBUG) << "Init device" << std::endl;
     mDevice = std::unique_ptr<IRenderDevice>{ interface->createRenderDevice(settings) };

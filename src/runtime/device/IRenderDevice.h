@@ -15,9 +15,8 @@ class IG_LIB IRenderDevice {
 public:
     struct SetupSettings {
         IG::Target Target;
-        bool AcquireStats  = false;
-        bool DebugTrace    = false;
-        bool IsInteractive = false;
+        bool AcquireStats = false;
+        bool DebugTrace   = false;
     };
 
     struct SceneSettings {
@@ -58,7 +57,6 @@ public:
     [[nodiscard]] virtual Target target() const            = 0;
     [[nodiscard]] virtual size_t framebufferWidth() const  = 0;
     [[nodiscard]] virtual size_t framebufferHeight() const = 0;
-    [[nodiscard]] virtual bool isInteractive() const       = 0;
 
     [[nodiscard]] virtual AOVAccessor getFramebufferForHost(const std::string& name, bool sync = true)   = 0;
     [[nodiscard]] virtual AOVAccessor getFramebufferForDevice(const std::string& name, bool sync = true) = 0;

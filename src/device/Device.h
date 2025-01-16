@@ -17,7 +17,6 @@ public:
     [[nodiscard]] Target target() const override;
     [[nodiscard]] size_t framebufferWidth() const override;
     [[nodiscard]] size_t framebufferHeight() const override;
-    [[nodiscard]] bool isInteractive() const override;
 
     [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name, bool sync) override;
     [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name, bool sync) override;
