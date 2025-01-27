@@ -5,13 +5,13 @@
 #include "Target.h"
 
 namespace IG {
-class IDeviceInterface;
+class IPluginInterface;
 
 class IG_LIB DeviceManager {
 public:
     bool init(const Path& dir = Path{}, bool ignoreEnv = false, bool force = false);
 
-    [[nodiscard]] const IDeviceInterface* getDevice(const TargetArchitecture& target);
+    [[nodiscard]] const IPluginInterface* getDevice(const TargetArchitecture& target);
 
     bool load(const TargetArchitecture& target);
     bool unload(const TargetArchitecture& target);

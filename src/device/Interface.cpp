@@ -1,9 +1,9 @@
 #include "Compiler.h"
-#include "Device.h"
+#include "DeviceInterface.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "config/Build.h"
-#include "device/IDeviceInterface.h"
+#include "device/IPluginInterface.h"
 #include "device/Target.h"
 
 #include <anydsl_jit.h>
@@ -29,7 +29,7 @@ namespace IG {
 #error Unknown device architecture
 #endif
 
-class CLASS_NAME : public IDeviceInterface {
+class CLASS_NAME : public IPluginInterface {
 private:
     // Function used as a symbol for the current module (device dll)
     static void anchor_function() {}
@@ -87,20 +87,20 @@ public:
         anydsl_set_cache_directory(cache_dir.generic_string().c_str());
     }
 
-    IRenderDevice* createRenderDevice(const IRenderDevice::SetupSettings& settings) const
+    std::shared_ptr<IDeviceInterface> createDeviceInterface(const Device::SetupSettings& settings) const
     {
-        return new Device(settings);
+        return std::make_shared<DeviceInterface>(settings);
     }
 
-    ICompilerDevice* createCompilerDevice() const
+    std::shared_ptr<ICompilerDevice> createCompilerDevice() const
     {
-        return new Compiler();
+        return std::make_shared<Compiler>();
     }
 };
 } // namespace IG
 
 extern "C" {
-IG_EXPORT const IG::IDeviceInterface* ig_get_interface()
+IG_EXPORT const IG::IPluginInterface* ig_get_interface()
 {
     static IG::CLASS_NAME interface;
     return &interface;

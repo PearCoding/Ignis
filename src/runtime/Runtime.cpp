@@ -4,7 +4,7 @@
 #include "RuntimeInfo.h"
 #include "StringUtils.h"
 #include "device/DeviceManager.h"
-#include "device/IDeviceInterface.h"
+#include "device/IPluginInterface.h"
 #include "extra/GlareEvaluator.h"
 #include "loader/LoaderCamera.h"
 #include "loader/Parser.h"
@@ -102,20 +102,19 @@ Runtime::Runtime(const RuntimeOptions& opts)
     if (!DeviceManager::instance().init(/*TODO Parameter*/))
         throw std::runtime_error("Could not initialize devices");
 
-    const IDeviceInterface* interface = DeviceManager::instance().getDevice(mOptions.Target.architecture());
+    const IPluginInterface* interface = DeviceManager::instance().getDevice(mOptions.Target.architecture());
     if (interface == nullptr)
         throw std::runtime_error("Could not get requested device: " + mOptions.Target.toString());
 
     interface->makeCurrent();
 
     // Get compiler interface
-    std::shared_ptr<ICompilerDevice> compilerDevice = std::shared_ptr<ICompilerDevice>{ interface->createCompilerDevice() };
+    const auto compilerDevice = interface->createCompilerDevice();
     if (compilerDevice == nullptr)
         throw std::runtime_error("Could not get compiler interface from requested device");
 
     // Configure compiler
     mCompiler = std::make_unique<ScriptCompiler>(compilerDevice);
-
     mCompiler->setOptimizationLevel(std::min<size_t>(3, mOptions.ShaderOptimizationLevel));
     mCompiler->setVerbose(IG_LOGGER.verbosity() == L_DEBUG);
 
@@ -132,15 +131,17 @@ Runtime::Runtime(const RuntimeOptions& opts)
         mCompiler->loadStdLibFromDirectory(mOptions.ScriptDir);
     }
 
-    IRenderDevice::SetupSettings settings;
+    Device::SetupSettings settings;
     settings.Target       = mOptions.Target;
     settings.AcquireStats = mOptions.AcquireStats;
     settings.DebugTrace   = mOptions.DebugTrace;
 
     IG_LOG(L_DEBUG) << "Init device" << std::endl;
-    mDevice = std::unique_ptr<IRenderDevice>{ interface->createRenderDevice(settings) };
+    mInterface = interface->createDeviceInterface(settings);
+    mDevice    = std::make_shared<Device>(mInterface);
     if (mDevice == nullptr)
         throw std::runtime_error("Could not creater render interface from requested device");
+    IDeviceInterface::setCurrentDevice(mInterface.get());
 }
 
 Runtime::~Runtime()
@@ -372,7 +373,7 @@ void Runtime::stepVariant(size_t variant)
 
     // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
-    IRenderDevice::RenderSettings settings;
+    Device::RenderSettings settings;
     settings.rays      = nullptr; // No artificial ray streams
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = info.GetWidth(mFilmWidth);
@@ -431,7 +432,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
 
     // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
 
-    IRenderDevice::RenderSettings settings;
+    Device::RenderSettings settings;
     settings.rays      = rays.data();
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = rays.size();
@@ -498,9 +499,9 @@ void Runtime::reset()
     // No mCurrentFrameCount
 }
 
-const Statistics* Runtime::statistics() const
+const Statistics& Runtime::statistics() const
 {
-    return mOptions.AcquireStats ? mDevice->getStatistics() : nullptr;
+    return mDevice->getStatistics();
 }
 
 static void dumpRegistries(std::ostream& stream, const std::string& name, const ShaderOutput<void*>& shader)
@@ -533,7 +534,7 @@ static void dumpRegistries(std::ostream& stream, const TechniqueVariantBase<void
 
 bool Runtime::setupScene()
 {
-    IRenderDevice::SceneSettings settings;
+    Device::SceneSettings settings;
     settings.database            = &mDatabase;
     settings.aov_map             = &mTechniqueInfo.EnabledAOVs;
     settings.resource_map        = &mResourceMap;
@@ -638,11 +639,11 @@ bool Runtime::compileShaders()
         registerShader(i, "primary traversal", "ig_traversal_shader", &variant.PrimaryTraversalShader, &shaders.PrimaryTraversalShader);
         registerShader(i, "secondary traversal", "ig_traversal_shader", &variant.SecondaryTraversalShader, &shaders.SecondaryTraversalShader);
         registerShader(i, "ray generation", "ig_ray_generation_shader", &variant.RayGenerationShader, &shaders.RayGenerationShader);
-        registerShader(i, "miss", "ig_miss_shader", &variant.MissShader, &shaders.MissShader);
+        registerShader(i, "miss", "ig_material_shader", &variant.MissShader, &shaders.MissShader);
 
         shaders.HitShaders.resize(variant.HitShaders.size());
         for (size_t j = 0; j < variant.HitShaders.size(); ++j)
-            registerShader(i, "hit shader " + std::to_string(j), "ig_hit_shader", &variant.HitShaders[j], &shaders.HitShaders[j]);
+            registerShader(i, "hit shader " + std::to_string(j), "ig_material_shader", &variant.HitShaders[j], &shaders.HitShaders[j]);
 
         shaders.AdvancedShadowHitShaders.resize(variant.AdvancedShadowHitShaders.size());
         for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j)

@@ -151,10 +151,10 @@ int main(int argc, char** argv)
 
     timer_all.stop();
 
-    auto stats = runtime->statistics();
-    if (stats) {
+    if (cmd.AcquireStats || cmd.AcquireFullStats) {
+        const auto& stats = runtime->statistics();
         IG_LOG(L_INFO)
-            << stats->dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats)
+            << stats.dump(timer_all.duration_ms, runtime->currentIterationCount(), cmd.AcquireFullStats)
             << "  Iterations: " << runtime->currentIterationCount() << std::endl
             << "  SPP: " << runtime->currentSampleCount() << std::endl
             << "  SPI: " << SPI << std::endl

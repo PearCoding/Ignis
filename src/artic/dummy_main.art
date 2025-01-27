@@ -42,11 +42,7 @@ fn ig_traversal_shader(_settings: &Settings, _size: i32) -> () {
 }
 
 #[export]
-fn ig_miss_shader(_settings: &Settings, _first: i32, _last: i32) -> () {
-}
-
-#[export]
-fn ig_hit_shader(_settings: &Settings, _mat_id: i32, _first: i32, _last: i32) -> () {
+fn ig_material_shader(_settings: &Settings, _mat_id: i32, _first: i32, _last: i32) -> () {
 }
 
 #[export]

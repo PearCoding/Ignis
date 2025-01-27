@@ -1,5 +1,5 @@
 #include "device/DeviceManager.h"
-#include "device/IDeviceInterface.h"
+#include "device/IPluginInterface.h"
 #include "loader/Transpiler.h"
 #include "shader/ScriptCompiler.h"
 

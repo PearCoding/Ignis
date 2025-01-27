@@ -1,6 +1,6 @@
 #include "Compiler.h"
 #include "Logger.h"
-#include "device/IDeviceInterface.h"
+#include "device/IPluginInterface.h"
 
 #include <anydsl_jit.h>
 

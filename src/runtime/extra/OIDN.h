@@ -4,14 +4,14 @@
 
 namespace IG {
 class Runtime;
-class IRenderDevice;
+class Device;
 
 class IG_LIB OIDN {
 public:
     OIDN(Runtime* runtime);
     ~OIDN();
 
-    void run(IRenderDevice* device);
+    void run(Device* device);
 
     [[nodiscard]] static bool isAvailable();
     [[nodiscard]] static bool hasGPU();

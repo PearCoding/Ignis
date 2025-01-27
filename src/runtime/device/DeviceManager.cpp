@@ -1,5 +1,5 @@
 #include "DeviceManager.h"
-#include "IDeviceInterface.h"
+#include "IPluginInterface.h"
 #include "Logger.h"
 #include "RuntimeInfo.h"
 #include "StringUtils.h"
@@ -16,7 +16,7 @@
 
 namespace IG {
 
-using GetInterfaceFunction = const IDeviceInterface* (*)();
+using GetInterfaceFunction = const IPluginInterface* (*)();
 
 struct path_hash {
     std::size_t operator()(const Path& path) const
@@ -117,7 +117,7 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
     return true;
 }
 
-const IDeviceInterface* DeviceManager::getDevice(const TargetArchitecture& target)
+const IPluginInterface* DeviceManager::getDevice(const TargetArchitecture& target)
 {
     if (!load(target))
         return nullptr;
@@ -176,7 +176,7 @@ std::unordered_set<TargetArchitecture> DeviceManager::availableDevices() const
     return list;
 }
 
-static std::optional<TargetArchitecture> checkModule(const Path& path, const IDeviceInterface* interface)
+static std::optional<TargetArchitecture> checkModule(const Path& path, const IPluginInterface* interface)
 {
     const TargetArchitecture deviceTarget = interface->getArchitecture();
     const Build::Version deviceVersion    = interface->getVersion();
@@ -201,7 +201,7 @@ bool DeviceManager::addModule(const Path& path)
         if (!func)
             return false;
 
-        const IDeviceInterface* interface = func();
+        const IPluginInterface* interface = func();
         const auto target                 = checkModule(path, interface);
         if (!target.has_value())
             return false;
@@ -225,7 +225,7 @@ bool DeviceManager::loadModule(const Path& path)
         if (!func)
             return false;
 
-        const IDeviceInterface* interface = func();
+        const IPluginInterface* interface = func();
         const auto target                 = checkModule(path, interface);
         if (!target.has_value())
             return false;

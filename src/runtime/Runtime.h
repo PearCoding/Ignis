@@ -7,8 +7,8 @@
 #include "RuntimeStructs.h"
 #include "Statistics.h"
 #include "camera/CameraOrientation.h"
+#include "device/Device.h"
 #include "device/ICompilerDevice.h"
-#include "device/IRenderDevice.h"
 #include "extra/OIDN.h"
 #include "loader/Loader.h"
 #include "shader/ScriptCompiler.h"
@@ -20,8 +20,8 @@ struct LoaderOptions;
 class Scene;
 class GlareEvaluator;
 
-using AOVAccessor    = IRenderDevice::AOVAccessor;
-using BufferAccessor = IRenderDevice::BufferAccessor;
+using AOVAccessor    = Device::AOVAccessor;
+using BufferAccessor = Device::BufferAccessor;
 
 class IG_LIB Runtime {
     IG_CLASS_NON_COPYABLE(Runtime);
@@ -101,7 +101,7 @@ public:
     inline void incFrameCount() { mCurrentFrame++; }
 
     /// Return pointer to structure containing statistics
-    [[nodiscard]] const Statistics* statistics() const;
+    [[nodiscard]] const Statistics& statistics() const;
 
     /// Returns the name of the loaded technique
     [[nodiscard]] inline const std::string& technique() const { return mTechniqueName; }
@@ -201,8 +201,9 @@ private:
     ParameterSet mGlobalRegistry;
     ParameterDescSet mSceneParameterDesc; // Optional user parameter description given for a scene
 
-    std::unique_ptr<ScriptCompiler> mCompiler;
-    std::unique_ptr<IRenderDevice> mDevice;
+    std::shared_ptr<ScriptCompiler> mCompiler;
+    std::shared_ptr<IDeviceInterface> mInterface;
+    std::shared_ptr<Device> mDevice;
 
     std::unique_ptr<OIDN> mDenoiser;
 

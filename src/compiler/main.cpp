@@ -5,7 +5,7 @@
 #include "Logger.h"
 #include "device/DeviceManager.h"
 #include "device/ICompilerDevice.h"
-#include "device/IDeviceInterface.h"
+#include "device/IPluginInterface.h"
 
 using namespace IG;
 
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    const IDeviceInterface* interface = DeviceManager::instance().getDevice(Target::pickCPU().architecture());
+    const IPluginInterface* interface = DeviceManager::instance().getDevice(Target::pickCPU().architecture());
     if (interface == nullptr) {
         IG_LOG(L_ERROR) << "Could not get requested device" << std::endl;
         return EXIT_FAILURE;

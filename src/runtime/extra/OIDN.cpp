@@ -1,7 +1,7 @@
 #include "OIDN.h"
 #include "Logger.h"
 #include "Runtime.h"
-#include "device/IRenderDevice.h"
+#include "device/Device.h"
 
 #ifdef IG_HAS_DENOISER
 #include "OpenImageDenoise/oidn.hpp"
@@ -89,7 +89,7 @@ public:
         }
     }
 
-    inline void filter(IRenderDevice* device)
+    inline void filter(Device* device)
     {
         if (isSameDevice(device->target()))
             filterDevice(device);
@@ -97,12 +97,12 @@ public:
             filterHost(device);
     }
 
-    inline void filterHost(IRenderDevice* device)
+    inline void filterHost(Device* device)
     {
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
         const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised", false);
+        const auto output = device->getFramebufferForHost("Denoised");
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -130,7 +130,7 @@ public:
         device->syncFramebufferHostToDevice("Denoised");
     }
 
-    inline void filterDevice(IRenderDevice* device)
+    inline void filterDevice(Device* device)
     {
         const auto color  = device->getFramebufferForDevice({});
         const auto normal = device->getFramebufferForDevice("Normals");
@@ -262,7 +262,7 @@ public:
         IG_LOG(IG::L_INFO) << "Using OpenImageDenoise " << versionMajor << "." << versionMinor << "." << versionPatch << std::endl;
     }
 
-    inline void filter(IRenderDevice* device)
+    inline void filter(Device* device)
     {
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
@@ -367,7 +367,7 @@ OIDN::~OIDN()
 {
 }
 
-void OIDN::run(IRenderDevice* device)
+void OIDN::run(Device* device)
 {
 #ifdef IG_HAS_DENOISER
     mInternal->filter(device);

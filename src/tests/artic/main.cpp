@@ -1,7 +1,7 @@
 #include "Logger.h"
 #include "device/DeviceManager.h"
 #include "device/ICompilerDevice.h"
-#include "device/IDeviceInterface.h"
+#include "device/IPluginInterface.h"
 #include "shader/ScriptCompiler.h"
 
 using namespace IG;
@@ -28,7 +28,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    const IDeviceInterface* interface = DeviceManager::instance().getDevice(target.architecture());
+    const IPluginInterface* interface = DeviceManager::instance().getDevice(target.architecture());
     if (interface == nullptr) {
         IG_LOG(L_ERROR) << "Could not get requested device" << std::endl;
         return EXIT_FAILURE;
@@ -61,10 +61,10 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
 
     // Get render interface
-    const std::shared_ptr<IRenderDevice> renderDevice = std::shared_ptr<IRenderDevice>{ interface->createRenderDevice(IRenderDevice::SetupSettings{
+    const std::shared_ptr<Device> renderDevice = std::make_shared<Device>(interface->createDeviceInterface(Device::SetupSettings{
         .Target       = target,
         .AcquireStats = false,
-        .DebugTrace   = false }) };
+        .DebugTrace   = false }));
 
     if (renderDevice == nullptr) {
         IG_LOG(L_ERROR) << "Could not get render interface from requested device" << std::endl;

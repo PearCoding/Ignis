@@ -5,8 +5,8 @@
 #include "Scene.h"
 
 namespace IG {
+class Device;
 class ScriptCompiler;
-class IRenderDevice;
 
 struct LoaderOptions {
     Path FilePath;
@@ -27,6 +27,6 @@ struct LoaderOptions {
     DenoiserSettings Denoiser;
 
     ScriptCompiler* Compiler;
-    IRenderDevice* Device;
+    IG::Device* Device;
 };
 } // namespace IG
