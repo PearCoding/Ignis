@@ -123,7 +123,11 @@ public:
         if (width <= 5 || height <= 5)
             return;
 
-        IG_LOG(L_INFO) << "Resizing to " << width << "x" << height << std::endl;
+        // Check if something changed
+        if (Width == (size_t)width && Height == (size_t)height)
+            return;
+
+        IG_LOG(L_INFO) << "Resizing framebuffer to " << width << "x" << height << std::endl;
 
         Runtime->resizeFramebuffer((size_t)width, (size_t)height);
         Width  = width;
