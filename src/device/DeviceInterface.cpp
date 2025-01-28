@@ -143,28 +143,20 @@ inline IDeviceInterface::DeviceImageProxy<T> mapToProxy(const DeviceImageBase<T>
 
 static const Image MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
 
-/// @brief Guard to ensure `getCurrentThreadData()`, fast math and the framebuffer are available. If only the `getCurrentThreadData()` method is used, threadsOnly can be set to `true`.
+/// @brief Guard to ensure `getCurrentThreadData()` and fast math.
 /// Note, the call to SECTION makes use of `getCurrentThreadData`!
 class DeviceGuard {
     DeviceInterface* const mInterface;
-    const bool mThreadsOnly;
 
 public:
-    inline explicit DeviceGuard(DeviceInterface* interface, bool threadsOnly = false)
+    inline explicit DeviceGuard(DeviceInterface* interface)
         : mInterface(interface)
-        , mThreadsOnly(threadsOnly)
     {
-        if (!mThreadsOnly)
-            mInterface->enterDevice();
-        else
-            mInterface->registerThread();
+        mInterface->enterDevice();
     }
     inline ~DeviceGuard()
     {
-        if (!mThreadsOnly)
-            mInterface->leaveDevice();
-        else
-            mInterface->unregisterThread();
+        mInterface->leaveDevice();
     }
 };
 
@@ -241,7 +233,8 @@ void DeviceInterface::updateContext(const TechniqueVariantShaderSet& shaderSet, 
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::getFramebuffer()
 {
-    DeviceGuard _guard(this, true);
+    DeviceGuard _guard(this);
+    ensureFramebuffer();
 
     IG_ASSERT(mHostFramebuffer.Data.data() != nullptr, "Expected host framebuffer to be already initialized");
 
@@ -385,7 +378,7 @@ ParameterSet* DeviceInterface::getCurrentGlobalRegistry() { return mCurrentParam
 
 ParameterSet* DeviceInterface::getCurrentLocalRegistry()
 {
-    DeviceGuard _guard(this, true);
+    DeviceGuard _guard(this);
     if (isGPU())
         return mDeviceData.current_local_registry;
     else
@@ -719,7 +712,7 @@ void DeviceInterface::loadEntityBVH(BVHType type, const char* prim_type, void** 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(const std::string& filename, int32_t expected_channels)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this, true);
+    DeviceGuard _threadGuard(this);
 
     auto& images = mDeviceData.images;
     auto it      = images.find(filename);
@@ -750,7 +743,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
 IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFromFile(const std::string& filename, int32_t expected_channels, bool linear)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this, true);
+    DeviceGuard _threadGuard(this);
 
     auto& images = mDeviceData.packed_images;
     auto it      = images.find(filename);
@@ -803,7 +796,7 @@ static std::vector<uint8_t> readBufferFile(const std::string& filename)
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile(const std::string& filename)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this, true);
+    DeviceGuard _threadGuard(this);
 
     auto& buffers = mDeviceData.buffers;
     auto it       = buffers.find(filename);
@@ -846,7 +839,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     IG_UNUSED(flags); // We do not make use of it yet
 
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this, true);
+    DeviceGuard _threadGuard(this);
 
     IG_ASSERT(size > 0, "Expected buffer size to be larger then zero");
 
@@ -1036,7 +1029,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
         return DeviceImageProxy<float>::Invalid();
     }
 
-    DeviceGuard _guard(this, true);
+    DeviceGuard _guard(this);
 
     if (isGPU()) {
         if (aov_name.empty() || aov_name == DefaultFramebufferName) {
@@ -1070,7 +1063,7 @@ void DeviceInterface::mapAOVBackToDevice(const std::string& aov_name)
     if (!isGPU()) // Device is host
         return;
 
-    DeviceGuard _guard(this, true);
+    DeviceGuard _guard(this);
 
     if (aov_name.empty() || aov_name == DefaultFramebufferName) {
         _SECTION(SectionType::FramebufferUpdate);
@@ -1133,6 +1126,7 @@ void DeviceInterface::clearAllAOVs()
 void DeviceInterface::runDeviceShader()
 {
     DeviceGuard _guard(this);
+    ensureFramebuffer();
 
     if (mSetupSettings.DebugTrace)
         IG_LOG(L_DEBUG) << "TRACE> Device Shader " << mSetupSettings.Target.toString() << std::endl;
@@ -1155,6 +1149,7 @@ void DeviceInterface::runDeviceShader()
 void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)
 {
     DeviceGuard _guard(this);
+    ensureFramebuffer();
 
     if (mSetupSettings.DebugTrace)
         IG_LOG(L_DEBUG) << "TRACE> Tonemap Shader" << std::endl;
@@ -1184,6 +1179,7 @@ void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pi
 ImageInfoOutput DeviceInterface::runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings)
 {
     DeviceGuard _guard(this);
+    ensureFramebuffer();
 
     if (mSetupSettings.DebugTrace)
         IG_LOG(L_DEBUG) << "TRACE> Imageinfo Shader" << std::endl;
@@ -1329,6 +1325,7 @@ void DeviceInterface::runAdvancedShadowShader(int material_id, int first, int la
 void DeviceInterface::runCallbackShader(int type)
 {
     DeviceGuard _guard(this);
+    ensureFramebuffer();
 
     IG_ASSERT(type >= 0 && type < (int)CallbackType::_COUNT, "Expected callback shader type to be well formed!");
 
@@ -1356,6 +1353,7 @@ void DeviceInterface::runCallbackShader(int type)
 void DeviceInterface::runBakeShader(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output)
 {
     DeviceGuard _guard(this);
+    // No access to the framebuffer!
 
     IG_ASSERT(shader.Exec != nullptr, "Expected bake shader to be valid");
 
@@ -1385,6 +1383,7 @@ void DeviceInterface::runBakeShader(const ShaderOutput<void*>& shader, const std
 void DeviceInterface::runPassShader(const ShaderOutput<void*>& shader, void* userData)
 {
     DeviceGuard _guard(this);
+    ensureFramebuffer();
 
     IG_ASSERT(shader.Exec != nullptr, "Expected pass shader to be valid");
 
@@ -1408,19 +1407,19 @@ void DeviceInterface::runPassShader(const ShaderOutput<void*>& shader, void* use
 
 void DeviceInterface::beginStatsSection(int id)
 {
-    DeviceGuard _guard(this, true);
+    DeviceGuard _guard(this);
     getCurrentThreadData()->stats.beginSection((IG::SectionType)id);
 }
 
 void DeviceInterface::endStatsSection(int id)
 {
-    DeviceGuard _guard(this, true);
+    DeviceGuard _guard(this);
     getCurrentThreadData()->stats.endSection((IG::SectionType)id);
 }
 
 void DeviceInterface::addStatsValue(int id, int value)
 {
-    DeviceGuard _guard(this, true);
+    DeviceGuard _guard(this);
     getCurrentThreadData()->stats.increase((IG::Quantity)id, static_cast<uint64_t>(value));
 }
 
@@ -1441,7 +1440,6 @@ void DeviceInterface::enterDevice()
 {
     enableFastMathModeForThread();
     registerThread();
-    ensureFramebuffer();
 }
 
 void DeviceInterface::leaveDevice()
