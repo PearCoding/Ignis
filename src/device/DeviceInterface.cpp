@@ -144,7 +144,7 @@ inline IDeviceInterface::DeviceImageProxy<T> mapToProxy(const DeviceImageBase<T>
 static const Image MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
 
 /// @brief Guard to ensure `getCurrentThreadData()` and fast math.
-/// Note, the call to SECTION makes use of `getCurrentThreadData`!
+/// Note, the call to _SECTION makes use of `getCurrentThreadData()`!
 class DeviceGuard {
     DeviceInterface* const mInterface;
 
