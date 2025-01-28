@@ -270,7 +270,7 @@ if __name__ == '__main__':
     # Load all scene files but ignore files with -base in name
     scenes = []
     for file in sorted(os.listdir(eval_dir)):
-        if file.endswith('.json') and "-base" not in file:
+        if file.endswith('.json') and "-base" not in file and not file.startswith("_"):
             if args.filter:
                 if not PurePath(Path(file).stem).match(args.filter):
                     continue
