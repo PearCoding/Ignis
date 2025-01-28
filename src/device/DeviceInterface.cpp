@@ -241,9 +241,6 @@ void DeviceInterface::updateContext(const TechniqueVariantShaderSet& shaderSet, 
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::getFramebuffer()
 {
-    DeviceGuard _guard(this);
-    ensureFramebuffer();
-
     IG_ASSERT(mHostFramebuffer.Data.data() != nullptr, "Expected host framebuffer to be already initialized");
 
     if (isGPU()) {
@@ -377,8 +374,9 @@ void DeviceInterface::unregisterThread()
     IG_ASSERT(tlThreadData != nullptr, "Expected registerThread together with a unregisterThread");
 
     if (tlThreadData->ref_count.fetch_sub(1) == 1) {
-        mAvailableThreadData.push(tlThreadData);
+        CPUData* ptr = tlThreadData;
         tlThreadData = nullptr;
+        mAvailableThreadData.push(ptr);
     }
 }
 
@@ -386,7 +384,6 @@ ParameterSet* DeviceInterface::getCurrentGlobalRegistry() { return mCurrentParam
 
 ParameterSet* DeviceInterface::getCurrentLocalRegistry()
 {
-    DeviceGuard _guard(this);
     if (isGPU())
         return mDeviceData.current_local_registry;
     else
@@ -717,7 +714,6 @@ void DeviceInterface::loadEntityBVH(BVHType type, const char* prim_type, void** 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(const std::string& filename, int32_t expected_channels)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this);
 
     auto& images = mDeviceData.images;
     auto it      = images.find(filename);
@@ -748,7 +744,6 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
 IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFromFile(const std::string& filename, int32_t expected_channels, bool linear)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this);
 
     auto& images = mDeviceData.packed_images;
     auto it      = images.find(filename);
@@ -801,7 +796,6 @@ static std::vector<uint8_t> readBufferFile(const std::string& filename)
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile(const std::string& filename)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this);
 
     auto& buffers = mDeviceData.buffers;
     auto it       = buffers.find(filename);
@@ -840,7 +834,6 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     IG_UNUSED(flags); // We do not make use of it yet
 
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-    DeviceGuard _threadGuard(this);
 
     IG_ASSERT(size > 0, "Expected buffer size to be larger then zero");
 
@@ -1408,19 +1401,16 @@ void DeviceInterface::runPassShader(const ShaderOutput<void*>& shader, void* use
 
 void DeviceInterface::beginStatsSection(int id)
 {
-    DeviceGuard _guard(this);
     getCurrentThreadData()->stats.beginSection((IG::SectionType)id);
 }
 
 void DeviceInterface::endStatsSection(int id)
 {
-    DeviceGuard _guard(this);
     getCurrentThreadData()->stats.endSection((IG::SectionType)id);
 }
 
 void DeviceInterface::addStatsValue(int id, int value)
 {
-    DeviceGuard _guard(this);
     getCurrentThreadData()->stats.increase((IG::Quantity)id, static_cast<uint64_t>(value));
 }
 

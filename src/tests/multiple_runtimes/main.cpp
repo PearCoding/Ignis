@@ -24,17 +24,13 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    int v = 0;
     for (const Path& scene : scenes) {
         IG_LOG(L_INFO) << "Scene " << scene << std::endl;
 
         for (int i = 0; i < 2; ++i) {
             std::unique_ptr<Runtime> runtime;
             try {
-                RuntimeOptions opts       = RuntimeOptions::makeDefault();
-                opts.DebugTrace           = v >= 1;
-                opts.DumpShader           = v >= 1;
-                opts.ShaderCompileThreads = 1;
+                RuntimeOptions opts = RuntimeOptions::makeDefault();
                 if (i % 2 == 1) {
                     opts.Target = Target::pickGPU();
                     if (!opts.Target.isValid() || opts.Target.gpuArchitecture() == GPUArchitecture::Unknown)
@@ -57,8 +53,8 @@ int main(int argc, char** argv)
             while (runtime->currentSampleCount() < SPP)
                 runtime->step();
         }
-        ++v;
     }
 
+    IG_LOG(L_INFO) << "Test passed :)" << std::endl;
     return EXIT_SUCCESS;
 }
