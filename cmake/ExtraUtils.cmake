@@ -186,6 +186,11 @@ function(ig_add_extra_options TARGET)
         endif()
     endif()
 
+    # Make all symbols hidden by default
+    if(NOT target_type STREQUAL "STATIC_LIBRARY")
+        set_target_properties(${TARGET} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+    endif()
+
     if(NOT NO_LTO)
         if(LTO_ON)
             if(NOT target_type STREQUAL "STATIC_LIBRARY")

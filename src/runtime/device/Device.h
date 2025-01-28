@@ -12,7 +12,7 @@ class IDeviceInterface;
 class Statistics;
 struct SceneDatabase;
 
-class Device {
+class IG_LIB Device {
 public:
     struct SetupSettings {
         IG::Target Target;
