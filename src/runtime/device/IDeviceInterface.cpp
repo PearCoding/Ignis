@@ -13,7 +13,7 @@ constexpr size_t MinPrimaryStreamSize   = (sizeof(PrimaryStream) - sizeof(Primar
 constexpr size_t MinSecondaryStreamSize = (sizeof(SecondaryStream) - sizeof(SecondaryStream::payload)) / sizeof(SecondaryStream::mat_id);
 
 template <typename T>
-inline void getStream(T* dev_stream, IDeviceInterface::DeviceBufferProxy<float>& stream, size_t min_components)
+inline void getStream(T* dev_stream, IDeviceInterface::DeviceStreamProxy<float>& stream, size_t min_components)
 {
     static_assert(std::is_standard_layout<T>::value, "Expected stream to be plain old data");
     static_assert((sizeof(T) % sizeof(float*)) == 0, "Expected stream size to be multiple of pointer size");
@@ -110,7 +110,7 @@ IG_EXPORT void ignis_load_fixtable(const char* name, uint8_t** data, int32_t* si
     IG_ASSERT(device, "Expected valid interface");
     auto proxy = device->loadFixtable(name);
     *data      = const_cast<uint8_t*>(proxy.DataPtr);
-    *size      = (int32_t)proxy.BlockSize;
+    *size      = (int32_t)proxy.SizeInBytes;
 }
 
 IG_EXPORT void ignis_load_rays(StreamRay** list)
@@ -160,7 +160,7 @@ IG_EXPORT void ignis_load_buffer(const char* file, uint8_t** data, int32_t* size
     IG_ASSERT(device, "Expected valid interface");
     auto proxy = device->loadBufferFromFile(file);
     *data      = const_cast<uint8_t*>(proxy.DataPtr);
-    *size      = (int32_t)proxy.DataSize;
+    *size      = (int32_t)proxy.SizeInBytes;
 }
 
 IG_EXPORT void ignis_load_buffer_by_id(int32_t id, uint8_t** data, int32_t* size)
@@ -177,7 +177,7 @@ IG_EXPORT void ignis_request_buffer(const char* name, uint8_t** data, int size, 
     auto proxy = device->requestBuffer(name, size, flags);
     *data      = const_cast<uint8_t*>(proxy.DataPtr);
 
-    IG_ASSERT(proxy.DataSize >= (size_t)size, "Expected data allocation to allocate enough memory");
+    IG_ASSERT(proxy.SizeInBytes >= (size_t)size, "Expected data allocation to allocate enough memory");
 }
 
 IG_EXPORT void ignis_dbg_dump_buffer(const char* name, const char* filename)

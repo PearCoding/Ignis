@@ -81,7 +81,7 @@ void Device::syncAllFramebufferHostToDevice()
 
 size_t Device::getBufferSizeInBytes(const std::string& name)
 {
-    const size_t size = mDevice->loadBufferByName(name).DataSize;
+    const size_t size = mDevice->loadBufferByName(name).SizeInBytes;
     return size;
 }
 
@@ -96,7 +96,7 @@ Device::BufferAccessor Device::getBufferForDevice(const std::string& name)
     const auto acc = mDevice->loadBufferByName(name);
     return {
         .Data        = acc.DataPtr,
-        .SizeInBytes = acc.DataSize
+        .SizeInBytes = acc.SizeInBytes
     };
 }
 

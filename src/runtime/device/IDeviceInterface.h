@@ -9,9 +9,8 @@ public:
     template <typename T>
     struct DeviceBufferProxy {
         T* DataPtr;
-        size_t DataSize;
-        size_t BlockSize;
-        inline static DeviceBufferProxy Invalid() { return { .DataPtr = nullptr, .DataSize = 0, .BlockSize = 0 }; }
+        size_t SizeInBytes;
+        inline static DeviceBufferProxy Invalid() { return { .DataPtr = nullptr, .SizeInBytes = 0 }; }
     };
     using FixtableProxy = DeviceBufferProxy<uint8_t>;
 
@@ -21,6 +20,13 @@ public:
         size_t Width;
         size_t Height;
         inline static DeviceImageProxy Invalid() { return { .DataPtr = nullptr, .Width = 0, .Height = 0 }; }
+    };
+
+    template <typename T>
+    struct DeviceStreamProxy {
+        T* DataPtr;
+        size_t BlockSize;
+        inline static DeviceStreamProxy Invalid() { return { .DataPtr = nullptr, .BlockSize = 0 }; }
     };
 
     struct DyntableProxy {
@@ -82,8 +88,8 @@ public:
     virtual ParameterSet* getCurrentGlobalRegistry() = 0;
     virtual ParameterSet* getCurrentLocalRegistry()  = 0;
 
-    virtual DeviceBufferProxy<float> getStream(StreamType type, size_t buffer_id, size_t size, size_t minComponents) = 0;
-    virtual DeviceBufferProxy<float> getStream(StreamType type, size_t buffer_id)                                    = 0;
+    virtual DeviceStreamProxy<float> getStream(StreamType type, size_t buffer_id, size_t size, size_t minComponents) = 0;
+    virtual DeviceStreamProxy<float> getStream(StreamType type, size_t buffer_id)                                    = 0;
     virtual void swapGPUStreams(StreamType type)                                                                     = 0;
 
     virtual TemporaryStorageHostProxy getTemporaryStorageHost() = 0; // TODO: Would be cool to get rid of this and make it more adaptive

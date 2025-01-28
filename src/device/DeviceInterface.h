@@ -69,10 +69,15 @@ using DevicePackedImage = DeviceImageBase<uint8_t>; // Packed RGBA
 template <typename T>
 struct DeviceBufferBase {
     anydsl::Array<T> Data;
-    size_t BlockSize = 0;
 };
 using DeviceBuffer = DeviceBufferBase<uint8_t>;
-using DeviceStream = DeviceBufferBase<float>;
+
+template <typename T>
+struct DeviceStreamBase {
+    anydsl::Array<T> Data;
+    size_t BlockSize = 0;
+};
+using DeviceStream = DeviceStreamBase<float>;
 
 struct CPUData {
     std::atomic<size_t> ref_count = 0;
@@ -156,8 +161,8 @@ public:
     ParameterSet* getCurrentGlobalRegistry() override;
     ParameterSet* getCurrentLocalRegistry() override;
 
-    DeviceBufferProxy<float> getStream(StreamType type, size_t buffer_id, size_t size, size_t minComponents) override;
-    DeviceBufferProxy<float> getStream(StreamType type, size_t buffer_id) override;
+    DeviceStreamProxy<float> getStream(StreamType type, size_t buffer_id, size_t size, size_t minComponents) override;
+    DeviceStreamProxy<float> getStream(StreamType type, size_t buffer_id) override;
     void swapGPUStreams(StreamType type) override;
 
     TemporaryStorageHostProxy getTemporaryStorageHost() override; // TODO: Would be cool to get rid of this and make it more adaptive

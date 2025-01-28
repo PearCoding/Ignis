@@ -125,9 +125,8 @@ template <typename T>
 inline IDeviceInterface::DeviceBufferProxy<T> mapToProxy(const DeviceBufferBase<T>& buffer)
 {
     return IDeviceInterface::DeviceBufferProxy<T>{
-        .DataPtr   = const_cast<T*>(buffer.Data.data()),
-        .DataSize  = (size_t)buffer.Data.size(),
-        .BlockSize = buffer.BlockSize
+        .DataPtr     = const_cast<T*>(buffer.Data.data()),
+        .SizeInBytes = (size_t)buffer.Data.size() * sizeof(T)
     };
 }
 
@@ -138,6 +137,15 @@ inline IDeviceInterface::DeviceImageProxy<T> mapToProxy(const DeviceImageBase<T>
         .DataPtr = const_cast<T*>(buffer.Data.data()),
         .Width   = buffer.Width,
         .Height  = buffer.Height
+    };
+}
+
+template <typename T>
+inline IDeviceInterface::DeviceStreamProxy<T> mapToProxy(const DeviceStreamBase<T>& buffer)
+{
+    return IDeviceInterface::DeviceStreamProxy<T>{
+        .DataPtr   = const_cast<T*>(buffer.Data.data()),
+        .BlockSize = buffer.BlockSize
     };
 }
 
@@ -452,7 +460,7 @@ ShaderInfo& DeviceInterface::getCurrentShader()
         return mShaderInfos.at(getCurrentThreadData()->current_shader_key);
 }
 
-DeviceInterface::DeviceBufferProxy<float> DeviceInterface::getStream(StreamType type, size_t buffer, size_t size, size_t minComponents)
+DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType type, size_t buffer, size_t size, size_t minComponents)
 {
     const bool isPrimary = type == StreamType::Primary;
     if (mSetupSettings.DebugTrace) {
@@ -473,12 +481,11 @@ DeviceInterface::DeviceBufferProxy<float> DeviceInterface::getStream(StreamType 
 
     return {
         .DataPtr   = stream.Data.data(),
-        .DataSize  = stream.Data.size() * sizeof(float),
         .BlockSize = stream.BlockSize
     };
 }
 
-DeviceInterface::DeviceBufferProxy<float> DeviceInterface::getStream(StreamType type, size_t buffer)
+DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType type, size_t buffer)
 {
     const bool isPrimary = type == StreamType::Primary;
     if (mSetupSettings.DebugTrace) {
@@ -496,7 +503,6 @@ DeviceInterface::DeviceBufferProxy<float> DeviceInterface::getStream(StreamType 
 
         return {
             .DataPtr   = stream.Data.data(),
-            .DataSize  = stream.Data.size() * sizeof(float),
             .BlockSize = stream.BlockSize
         };
     } else {
@@ -505,7 +511,6 @@ DeviceInterface::DeviceBufferProxy<float> DeviceInterface::getStream(StreamType 
 
         return {
             .DataPtr   = stream.Data.data(),
-            .DataSize  = stream.Data.size() * sizeof(float),
             .BlockSize = stream.BlockSize
         };
     }
@@ -639,7 +644,7 @@ IDeviceInterface::FixtableProxy DeviceInterface::loadFixtable(const std::string&
         IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
         IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
 
-        tables[name] = DeviceBuffer{ copyToDevice(mDeviceID, mCurrentSceneSettings.database->FixTables.at(name).data()), 1 };
+        tables[name] = DeviceBuffer{ .Data = copyToDevice(mDeviceID, mCurrentSceneSettings.database->FixTables.at(name).data()) };
         return mapToProxy(tables.at(name));
     }
 }
@@ -811,7 +816,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     if ((vec.size() % sizeof(int32_t)) != 0)
         IG_LOG(L_WARNING) << "Buffer '" << filename << "' is not properly sized!" << std::endl;
 
-    buffers[filename] = DeviceBuffer{ copyToDevice(mDeviceID, vec), 1 };
+    buffers[filename] = DeviceBuffer{ .Data = copyToDevice(mDeviceID, vec) };
 
     return mapToProxy(buffers.at(filename));
 }
@@ -827,11 +832,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferByName(c
 
     IG_LOG(L_ERROR) << "No buffer '" << name << "'" << std::endl;
 
-    return {
-        .DataPtr   = nullptr,
-        .DataSize  = 0,
-        .BlockSize = 0
-    };
+    return DeviceBufferProxy<uint8_t>::Invalid();
 }
 
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(const std::string& name, int32_t size, int32_t flags)
@@ -860,7 +861,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
         std::abort();
     }
 
-    buffers[name] = DeviceBuffer{ anydsl::Array<uint8_t>(mDeviceID, reinterpret_cast<uint8_t*>(ptr), size), 1 };
+    buffers[name] = DeviceBuffer{ .Data = anydsl::Array<uint8_t>(mDeviceID, reinterpret_cast<uint8_t*>(ptr), size) };
     return mapToProxy(buffers.at(name));
 }
 
