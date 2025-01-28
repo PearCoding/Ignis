@@ -324,6 +324,10 @@ anydsl::Array<float> DeviceInterface::createFramebuffer(int dev) const
 std::string DeviceInterface::lookupResource(int32_t id) const
 {
     IG_ASSERT(mCurrentSceneSettings.resource_map != nullptr, "Expected resource map to be initialized");
+    if (id < 0 || (size_t)id >= mCurrentSceneSettings.resource_map->size()) {
+        IG_LOG(L_ERROR) << "Resource ID '" << id << "' is not known!" << std::endl;
+        return {};
+    }
     return mCurrentSceneSettings.resource_map->at(id);
 }
 
@@ -417,7 +421,7 @@ void DeviceInterface::updateShaderSet(const TechniqueVariantShaderSet& shaderSet
     mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::PrimaryTraversal, 0));
     mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::SecondaryTraversal, 0));
     mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::RayGeneration, 0));
-    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Miss, 0));
+    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Miss, -1));
     for (size_t i = 0; i < mCurrentShaderSet.HitShaders.size(); ++i)
         mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Hit, (uint32)i));
     for (size_t i = 0; i < mCurrentShaderSet.AdvancedShadowHitShaders.size(); ++i)
