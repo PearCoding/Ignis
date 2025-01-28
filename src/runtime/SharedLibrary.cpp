@@ -19,7 +19,7 @@ struct SharedLibraryInternal {
 
 #ifdef IG_OS_LINUX
     explicit SharedLibraryInternal(const std::string& path)
-        : Handle(dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL | RTLD_DEEPBIND))
+        : Handle(dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL /* Ensure the symbols are available through the whole application */ | RTLD_DEEPBIND /* Ensure the symbols are put before other ones */))
     {
         if (!Handle)
             throw std::runtime_error(dlerror());
