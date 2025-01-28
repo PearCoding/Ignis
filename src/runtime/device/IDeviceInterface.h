@@ -68,8 +68,8 @@ public:
     virtual std::pair<size_t, size_t> framebufferSize() const = 0;
     virtual std::pair<size_t, size_t> workSize() const        = 0;
 
-    inline size_t framebufferArea() const { return std::get<0>(framebufferSize()) * std::get<0>(framebufferSize()); }
-    inline size_t workArea() const { return std::get<0>(workSize()) * std::get<0>(workSize()); }
+    inline size_t framebufferArea() const { return std::get<0>(framebufferSize()) * std::get<1>(framebufferSize()); }
+    inline size_t workArea() const { return std::get<0>(workSize()) * std::get<1>(workSize()); }
 
     virtual DeviceImageProxy<float> getFramebuffer()            = 0;
     virtual void resizeFramebuffer(size_t width, size_t height) = 0;

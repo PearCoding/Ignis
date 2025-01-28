@@ -280,6 +280,8 @@ void DeviceInterface::ensureFramebuffer()
 {
     const size_t expectedSize = framebufferArea() * 3;
 
+    IG_ASSERT(expectedSize > 0, "Expected host framebuffer to have a valid size");
+
     if (mHostFramebuffer.Data.data() && (size_t)mHostFramebuffer.Data.size() >= expectedSize)
         return;
 
