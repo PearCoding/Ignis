@@ -113,7 +113,7 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
     uint32_t* device_out_pixels = out_pixels;
     // Allocate a new buffer and map back to host
     if (mDevice->isGPU())
-        device_out_pixels = (uint32_t*)mDevice->requestBuffer("__internal_tonemap_output", acc.Width * acc.Height * sizeof(uint32_t), 0).DataPtr;
+        device_out_pixels = (uint32_t*)mDevice->requestBuffer("__internal_tonemap_output", (int)(acc.Width * acc.Height * sizeof(uint32_t)), 0).DataPtr;
 
     mDevice->runTonemapShader(in_pixels, device_out_pixels, settings);
 

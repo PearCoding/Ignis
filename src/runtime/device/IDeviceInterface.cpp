@@ -67,8 +67,8 @@ IG_EXPORT void ignis_get_work_info(WorkInfo* info)
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
     const auto workSize = device->workSize();
-    info->width         = std::get<0>(workSize);
-    info->height        = std::get<1>(workSize);
+    info->width         = (int)std::get<0>(workSize);
+    info->height        = (int)std::get<1>(workSize);
 
     info->advanced_shadows                = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced;
     info->advanced_shadows_with_materials = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::AdvancedWithMaterials;

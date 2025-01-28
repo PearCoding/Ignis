@@ -424,7 +424,7 @@ void DeviceInterface::updateShaderSet(const TechniqueVariantShaderSet& shaderSet
     mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::PrimaryTraversal, 0));
     mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::SecondaryTraversal, 0));
     mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::RayGeneration, 0));
-    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Miss, -1));
+    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Miss, 0));
     for (size_t i = 0; i < mCurrentShaderSet.HitShaders.size(); ++i)
         mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Hit, (uint32)i));
     for (size_t i = 0; i < mCurrentShaderSet.AdvancedShadowHitShaders.size(); ++i)
@@ -1285,7 +1285,7 @@ void DeviceInterface::runMaterialShader(int material_id, int first, int last)
     const auto& output = material_id >= 0 ? mCurrentShaderSet.HitShaders.at(material_id) : mCurrentShaderSet.MissShader;
     auto callback      = reinterpret_cast<Callback*>(output.Exec);
     IG_ASSERT(callback != nullptr, "Expected hit shader to be valid");
-    setCurrentShader(last - first, ShaderKey(mCurrentShaderSet.ID, shaderType, (uint32)material_id), output);
+    setCurrentShader(last - first, ShaderKey(mCurrentShaderSet.ID, shaderType, material_id >= 0 ? (uint32)material_id : 0), output);
     callback(&mCurrentDriverSettings, material_id, first, last);
 
     handleDebugOutput();
