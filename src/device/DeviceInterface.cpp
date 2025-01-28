@@ -144,17 +144,25 @@ inline IDeviceInterface::DeviceImageProxy<T> mapToProxy(const DeviceImageBase<T>
 static const Image MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
 
 class DeviceGuard {
-    DeviceInterface* mInterface;
+    DeviceInterface* const mInterface;
+    const bool mThreadsOnly;
 
 public:
-    inline explicit DeviceGuard(DeviceInterface* interface)
+    inline explicit DeviceGuard(DeviceInterface* interface, bool threadsOnly = false)
         : mInterface(interface)
+        , mThreadsOnly(threadsOnly)
     {
-        mInterface->enterDevice();
+        if (!mThreadsOnly)
+            mInterface->enterDevice();
+        else
+            mInterface->registerThread();
     }
     inline ~DeviceGuard()
     {
-        mInterface->leaveDevice();
+        if (!mThreadsOnly)
+            mInterface->leaveDevice();
+        else
+            mInterface->unregisterThread();
     }
 };
 
@@ -231,6 +239,8 @@ void DeviceInterface::updateContext(const TechniqueVariantShaderSet& shaderSet, 
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::getFramebuffer()
 {
+    DeviceGuard _guard(this, true);
+
     IG_ASSERT(mHostFramebuffer.Data.data() != nullptr, "Expected host framebuffer to be already initialized");
 
     if (isGPU()) {
@@ -367,7 +377,7 @@ ParameterSet* DeviceInterface::getCurrentGlobalRegistry() { return mCurrentParam
 
 ParameterSet* DeviceInterface::getCurrentLocalRegistry()
 {
-    DeviceGuard _guard(this);
+    DeviceGuard _guard(this, true);
     if (isGPU())
         return mDeviceData.current_local_registry;
     else
@@ -701,6 +711,7 @@ void DeviceInterface::loadEntityBVH(BVHType type, const char* prim_type, void** 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(const std::string& filename, int32_t expected_channels)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
+    DeviceGuard _threadGuard(this, true);
 
     auto& images = mDeviceData.images;
     auto it      = images.find(filename);
@@ -731,6 +742,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
 IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFromFile(const std::string& filename, int32_t expected_channels, bool linear)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
+    DeviceGuard _threadGuard(this, true);
 
     auto& images = mDeviceData.packed_images;
     auto it      = images.find(filename);
@@ -783,6 +795,7 @@ static std::vector<uint8_t> readBufferFile(const std::string& filename)
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile(const std::string& filename)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
+    DeviceGuard _threadGuard(this, true);
 
     auto& buffers = mDeviceData.buffers;
     auto it       = buffers.find(filename);
@@ -825,6 +838,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     IG_UNUSED(flags); // We do not make use of it yet
 
     std::lock_guard<std::mutex> _guard(mThreadMutex);
+    DeviceGuard _threadGuard(this, true);
 
     IG_ASSERT(size > 0, "Expected buffer size to be larger then zero");
 
@@ -1014,6 +1028,8 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
         return DeviceImageProxy<float>::Invalid();
     }
 
+    DeviceGuard _guard(this, true);
+
     if (isGPU()) {
         if (aov_name.empty() || aov_name == DefaultFramebufferName) {
             if (mHostFramebuffer.Dirty && mDeviceData.film_pixels.data() != nullptr) {
@@ -1045,6 +1061,8 @@ void DeviceInterface::mapAOVBackToDevice(const std::string& aov_name)
 {
     if (!isGPU()) // Device is host
         return;
+
+    DeviceGuard _guard(this, true);
 
     if (aov_name.empty() || aov_name == DefaultFramebufferName) {
         _SECTION(SectionType::FramebufferUpdate);
@@ -1382,16 +1400,19 @@ void DeviceInterface::runPassShader(const ShaderOutput<void*>& shader, void* use
 
 void DeviceInterface::beginStatsSection(int id)
 {
+    DeviceGuard _guard(this, true);
     getCurrentThreadData()->stats.beginSection((IG::SectionType)id);
 }
 
 void DeviceInterface::endStatsSection(int id)
 {
+    DeviceGuard _guard(this, true);
     getCurrentThreadData()->stats.endSection((IG::SectionType)id);
 }
 
 void DeviceInterface::addStatsValue(int id, int value)
 {
+    DeviceGuard _guard(this, true);
     getCurrentThreadData()->stats.increase((IG::Quantity)id, static_cast<uint64_t>(value));
 }
 

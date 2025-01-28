@@ -146,6 +146,10 @@ Runtime::Runtime(const RuntimeOptions& opts)
 
 Runtime::~Runtime()
 {
+    if (IDeviceInterface::getCurrentDevice() == mInterface.get())
+        IDeviceInterface::setCurrentDevice(nullptr);
+    else if (IDeviceInterface::getCurrentDevice() != nullptr)
+        IG_LOG(L_WARNING) << "Runtime life time overlaps with other runtimes. Only one runtime per session allowed. Undefined behaviour might happen!" << std::endl;
 }
 
 void Runtime::checkCacheDirectory()
