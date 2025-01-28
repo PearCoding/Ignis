@@ -267,7 +267,7 @@ public:
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
         const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised", false);
+        const auto output = device->getFramebufferForHost("Denoised");
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
