@@ -102,7 +102,7 @@ public:
             }
 
             std::cout << std::setw(PERC_OUTPUT_FIELD_SIZE) << std::setprecision(2) << std::fixed << percentage << "% | "
-                      << "S: " << std::setw(ITER_OUTPUT_FIELD_SIZE) << current << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
+                      << "S: " << std::setw(ITER_OUTPUT_FIELD_SIZE / 2) << current << " / " << std::setw(ITER_OUTPUT_FIELD_SIZE / 2) << mTarget << " | RT: " << std::setw(TIME_OUTPUT_FIELD_SIZE) << timestr(fullDuration.count());
 
             if (percentage > FltEps) {
                 const int64_t fullDur = fullDuration.count();
