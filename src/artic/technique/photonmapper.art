@@ -508,12 +508,12 @@ fn @ppm_handle_before_iteration_camera(device: Device, _iter: i32, photon_count:
     
     // Make sure both offset buffers have the same data
     if ((nlog2-1) % 2) == 0 {
-        for i in device.parallel_range(0, offset_buffer2.count/4 ) {
+        for i in device.parallel_range(0, offset_buffer2.count/4) {
             let (a,b,c,d) = offset_buffer2.load_int4(i * 4);
             offset_buffer.store_int4(i * 4, a, b, c, d);
         }
     } else {
-        for i in device.parallel_range(0, offset_buffer.count/4 ) {
+        for i in device.parallel_range(0, offset_buffer.count/4) {
             let (a,b,c,d) = offset_buffer.load_int4(i * 4);
             offset_buffer2.store_int4(i * 4, a, b, c, d);
         }

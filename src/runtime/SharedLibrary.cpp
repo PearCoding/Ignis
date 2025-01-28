@@ -19,7 +19,8 @@ struct SharedLibraryInternal {
 
 #ifdef IG_OS_LINUX
     explicit SharedLibraryInternal(const std::string& path)
-        : Handle(dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL /* Ensure the symbols are available through the whole application */ | RTLD_DEEPBIND /* Ensure the symbols are put before other ones */))
+        : Handle(dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL /* Ensure the symbols are available through the whole application */ ))
+        // Note: RTLD_DEEPBIND destablizes AnyDSL and might crash it in some cases...
     {
         if (!Handle)
             throw std::runtime_error(dlerror());
