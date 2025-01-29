@@ -12,7 +12,7 @@
 #include <sstream>
 
 #ifdef IG_PARALLEL_LOAD
-#include <tbb/parallel_for.h>
+#include <tbb/parallel_for_each.h>
 #endif
 
 namespace IG {
@@ -85,26 +85,15 @@ bool LoaderShape::load(LoaderContext& ctx)
 {
     ShapeMTAccessor acc;
 
-    // To make use of parallelization and workaround the map restrictions
-    // we do have to construct a map
-    std::vector<std::string> names(ctx.Options.Scene->shapes().size());
-    std::transform(ctx.Options.Scene->shapes().begin(), ctx.Options.Scene->shapes().end(), names.begin(),
-                   [](const std::pair<std::string, std::shared_ptr<SceneObject>>& pair) {
-                       return pair.first;
-                   });
-
     // Make sure this table is preloaded
     ctx.Database.DynTables.emplace("shapes", DynTable{});
 
-    const auto load_shape = [&](size_t i) {
-        const std::string name = names.at(i);
-        SceneObject* child     = ctx.Options.Scene->shapePtr(name);
-
+    const auto load_shape = [&](const std::string& name, SceneObject* child) {
         auto entry = getShapeProviderEntry(child->pluginType());
         if (!entry)
             return;
 
-        if (auto it = mShapeProviders.find(entry->Provider); it != mShapeProviders.end())
+        if (const auto it = mShapeProviders.find(entry->Provider); it != mShapeProviders.end())
             it->second->handle(ctx, acc, name, *child);
     };
 
@@ -112,14 +101,13 @@ bool LoaderShape::load(LoaderContext& ctx)
     IG_LOG(L_DEBUG) << "Loading shapes..." << std::endl;
     const auto start1 = std::chrono::high_resolution_clock::now();
 #ifdef IG_PARALLEL_LOAD
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, names.size()),
-                      [&](const tbb::blocked_range<size_t>& range) {
-                          for (size_t i = range.begin(); i != range.end(); ++i)
-                              load_shape(i);
-                      });
+    tbb::parallel_for_each(ctx.Options.Scene->shapes().begin(), ctx.Options.Scene->shapes().end(),
+                           [&](const Scene::ObjectMap::value_type& value) {
+                               load_shape(value.first, value.second.get());
+                           });
 #else
-    for (size_t i = 0; i < names.size(); ++i)
-        load_shape(i);
+    for (auto it = ctx.Options.Scene->shapes().begin(); it != ctx.Options.Scene->shapes().end(); ++it)
+        load_shape(it->first, it->second.get());
 #endif
     IG_LOG(L_DEBUG) << "Loading of shapes took " << (std::chrono::high_resolution_clock::now() - start1) << std::endl;
 

@@ -5,6 +5,8 @@
 namespace IG {
 class IG_LIB Scene {
 public:
+    using ObjectMap = std::unordered_map<std::string, std::shared_ptr<SceneObject>>;
+
     inline Scene()
     {
     }
@@ -64,8 +66,6 @@ public:
     void warnUnusedProperties() const;
 
 private:
-    using ObjectMap = std::unordered_map<std::string, std::shared_ptr<SceneObject>>;
-
     inline std::shared_ptr<SceneObject> get(const ObjectMap& map, const std::string& name) const
     {
         if (auto it = map.find(name); it != map.end())
