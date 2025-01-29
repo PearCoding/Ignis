@@ -50,8 +50,9 @@ public:
     explicit Device(const std::shared_ptr<IDeviceInterface>& device);
     virtual ~Device();
 
+    void connectGlobalRegistry(ParameterSet* parameter_set);
     void assignScene(const SceneSettings& settings);
-    void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings, ParameterSet* parameter_set);
+    void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings);
     void resize(size_t width, size_t height);
 
     void releaseAll();
@@ -68,8 +69,10 @@ public:
     void syncAllFramebufferHostToDevice();
 
     [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name);
-    [[nodiscard]] bool copyBufferToHost(const std::string& name, void* buffer, size_t maxSizeByte);
+    [[nodiscard]] bool copyBufferToHost(const std::string& name, void* dstBuffer, size_t maxSizeByte);
+    [[nodiscard]] bool copyBufferFromHost(const std::string& name, const void* srcBuffer, size_t maxSizeByte);
     [[nodiscard]] BufferAccessor getBufferForDevice(const std::string& name);
+    [[nodiscard]] BufferAccessor requestBufferForDevice(const std::string& name, size_t sizeInBytes);
 
     [[nodiscard]] const Statistics& getStatistics();
 

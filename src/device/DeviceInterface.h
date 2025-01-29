@@ -142,8 +142,8 @@ public:
 
     void releaseAllMemory() override;
 
+    void connectGlobalRegistry(ParameterSet* parameter_set) override;
     void setCurrentSceneSettings(const Device::SceneSettings&) override;
-    void updateContext(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, ParameterSet* parameterSet);
     const Device::SceneSettings& currentSceneSettings() const override;
     const Device::RenderSettings& currentRenderSettings() const override;
 
@@ -181,6 +181,7 @@ public:
     DeviceBufferProxy<uint8_t> requestBuffer(const std::string& name, int32_t size, int32_t flags) override;
     void saveBuffer(const std::string& name, const std::string& filename) override;
     bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte) override;
+    bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte) override;
 
     DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name) override;
     DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name) override;
@@ -189,7 +190,7 @@ public:
     void mapAOVBackToDevice(const std::string& aov_name) override;
     void mapAllAOVsBackToDevice() override;
 
-    void runDeviceShader() override;
+    void runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) override;
     void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings) override;
     ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings) override;
 

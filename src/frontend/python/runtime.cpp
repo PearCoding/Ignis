@@ -11,6 +11,7 @@ IG_BEGIN_IGNORE_WARNINGS
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/unique_ptr.h>
 #include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
 IG_END_IGNORE_WARNINGS
@@ -26,32 +27,13 @@ static void flush_io()
     std::cerr.flush();
 }
 
-class RuntimeWrap {
-    static std::unique_ptr<Runtime> sInstance;
-
-    RuntimeOptions mOptions;
-    std::string mSource;
-    Path mPath;
-    bool mCreated;
-    const Scene* mScene;
-
+class IRuntimeWrap {
 public:
-    RuntimeWrap(const RuntimeOptions& opts, const std::string& source, const Path& path)
-        : mOptions(opts)
-        , mSource(source)
-        , mPath(path)
-        , mCreated(false)
-        , mScene(nullptr)
+    IRuntimeWrap() = default;
+    virtual ~IRuntimeWrap()
     {
-    }
-
-    RuntimeWrap(const RuntimeOptions& opts, const Scene* scene, const Path& path)
-        : mOptions(opts)
-        , mSource()
-        , mPath(path)
-        , mCreated(false)
-        , mScene(scene)
-    {
+        // Calling shutdown in the deconstructor might destroy other runtime wraps, as the call to the deconstructor is not known (garbage collection)
+        // shutdown();
     }
 
     Runtime* enter()
@@ -67,8 +49,7 @@ public:
 
     Runtime* instance()
     {
-        // Only return instance if the class created it
-        if (mCreated && sInstance)
+        if (sInstance)
             return sInstance.get();
 
         return create();
@@ -76,44 +57,143 @@ public:
 
     void shutdown()
     {
-        sInstance.reset();
-        flush_io();
-        // Do not reset `mCreated`! The class should create the runtime only once
+        if (sInstance) {
+            sInstance.reset(nullptr);
+            flush_io();
+        }
     }
 
-private:
-    Runtime* create()
+protected:
+    inline Runtime* create()
     {
         if (sInstance) {
             IG_LOG(L_ERROR) << "Trying to create multiple runtime instances!" << std::endl;
             return nullptr;
         }
 
-        sInstance = std::make_unique<Runtime>(mOptions);
+        sInstance.reset(createInstance());
+        flush_io();
 
-        if (mScene) {
-            if (!sInstance->loadFromScene(mScene)) {
-                sInstance.reset();
-                return nullptr;
-            }
-        } else if (mSource.empty() && !mPath.empty()) {
-            if (!sInstance->loadFromFile(mPath)) {
-                sInstance.reset();
+        return sInstance.get();
+    }
+
+    virtual Runtime* createInstance() = 0;
+
+private:
+    static std::unique_ptr<Runtime> sInstance;
+};
+
+std::unique_ptr<Runtime> IRuntimeWrap::sInstance;
+
+class EmptyRuntimeWrap : public IRuntimeWrap {
+    const RuntimeOptions mOptions;
+
+public:
+    EmptyRuntimeWrap(const RuntimeOptions& opts)
+        : IRuntimeWrap()
+        , mOptions(opts)
+    {
+    }
+
+    virtual ~EmptyRuntimeWrap() = default;
+
+protected:
+    virtual Runtime* createInstance() override
+    {
+        try {
+            return new Runtime(mOptions);
+        } catch (const std::exception& e) {
+            IG_LOG(L_ERROR) << e.what() << std::endl;
+            flush_io();
+            throw e;
+        }
+    }
+};
+
+class SceneRuntimeWrap : public IRuntimeWrap {
+    const RuntimeOptions mOptions;
+    const Path mPath;
+    const Scene* const mScene;
+
+public:
+    SceneRuntimeWrap(const RuntimeOptions& opts, const Scene* scene, const Path& path)
+        : IRuntimeWrap()
+        , mOptions(opts)
+        , mPath(path)
+        , mScene(scene)
+    {
+    }
+
+    virtual ~SceneRuntimeWrap() = default;
+
+protected:
+    virtual Runtime* createInstance() override
+    {
+        if (!mScene)
+            return nullptr;
+
+        Runtime* runtime;
+        try {
+            runtime = new Runtime(mOptions);
+        } catch (const std::exception& e) {
+            IG_LOG(L_ERROR) << e.what() << std::endl;
+            flush_io();
+            throw e;
+        }
+
+        if (!runtime->loadFromScene(mScene)) {
+            delete runtime;
+            return nullptr;
+        }
+
+        return runtime;
+    }
+};
+
+class TextRuntimeWrap : public IRuntimeWrap {
+    const RuntimeOptions mOptions;
+    const Path mPath;
+    const std::string mSource;
+
+public:
+    TextRuntimeWrap(const RuntimeOptions& opts, const std::string& source, const Path& path)
+        : IRuntimeWrap()
+        , mOptions(opts)
+        , mPath(path)
+        , mSource(source)
+    {
+    }
+
+    virtual ~TextRuntimeWrap() = default;
+
+protected:
+    virtual Runtime* createInstance() override
+    {
+        Runtime* runtime;
+        try {
+            runtime = new Runtime(mOptions);
+        } catch (const std::exception& e) {
+            IG_LOG(L_ERROR) << e.what() << std::endl;
+            flush_io();
+            throw e;
+        }
+
+        if (mSource.empty()) {
+            if (!runtime->loadFromFile(mPath)) {
+                delete runtime;
                 return nullptr;
             }
         } else {
-            if (!sInstance->loadFromString(mSource, mPath)) {
-                sInstance.reset();
+            if (!runtime->loadFromString(mSource, mPath)) {
+                delete runtime;
                 return nullptr;
             }
         }
 
-        mCreated = true;
-        return sInstance.get();
+        return runtime;
     }
 };
 
-std::unique_ptr<Runtime> RuntimeWrap::sInstance;
 void runtime_module(nb::module_& m)
 {
     // Logger IO stuff
@@ -149,7 +229,7 @@ void runtime_module(nb::module_& m)
         .def_static("makeGPU", &Target::makeGPU)
         .def_static("pickBest", &Target::pickBest)
         .def_static("pickCPU", &Target::pickCPU)
-        .def_static("pickGPU", &Target::pickGPU, nb::arg("device") = 0);
+        .def_static("pickGPU", &Target::pickGPU, "device"_a = 0);
 
     nb::class_<DenoiserSettings>(m, "DenoiserSettings", "Settings for the denoiser")
         .def(nb::init<>())
@@ -159,7 +239,7 @@ void runtime_module(nb::module_& m)
 
     auto opts = nb::class_<RuntimeOptions>(m, "RuntimeOptions", "Options to customize runtime behaviour")
                     .def(nb::init<>())
-                    .def_static("makeDefault", &RuntimeOptions::makeDefault, nb::arg("trace") = false)
+                    .def_static("makeDefault", &RuntimeOptions::makeDefault, "trace"_a = false)
                     .def_rw("Target", &RuntimeOptions::Target, "The target device")
                     .def_rw("DumpShader", &RuntimeOptions::DumpShader, "Set True if most shader should be dumped into the filesystem")
                     .def_rw("DumpShaderFull", &RuntimeOptions::DumpShaderFull, "Set True if all shader should be dumped into the filesystem")
@@ -222,12 +302,11 @@ void runtime_module(nb::module_& m)
         .def_static("MakeFull", &BoundingBox::Full);
 
     auto glareEvaluator = nb::class_<GlareEvaluator>(m, "GlareEvaluator", "Optional pass to compute significant glare values")
-                              .def("run", &GlareEvaluator::run)
-                              .def_prop_rw("multiplier", &GlareEvaluator::multiplier, &GlareEvaluator::setMultiplier)
-                              .def_prop_rw("verticalIlluminance", &GlareEvaluator::verticalIlluminance, &GlareEvaluator::setVerticalIlluminance)
-                              .def("setData", [](GlareEvaluator& self, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig> output) {
-                                  self.setUserData(output.data(), output.shape(1), output.shape(2));
-                              });
+        //   .def("run", &GlareEvaluator::run)
+        //   .def_prop_rw("multiplier", &GlareEvaluator::multiplier, &GlareEvaluator::setMultiplier)
+        //   .def_prop_rw("verticalIlluminance", &GlareEvaluator::verticalIlluminance, &GlareEvaluator::setVerticalIlluminance)
+        //   .def("setData", [](GlareEvaluator& self, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig> output) { self.setUserData(output.data(), output.shape(1), output.shape(2)); })
+        ;
 
     nb::class_<GlareEvaluator::Result>(glareEvaluator, "Result", "Result of the glare evaluation")
         .def_rw("DGP", &GlareEvaluator::Result::DGP)
@@ -247,21 +326,19 @@ void runtime_module(nb::module_& m)
 
     // TODO: Add option to insert new "texture" as parameter for Python Interchange with proper device handling
     nb::class_<Runtime>(m, "Runtime", "Renderer runtime allowing control of simulation and access to results")
-        .def("step", &Runtime::step, nb::arg("ignoreDenoiser") = false)
+        .def("step", &Runtime::step, "ignoreDenoiser"_a = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
             size_t shape[] = { rays.size(), 3ul };
             return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, 2, shape, nb::handle());
         })
         .def("reset", &Runtime::reset, "Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset")
-        .def(
-            "getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
+        .def("getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
-                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape, nb::handle()); }, nb::arg("aov") = "")
-        .def(
-            "getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape, nb::handle()); }, "aov"_a = "")
+        .def("getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
                 size_t shape[]      = { height, width, 3ul };
@@ -286,7 +363,7 @@ void runtime_module(nb::module_& m)
                     }
                 }
 
-                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId); }, nb::arg("aov") = "")
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId); }, "aov"_a = "")
         .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::ndim<2>, nb::c_contig, nb::device::cpu> output) {
             // TODO: Add device specific access!
             TonemapSettings settings;
@@ -305,7 +382,15 @@ void runtime_module(nb::module_& m)
 
             // TODO: Check stride?
             r.tonemap((uint32*)output.data(), settings); })
-        .def("createGlareEvaluator", &Runtime::createGlareEvaluator)
+        // .def("createGlareEvaluator", &Runtime::createGlareEvaluator, nb::keep_alive<1, 0>())
+        .def("runGlareEvaluation", [](Runtime& self, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
+            GlareEvaluator eval(&self);
+            eval.setUserData(data.data(), data.shape(1), data.shape(0), data.device_type() == nb::device::cpu::value);
+            if (multiplier.has_value())
+                eval.setMultiplier(multiplier.value());
+            if (verticalIlluminace.has_value())
+                eval.setVerticalIlluminance(verticalIlluminace.value());
+            return eval.run(); }, "data"_a, "multiplier"_a.none() = std::nullopt, "verticalIlluminance"_a.none() = std::nullopt)
         .def("setParameter", nb::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", nb::overload_cast<const std::string&, float>(&Runtime::setParameter))
         .def("setParameter", nb::overload_cast<const std::string&, const Vector3f&>(&Runtime::setParameter))
@@ -338,48 +423,48 @@ void runtime_module(nb::module_& m)
         .def_prop_ro_static("AvailableCameraTypes", &Runtime::getAvailableCameraTypes)
         .def_prop_ro_static("AvailableTechniqueTypes", &Runtime::getAvailableTechniqueTypes);
 
-    nb::class_<RuntimeWrap>(m, "RuntimeWrap", "Wrapper around the runtime used for proper runtime loading and shutdown")
-        .def("__enter__", &RuntimeWrap::enter, nb::rv_policy::reference_internal)
-        .def("__exit__", &RuntimeWrap::exit, "type"_a.none(), "value"_a.none(), "traceback"_a.none())
-        .def_prop_ro("instance", &RuntimeWrap::instance, nb::rv_policy::reference_internal)
-        .def("shutdown", &RuntimeWrap::shutdown)
-        .def("__del__", &RuntimeWrap::shutdown);
+    nb::class_<IRuntimeWrap>(m, "IRuntimeWrap", "Wrapper around the runtime used for proper runtime loading and shutdown", nb::is_final())
+        .def("__enter__", &IRuntimeWrap::enter, nb::rv_policy::reference_internal)
+        .def("__exit__", &IRuntimeWrap::exit, "type"_a.none(), "value"_a.none(), "traceback"_a.none())
+        .def_prop_ro("instance", &IRuntimeWrap::instance, nb::rv_policy::reference_internal)
+        .def("shutdown", &IRuntimeWrap::shutdown)
+        .def("__del__", &IRuntimeWrap::shutdown);
 
     m.def(
-         "loadFromFile", [](const Path& path) { return RuntimeWrap(RuntimeOptions::makeDefault(), std::string{}, path); },
+         "loadFromFile", [](const Path& path) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<TextRuntimeWrap>(RuntimeOptions::makeDefault(), std::string{}, path); },
          "Load a scene from file and generate a default runtime")
         .def(
-            "loadFromFile", [](const Path& path, const RuntimeOptions& opts) { return RuntimeWrap(opts, std::string{}, path); },
+            "loadFromFile", [](const Path& path, const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<TextRuntimeWrap>(opts, std::string{}, path); },
             "Load a scene from file and generate a runtime with given options")
         .def(
-            "loadFromString", [](const std::string& str) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, std::string{}); },
+            "loadFromString", [](const std::string& str) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<TextRuntimeWrap>(RuntimeOptions::makeDefault(), str, Path{}); },
             "Load a scene from a string and generate a default runtime")
         .def(
-            "loadFromString", [](const std::string& str, const Path& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), str, dir); },
+            "loadFromString", [](const std::string& str, const Path& dir) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<TextRuntimeWrap>(RuntimeOptions::makeDefault(), str, dir); },
             "Load a scene from a string with directory for external resources and generate a default runtime")
         .def(
-            "loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, std::string{}); },
+            "loadFromString", [](const std::string& str, const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<TextRuntimeWrap>(opts, str, Path{}); },
             "Load a scene from a string and generate a runtime with given options")
         .def(
-            "loadFromString", [](const std::string& str, const Path& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, str, dir); },
+            "loadFromString", [](const std::string& str, const Path& dir, const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<TextRuntimeWrap>(opts, str, dir); },
             "Load a scene from a string with directory for external resources and generate a runtime with given options")
         .def(
-            "loadFromScene", [](const Scene* scene) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, std::string{}); },
+            "loadFromScene", [](const Scene* scene) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<SceneRuntimeWrap>(RuntimeOptions::makeDefault(), scene, Path{}); },
             "Generate a default runtime from an already loaded scene")
         .def(
-            "loadFromScene", [](const Scene* scene, const Path& dir) { return RuntimeWrap(RuntimeOptions::makeDefault(), scene, dir); },
+            "loadFromScene", [](const Scene* scene, const Path& dir) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<SceneRuntimeWrap>(RuntimeOptions::makeDefault(), scene, dir); },
             "Generate a default runtime from an already loaded scene with directory for external resources")
         .def(
-            "loadFromScene", [](const Scene* scene, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, std::string{}); },
+            "loadFromScene", [](const Scene* scene, const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<SceneRuntimeWrap>(opts, scene, Path{}); },
             "Generate a runtime with given options from an already loaded scene")
         .def(
-            "loadFromScene", [](const Scene* scene, const Path& dir, const RuntimeOptions& opts) { return RuntimeWrap(opts, scene, dir); },
+            "loadFromScene", [](const Scene* scene, const Path& dir, const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<SceneRuntimeWrap>(opts, scene, dir); },
             "Generate a runtime with given options from an already loaded scene with directory for external resources")
         .def(
-            "createEmpty", []() { return RuntimeWrap(RuntimeOptions::makeDefault(), nullptr, {}); },
+            "createEmpty", []() { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<EmptyRuntimeWrap>(RuntimeOptions::makeDefault()); },
             "Generate a runtime without loading a scene")
         .def(
-            "createEmpty", [](const RuntimeOptions& opts) { return RuntimeWrap(opts, nullptr, {}); },
+            "createEmpty", [](const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<EmptyRuntimeWrap>(opts); },
             "Generate a runtime without loading a scene")
         .def(
             "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu> b) {
@@ -392,8 +477,7 @@ void runtime_module(nb::module_& m)
                 return Image::save(path, (const float*)b.data(), width, height, 3);
             },
             "Save an OpenEXR image to the filesystem")
-        .def(
-            "saveExr", [](const Path& path, nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
+        .def("saveExr", [](const Path& path, nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);
                 size_t height = b.shape(0);
 

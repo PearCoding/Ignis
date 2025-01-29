@@ -141,6 +141,8 @@ Runtime::Runtime(const RuntimeOptions& opts)
     mDevice    = std::make_shared<Device>(mInterface);
     if (mDevice == nullptr)
         throw std::runtime_error("Could not creater render interface from requested device");
+    mDevice->connectGlobalRegistry(&mGlobalRegistry);
+
     IDeviceInterface::setCurrentDevice(mInterface.get());
 }
 
@@ -387,7 +389,7 @@ void Runtime::stepVariant(size_t variant)
     settings.frame     = mCurrentFrame;
     settings.user_seed = mOptions.Seed;
 
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
+    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -446,7 +448,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     settings.frame     = mCurrentFrame;
     settings.user_seed = mOptions.Seed;
 
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings, &mGlobalRegistry);
+    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -490,9 +492,19 @@ BufferAccessor Runtime::getBufferForDevice(const std::string& name) const
     return mDevice->getBufferForDevice(name);
 }
 
+BufferAccessor Runtime::requestBufferForDevice(const std::string& name, size_t sizeInBytes) const
+{
+    return mDevice->requestBufferForDevice(name, sizeInBytes);
+}
+
 bool Runtime::copyBufferToHost(const std::string& name, void* dst, size_t maxSizeInBytes)
 {
     return mDevice->copyBufferToHost(name, dst, maxSizeInBytes);
+}
+
+bool Runtime::copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeInBytes)
+{
+    return mDevice->copyBufferFromHost(name, src, maxSizeInBytes);
 }
 
 void Runtime::reset()

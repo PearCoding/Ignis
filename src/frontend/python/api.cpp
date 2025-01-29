@@ -15,8 +15,9 @@ void runtime_module(nb::module_& m); // Defined in runtime.cpp
 
 NB_MODULE(pyignis, m)
 {
-    m.doc() = "Ignis python interface";
+    m.doc()               = "Ignis python interface";
     m.attr("__version__") = MACRO_STRINGIFY(IGNIS_VERSION);
+    m.attr("version")     = MACRO_STRINGIFY(IGNIS_VERSION);
 
     nb::enum_<LogLevel>(m, "LogLevel", "Enum holding verbosity level for logging")
         .value("Debug", LogLevel::L_DEBUG)

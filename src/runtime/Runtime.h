@@ -77,7 +77,9 @@ public:
 
     [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name) const;
     [[nodiscard]] BufferAccessor getBufferForDevice(const std::string& name) const;
+    BufferAccessor requestBufferForDevice(const std::string& name, size_t sizeInBytes) const;
     bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeInBytes);
+    bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeInBytes);
 
     /// Return all names of the enabled AOVs
     [[nodiscard]] inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }

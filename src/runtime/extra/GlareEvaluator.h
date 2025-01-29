@@ -36,11 +36,12 @@ public:
     inline void setVerticalIlluminance(float v) { mVerticalIlluminance = v; }
     [[nodiscard]] inline float verticalIlluminance() const { return mVerticalIlluminance; }
 
-    inline void setUserData(const float* data, size_t width, size_t height)
+    inline void setUserData(const float* data, size_t width, size_t height, bool dataIsOnHost = false)
     {
-        mData       = data;
-        mDataWidth  = width;
-        mDataHeight = height;
+        mDataIsOnHost = dataIsOnHost;
+        mData         = data;
+        mDataWidth    = width;
+        mDataHeight   = height;
     }
 
 private:
@@ -52,6 +53,7 @@ private:
     float mMultiplier;
     float mVerticalIlluminance;
 
+    bool mDataIsOnHost;
     const float* mData;
     size_t mDataWidth;
     size_t mDataHeight;

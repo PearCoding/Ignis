@@ -66,10 +66,10 @@ public:
 
     virtual void releaseAllMemory() = 0;
 
-    virtual void setCurrentSceneSettings(const Device::SceneSettings&)                                                                         = 0;
-    virtual void updateContext(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, ParameterSet* parameterSet) = 0;
-    virtual const Device::SceneSettings& currentSceneSettings() const                                                                          = 0;
-    virtual const Device::RenderSettings& currentRenderSettings() const                                                                        = 0;
+    virtual void connectGlobalRegistry(ParameterSet* parameter_set)     = 0;
+    virtual void setCurrentSceneSettings(const Device::SceneSettings&)  = 0;
+    virtual const Device::SceneSettings& currentSceneSettings() const   = 0;
+    virtual const Device::RenderSettings& currentRenderSettings() const = 0;
 
     virtual std::pair<size_t, size_t> framebufferSize() const = 0;
     virtual std::pair<size_t, size_t> workSize() const        = 0;
@@ -108,6 +108,7 @@ public:
     virtual DeviceBufferProxy<uint8_t> requestBuffer(const std::string& name, int32_t size, int32_t flags) = 0;
     virtual void saveBuffer(const std::string& name, const std::string& filename)                          = 0;
     virtual bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte)                  = 0;
+    virtual bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte)          = 0;
 
     virtual DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name) = 0;
     virtual DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name)   = 0;
@@ -116,9 +117,9 @@ public:
     virtual void mapAOVBackToDevice(const std::string& aov_name)                       = 0;
     virtual void mapAllAOVsBackToDevice()                                              = 0;
 
-    virtual void runDeviceShader()                                                                                = 0;
-    virtual void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings) = 0;
-    virtual ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings)               = 0;
+    virtual void runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) = 0;
+    virtual void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)    = 0;
+    virtual ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings)                  = 0;
 
     virtual void runTraversalShader(TraversalStage stage, int size)                                                            = 0;
     virtual int runRayGenerationShader(int next_id, int size, int xmin, int ymin, int xmax, int ymax)                          = 0;

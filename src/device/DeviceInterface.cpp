@@ -222,21 +222,15 @@ std::pair<size_t, size_t> DeviceInterface::workSize() const
 const Device::SceneSettings& DeviceInterface::currentSceneSettings() const { return mCurrentSceneSettings; }
 const Device::RenderSettings& DeviceInterface::currentRenderSettings() const { return mCurrentRenderSettings; }
 
+void DeviceInterface::connectGlobalRegistry(ParameterSet* parameter_set)
+{
+    mCurrentParameters = parameter_set;
+}
+
 void DeviceInterface::setCurrentSceneSettings(const Device::SceneSettings& settings)
 {
     mCurrentSceneSettings = settings;
     mEntityCount          = mCurrentSceneSettings.database->FixTables.count("entities") > 0 ? mCurrentSceneSettings.database->FixTables.at("entities").entryCount() : 0;
-}
-
-void DeviceInterface::updateContext(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, ParameterSet* parameterSet)
-{
-    updateShaderSet(shaderSet);
-    updateSettings(settings);
-
-    mCurrentRenderSettings = settings;
-    mCurrentParameters     = parameterSet;
-
-    resetFramebufferAccess();
 }
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::getFramebuffer()
@@ -801,6 +795,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     if (const auto it = buffers.find(filename); it != buffers.end())
         return mapToProxy(it->second);
 
+    DeviceGuard _deviceGuard(this); // Can be called from external
     _SECTION(SectionType::BufferLoading);
 
     IG_LOG(L_DEBUG) << "Loading buffer '" << filename << "'" << std::endl;
@@ -841,6 +836,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     if (const auto it = buffers.find(name); it != buffers.end() && it->second.Data.size() >= (int64_t)size)
         return mapToProxy(it->second);
 
+    DeviceGuard _deviceGuard(this); // Can be called from external
     _SECTION(SectionType::BufferRequests);
 
     IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;
@@ -895,6 +891,29 @@ bool DeviceInterface::copyBufferToHost(const std::string& buffer_name, void* dst
         return false;
 
     anydsl_copy(mDeviceID, ptr, 0, 0 /* Host */, dst, 0, size);
+
+    return true;
+}
+
+bool DeviceInterface::copyBufferFromHost(const std::string& buffer_name, const void* src, size_t maxSizeByte)
+{
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
+    uint8* ptr  = nullptr;
+    size_t size = 0;
+    if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
+        ptr  = it->second.Data.data();
+        size = (size_t)it->second.Data.size();
+    }
+
+    if (ptr == nullptr)
+        return false;
+
+    size = std::min(size, maxSizeByte);
+    if (size == 0)
+        return false;
+
+    anydsl_copy(0 /* Host */, src, 0, mDeviceID, ptr, 0, size);
 
     return true;
 }
@@ -1114,10 +1133,16 @@ void DeviceInterface::clearAllAOVs()
 }
 
 // -------------------------------------------------------- Shader
-void DeviceInterface::runDeviceShader()
+void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings)
 {
     DeviceGuard _guard(this);
+    updateShaderSet(shaderSet);
+    updateSettings(settings);
+
     ensureFramebuffer();
+    mCurrentRenderSettings = settings;
+
+    resetFramebufferAccess();
 
     if (mSetupSettings.DebugTrace)
         IG_LOG(L_DEBUG) << "TRACE> Device Shader " << mSetupSettings.Target.toString() << std::endl;
@@ -1374,7 +1399,7 @@ void DeviceInterface::runBakeShader(const ShaderOutput<void*>& shader, const std
 void DeviceInterface::runPassShader(const ShaderOutput<void*>& shader, void* userData)
 {
     DeviceGuard _guard(this);
-    ensureFramebuffer();
+    // A pass shader might not access the framebuffer!
 
     IG_ASSERT(shader.Exec != nullptr, "Expected pass shader to be valid");
 

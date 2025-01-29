@@ -22,15 +22,19 @@ size_t Device::framebufferWidth() const { return std::get<0>(mDevice->framebuffe
 
 size_t Device::framebufferHeight() const { return std::get<1>(mDevice->framebufferSize()); }
 
+void Device::connectGlobalRegistry(ParameterSet* parameter_set)
+{
+    mDevice->connectGlobalRegistry(parameter_set);
+}
+
 void Device::assignScene(const SceneSettings& settings)
 {
     mDevice->setCurrentSceneSettings(settings);
 }
 
-void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings, ParameterSet* parameterSet)
+void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings)
 {
-    mDevice->updateContext(shaderSet, settings, parameterSet);
-    mDevice->runDeviceShader();
+    mDevice->runDeviceShader(shaderSet, settings);
 }
 
 void Device::resize(size_t width, size_t height)
@@ -91,9 +95,24 @@ bool Device::copyBufferToHost(const std::string& name, void* dst, size_t maxSize
     return successful;
 }
 
+bool Device::copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte)
+{
+    const auto successful = mDevice->copyBufferFromHost(name, src, maxSizeByte);
+    return successful;
+}
+
 Device::BufferAccessor Device::getBufferForDevice(const std::string& name)
 {
     const auto acc = mDevice->loadBufferByName(name);
+    return {
+        .Data        = acc.DataPtr,
+        .SizeInBytes = acc.SizeInBytes
+    };
+}
+
+Device::BufferAccessor Device::requestBufferForDevice(const std::string& name, size_t sizeInBytes)
+{
+    const auto acc = mDevice->requestBuffer(name, sizeInBytes, 0);
     return {
         .Data        = acc.DataPtr,
         .SizeInBytes = acc.SizeInBytes

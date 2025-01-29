@@ -7,6 +7,10 @@ GlareEvaluator::GlareEvaluator(Runtime* runtime)
     : mRuntime(runtime)
     , mMultiplier(5)
     , mVerticalIlluminance(-1)
+    , mDataIsOnHost(false)
+    , mData(nullptr)
+    , mDataWidth(0)
+    , mDataHeight(0)
 {
     IG_ASSERT(runtime, "Expected a valid runtime");
     setup();
@@ -17,8 +21,8 @@ GlareEvaluator::~GlareEvaluator()
 }
 
 static const char* HandlerSrc = R"(
-    let u_width = registry::get_global_parameter_i32("__glare_framebuffer_width", 0);
-    let u_height = registry::get_global_parameter_i32("__glare_framebuffer_height", 0);
+    let u_width = registry::get_local_parameter_i32("__glare_framebuffer_width", 0);
+    let u_height = registry::get_local_parameter_i32("__glare_framebuffer_height", 0);
 
     let use_custom = u_width > 0 && u_height > 0;
 
@@ -41,8 +45,8 @@ static const char* HandlerSrc = R"(
 
     let glareSettings = GlareSettings{
         scale = if use_custom { 1:f32 } else { 1 / (settings.iter + 1) as f32 },
-        mul   = registry::get_global_parameter_f32("_glare_multiplier", 5),
-        vertical_illuminance = registry::get_global_parameter_f32("_glare_vertical_illuminance", -1)
+        mul   = registry::get_local_parameter_f32("_glare_multiplier", 5),
+        vertical_illuminance = registry::get_local_parameter_f32("_glare_vertical_illuminance", -1)
     };
 
     compute_glare(device, cam_fisheye, input, source_luminance, &glareSettings);
@@ -51,7 +55,8 @@ static const char* HandlerSrc = R"(
 void GlareEvaluator::setup()
 {
     std::stringstream shader;
-    shader << "#[export] fn ig_pass_main(settings: &Settings) -> () {" << std::endl
+    shader << "#[export] fn ig_pass_main(settings: &Settings, userData: &mut [i32]) -> () {" << std::endl
+           << "  maybe_unused(userData);" << std::endl
            << ShaderUtils::constructDevice(mRuntime->loaderOptions()) << std::endl
            << HandlerSrc
            << "}";
@@ -67,12 +72,18 @@ std::optional<GlareEvaluator::Result> GlareEvaluator::run()
     mPass->setParameter("_glare_multiplier", mMultiplier);
     mPass->setParameter("_glare_vertical_illuminance", mVerticalIlluminance);
 
-    mPass->setUserData((void*)mData);
-
     if (mData == nullptr) {
         mPass->setParameter("__glare_framebuffer_width", (int)0);
         mPass->setParameter("__glare_framebuffer_height", (int)0);
     } else {
+        if (mDataIsOnHost && mRuntime->target().isGPU()) {
+            const auto acc = mRuntime->requestBufferForDevice("__glare_framebuffer_host", mDataWidth * mDataHeight * 3 * sizeof(float));
+            mRuntime->copyBufferFromHost("__glare_framebuffer_host", (const void*)mData, acc.SizeInBytes);
+            mPass->setUserData((void*)acc.Data);
+        } else {
+            mPass->setUserData((void*)mData);
+        }
+
         mPass->setParameter("__glare_framebuffer_width", (int)mDataWidth);
         mPass->setParameter("__glare_framebuffer_height", (int)mDataHeight);
     }
