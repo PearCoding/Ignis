@@ -112,7 +112,7 @@ Device::BufferAccessor Device::getBufferForDevice(const std::string& name)
 
 Device::BufferAccessor Device::requestBufferForDevice(const std::string& name, size_t sizeInBytes)
 {
-    const auto acc = mDevice->requestBuffer(name, sizeInBytes, 0);
+    const auto acc = mDevice->requestBuffer(name, (int)sizeInBytes, 0);
     return {
         .Data        = acc.DataPtr,
         .SizeInBytes = acc.SizeInBytes
