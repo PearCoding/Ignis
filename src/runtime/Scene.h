@@ -40,6 +40,14 @@ public:
     inline std::shared_ptr<SceneObject> entity(const std::string& name) const { return get(mEntities, name); }
     inline std::shared_ptr<SceneObject> parameter(const std::string& name) const { return get(mParameters, name); }
 
+    inline SceneObject* texturePtr(const std::string& name) const { return getPtr(mTextures, name); }
+    inline SceneObject* bsdfPtr(const std::string& name) const { return getPtr(mBSDFs, name); }
+    inline SceneObject* shapePtr(const std::string& name) const { return getPtr(mShapes, name); }
+    inline SceneObject* lightPtr(const std::string& name) const { return getPtr(mLights, name); }
+    inline SceneObject* mediumPtr(const std::string& name) const { return getPtr(mMedia, name); }
+    inline SceneObject* entityPtr(const std::string& name) const { return getPtr(mEntities, name); }
+    inline SceneObject* parameterPtr(const std::string& name) const { return getPtr(mParameters, name); }
+
     inline void addTexture(const std::string& name, const std::shared_ptr<SceneObject>& texture) { mTextures[name] = texture; }
     inline void addBSDF(const std::string& name, const std::shared_ptr<SceneObject>& bsdf) { mBSDFs[name] = bsdf; }
     inline void addShape(const std::string& name, const std::shared_ptr<SceneObject>& shape) { mShapes[name] = shape; }
@@ -62,6 +70,14 @@ private:
     {
         if (auto it = map.find(name); it != map.end())
             return it->second;
+        else
+            return nullptr;
+    }
+
+    inline SceneObject* getPtr(const ObjectMap& map, const std::string& name) const
+    {
+        if (auto it = map.find(name); it != map.end())
+            return it->second.get();
         else
             return nullptr;
     }

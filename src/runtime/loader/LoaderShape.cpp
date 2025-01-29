@@ -98,17 +98,14 @@ bool LoaderShape::load(LoaderContext& ctx)
 
     const auto load_shape = [&](size_t i) {
         const std::string name = names.at(i);
-        const auto child       = ctx.Options.Scene->shape(name);
+        SceneObject* child     = ctx.Options.Scene->shapePtr(name);
 
         auto entry = getShapeProviderEntry(child->pluginType());
         if (!entry)
             return;
 
-        auto it = mShapeProviders.find(entry->Provider);
-        if (it == mShapeProviders.end())
-            return;
-
-        it->second->handle(ctx, acc, name, *child);
+        if (auto it = mShapeProviders.find(entry->Provider); it != mShapeProviders.end())
+            it->second->handle(ctx, acc, name, *child);
     };
 
     // Start loading!

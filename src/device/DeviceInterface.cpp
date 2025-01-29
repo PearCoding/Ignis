@@ -798,8 +798,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     auto& buffers = mDeviceData.buffers;
-    auto it       = buffers.find(filename);
-    if (it != buffers.end())
+    if (const auto it = buffers.find(filename); it != buffers.end())
         return mapToProxy(it->second);
 
     _SECTION(SectionType::BufferLoading);
@@ -819,9 +818,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferByName(c
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
-    auto& buffers = mDeviceData.buffers;
-    auto it       = buffers.find(name);
-    if (it != buffers.end())
+    if (const auto it = mDeviceData.buffers.find(name); it != mDeviceData.buffers.end())
         return mapToProxy(it->second);
 
     IG_LOG(L_ERROR) << "No buffer '" << name << "'" << std::endl;
@@ -841,7 +838,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     size = (int32_t)roundUp(size, 32);
 
     auto& buffers = mDeviceData.buffers;
-    if (auto it = buffers.find(name); it != buffers.end() && it->second.Data.size() >= (int64_t)size)
+    if (const auto it = buffers.find(name); it != buffers.end() && it->second.Data.size() >= (int64_t)size)
         return mapToProxy(it->second);
 
     _SECTION(SectionType::BufferRequests);
@@ -861,9 +858,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
 void DeviceInterface::saveBuffer(const std::string& name, const std::string& filename)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
-
-    auto& buffers = mDeviceData.buffers;
-    if (auto it = buffers.find(name); it != buffers.end()) {
+    if (const auto it = mDeviceData.buffers.find(name); it != mDeviceData.buffers.end()) {
         const size_t size = (size_t)it->second.Data.size();
 
         IG_LOG(L_DEBUG) << "Dumping buffer '" << name << "' to '" << filename << "' with " << FormatMemory(size) << std::endl;
@@ -883,10 +878,11 @@ void DeviceInterface::saveBuffer(const std::string& name, const std::string& fil
 
 bool DeviceInterface::copyBufferToHost(const std::string& buffer_name, void* dst, size_t maxSizeByte)
 {
-    auto& buffers = mDeviceData.buffers;
-    uint8* ptr    = nullptr;
-    size_t size   = 0;
-    if (auto it = buffers.find(buffer_name); it != buffers.end()) {
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
+    uint8* ptr  = nullptr;
+    size_t size = 0;
+    if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
         ptr  = it->second.Data.data();
         size = (size_t)it->second.Data.size();
     }
@@ -944,6 +940,7 @@ void DeviceInterface::handleDebugOutput()
         ptr[0] = 0;
     };
 
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
     if (const auto it = mDeviceData.buffers.find("__dbg_output"); it != mDeviceData.buffers.end()) {
         DeviceBuffer& buffer = it->second;
         if (isGPU()) {

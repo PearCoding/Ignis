@@ -329,9 +329,9 @@ static uint64 setup_bvh(const TriMesh& mesh, LoaderContext& ctx, const std::stri
     constexpr size_t MinFaceCountForCache = 500000;
     IG_ASSERT(mesh.faceCount() > 0, "Expected mesh to contain some triangles");
 
-    const Path path = ctx.CacheManager->directory() / ("_bvh_" + name + ".bin");
-    bool inCache                     = false;
-    const bool isEligible            = mesh.faceCount() > MinFaceCountForCache; // Do not waste effort for small meshes
+    const Path path       = ctx.CacheManager->directory() / ("_bvh_" + name + ".bin");
+    bool inCache          = false;
+    const bool isEligible = mesh.faceCount() > MinFaceCountForCache; // Do not waste effort for small meshes
     if (isEligible && ctx.CacheManager->isEnabled()) {
         const std::string hash = mesh.computeHash();
         inCache                = ctx.CacheManager->checkAndUpdate("bvh_" + name, hash);
@@ -572,7 +572,7 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     acc.DatabaseAccessMutex.lock();
     IG_LOG(L_DEBUG) << "Generating triangle mesh for shape " << name << std::endl;
 
-    auto& table         = ctx.Database.DynTables["shapes"];
+    auto& table         = ctx.Database.DynTables.at("shapes");
     auto& meshData      = table.addLookup((uint32)this->id(), 0, Pack4Alignment);
     const size_t offset = table.currentOffset();
 
@@ -599,14 +599,10 @@ void TriMeshProvider::handle(LoaderContext& ctx, ShapeMTAccessor& acc, const std
     const uint32 id = ctx.Shapes->addShape(name, Shape{ this, (int32)off.first, (int32)off.second, bbox, offset });
     IG_ASSERT(id + 1 == table.entryCount(), "Expected id to be in sync with dyntable entry count");
 
-    // Check if shape is actually just a simple plane
-    if (plane.has_value()) {
+    if (plane.has_value()) // Check if shape is actually just a simple plane
         ctx.Shapes->addPlaneShape(id, plane.value());
-    } else {
-        // If not a plane, it might be a simple sphere
-        if (sphere.has_value())
-            ctx.Shapes->addSphereShape(id, sphere.value());
-    }
+    else if (sphere.has_value()) // If not a plane, it might be a simple sphere
+        ctx.Shapes->addSphereShape(id, sphere.value());
 
     // Add internal shape structure to table for potential area light usage
     ctx.Shapes->addTriShape(id, trishape);
