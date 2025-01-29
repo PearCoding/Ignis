@@ -12,7 +12,7 @@ public:
         size_t SizeInBytes;
         inline static DeviceBufferProxy Invalid() { return { .DataPtr = nullptr, .SizeInBytes = 0 }; }
     };
-    using FixtableProxy = DeviceBufferProxy<uint8_t>;
+    using FixTableProxy = DeviceBufferProxy<uint8_t>;
 
     template <typename T>
     struct DeviceImageProxy {
@@ -29,7 +29,7 @@ public:
         inline static DeviceStreamProxy Invalid() { return { .DataPtr = nullptr, .BlockSize = 0 }; }
     };
 
-    struct DyntableProxy {
+    struct DynTableProxy {
         size_t EntryCount;
         const LookupEntry* LookupEntries;
         uint8_t* DataPtr;
@@ -95,8 +95,8 @@ public:
     virtual TemporaryStorageHostProxy getTemporaryStorageHost() = 0; // TODO: Would be cool to get rid of this and make it more adaptive
 
     virtual void* loadRayList()                                 = 0;
-    virtual DyntableProxy loadDyntable(const std::string& name) = 0;
-    virtual FixtableProxy loadFixtable(const std::string& name) = 0;
+    virtual DynTableProxy loadDynTable(const std::string& name) = 0;
+    virtual FixTableProxy loadFixTable(const std::string& name) = 0;
 
     virtual void loadEntityBVH(BVHType type, const char* prim_type, void** nodes, void** objs) = 0;
 

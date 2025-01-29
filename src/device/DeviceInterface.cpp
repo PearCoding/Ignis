@@ -595,13 +595,13 @@ void* DeviceInterface::loadRayList()
     return (void*)&device.ray_list;
 }
 
-IDeviceInterface::DyntableProxy DeviceInterface::loadDyntable(const std::string& name)
+IDeviceInterface::DynTableProxy DeviceInterface::loadDynTable(const std::string& name)
 {
     static_assert(sizeof(::LookupEntry) == sizeof(LookupEntry), "Expected generated Lookup Entry and internal Lookup Entry to be of same size!");
 
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
-    DeviceDyntable* dyntable;
+    DeviceDynTable* dyntable;
 
     auto& tables = mDeviceData.dyntables;
     auto it      = tables.find(name);
@@ -629,7 +629,7 @@ IDeviceInterface::DyntableProxy DeviceInterface::loadDyntable(const std::string&
     };
 }
 
-IDeviceInterface::FixtableProxy DeviceInterface::loadFixtable(const std::string& name)
+IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string& name)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 

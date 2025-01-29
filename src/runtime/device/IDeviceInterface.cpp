@@ -31,7 +31,7 @@ static inline ParameterSet* getParameterSet(IDeviceInterface* device, bool globa
     return global ? device->getCurrentGlobalRegistry() : device->getCurrentLocalRegistry();
 }
 
-static inline DynTableData assignDyntable(const IDeviceInterface::DyntableProxy& tbl)
+static inline DynTableData assignDynTable(const IDeviceInterface::DynTableProxy& tbl)
 {
     DynTableData devtbl;
     devtbl.count  = tbl.EntryCount;
@@ -100,15 +100,15 @@ IG_EXPORT void ignis_load_dyntable(const char* name, DynTableData* dtb)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
-    auto proxy = device->loadDyntable(name);
-    *dtb       = assignDyntable(proxy);
+    auto proxy = device->loadDynTable(name);
+    *dtb       = assignDynTable(proxy);
 }
 
 IG_EXPORT void ignis_load_fixtable(const char* name, uint8_t** data, int32_t* size)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
-    auto proxy = device->loadFixtable(name);
+    auto proxy = device->loadFixTable(name);
     *data      = const_cast<uint8_t*>(proxy.DataPtr);
     *size      = (int32_t)proxy.SizeInBytes;
 }

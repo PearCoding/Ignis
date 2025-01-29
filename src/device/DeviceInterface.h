@@ -25,7 +25,7 @@ using Bvh8Ent = BvhProxy<Node8, EntityLeaf1>;
 
 using BvhVariant = std::variant<Bvh2Ent, Bvh4Ent, Bvh8Ent>;
 
-struct DeviceDyntable {
+struct DeviceDynTable {
     size_t EntryCount = 0;
     ShallowArray<::LookupEntry> LookupEntries;
     ShallowArray<uint8_t> Data;
@@ -110,7 +110,7 @@ public:
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DevicePackedImage> packed_images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
-        std::unordered_map<std::string, DeviceDyntable> dyntables;
+        std::unordered_map<std::string, DeviceDynTable> dyntables;
         std::unordered_map<std::string, DeviceBuffer> fixtables;
 
         ParameterSet* current_local_registry = nullptr;
@@ -168,8 +168,8 @@ public:
     TemporaryStorageHostProxy getTemporaryStorageHost() override; // TODO: Would be cool to get rid of this and make it more adaptive
 
     void* loadRayList() override;
-    DyntableProxy loadDyntable(const std::string& name) override;
-    FixtableProxy loadFixtable(const std::string& name) override;
+    DynTableProxy loadDynTable(const std::string& name) override;
+    FixTableProxy loadFixTable(const std::string& name) override;
 
     void loadEntityBVH(BVHType type, const char* prim_type, void** nodes, void** objs) override;
 
