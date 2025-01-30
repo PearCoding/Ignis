@@ -6,8 +6,8 @@ enum FisheyeAspectMode {
 
 // Creates a fishlens camera
 fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: FisheyeAspectMode, tmin: f32, tmax: f32, mask: bool) -> Camera {
-    let right = vec3_normalize(vec3_cross(dir, up));
-    let view  = make_mat3x3(right, up, dir);
+    let frame = make_camera_frame(eye, dir, up);
+    let view  = mat3x3_from_camera(frame);
     let fov   = flt_pi;
     let asp   = w as f32 / h as f32;
 
@@ -113,6 +113,7 @@ fn @make_fishlens_camera(eye: Vec3, dir: Vec3, up: Vec3, w: i32, h: i32, mode: F
                 vec3_mulf(vec3_sub(d1x, d0), w as f32),
                 vec3_mulf(vec3_sub(d1y, d0), h as f32)
             )
-        }
+        },
+        frame = frame
     }
 }

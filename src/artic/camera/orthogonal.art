@@ -12,8 +12,9 @@ fn @orthogonal_pos_to_pixel(v: Vec3, eye: Vec3, view: Mat3x3, scale: Vec2, w: i3
 
 // Creates an orthogonal camera
 fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32, h: i32, tmin: f32, tmax: f32) -> Camera {
-    let right = vec3_normalize(vec3_cross(dir, up));
-    let view  = make_mat3x3(right, up, dir);
+    let frame = make_camera_frame(eye, dir, up);
+    let right = frame.right;
+    let view  = mat3x3_from_camera(frame);
 
     Camera {
         generate_ray = @ |_, coord| {
@@ -40,6 +41,7 @@ fn @make_orthogonal_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32, 
                 right,
                 up
             )
-        }
+        },
+        frame = frame
     }
 }

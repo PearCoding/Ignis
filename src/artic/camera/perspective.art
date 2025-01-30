@@ -27,8 +27,9 @@ fn @perspective_pos_to_pixel(v: Vec3, eye: Vec3, view: Mat3x3, scale: Vec2, w: i
 
 // Creates a perspective camera
 fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32, h: i32, tmin: f32, tmax: f32) -> Camera {
-    let right = vec3_normalize(vec3_cross(dir, up));
-    let view  = make_mat3x3(right, up, dir);
+    let frame = make_camera_frame(eye, dir, up);
+    let right = frame.right;
+    let view  = mat3x3_from_camera(frame);
 
     // nx, ny in [-1, 1]
     fn @compute_dir(nx: f32, ny: f32) = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * nx, scale.y * ny, 1)));
@@ -61,14 +62,16 @@ fn @make_perspective_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, w: i32,
                 vec3_mulf(right, scale.x),
                 vec3_mulf(up, scale.y)
             )
-        }
+        },
+        frame = frame
     }
 }
 
 // Creates a perspective camera with depth of field
 fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, aperture_radius: f32, focal_length: f32, w: i32, h: i32, tmin: f32, tmax: f32) -> Camera {
-    let right = vec3_normalize(vec3_cross(dir, up));
-    let view  = make_mat3x3(right, up, dir);
+    let frame = make_camera_frame(eye, dir, up);
+    let right = frame.right;
+    let view  = mat3x3_from_camera(frame);
 
     fn @gen_ray(rnd: RandomGenerator, coord: PixelCoord ) {
         let global_dir = vec3_normalize(mat3x3_mul(view, make_vec3(scale.x * coord.nx, scale.y * coord.ny, 1)));
@@ -109,6 +112,7 @@ fn @make_perspective_dof_camera(eye: Vec3, dir: Vec3, up: Vec3, scale: Vec2, ape
                 vec3_mulf(right, scale.x),
                 vec3_mulf(up, scale.y)
             )
-        }
+        },
+        frame = frame
     }
 }

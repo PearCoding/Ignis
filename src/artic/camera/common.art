@@ -3,5 +3,6 @@ fn @make_null_camera() = Camera {
     generate_ray = @ |_, _| Option[Ray]::None,
     sample_pixel = @ |_, _| Option[CameraSample]::None,
     pos_to_pixel = @ |_|    Option[PixelCoord]::None,
-    differential = @ |_| ( make_vec3(0,0,0), make_vec3(0,0,0) )
+    differential = @ |_| ( make_vec3(0,0,0), make_vec3(0,0,0) ),
+    frame        = make_ident_camera_frame()
 };

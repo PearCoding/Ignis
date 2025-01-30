@@ -12,10 +12,10 @@ struct ReduceOutputInfo {
 }
 
 struct ReduceOutputGlare {
-    source_omega:  f32,
-    source_lum:    f32,
-    source_x:      f32,
-    source_y:      f32,
+    source_omega: f32,
+    source_lum:   f32,
+    source_x:     f32,
+    source_y:     f32,
 }
 
 // An evalglare.c implementation using the GPU.
@@ -24,9 +24,8 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
     let width  = input.width;
     let height = input.height;
 
-    //let cam_eye = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
-    let cam_up  = vec3_normalize(registry::get_global_parameter_vec3("__camera_up", vec3_expand(0)));
-    let cam_dir = vec3_normalize(registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0)));
+    let cam_up  = camera.frame.up;
+    let cam_dir = camera.frame.dir;
 
     let cam_hv = vec3_normalize(vec3_cross(cam_dir, cam_up));
     let cam_vv = vec3_normalize(vec3_cross(cam_dir, cam_hv));
@@ -170,10 +169,10 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
             source_y     = a.source_y     + b.source_y }
     );
 
-    let glare_omega  = reduce_glare.source_omega;
-    let glare_lum    = reduce_glare.source_lum / glare_omega;
-    let glare_x      = reduce_glare.source_x / glare_omega;
-    let glare_y      = reduce_glare.source_y / glare_omega;
+    let glare_omega = reduce_glare.source_omega;
+    let glare_lum   = safe_div(reduce_glare.source_lum, glare_omega);
+    let glare_x     = safe_div(reduce_glare.source_x, glare_omega);
+    let glare_y     = safe_div(reduce_glare.source_y, glare_omega);
 
     let lum_a     = E_v / flt_pi;
     let lum_backg = if glare_omega <= flt_eps { lum_avg } else { (reduce_info.total_lum - reduce_glare.source_lum) / (reduce_info.total_omega - reduce_glare.source_omega) };

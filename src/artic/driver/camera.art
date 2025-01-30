@@ -73,16 +73,36 @@ struct CameraSample {
     pdf:    f32         // Pdf of sample to connect (in area measure)
 }
 
+struct CameraFrame {
+    eye:   Vec3,
+    dir:   Vec3,
+    up:    Vec3,
+    right: Vec3
+}
+
+fn @make_camera_frame(eye: Vec3, dir: Vec3, up: Vec3) = CameraFrame {
+    eye   = eye,
+    dir   = dir,
+    up    = up,
+    right = vec3_normalize(vec3_cross(dir, up))
+};
+
+fn @make_ident_camera_frame() = make_camera_frame(vec3_expand(0), make_vec3(0,0,1), make_vec3(0,1,0));
+
+fn @mat3x3_from_camera(transform: CameraFrame) = make_mat3x3(transform.right, transform.up, transform.dir);
+
 // Opaque camera object
 struct Camera {
     // Generates a ray for a point on the image plane
-    generate_ray: fn (RandomGenerator, PixelCoord) -> Option[Ray],
+    generate_ray:  fn (RandomGenerator, PixelCoord) -> Option[Ray],
     // Sample a point on the image plane with corresponding pixel for given point in the scene if possible
     // This call might fail if given point in scene is not within the direction of the camera
-    sample_pixel: fn (RandomGenerator, Vec3) -> Option[CameraSample],
+    sample_pixel:  fn (RandomGenerator, Vec3) -> Option[CameraSample],
     // Map point in scene to a pixel coordinate if possible
     // This call might fail if given point in scene is not within the direction of the camera
-    pos_to_pixel: fn (Vec3) -> Option[PixelCoord],
+    pos_to_pixel:  fn (Vec3) -> Option[PixelCoord],
     // Returns dx and dy vectors in respect to the pixel position (given as index)
-    differential: fn (PixelCoord) -> (Vec3, Vec3)
+    differential:  fn (PixelCoord) -> (Vec3, Vec3),
+    // The camera frame specified with position, direction and up vector
+    frame: CameraFrame
 }
