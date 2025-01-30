@@ -365,6 +365,8 @@ void runtime_module(nb::module_& m)
 
                 return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId); }, "aov"_a = "")
         .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::ndim<2>, nb::c_contig, nb::device::cpu> output) {
+            if(!output.is_valid())
+                throw nb::buffer_error("Invalid input buffer");
             // TODO: Add device specific access!
             TonemapSettings settings;
             settings.AOV            = "";
@@ -383,8 +385,10 @@ void runtime_module(nb::module_& m)
             // TODO: Check stride?
             r.tonemap((uint32*)output.data(), settings); })
         // .def("createGlareEvaluator", &Runtime::createGlareEvaluator, nb::keep_alive<1, 0>())
-        .def("runGlareEvaluation", [](Runtime& self, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
-            GlareEvaluator eval(&self);
+        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1, 3>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
+            if(!data.is_valid())
+                throw nb::buffer_error("Invalid input buffer");
+            GlareEvaluator eval(&r);
             eval.setUserData(data.data(), data.shape(1), data.shape(0), data.device_type() == nb::device::cpu::value);
             if (multiplier.has_value())
                 eval.setMultiplier(multiplier.value());
@@ -467,7 +471,7 @@ void runtime_module(nb::module_& m)
             "createEmpty", [](const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<EmptyRuntimeWrap>(opts); },
             "Generate a runtime without loading a scene")
         .def(
-            "saveExr", [](const Path& path, nb::ndarray<float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu> b) {
+            "saveExr", [](const Path& path, nb::ndarray<const float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);
                 size_t height = b.shape(0);
 
@@ -477,7 +481,7 @@ void runtime_module(nb::module_& m)
                 return Image::save(path, (const float*)b.data(), width, height, 3);
             },
             "Save an OpenEXR image to the filesystem")
-        .def("saveExr", [](const Path& path, nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
+        .def("saveExr", [](const Path& path, nb::ndarray<const float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
                 size_t width  = b.shape(1);
                 size_t height = b.shape(0);
 
