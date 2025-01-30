@@ -1,4 +1,5 @@
 #include "GlareEvaluator.h"
+#include "Logger.h"
 #include "Runtime.h"
 #include "shader/ShaderUtils.h"
 
@@ -33,14 +34,14 @@ static const char* HandlerSrc = R"(
         let buffer = device.make_buffer_view(userData as &[f32], width * height * 3);
         make_aov_image_from_buffer_readonly(buffer, width, height)
     } else {
-        device.load_aov_image("", spi)
+        device.load_aov_image("Color", spi)
     };
 
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
 
     let camera_eye  = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
-    let camera_dir  = registry::get_global_parameter_vec3("__camera_dir", vec3_expand(0));
-    let camera_up   = registry::get_global_parameter_vec3("__camera_up" , vec3_expand(0));
+    let camera_dir  = registry::get_global_parameter_vec3("__camera_dir", make_vec3(0,0,1));
+    let camera_up   = registry::get_global_parameter_vec3("__camera_up" , make_vec3(0,1,0));
     let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100, true);
 
     let glareSettings = GlareSettings{
@@ -78,7 +79,14 @@ std::optional<GlareEvaluator::Result> GlareEvaluator::run()
     } else {
         if (mDataIsOnHost && mRuntime->target().isGPU()) {
             const auto acc = mRuntime->requestBufferForDevice("__glare_framebuffer_host", mDataWidth * mDataHeight * 3 * sizeof(float));
-            mRuntime->copyBufferFromHost("__glare_framebuffer_host", (const void*)mData, acc.SizeInBytes);
+            if (acc.Data == nullptr) {
+                IG_LOG(L_ERROR) << "Could not allocate temporary data on device for glare evaluation" << std::endl;
+                return {};
+            }
+            if (!mRuntime->copyBufferFromHost("__glare_framebuffer_host", (const void*)mData, acc.SizeInBytes)) {
+                IG_LOG(L_ERROR) << "Could not copy data to device for glare evaluation" << std::endl;
+                return {};
+            }
             mPass->setUserData((void*)acc.Data);
         } else {
             mPass->setUserData((void*)mData);
