@@ -6,7 +6,7 @@
 #include "serialization/Serializer.h"
 
 namespace IG {
-SkyModel::SkyModel(const RGB& ground_albedo, const ElevationAzimuth& sunEA, float turbidity, size_t resAzimuth, size_t resElevation)
+SkyModel::SkyModel(const Color& ground_albedo, const ElevationAzimuth& sunEA, float turbidity, size_t resAzimuth, size_t resElevation)
     : mAzimuthCount(resAzimuth)
     , mElevationCount(resElevation)
 {
@@ -58,9 +58,9 @@ bool SkyModel::save(const Path& path) const
     return Image::save(path, mData.data(), mAzimuthCount, mElevationCount, 4, true);
 }
 
-RGB SkyModel::computeTotal() const
+Color SkyModel::computeTotal() const
 {
-    RGB rgb = RGB(0);
+    Color rgb = Color(0);
     for (size_t i = 0; i < mElevationCount * mAzimuthCount; ++i) {
         rgb.r += mData[i * 4 + 0];
         rgb.g += mData[i * 4 + 1];

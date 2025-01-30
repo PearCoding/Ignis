@@ -63,7 +63,7 @@ struct ImageMetaData {
 /// RGB will be expanded to RGBA for access performance
 struct IG_LIB Image {
     std::unique_ptr<float[]> pixels;
-    size_t width, height, channels;
+    size_t width = 0, height = 0, channels = 0;
 
     [[nodiscard]] inline bool isValid() const { return pixels != nullptr; }
     [[nodiscard]] inline bool isMono() const { return channels == 1; }
@@ -80,6 +80,12 @@ struct IG_LIB Image {
     void flipY();
 
     [[nodiscard]] Vector4f computeAverage() const;
+
+    /// Cast image to mono (channels=0), rgb (channels=3) or rgba (channels=4). Will always create a copy even if the channel count is the same. Uses luminance for mono and extends alpha channel with a=1
+    [[nodiscard]] Image castTo(size_t newChannels) const;
+
+    /// Clones the image
+    [[nodiscard]] Image clone() const;
 
     enum class FilterMethod {
         Nearest,

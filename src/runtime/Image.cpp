@@ -1,4 +1,5 @@
 #include "Image.h"
+#include "Color.h"
 #include "Logger.h"
 #include "StringUtils.h"
 
@@ -1043,4 +1044,125 @@ bool Image::save(const Path& path, size_t width, size_t height,
     return true;
 }
 
+Image Image::clone() const
+{
+    Image img;
+    img.width    = width;
+    img.height   = height;
+    img.channels = channels;
+
+    if (!pixels)
+        return img;
+
+    img.pixels.reset(new float[img.width * img.height * img.channels]);
+    std::memcpy(img.pixels.get(), pixels.get(), img.width * img.height * img.channels * sizeof(float));
+
+    return img;
+}
+
+Image Image::castTo(size_t newChannels) const
+{
+    if (newChannels == channels)
+        return this->clone();
+
+    if (!isValid())
+        return Image();
+    if (newChannels != 1 && newChannels != 3 && newChannels != 4)
+        return Image();
+
+    Image img;
+    img.width    = width;
+    img.height   = height;
+    img.channels = newChannels;
+
+    if (newChannels == 1) {
+        img.pixels.reset(new float[img.width * img.height * img.channels]);
+
+        if (channels == 3) {
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        const float lum       = Color(pixels[i * 3 + 0], pixels[i * 3 + 1], pixels[i * 3 + 2]).luminance();
+                        img.pixels[i * 1 + 0] = lum;
+                    }
+                });
+            return img;
+        } else if (channels == 4) {
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        const float lum       = Color(pixels[i * 4 + 0], pixels[i * 4 + 1], pixels[i * 4 + 2]).luminance();
+                        img.pixels[i * 1 + 0] = lum;
+                    }
+                });
+            return img;
+        } else {
+            return Image();
+        }
+    } else if (newChannels == 3) {
+        img.pixels.reset(new float[img.width * img.height * img.channels]);
+
+        if (channels == 1) {
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        const float lum       = pixels[i * 1 + 0];
+                        img.pixels[i * 3 + 0] = lum;
+                        img.pixels[i * 3 + 1] = lum;
+                        img.pixels[i * 3 + 2] = lum;
+                    }
+                });
+            return img;
+        } else if (channels == 4) {
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        img.pixels[i * 3 + 0] = pixels[i * 4 + 0];
+                        img.pixels[i * 3 + 1] = pixels[i * 4 + 1];
+                        img.pixels[i * 3 + 2] = pixels[i * 4 + 2];
+                    }
+                });
+            return img;
+        } else {
+            return Image();
+        }
+    } else if (newChannels == 4) {
+        img.pixels.reset(new float[img.width * img.height * img.channels]);
+
+        if (channels == 1) {
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        const float lum       = pixels[i * 1 + 0];
+                        img.pixels[i * 4 + 0] = lum;
+                        img.pixels[i * 4 + 1] = lum;
+                        img.pixels[i * 4 + 2] = lum;
+                        img.pixels[i * 4 + 3] = 1;
+                    }
+                });
+            return img;
+        } else if (channels == 3) {
+            tbb::parallel_for(
+                tbb::blocked_range<size_t>(0, img.width * img.height),
+                [&](tbb::blocked_range<size_t> r) {
+                    for (size_t i = r.begin(); i < r.end(); ++i) {
+                        img.pixels[i * 4 + 0] = pixels[i * 3 + 0];
+                        img.pixels[i * 4 + 1] = pixels[i * 3 + 1];
+                        img.pixels[i * 4 + 2] = pixels[i * 3 + 2];
+                        img.pixels[i * 4 + 3] = 1;
+                    }
+                });
+            return img;
+        } else {
+            return Image();
+        }
+    } else {
+        return Image();
+    }
+}
 } // namespace IG

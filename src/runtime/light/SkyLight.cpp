@@ -16,7 +16,7 @@ SkyLight::SkyLight(const std::string& name, const std::shared_ptr<SceneObject>& 
     auto ground    = light->property("ground").getVector3(Vector3f(0.8f, 0.8f, 0.8f));
     auto turbidity = light->property("turbidity").getNumber(3.0f);
 
-    SkyModel model(RGB(ground), ea, turbidity);
+    SkyModel model(Color(ground), ea, turbidity);
     mTotalFlux = model.computeTotal().average();
 }
 
@@ -40,7 +40,7 @@ static Path setup_sky(LoaderContext& ctx, const std::string& name, const std::sh
     const auto ea  = LoaderUtils::getEA(*light);
 
     const Path path = ctx.CacheManager->directory() / ("skytex_" + LoaderUtils::escapeIdentifier(name) + ".exr");
-    SkyModel model(RGB(ground), ea, turbidity);
+    SkyModel model(Color(ground), ea, turbidity);
     model.save(path);
 
     ctx.Cache->ExportedData[exported_id] = path;

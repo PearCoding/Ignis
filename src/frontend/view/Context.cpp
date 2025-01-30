@@ -580,7 +580,7 @@ public:
         SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
     }
 
-    [[nodiscard]] inline RGB getFilmData(size_t width, size_t height, uint32_t x, uint32_t y)
+    [[nodiscard]] inline Color getFilmData(size_t width, size_t height, uint32_t x, uint32_t y)
     {
         IG_UNUSED(height);
 
@@ -589,11 +589,11 @@ public:
         const float inv_iter = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 0.0f;
         const size_t ind     = y * width + x;
 
-        return RGB{
+        return Color(
             film[ind * 3 + 0] * inv_iter,
             film[ind * 3 + 1] * inv_iter,
             film[ind * 3 + 2] * inv_iter
-        };
+        );
     }
 
     void makeScreenshot()
@@ -691,7 +691,7 @@ public:
             if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
                 int mouse_x, mouse_y;
                 SDL_GetMouseState(&mouse_x, &mouse_y);
-                RGB rgb{ 0, 0, 0 };
+                Color rgb;
                 if (mouse_x >= 0 && mouse_x < (int)Width && mouse_y >= 0 && mouse_y < (int)Height)
                     rgb = getFilmData(Width, Height, (uint32)mouse_x, (uint32)mouse_y);
 
