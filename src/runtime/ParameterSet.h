@@ -75,7 +75,7 @@ struct IG_LIB ParameterSet {
             return def;
     }
 
-    inline std::string getString(const std::string& key, const std::string& def) const
+    inline const std::string& getString(const std::string& key, const std::string& def) const
     {
         if (const auto it = StringParameters.find(key); it != StringParameters.end())
             return it->second;
