@@ -70,6 +70,8 @@ UtilOptions::UtilOptions(int argc, char** argv, const std::string& desc)
     convert->add_option("--offset", ToneMapOffset, "Set tonemap offset for output image");
     convert->add_option("--jpg-quality", JPGQuality, "Quality between [0, 100] for jpg output");
 
+    convert->add_option("--layer", LayerName, "Set layer to load if it is an EXR image file");
+
 #ifdef IG_WITH_CONVERTER_MITSUBA
     convert->add_option("--mts-lookup", MtsLookupDirs, "Directory to add for lookup during mitsuba scene file parsing");
     convert->add_option("--mts-define", MtsDefs, "Definitions to use during mitsuba scene file parsing");

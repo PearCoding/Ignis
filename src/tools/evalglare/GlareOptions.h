@@ -36,6 +36,7 @@ public:
     size_t ShaderCompileThreads    = 0;
 
     Path Input;
+    std::string LayerName;
 
     Path ScriptDir;
 

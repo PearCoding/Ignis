@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     }
 
     ImageMetaData metaData;
-    Image image = Image::load(cmd.Input, &metaData);
+    Image image = Image::load(cmd.Input, &metaData, !cmd.LayerName.empty() ? &cmd.LayerName : nullptr);
     if (!image.isValid()) {
         IG_LOG(L_ERROR) << "Given input image is invalid" << std::endl;
         return EXIT_FAILURE;
@@ -65,13 +65,16 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    if (result->VerticalIlluminance < 100)
+        IG_LOG(L_WARNING) << "Vertical illuminance below 300 lux. DGP might be underestimated" << std::endl;
+
     if (result->SourceOmega <= 0)
         IG_LOG(L_WARNING) << "No glare source detected. Metrics might be invalid" << std::endl;
     else if (result->SourceLuminance <= 0)
         IG_LOG(L_WARNING) << "Source luminance is 0. Metrics might be invalid" << std::endl;
 
     constexpr int SW  = 8;
-    constexpr int P   = 2;
+    constexpr int P   = 3;
     constexpr int SW2 = 12;
     constexpr int P2  = 4;
     std::cout << "DGP:    " << std::setw(SW) << std::fixed << std::setprecision(P) << result->DGP << std::endl

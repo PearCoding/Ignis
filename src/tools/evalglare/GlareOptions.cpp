@@ -52,6 +52,8 @@ GlareOptions::GlareOptions(int argc, char** argv)
     app.add_option("-b,--multiplier", Multiplier, "Glare source multiplier used to detect glare sources")->default_val(Multiplier);
     app.add_option("--vertical-illuminance", VerticalIlluminance, "Override the automatically computed vertical illuminance used for metric computations");
 
+    app.add_option("--layer", LayerName, "Set layer to load if it is an EXR image file");
+
     app.add_flag("--cpu", useCPU, "Use CPU as target only");
     app.add_flag("--gpu", useGPU, "Use GPU as target only");
     app.add_option("--gpu-arch", gpu_arch, "Explicitly set GPU architecture to use. Will not check if available or not")->check(CLI::IsMember(IG::Target::getAvailableGPUArchitectureNames(), CLI::ignore_case));

@@ -498,7 +498,15 @@ EXRAttribute makeFloatAttribute(const std::string_view& name, float data)
     return attr;
 }
 
-Image Image::load(const Path& path, ImageMetaData* metaData)
+static inline std::string extractChannelName(const std::string& name)
+{
+    if (const auto pos = name.find_last_of('.'); pos != std::string::npos)
+        return name.substr(0, pos);
+    else
+        return name;
+}
+
+Image Image::load(const Path& path, ImageMetaData* metaData, const std::string* optionalLayerName)
 {
     std::string ext   = path.extension().generic_string();
     const bool useExr = string_ends_with(ext, ".exr");
@@ -599,21 +607,46 @@ Image Image::load(const Path& path, ImageMetaData* metaData)
         int idxY = -1;
 
         int channels = 0;
+        std::unordered_set<std::string> channel_names; // Only populated if metaData != nullptr
         for (int c = 0; c < exr_header.num_channels; ++c) {
             const std::string name = to_lowercase(std::string(exr_header.channels[c].name));
 
-            if (name == "a" || name == "default.a")
-                idxA = c;
-            else if (name == "r" || name == "default.r")
-                idxR = c;
-            else if (name == "g" || name == "default.g")
-                idxG = c;
-            else if (name == "b" || name == "default.b")
-                idxB = c;
-            else if (name == "y" || name == "default.y")
-                idxY = c;
+            if (optionalLayerName) {
+                if (name == (*optionalLayerName + ".a"))
+                    idxA = c;
+                else if (name == (*optionalLayerName + ".r"))
+                    idxR = c;
+                else if (name == (*optionalLayerName + ".g"))
+                    idxG = c;
+                else if (name == (*optionalLayerName + ".b"))
+                    idxB = c;
+                else if (name == (*optionalLayerName + ".y"))
+                    idxY = c;
+                else if (name == *optionalLayerName)
+                    idxY = c;
+            } else {
+                if (name == "a" || name == "default.a")
+                    idxA = c;
+                else if (name == "r" || name == "default.r")
+                    idxR = c;
+                else if (name == "g" || name == "default.g")
+                    idxG = c;
+                else if (name == "b" || name == "default.b")
+                    idxB = c;
+                else if (name == "y" || name == "default.y")
+                    idxY = c;
+            }
+
+            if (metaData) {
+                const std::string extractedName = extractChannelName(name);
+                if (extractedName != "a" && extractedName != "r" && extractedName != "g" && extractedName != "b" && extractedName != "y")
+                    channel_names.emplace(extractedName);
+            }
             ++channels;
         }
+
+        if (metaData)
+            metaData->AdditionalLayerNames.insert(metaData->AdditionalLayerNames.end(), channel_names.begin(), channel_names.end());
 
         // TODO: Tiled
         if (channels == 1) {

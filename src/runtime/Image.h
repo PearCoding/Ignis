@@ -56,6 +56,8 @@ struct ImageMetaData {
     std::unordered_map<std::string, size_t> CustomIntegers;
     std::unordered_map<std::string, Vector2f> CustomVec2s;
     std::unordered_map<std::string, Vector3f> CustomVec3s;
+
+    std::vector<std::string> AdditionalLayerNames;
 };
 
 /// Linear image with pixels in format Channels x Width x Height
@@ -110,8 +112,8 @@ struct IG_LIB Image {
     [[nodiscard]] static bool isPacked(const Path& path);
 
     /// Loads an image in linear RGBA
-    /// Supports EXR, HDR, PNG, JPEG and many other formats supported by the stbi library. In case of EXR only the color layer will be loaded.
-    [[nodiscard]] static Image load(const Path& path, ImageMetaData* metaData = nullptr);
+    /// Supports EXR, HDR, PNG, JPEG and many other formats supported by the stbi library. In case of EXR `optionalLayerName` will be considered as a layer if defined and exists, else the color layer will be loaded.
+    [[nodiscard]] static Image load(const Path& path, ImageMetaData* metaData = nullptr, const std::string* optionalLayerName = nullptr);
 
     /// Loads image and directly uploads to buffer in packed format
     /// Supports PNG, JPEG and many other formats supported by the stbi library

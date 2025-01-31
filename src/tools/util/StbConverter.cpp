@@ -95,10 +95,10 @@ static std::string genCommandLine(const ImageMetaData& metaData)
     }
 }
 
-bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, float exposure, float offset, int jpg_quality)
+bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, float exposure, float offset, int jpg_quality, const std::string* optionalInputLayerName)
 {
     // Input
-    Image image = Image::load(input);
+    Image image = Image::load(input, nullptr, optionalInputLayerName);
     if (!image.isValid())
         return false;
 
@@ -138,11 +138,11 @@ bool convert_stb(const Path& input, const Path& output, ConvertToStdImage type, 
     return ret > 0;
 }
 
-bool convert_hdr(const Path& input, const Path& output, float exposure, float offset)
+bool convert_hdr(const Path& input, const Path& output, float exposure, float offset, const std::string* optionalInputLayerName)
 {
     // Input
     ImageMetaData metaData;
-    Image image = Image::load(input, &metaData);
+    Image image = Image::load(input, &metaData, optionalInputLayerName);
     if (!image.isValid())
         return false;
 

@@ -49,6 +49,14 @@ bool dump_metadata(const Path& input)
     for (const auto& attrib : metaData.CustomVec3s)
         std::cout << attrib.first << ": " << FormatVector(attrib.second) << std::endl;
 
+    if (!metaData.AdditionalLayerNames.empty()) {
+        std::cout << std::endl;
+        std::cout << "Extra layers: [" << metaData.AdditionalLayerNames.front();
+        for (size_t i = 1; i < metaData.AdditionalLayerNames.size(); ++i)
+            std::cout << ", " << metaData.AdditionalLayerNames.at(i);
+        std::cout << "]" << std::endl;
+    }
+
     return true;
 }
 } // namespace IG

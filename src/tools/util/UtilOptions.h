@@ -43,6 +43,8 @@ public:
 
     int JPGQuality = 90;
 
+    std::string LayerName;
+
     std::vector<Path> MtsLookupDirs;
     std::unordered_map<std::string, std::string> MtsDefs;
 };

@@ -15,6 +15,7 @@ int main(int argc, char** argv)
     if (cmd.ShouldExit)
         return EXIT_SUCCESS;
 
+    const std::string* layerNamePtr = !cmd.LayerName.empty() ? &cmd.LayerName : nullptr;
     try {
         switch (cmd.Op) {
         case Operation::Info:
@@ -23,23 +24,23 @@ int main(int argc, char** argv)
         case Operation::Convert: {
             switch (cmd.ConvertFormat) {
             case ConvertOption::BMP:
-                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::BMP, cmd.ToneMapExposure, cmd.ToneMapOffset);
+                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::BMP, cmd.ToneMapExposure, cmd.ToneMapOffset, 0, layerNamePtr);
                 break;
             case ConvertOption::JPG:
-                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::JPG, cmd.ToneMapExposure, cmd.ToneMapOffset, cmd.JPGQuality);
+                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::JPG, cmd.ToneMapExposure, cmd.ToneMapOffset, cmd.JPGQuality, layerNamePtr);
                 break;
             case ConvertOption::PNG:
-                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::PNG, cmd.ToneMapExposure, cmd.ToneMapOffset);
+                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::PNG, cmd.ToneMapExposure, cmd.ToneMapOffset, 0, layerNamePtr);
                 break;
             case ConvertOption::TGA:
-                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::TGA, cmd.ToneMapExposure, cmd.ToneMapOffset);
+                convert_stb(cmd.InputFile, cmd.OutputFile, ConvertToStdImage::TGA, cmd.ToneMapExposure, cmd.ToneMapOffset, 0, layerNamePtr);
                 break;
 
             case ConvertOption::HDR:
-                convert_hdr(cmd.InputFile, cmd.OutputFile, cmd.ToneMapExposure, cmd.ToneMapOffset);
+                convert_hdr(cmd.InputFile, cmd.OutputFile, cmd.ToneMapExposure, cmd.ToneMapOffset, layerNamePtr);
                 break;
             case ConvertOption::EXR:
-                convert_exr(cmd.InputFile, cmd.OutputFile, cmd.ToneMapExposure, cmd.ToneMapOffset);
+                convert_exr(cmd.InputFile, cmd.OutputFile, cmd.ToneMapExposure, cmd.ToneMapOffset, layerNamePtr);
                 break;
 
             case ConvertOption::OBJ:

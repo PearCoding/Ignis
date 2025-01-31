@@ -2,10 +2,11 @@
 #include "ImageUtils.h"
 
 namespace IG {
-bool convert_exr(const Path& input, const Path& output, float exposure, float offset)
+bool convert_exr(const Path& input, const Path& output, float exposure, float offset, const std::string* optionalInputLayerName)
 {
     // Input
-    Image image = Image::load(input);
+    ImageMetaData metaData;
+    Image image = Image::load(input, &metaData, optionalInputLayerName);
     if (!image.isValid())
         return false;
 
@@ -16,6 +17,6 @@ bool convert_exr(const Path& input, const Path& output, float exposure, float of
     image.flipY();
 
     // Output
-    return image.save(output);
+    return image.save(output, &metaData);
 }
 } // namespace IG
