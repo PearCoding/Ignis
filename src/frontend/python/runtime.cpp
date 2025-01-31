@@ -475,8 +475,8 @@ void runtime_module(nb::module_& m)
         .def(
             "createEmpty", [](const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<EmptyRuntimeWrap>(opts); },
             "Generate a runtime without loading a scene")
-        .def("saveImage", [](const Path& path, nb::ndarray<const float, nb::ndim<3>, nb::c_contig, nb::device::cpu> b) { return saveImage(path, b.data(), b.shape(1), b.shape(0), b.shape(2)); }, "Save an image to the filesystem", "path"_a, "array"_a)
-        .def("saveImage", [](const Path& path, nb::ndarray<const float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) { return saveImage(path, b.data(), b.shape(1), b.shape(0), 1); }, "Save an grayscale image to the filesystem", "path"_a, "array"_a)
+        .def("saveImage", [](const Path& path, nb::ndarray<const float, nb::ndim<3>, nb::c_contig, nb::device::cpu> b) { return saveImage(path, b.data(), b.shape(1), b.shape(0), b.shape(2)); }, "Save image to the filesystem", "path"_a, "array"_a)
+        .def("saveImage", [](const Path& path, nb::ndarray<const float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) { return saveImage(path, b.data(), b.shape(1), b.shape(0), 1); }, "Save grayscale image to the filesystem", "path"_a, "array"_a)
         .def("loadImage", [](const Path& path, const std::string& layer) {
                 Image image = Image::load(path, nullptr, !layer.empty() ? &layer : nullptr);
                 if (!image.isValid())
