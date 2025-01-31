@@ -194,6 +194,14 @@ protected:
     }
 };
 
+static bool saveImage(const Path& path, const float* data, size_t width, size_t height, size_t channels)
+{
+    if (width == 0 || height == 0 || (channels != 1 && channels != 3 && channels != 4))
+        throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");
+
+    return Image::save(path, data, width, height, channels);
+}
+
 void runtime_module(nb::module_& m)
 {
     // Logger IO stuff
@@ -329,19 +337,16 @@ void runtime_module(nb::module_& m)
         .def("step", &Runtime::step, "ignoreDenoiser"_a = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
-            size_t shape[] = { rays.size(), 3ul };
-            return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, 2, shape, nb::handle());
+            return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, { rays.size(), 3ul }, nb::handle());
         })
         .def("reset", &Runtime::reset, "Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset")
         .def("getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
-                size_t shape[]      = { height, width, 3ul };
-                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, 3, shape, nb::handle()); }, "aov"_a = "")
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, { height, width, 3ul }, nb::handle()); }, "aov"_a = "")
         .def("getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
-                size_t shape[]      = { height, width, 3ul };
 
                 const Target target = r.target();
 
@@ -363,7 +368,7 @@ void runtime_module(nb::module_& m)
                     }
                 }
 
-                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, 3, shape, nb::handle(), nullptr, nb::dtype<float>(), deviceType, deviceId); }, "aov"_a = "")
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, { height, width, 3ul }, nb::handle(), {}, nb::dtype<float>(), deviceType, deviceId); }, "aov"_a = "")
         .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::ndim<2>, nb::c_contig, nb::device::cpu> output) {
             if(!output.is_valid())
                 throw nb::buffer_error("Invalid input buffer");
@@ -470,23 +475,12 @@ void runtime_module(nb::module_& m)
         .def(
             "createEmpty", [](const RuntimeOptions& opts) { return (std::unique_ptr<IRuntimeWrap>)std::make_unique<EmptyRuntimeWrap>(opts); },
             "Generate a runtime without loading a scene")
-        .def(
-            "saveExr", [](const Path& path, nb::ndarray<const float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu> b) {
-                size_t width  = b.shape(1);
-                size_t height = b.shape(0);
+        .def("saveImage", [](const Path& path, nb::ndarray<const float, nb::ndim<3>, nb::c_contig, nb::device::cpu> b) { return saveImage(path, b.data(), b.shape(1), b.shape(0), b.shape(2)); }, "Save an image to the filesystem", "path"_a, "array"_a)
+        .def("saveImage", [](const Path& path, nb::ndarray<const float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) { return saveImage(path, b.data(), b.shape(1), b.shape(0), 1); }, "Save an grayscale image to the filesystem", "path"_a, "array"_a)
+        .def("loadImage", [](const Path& path, const std::string& layer) {
+                Image image = Image::load(path, nullptr, !layer.empty() ? &layer : nullptr);
+                if (!image.isValid())
+                    throw std::runtime_error("Errror while loading image");
 
-                if (width == 0 || height == 0 || b.shape(2) != 3)
-                    throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");
-
-                return Image::save(path, (const float*)b.data(), width, height, 3);
-            },
-            "Save an OpenEXR image to the filesystem")
-        .def("saveExr", [](const Path& path, nb::ndarray<const float, nb::ndim<2>, nb::c_contig, nb::device::cpu> b) {
-                size_t width  = b.shape(1);
-                size_t height = b.shape(0);
-
-                if (width == 0 || height == 0)
-                    throw nb::buffer_error("Incompatible buffer: Expected valid buffer dimensions");
-
-                return Image::save(path, (const float*)b.data(), width, height, 1); }, "Save an OpenEXR grayscale image to the filesystem");
+                return nb::ndarray<nb::numpy, float, nb::ndim<3>>(image.pixels.get(), {image.height, image.width, image.channels}, nb::handle(), {}, nb::dtype<float>(), nb::device::cpu::value, 0, 'C').cast(); }, "Load image from the filesystem", "path"_a, "layer"_a = "");
 }
