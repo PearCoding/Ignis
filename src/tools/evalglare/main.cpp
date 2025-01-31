@@ -36,6 +36,10 @@ int main(int argc, char** argv)
     if (image.channels != 3)
         image = image.castTo(3);
 
+    const std::string cameraType = metaData.CameraType.value_or("fishlens"); // Assume it is correct if not provided
+    if (cameraType != "fishlens" && cameraType != "fisheye")
+        IG_LOG(L_WARNING) << "Image was not rendered with fishlens. Computation might be wrong." << std::endl;
+
     std::unique_ptr<Runtime> runtime;
     std::shared_ptr<GlareEvaluator> glare;
     try {
@@ -45,14 +49,6 @@ int main(int argc, char** argv)
         IG_LOG(L_ERROR) << e.what() << std::endl;
         return EXIT_FAILURE;
     }
-
-    const std::optional<Vector3f> dir = cmd.Dir.has_value() ? cmd.DirVector() : metaData.CameraDir;
-    const std::optional<Vector3f> up  = cmd.Up.has_value() ? cmd.UpVector() : metaData.CameraUp;
-
-    if (dir.has_value())
-        runtime->setParameter("__camera_dir", *dir);
-    if (up.has_value())
-        runtime->setParameter("__camera_up", *up);
 
     glare->setUserData(image.pixels.get(), image.width, image.height, true);
     glare->setMultiplier(cmd.Multiplier);

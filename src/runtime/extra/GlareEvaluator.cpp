@@ -22,12 +22,12 @@ GlareEvaluator::~GlareEvaluator()
 }
 
 static const char* HandlerSrc = R"(
-    let u_width = registry::get_local_parameter_i32("__glare_framebuffer_width", 0);
+    let u_width  = registry::get_local_parameter_i32("__glare_framebuffer_width",  0);
     let u_height = registry::get_local_parameter_i32("__glare_framebuffer_height", 0);
 
     let use_custom = u_width > 0 && u_height > 0;
 
-    let width  = if !use_custom { settings.width } else { u_width };
+    let width  = if !use_custom { settings.width }  else { u_width };
     let height = if !use_custom { settings.height } else { u_height };
 
     let input = if use_custom {
@@ -39,9 +39,10 @@ static const char* HandlerSrc = R"(
 
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
 
-    let camera_eye  = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
-    let camera_dir  = registry::get_global_parameter_vec3("__camera_dir", make_vec3(0,0,1));
-    let camera_up   = registry::get_global_parameter_vec3("__camera_up" , make_vec3(0,1,0));
+    // The glare computation is invariant of the camera frame. It works on the image-plane. We only need the camera to compute solid angles by "brute force".
+    let camera_eye  = vec3_expand(0);
+    let camera_dir  = make_vec3(0,0,1);
+    let camera_up   = make_vec3(0,1,0);
     let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100, true);
 
     let glareSettings = GlareSettings{

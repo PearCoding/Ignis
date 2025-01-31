@@ -49,9 +49,6 @@ GlareOptions::GlareOptions(int argc, char** argv)
 
     app.add_flag("--no-color", NoColor, "Do not use decorations to make console output better");
 
-    app.add_option("--dir", Dir, "Set the direction vector of the camera");
-    app.add_option("--up", Up, "Set the up vector of the camera");
-
     app.add_option("-b,--multiplier", Multiplier, "Glare source multiplier used to detect glare sources")->default_val(Multiplier);
     app.add_option("--vertical-illuminance", VerticalIlluminance, "Override the automatically computed vertical illuminance used for metric computations");
 

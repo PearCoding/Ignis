@@ -25,20 +25,8 @@ public:
     bool NoColor    = false;
     bool NoProgress = false;
 
-    std::optional<std::array<float, 3>> Eye;
-    std::optional<std::array<float, 3>> Dir;
-    std::optional<std::array<float, 3>> Up;
-
     float Multiplier = 5;
     std::optional<float> VerticalIlluminance;
-
-    inline std::optional<Vector3f> ToVector(const std::optional<std::array<float, 3>>& arr) const
-    {
-        return arr.has_value() ? std::optional<Vector3f>{ Vector3f(arr.value()[0], arr.value()[1], arr.value()[2]) } : std::optional<Vector3f>{};
-    }
-
-    inline std::optional<Vector3f> DirVector() const { return ToVector(Dir); }
-    inline std::optional<Vector3f> UpVector() const { return ToVector(Up); }
 
     IG::Target Target;
     bool NoCache = false;
