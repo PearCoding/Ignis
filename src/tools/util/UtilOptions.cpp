@@ -41,7 +41,7 @@ UtilOptions::UtilOptions(int argc, char** argv, const std::string& desc)
     argv = app.ensure_utf8(argv);
 
     app.positionals_at_end(false);
-    app.set_version_flag("--version", Build::getBuildString());
+    app.set_version_flag("--version", Build::getCopyrightString() + "\n" + Build::getBuildString());
     app.set_help_flag("-h,--help", "Shows help message and exit");
 
     app.add_flag("-q,--quiet", Quiet, "Do not print messages into console");
@@ -51,7 +51,6 @@ UtilOptions::UtilOptions(int argc, char** argv, const std::string& desc)
     app.add_option("--log-level", VerbosityLevel, "Set the verbosity level")->transform(EnumValidator(LogLevelMap, CLI::ignore_case));
 
     app.add_flag("--no-color", NoColor, "Do not use decorations to make console output better");
-    app.add_flag("--no-logo", NoLogo, "Do not use show copyright");
 
     app.require_subcommand(1);
 

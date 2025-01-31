@@ -31,7 +31,6 @@ public:
     bool Quiet              = false;
     LogLevel VerbosityLevel = L_INFO;
     bool NoColor            = false;
-    bool NoLogo             = false;
 
     Path InputFile;
     Path OutputFile;

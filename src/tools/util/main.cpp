@@ -15,9 +15,6 @@ int main(int argc, char** argv)
     if (cmd.ShouldExit)
         return EXIT_SUCCESS;
 
-    if (!cmd.Quiet && !cmd.NoLogo)
-        std::cout << Build::getCopyrightString() << std::endl;
-
     try {
         switch (cmd.Op) {
         case Operation::Info:
