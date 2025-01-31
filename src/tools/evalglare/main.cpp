@@ -70,22 +70,25 @@ int main(int argc, char** argv)
     else if (result->SourceLuminance <= 0)
         IG_LOG(L_WARNING) << "Source luminance is 0. Metrics might be invalid" << std::endl;
 
-    constexpr int SW = 8;
-    std::cout << "DGP:    " << std::setw(SW) << result->DGP << std::endl
-              << "DGI:    " << std::setw(SW) << result->DGI << std::endl
-              << "DGImod: " << std::setw(SW) << result->DGImod << std::endl
-              << "DGR:    " << std::setw(SW) << result->DGR << std::endl
-              << "VCP:    " << std::setw(SW) << result->VCP << std::endl
-              << "UGR:    " << std::setw(SW) << result->UGR << std::endl
-              << "UGRexp: " << std::setw(SW) << result->UGRexp << std::endl
-              << "UGP:    " << std::setw(SW) << result->UGP << std::endl
+    constexpr int SW  = 8;
+    constexpr int P   = 2;
+    constexpr int SW2 = 12;
+    constexpr int P2  = 4;
+    std::cout << "DGP:    " << std::setw(SW) << std::fixed << std::setprecision(P) << result->DGP << std::endl
+              << "DGI:    " << std::setw(SW) << std::fixed << std::setprecision(P) << result->DGI << std::endl
+              << "DGImod: " << std::setw(SW) << std::fixed << std::setprecision(P) << result->DGImod << std::endl
+              << "DGR:    " << std::setw(SW) << std::fixed << std::setprecision(P) << result->DGR << std::endl
+              << "VCP:    " << std::setw(SW) << std::fixed << std::setprecision(P) << result->VCP << std::endl
+              << "UGR:    " << std::setw(SW) << std::fixed << std::setprecision(P) << result->UGR << std::endl
+              << "UGRexp: " << std::setw(SW) << std::fixed << std::setprecision(P) << result->UGRexp << std::endl
+              << "UGP:    " << std::setw(SW) << std::fixed << std::setprecision(P) << result->UGP << std::endl
               << std::endl
-              << "eV: " << std::setw(SW) << result->VerticalIlluminance << std::endl
-              << "SL: " << std::setw(SW) << result->SourceLuminance << std::endl
-              << "BL: " << std::setw(SW) << result->BackgroundLuminance << std::endl
-              << "TL: " << std::setw(SW) << result->TotalLuminance << std::endl
-              << "SO: " << std::setw(SW) << result->SourceOmega << std::endl
-              << "TO: " << std::setw(SW) << result->TotalOmega << std::endl;
+              << "eV: " << std::setw(SW2) << std::fixed << std::setprecision(P2) << result->VerticalIlluminance << std::endl
+              << "SL: " << std::setw(SW2) << std::fixed << std::setprecision(P2) << result->SourceLuminance << std::endl
+              << "BL: " << std::setw(SW2) << std::fixed << std::setprecision(P2) << result->BackgroundLuminance << std::endl
+              << "TL: " << std::setw(SW2) << std::fixed << std::setprecision(P2) << result->TotalLuminance << std::endl
+              << "SO: " << std::setw(SW2) << std::fixed << std::setprecision(P2) << result->SourceOmega << std::endl
+              << "TO: " << std::setw(SW2) << std::fixed << std::setprecision(P2) << result->TotalOmega << std::endl;
 
     return EXIT_SUCCESS;
 }
