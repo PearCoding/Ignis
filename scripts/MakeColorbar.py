@@ -2,7 +2,6 @@
 # Take absolute difference of two images and output a colormapped image
 
 import argparse
-import simpleimageio as sio
 from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib as mpl
