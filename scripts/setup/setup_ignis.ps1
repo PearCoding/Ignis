@@ -1,6 +1,6 @@
 $CURRENT = Get-Location
 
-$BUILD_DIR = $Config.IGNIS.BUILD_DIR
+$BUILD_DIR = $Config.IGNIS.BUILD_DIR.Replace("{BUILD_TYPE}", $Config.IGNIS.BUILD_TYPE)
 
 Set-Location $IGNIS_ROOT
 

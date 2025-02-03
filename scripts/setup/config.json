@@ -67,7 +67,7 @@
     },
     "IGNIS": {
         "ENABLED": true,
-        "BUILD_DIR": "build/Release",
+        "BUILD_DIR": "build/{BUILD_TYPE}",
         "BUILD_TYPE": "Release",
         "BUILD_INSTALLER": false
     }
