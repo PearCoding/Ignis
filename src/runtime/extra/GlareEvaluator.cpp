@@ -55,7 +55,7 @@ static const char* HandlerSrc = R"(
     let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100, true);
 
     let glareSettings = GlareSettings{
-        mul   = registry::get_local_parameter_f32("_glare_multiplier", 5),
+        multiplier           = registry::get_local_parameter_f32("_glare_multiplier", 5),
         vertical_illuminance = registry::get_local_parameter_f32("_glare_vertical_illuminance", -1)
     };
 

@@ -1,5 +1,5 @@
 struct GlareSettings {
-    mul:                  f32,
+    multiplier:           f32,
     vertical_illuminance: f32 // Set < 0 to compute it automatically
 }
 
@@ -133,7 +133,7 @@ fn @compute_glare(device: Device, camera: Camera, input: MonoAOVImage, source_lu
 
     let lum_avg    = reduce_info.total_lum / reduce_info.total_omega;
     let lum_max    = reduce_info.max_lum;
-    let lum_source = lum_avg * settings.mul;
+    let lum_source = lum_avg * settings.multiplier;
     let E_v        = if settings.vertical_illuminance < 0 { reduce_info.e_v } else { settings.vertical_illuminance };
 
     // Run pass to get info for glare source
@@ -260,7 +260,7 @@ fn @compute_glare(device: Device, camera: Camera, input: MonoAOVImage, source_lu
     // low-light correction
     let low_light_corr = if E_v < 1000 {
         let k = math_builtins::exp(0.024 * E_v - 4);
-        k/(1 + k)
+        k / (1 + k)
     } else { 
         1.0:f32
     };
