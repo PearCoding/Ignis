@@ -1,5 +1,5 @@
 #!/bin/python3
-# Converts (LMK) pcf (CIERGB E) files to linear exr (sRGB)
+# Converts (LMK) pcf (CIERGB E) files to linear exr (CIERGB E)
 
 import argparse
 import simpleimageio as sio
@@ -96,9 +96,9 @@ if __name__ == "__main__":
         data = data.reshape((height, width, 3)) # HxWxC
         data = np.flip(data, axis=2) # BGR -> RGB
 
-        data = ciergb_to_xyz(data)
+        # data = ciergb_to_xyz(data)
         # data = e_to_d65(data)
-        data = xyz_to_srgb(data)
+        # data = xyz_to_srgb(data)
         # data = d65_to_e(data)
 
         sio.write(str(output_path), data)
