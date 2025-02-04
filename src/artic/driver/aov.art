@@ -7,6 +7,13 @@ struct AOVImage {
     get:    fn (PixelCoord) -> Color
 }
 
+struct MonoAOVImage {
+    width:  i32,
+    height: i32,
+    splat:  fn (PixelCoord, f32) -> (),
+    get:    fn (PixelCoord) -> f32
+}
+
 // Contains all the aov images available
 type AOVTable = fn (i32) -> AOVImage;
 
@@ -15,6 +22,13 @@ fn @make_empty_aov_image(w: i32, h: i32) = AOVImage {
     height = h,
     splat  = @|_, _| -> () {},
     get    = @|_| -> Color { color_builtins::black }
+};
+
+fn @make_empty_mono_aov_image(w: i32, h: i32) = MonoAOVImage {
+    width  = w,
+    height = h,
+    splat  = @|_, _| -> () {},
+    get    = @|_| -> f32 { 0:f32 }
 };
 
 fn @make_atomic_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32, atomics: Atomics) -> AOVImage {
@@ -96,4 +110,25 @@ fn @make_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, heigh
     height = height,
     splat  = @|_, _| -> () { /* Nothing */ },
     get    = @|coord| vec3_to_color(shallow_buffer_load_vec3_unaligned(buffer, coord.linear * 3))
+};
+
+fn @make_mono_aov_image_from_buffer(buffer: DeviceBuffer, width: i32, height: i32) = MonoAOVImage {
+    width  = width,
+    height = height,
+    splat  = @|coord, value| -> () { buffer.store_f32(coord.linear, value); },
+    get    = @|coord| buffer.load_f32(coord.linear)
+};
+
+fn @make_mono_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, height: i32) = MonoAOVImage {
+    width  = width,
+    height = height,
+    splat  = @|_, _| -> () { /* Nothing */ },
+    get    = @|coord| buffer.load_f32(coord.linear)
+};
+
+fn @make_mono_from_rgb_aov(rgb: AOVImage, luminance: fn(Color)->f32) = MonoAOVImage {
+    width  = rgb.width,
+    height = rgb.height,
+    splat  = @|coord, value| -> () { rgb.splat(coord, make_gray_color(value)); },
+    get    = @|coord| luminance(rgb.get(coord))
 };
