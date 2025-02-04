@@ -36,12 +36,13 @@ public:
     inline void setVerticalIlluminance(float v) { mVerticalIlluminance = v; }
     [[nodiscard]] inline float verticalIlluminance() const { return mVerticalIlluminance; }
 
-    inline void setUserData(const float* data, size_t width, size_t height, bool dataIsOnHost = false)
+    inline void setUserData(const float* data, size_t width, size_t height, bool isSRGB, bool dataIsOnHost)
     {
         mDataIsOnHost = dataIsOnHost;
         mData         = data;
         mDataWidth    = width;
         mDataHeight   = height;
+        mIsSRGB       = isSRGB;
     }
 
 private:
@@ -57,5 +58,6 @@ private:
     const float* mData;
     size_t mDataWidth;
     size_t mDataHeight;
+    bool mIsSRGB;
 };
 } // namespace IG

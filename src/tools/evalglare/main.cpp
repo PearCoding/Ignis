@@ -50,7 +50,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    glare->setUserData(image.pixels.get(), image.width, image.height, true);
+    glare->setUserData(image.pixels.get(), image.width, image.height, true, true);
     glare->setMultiplier(cmd.Multiplier);
     if (cmd.VerticalIlluminance.has_value())
         glare->setVerticalIlluminance(*cmd.VerticalIlluminance);

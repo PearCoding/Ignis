@@ -390,11 +390,23 @@ void runtime_module(nb::module_& m)
             // TODO: Check stride?
             r.tonemap((uint32*)output.data(), settings); })
         // .def("createGlareEvaluator", &Runtime::createGlareEvaluator, nb::keep_alive<1, 0>())
-        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1, 3>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
+        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
             if(!data.is_valid())
                 throw nb::buffer_error("Invalid input buffer");
             GlareEvaluator eval(&r);
-            eval.setUserData(data.data(), data.shape(1), data.shape(0), data.device_type() == nb::device::cpu::value);
+            eval.setUserData(data.data(), data.shape(1), data.shape(0), false, data.device_type() == nb::device::cpu::value);
+            if (multiplier.has_value())
+                eval.setMultiplier(multiplier.value());
+            if (verticalIlluminace.has_value())
+                eval.setVerticalIlluminance(verticalIlluminace.value());
+            return eval.run(); }, "data"_a, "multiplier"_a.none() = std::nullopt, "verticalIlluminance"_a.none() = std::nullopt)
+        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1, -1>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
+            if(!data.is_valid())
+                throw nb::buffer_error("Invalid input buffer");
+            if(data.shape(2) != 1 && data.shape(2) != 3)
+                throw nb::buffer_error("Expected a mono or rgb buffer");
+            GlareEvaluator eval(&r);
+            eval.setUserData(data.data(), data.shape(1), data.shape(0), data.shape(2) == 3, data.device_type() == nb::device::cpu::value);
             if (multiplier.has_value())
                 eval.setMultiplier(multiplier.value());
             if (verticalIlluminace.has_value())

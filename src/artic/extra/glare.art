@@ -1,6 +1,5 @@
 struct GlareSettings {
     mul:                  f32,
-    scale:                f32,
     vertical_illuminance: f32 // Set < 0 to compute it automatically
 }
 
@@ -20,7 +19,7 @@ struct ReduceOutputGlare {
 
 // An evalglare.c implementation using the GPU.
 // The biggest difference to the original code, beyond the missing features, is that it only supports a single glare source!
-fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_luminance: DeviceBuffer, settings: &GlareSettings) {
+fn @compute_glare(device: Device, camera: Camera, input: MonoAOVImage, source_luminance: DeviceBuffer, settings: &GlareSettings) {
     let width  = input.width;
     let height = input.height;
 
@@ -100,16 +99,13 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
         (ang - 2 * flt_pi, r1)
     }
 
-    let scale     = settings.scale;
-    let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * color_luminance(col) * scale }; // Only luminance. In contrary to other parts this is explicit in Lux (assuming sRGB).
-
     // Run pass to get standard info from image
     let reduce_info = reduce[ReduceOutputInfo](device.parallel_reduce_handler, width * height,
         @|i:i32| {
             let pixel = make_pixelcoord_from_linear(i, width, height, 0, 0);
             if check_if_valid(pixel) {
                 let (omega, dir) = calc_omega(pixel);
-                let act_lum      = luminance(input.get(pixel));
+                let act_lum      = input.get(pixel);
                 let cos_f        = math_builtins::fabs(vec3_dot(cam_dir, dir));
                 let e_v          = act_lum * omega * cos_f;
                 
@@ -145,7 +141,7 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
         @|i:i32| {
             let pixel      = make_pixelcoord_from_linear(i, width, height, 0, 0);
             let (omega, _) = calc_omega(pixel);
-            let act_lum    = luminance(input.get(pixel));
+            let act_lum    = input.get(pixel);
             if check_if_valid(pixel) && act_lum > lum_source {
                 ReduceOutputGlare {
                     source_omega = omega,
@@ -179,9 +175,8 @@ fn @compute_glare(device: Device, camera: Camera, input: AOVImage, source_lumina
 
     // primary glare source scan
     for idx in device.parallel_range(0, width * height) {
-        let pixel         = make_pixelcoord_from_linear(idx, width, height, 0, 0);
-        let current_color = input.get(pixel);
-        let act_lum       = luminance(current_color);
+        let pixel   = make_pixelcoord_from_linear(idx, width, height, 0, 0);
+        let act_lum = input.get(pixel);
 
         let rel_luminance = if check_if_valid(pixel) && act_lum > lum_source {
             // compute relative luminance

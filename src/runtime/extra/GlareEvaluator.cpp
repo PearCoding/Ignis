@@ -12,6 +12,7 @@ GlareEvaluator::GlareEvaluator(Runtime* runtime)
     , mData(nullptr)
     , mDataWidth(0)
     , mDataHeight(0)
+    , mIsSRGB(true)
 {
     IG_ASSERT(runtime, "Expected a valid runtime");
     setup();
@@ -22,19 +23,27 @@ GlareEvaluator::~GlareEvaluator()
 }
 
 static const char* HandlerSrc = R"(
-    let u_width  = registry::get_local_parameter_i32("__glare_framebuffer_width",  0);
-    let u_height = registry::get_local_parameter_i32("__glare_framebuffer_height", 0);
+    let u_width    = registry::get_local_parameter_i32("__glare_framebuffer_width",    0);
+    let u_height   = registry::get_local_parameter_i32("__glare_framebuffer_height",   0);
+    let u_channels = registry::get_local_parameter_i32("__glare_framebuffer_channels", 0);
 
-    let use_custom = u_width > 0 && u_height > 0;
+    let use_custom = u_width > 0 && u_height > 0 && u_channels > 0;
 
     let width  = if !use_custom { settings.width }  else { u_width };
     let height = if !use_custom { settings.height } else { u_height };
 
+    let scale = if use_custom { 1:f32 } else { 1 / (settings.iter + 1) as f32 };
+    let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * color_luminance(col) * scale };
+
     let input = if use_custom {
-        let buffer = device.make_buffer_view(userData as &[f32], width * height * 3);
-        make_aov_image_from_buffer_readonly(buffer, width, height)
+        let buffer = device.make_buffer_view(userData as &[f32], width * height * u_channels);
+        if u_channels == 3 {
+            make_mono_from_rgb_aov(make_aov_image_from_buffer_readonly(buffer, width, height), luminance)
+        } else {
+            make_mono_aov_image_from_buffer_readonly(buffer, width, height)
+        }
     } else {
-        device.load_aov_image("Color", spi)
+        make_mono_from_rgb_aov(device.load_aov_image("Color", spi), luminance)
     };
 
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
@@ -46,7 +55,6 @@ static const char* HandlerSrc = R"(
     let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100, true);
 
     let glareSettings = GlareSettings{
-        scale = if use_custom { 1:f32 } else { 1 / (settings.iter + 1) as f32 },
         mul   = registry::get_local_parameter_f32("_glare_multiplier", 5),
         vertical_illuminance = registry::get_local_parameter_f32("_glare_vertical_illuminance", -1)
     };
@@ -77,9 +85,11 @@ std::optional<GlareEvaluator::Result> GlareEvaluator::run()
     if (mData == nullptr) {
         mPass->setParameter("__glare_framebuffer_width", (int)0);
         mPass->setParameter("__glare_framebuffer_height", (int)0);
+        mPass->setParameter("__glare_framebuffer_channels", (int)0);
     } else {
+        const size_t channels = mIsSRGB ? 3 : 1;
         if (mDataIsOnHost && mRuntime->target().isGPU()) {
-            const auto acc = mRuntime->requestBufferForDevice("__glare_framebuffer_host", mDataWidth * mDataHeight * 3 * sizeof(float));
+            const auto acc = mRuntime->requestBufferForDevice("__glare_framebuffer_host", mDataWidth * mDataHeight * channels * sizeof(float));
             if (acc.Data == nullptr) {
                 IG_LOG(L_ERROR) << "Could not allocate temporary data on device for glare evaluation" << std::endl;
                 return {};
@@ -95,6 +105,7 @@ std::optional<GlareEvaluator::Result> GlareEvaluator::run()
 
         mPass->setParameter("__glare_framebuffer_width", (int)mDataWidth);
         mPass->setParameter("__glare_framebuffer_height", (int)mDataHeight);
+        mPass->setParameter("__glare_framebuffer_channels", (int)channels);
     }
 
     if (!mPass->run())

@@ -176,12 +176,13 @@ fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let cam_fisheye = make_fishlens_camera(camera_eye, camera_dir, camera_up, width, height, FisheyeAspectMode::Circular /* Fixed in code */, 0, 100, true);
 
     let glareSettings = GlareSettings{
-        scale = 1 / (settings.iter + 1) as f32,
         mul   = registry::get_global_parameter_f32("_glare_multiplier", 5),
         vertical_illuminance = registry::get_global_parameter_f32("_glare_vertical_illuminance", -1)
     };
 
-    compute_glare(device, cam_fisheye, input, source_luminance, &glareSettings);
+    let scale = 1 / (settings.iter + 1) as f32;
+    let luminance = @|col:Color| -> f32 { color_builtins::white_efficiency * color_luminance(col) * scale };
+    compute_glare(device, cam_fisheye, make_mono_from_rgb_aov(input, luminance), source_luminance, &glareSettings);
 }
 
 fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
