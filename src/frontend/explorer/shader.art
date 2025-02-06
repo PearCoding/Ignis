@@ -147,7 +147,7 @@ fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
 
 fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () {
     let (width, height) = get_canvas_size();
-    let input  = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
+    let input  = make_rgb_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
     let output = device.request_buffer("_final_output", width * height, 0);
 
     let tonemapSettings = TonemapSettings{
@@ -259,7 +259,7 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
 
 fn @handle_imageinfo_shader(device: Device, _spi: i32, settings: &Settings) {
     let (width, height) = get_canvas_size();
-    let input = make_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
+    let input = make_rgb_aov_image_from_buffer(device.request_buffer("_perspective_output", width * height * 3, 0), width, height);
 
     let imageinfoSettings = ImageInfoSettings{
         scale           = 1 / (settings.iter + 1) as f32,

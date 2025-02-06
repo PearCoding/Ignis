@@ -60,6 +60,8 @@ public:
     /// A utility function to speed up utility information from the image
     ImageInfoOutput imageinfo(const ImageInfoSettings& settings);
 
+    /// Return all names of the enabled AOVs. Might only be available after the first iteration.
+    [[nodiscard]] std::vector<std::string> framebufferNames() const;
     /// Will resize the framebuffer, clear it and reset rendering
     void resizeFramebuffer(size_t width, size_t height);
     /// Return pointer to framebuffer. The returned buffer is host only. This might trigger a device -> host copy operation.
@@ -81,8 +83,6 @@ public:
     bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeInBytes);
     bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeInBytes);
 
-    /// Return all names of the enabled AOVs
-    [[nodiscard]] inline const std::vector<std::string>& aovs() const { return mTechniqueInfo.EnabledAOVs; }
 
     // A frame consists of multiple iterations until target SPP is (ever) reached.
     // An iteration consists of SPI samples per iteration.

@@ -47,6 +47,11 @@ void Device::releaseAll()
     mDevice->releaseAllMemory();
 }
 
+std::vector<std::string> Device::getFramebufferNames() const
+{
+    return mDevice->getAOVNames();
+}
+
 Device::AOVAccessor Device::getFramebufferForHost(const std::string& name)
 {
     const auto acc = mDevice->loadAOVImageForHost(name);
@@ -75,12 +80,12 @@ void Device::clearFramebuffer(const std::string& name)
 
 void Device::syncFramebufferHostToDevice(const std::string& name)
 {
-    mDevice->mapAOVBackToDevice(name);
+    // mDevice->mapAOVBackToDevice(name);
 }
 
 void Device::syncAllFramebufferHostToDevice()
 {
-    mDevice->mapAllAOVsBackToDevice();
+    // mDevice->mapAllAOVsBackToDevice();
 }
 
 size_t Device::getBufferSizeInBytes(const std::string& name)

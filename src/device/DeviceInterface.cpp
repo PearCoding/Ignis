@@ -5,6 +5,8 @@
 #include "device/DeviceUtils.h"
 #include "table/SceneDatabase.h"
 
+#include <anydsl_runtime.hpp>
+
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -21,10 +23,18 @@
     IG_UNUSED(sectionClosure)
 
 namespace IG {
-static const std::string_view DefaultFramebufferName = "Color";
+static const std::string DefaultFramebufferName = "Color";
 static inline bool checkIfAOVIsFramebuffer(const std::string& aov_name)
 {
     return aov_name.empty() || aov_name == DefaultFramebufferName;
+}
+
+static inline const std::string& handleAOVName(const std::string& aov_name)
+{
+    if (aov_name.empty())
+        return DefaultFramebufferName;
+    else
+        return aov_name;
 }
 
 static inline size_t roundUp(size_t num, size_t multiple)
@@ -39,41 +49,22 @@ static inline size_t roundUp(size_t num, size_t multiple)
     return num + multiple - remainder;
 }
 
-/// @brief Ensure the given buffer is present with the same size as the host. Does not copy from host to device!
-/// @tparam T
-/// @param dev
-/// @param dev_buffer
-/// @param host_buffer
-/// @return
 template <typename T>
-inline anydsl::Array<T>& ensurePresentOnDevice(int32_t dev, anydsl::Array<T>& dev_buffer, const anydsl::Array<T>& host_buffer)
-{
-    if (dev_buffer.size() != host_buffer.size()) {
-        void* ptr = anydsl_alloc(dev, sizeof(T) * host_buffer.size());
-        if (ptr == nullptr) {
-            IG_LOG(L_FATAL) << "Out of memory" << std::endl;
-            std::abort();
-        }
-        dev_buffer = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(ptr), host_buffer.size()));
-    }
-
-    return dev_buffer;
-}
-
-template <typename T>
-static inline anydsl::Array<T>& resizeArray(int32_t dev, anydsl::Array<T>& array, size_t size, size_t multiplier)
+static inline void resizeUnifiedArray(int32_t dev, UnifiedArray<T>& array, size_t size, size_t multiplier)
 {
     const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
     const size_t n      = capacity * multiplier;
-    if (array.size() < (int64_t)n) {
-        void* ptr = anydsl_alloc(dev, sizeof(T) * n);
-        if (ptr == nullptr) {
-            IG_LOG(L_FATAL) << "Out of memory" << std::endl;
-            std::abort();
-        }
-        array = std::move(anydsl::Array<T>(dev, reinterpret_cast<T*>(ptr), n));
-    }
-    return array;
+    if (array.SizeInBytes < n * sizeof(T))
+        array = UnifiedArray<T>::AllocateUnified(dev, size * sizeof(T));
+}
+
+template <typename T>
+static inline void resizeDeviceArray(int32_t dev, UnifiedArray<T>& array, size_t size, size_t multiplier)
+{
+    const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
+    const size_t n      = capacity * multiplier;
+    if (array.SizeInBytes < n * sizeof(T))
+        array = UnifiedArray<T>::AllocateDevice(dev, size * sizeof(T));
 }
 
 static inline int computeTargetID(const Target& target)
@@ -89,48 +80,11 @@ static inline int computeTargetID(const Target& target)
 }
 
 template <typename T>
-inline anydsl::Array<T> copyToDevice(int32_t dev, const T* data, size_t n)
-{
-    if (n == 0)
-        return anydsl::Array<T>();
-
-    void* ptr = anydsl_alloc(dev, sizeof(T) * n);
-    if (ptr == nullptr) {
-        IG_LOG(L_FATAL) << "Out of memory" << std::endl;
-        std::abort();
-        // return anydsl::Array<T>();
-    }
-
-    anydsl::Array<T> array(dev, reinterpret_cast<T*>(ptr), n);
-    anydsl_copy(0, data, 0, dev, array.data(), 0, sizeof(T) * n);
-    return array;
-}
-
-template <typename T>
-inline anydsl::Array<T> copyToDevice(int32_t dev, const std::vector<T>& host)
-{
-    return copyToDevice(dev, host.data(), host.size());
-}
-
-inline DeviceImage copyToDevice(int32_t dev, const Image& image)
-{
-    IG_ASSERT(image.channels == 1 || image.channels == 4, "Expected image to have one or four channels");
-    return DeviceImage{ copyToDevice(dev, image.pixels.get(), image.width * image.height * image.channels), image.width, image.height };
-}
-
-inline DevicePackedImage copyToDevicePacked(int32_t dev, const Image& image)
-{
-    std::vector<uint8_t> packed;
-    image.copyToPackedFormat(packed);
-    return DevicePackedImage{ copyToDevice(dev, packed), image.width, image.height };
-}
-
-template <typename T>
 inline IDeviceInterface::DeviceBufferProxy<T> mapToProxy(const DeviceBufferBase<T>& buffer)
 {
     return IDeviceInterface::DeviceBufferProxy<T>{
-        .DataPtr     = const_cast<T*>(buffer.Data.data()),
-        .SizeInBytes = (size_t)buffer.Data.size() * sizeof(T)
+        .DataPtr     = const_cast<T*>(buffer.Data.DevicePtr),
+        .SizeInBytes = buffer.Data.SizeInBytes
     };
 }
 
@@ -138,7 +92,7 @@ template <typename T>
 inline IDeviceInterface::DeviceImageProxy<T> mapToProxy(const DeviceImageBase<T>& buffer)
 {
     return IDeviceInterface::DeviceImageProxy<T>{
-        .DataPtr = const_cast<T*>(buffer.Data.data()),
+        .DataPtr = const_cast<T*>(buffer.Data.DevicePtr),
         .Width   = buffer.Width,
         .Height  = buffer.Height
     };
@@ -148,7 +102,7 @@ template <typename T>
 inline IDeviceInterface::DeviceStreamProxy<T> mapToProxy(const DeviceStreamBase<T>& buffer)
 {
     return IDeviceInterface::DeviceStreamProxy<T>{
-        .DataPtr   = const_cast<T*>(buffer.Data.data()),
+        .DataPtr   = const_cast<T*>(buffer.Data.DevicePtr),
         .BlockSize = buffer.BlockSize
     };
 }
@@ -237,33 +191,19 @@ void DeviceInterface::setCurrentSceneSettings(const Device::SceneSettings& setti
     mEntityCount          = mCurrentSceneSettings.database->FixTables.count("entities") > 0 ? mCurrentSceneSettings.database->FixTables.at("entities").entryCount() : 0;
 }
 
-IDeviceInterface::DeviceImageProxy<float> DeviceInterface::getFramebuffer()
+std::vector<std::string> DeviceInterface::getAOVNames() const
 {
-    if (!mHostFramebuffer.Data.data()) {
-        IG_LOG(L_ERROR) << "Framebuffer not yet initialized. Run a single iteration first" << std::endl;
-        return DeviceImageProxy<float>::Invalid();
-    }
+    std::vector<std::string> names;
+    names.reserve(mDeviceData.aovs.size());
+    for (const auto& p : mDeviceData.aovs)
+        names.push_back(p.first);
 
-    if (isGPU()) {
-        auto& device = mDeviceData;
-        if (device.film_pixels.size() != mHostFramebuffer.Data.size()) {
-            _SECTION(SectionType::FramebufferUpdate);
-            device.film_pixels = createFramebuffer(mDeviceID);
-            anydsl::copy(mHostFramebuffer.Data, device.film_pixels);
-        }
+    return names;
+}
 
-        return {
-            .DataPtr = device.film_pixels.data(),
-            .Width   = mFramebufferWidth,
-            .Height  = mFramebufferHeight
-        };
-    } else {
-        return {
-            .DataPtr = mHostFramebuffer.Data.data(),
-            .Width   = mFramebufferWidth,
-            .Height  = mFramebufferHeight
-        };
-    }
+IDeviceInterface::DeviceImageProxy<float> DeviceInterface::getFramebufferForDevice()
+{
+    return loadAOVImageForDevice(DefaultFramebufferName);
 }
 
 void DeviceInterface::resizeFramebuffer(size_t width, size_t height)
@@ -277,49 +217,34 @@ void DeviceInterface::resizeFramebuffer(size_t width, size_t height)
 
 void DeviceInterface::ensureFramebuffer()
 {
-    const size_t expectedSize = framebufferArea() * 3;
+    const size_t expectedSize = framebufferArea() * 3 * sizeof(float);
 
     IG_ASSERT(expectedSize > 0, "Expected host framebuffer to have a valid size");
+    if (const auto it = mDeviceData.aovs.find(DefaultFramebufferName); it != mDeviceData.aovs.end()) {
+        // Check if resize is needed
+        if (it->second.Width != mFramebufferWidth || it->second.Height != mFramebufferHeight) {
+            // Update properties
+            for (auto& p : mDeviceData.aovs) {
+                p.second.Width  = mFramebufferWidth;
+                p.second.Height = mFramebufferHeight;
+            }
 
-    if (mHostFramebuffer.Data.data() && (size_t)mHostFramebuffer.Data.size() >= expectedSize)
-        return;
-
-    if (mCurrentSceneSettings.aov_map) {
-        for (const auto& name : *mCurrentSceneSettings.aov_map)
-            mAOVs.emplace(name, AOV{});
+            // Resize if needed
+            if (it->second.Data.SizeInBytes < expectedSize) {
+                for (auto& p : mDeviceData.aovs) {
+                    p.second.Data = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize);
+                    p.second.Data.fillWithZero();
+                }
+            }
+        }
+    } else {
+        mDeviceData.aovs[DefaultFramebufferName] = DeviceImage{
+            .Data   = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize),
+            .Width  = mFramebufferWidth,
+            .Height = mFramebufferHeight
+        };
+        mDeviceData.aovs[DefaultFramebufferName].Data.fillWithZero();
     }
-
-    mHostFramebuffer.Data = anydsl::Array<float>(expectedSize);
-    std::fill(mHostFramebuffer.Data.begin(), mHostFramebuffer.Data.end(), 0.0f);
-
-    for (auto& p : mAOVs) {
-        p.second.Data = anydsl::Array<float>(expectedSize);
-        std::fill(p.second.Data.begin(), p.second.Data.end(), 0.0f);
-    }
-
-    resetFramebufferAccess();
-}
-
-void DeviceInterface::resetFramebufferAccess()
-{
-    mHostFramebuffer.Dirty = true;
-
-    for (auto& p : mAOVs)
-        p.second.Dirty = true;
-}
-
-anydsl::Array<float> DeviceInterface::createFramebuffer(int dev) const
-{
-    auto film_size = framebufferArea() * 3;
-    void* ptr      = anydsl_alloc(dev, sizeof(float) * film_size);
-    if (ptr == nullptr) {
-        IG_LOG(L_FATAL) << "Out of memory" << std::endl;
-        std::abort();
-        // return anydsl::Array<float>();
-    }
-
-    auto film_data = reinterpret_cast<float*>(ptr);
-    return anydsl::Array<float>(dev, film_data, film_size);
 }
 
 std::string DeviceInterface::lookupResource(int32_t id) const
@@ -474,11 +399,11 @@ DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType 
     const size_t offset = isPrimary ? 0 : 1;
 
     auto& stream = isGPU() ? *mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount] : getCurrentThreadData()->streams[offset];
-    resizeArray(mDeviceID, stream.Data, size, elements);
+    resizeUnifiedArray(mDeviceID, stream.Data, size, elements);
     stream.BlockSize = size;
 
     return {
-        .DataPtr   = stream.Data.data(),
+        .DataPtr   = stream.Data.DevicePtr,
         .BlockSize = stream.BlockSize
     };
 }
@@ -496,19 +421,19 @@ DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType 
     const size_t offset = isPrimary ? 0 : 1;
 
     if (isGPU()) {
-        IG_ASSERT(mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount]->Data.size() > 0, "Expected gpu stream to be initialized");
+        IG_ASSERT(mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount]->Data.SizeInBytes > 0, "Expected gpu stream to be initialized");
         auto& stream = *mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount];
 
         return {
-            .DataPtr   = stream.Data.data(),
+            .DataPtr   = stream.Data.DevicePtr,
             .BlockSize = stream.BlockSize
         };
     } else {
-        IG_ASSERT(getCurrentThreadData()->streams[offset].Data.size() > 0, "Expected cpu stream to be initialized");
+        IG_ASSERT(getCurrentThreadData()->streams[offset].Data.SizeInBytes > 0, "Expected cpu stream to be initialized");
         auto& stream = getCurrentThreadData()->streams[offset];
 
         return {
-            .DataPtr   = stream.Data.data(),
+            .DataPtr   = stream.Data.DevicePtr,
             .BlockSize = stream.BlockSize
         };
     }
@@ -541,14 +466,12 @@ IDeviceInterface::TemporaryStorageHostProxy DeviceInterface::getTemporaryStorage
 
     IG_ASSERT(tmp != nullptr, "Expected valid temporary storage host pointer");
 
-    *tmp = TemporaryStorageHost{
-        std::move(resizeArray(0 /*Host*/, tmp->ray_begins, size, 1)),
-        std::move(resizeArray(0 /*Host*/, tmp->ray_ends, size, 1))
-    };
+    resizeDeviceArray(0 /*Host*/, tmp->ray_begins, size, 1);
+    resizeDeviceArray(0 /*Host*/, tmp->ray_ends, size, 1);
 
     return {
-        .RayBeginsPtr = tmp->ray_begins.data(),
-        .RayEndsPtr   = tmp->ray_ends.data(),
+        .RayBeginsPtr = tmp->ray_begins.DevicePtr,
+        .RayEndsPtr   = tmp->ray_ends.DevicePtr,
     };
 }
 
@@ -559,13 +482,12 @@ void* DeviceInterface::loadRayList()
 
     size_t count = mCurrentRenderSettings.width;
     auto& device = mDeviceData;
-    if (device.ray_list.size() == (int64_t)count)
-        return (void*)&device.ray_list;
+    if (device.ray_list.SizeInBytes == count * sizeof(StreamRay))
+        return device.ray_list.DevicePtr;
 
     IG_ASSERT(mCurrentRenderSettings.rays != nullptr, "Expected list of rays to be available");
 
-    std::vector<StreamRay> rays;
-    rays.reserve(count);
+    device.ray_list = UnifiedArray<StreamRay>::AllocateUnified(mDeviceID, count * sizeof(StreamRay));
 
     for (size_t i = 0; i < count; ++i) {
         const auto dRay = mCurrentRenderSettings.rays[i];
@@ -589,11 +511,10 @@ void* DeviceInterface::loadRayList()
         ray.tmin = dRay.Range(0);
         ray.tmax = dRay.Range(1);
 
-        rays.push_back(ray);
+        device.ray_list.HostPtr[i] = ray;
     }
 
-    device.ray_list = copyToDevice(mDeviceID, rays);
-    return (void*)&device.ray_list;
+    return device.ray_list.DevicePtr;
 }
 
 IDeviceInterface::DynTableProxy DeviceInterface::loadDynTable(const std::string& name)
@@ -602,48 +523,72 @@ IDeviceInterface::DynTableProxy DeviceInterface::loadDynTable(const std::string&
 
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
-    DeviceDynTable* dyntable;
+    if (isGPU()) {
+        DeviceDynTable* dyntable;
 
-    auto& tables = mDeviceData.dyntables;
-    auto it      = tables.find(name);
-    if (it != tables.end()) {
-        dyntable = &it->second;
-    } else {
+        auto& tables = mDeviceData.dyntables;
+        if (const auto it = tables.find(name); it != tables.end()) {
+            dyntable = &it->second;
+        } else {
+            IG_LOG(L_DEBUG) << "Loading dyntable '" << name << "'" << std::endl;
 
-        IG_LOG(L_DEBUG) << "Loading dyntable '" << name << "'" << std::endl;
+            const auto& tbl = mCurrentSceneSettings.database->DynTables.at(name);
 
-        const auto& tbl = mCurrentSceneSettings.database->DynTables.at(name);
-        tables[name]    = {
-               .EntryCount    = tbl.entryCount(),
-               .LookupEntries = ShallowArray<::LookupEntry>(mDeviceID, (::LookupEntry*)tbl.lookups().data(), tbl.lookups().size()),
-               .Data          = ShallowArray<uint8_t>(mDeviceID, tbl.data().data(), tbl.data().size())
+            DeviceDynTable entry = DeviceDynTable{
+                .EntryCount    = tbl.entryCount(),
+                .LookupEntries = UnifiedArray<::LookupEntry>::AllocateUnified(mDeviceID, tbl.lookups().size()),
+                .Data          = UnifiedArray<uint8_t>::AllocateUnified(mDeviceID, tbl.data().size())
+            };
+
+            std::memcpy(entry.LookupEntries.HostPtr, tbl.lookups().data(), tbl.lookups().size() * sizeof(::LookupEntry));
+            std::memcpy(entry.LookupEntries.HostPtr, tbl.data().data(), tbl.data().size() * sizeof(uint8_t));
+
+            dyntable = &tables.emplace(name, std::move(entry)).first->second;
+        }
+
+        IG_ASSERT(dyntable != nullptr, "Expected valid dyntable pointer");
+        return {
+            .EntryCount    = dyntable->EntryCount,
+            .LookupEntries = (LookupEntry*)dyntable->LookupEntries.DevicePtr,
+            .DataPtr       = const_cast<uint8*>(dyntable->Data.DevicePtr),
+            .DataSize      = dyntable->Data.SizeInBytes
         };
-        dyntable = &tables[name];
+    } else {
+        const auto& tbl = mCurrentSceneSettings.database->DynTables.at(name);
+        return {
+            .EntryCount    = tbl.entryCount(),
+            .LookupEntries = (LookupEntry*)tbl.lookups().data(),
+            .DataPtr       = const_cast<uint8*>(tbl.data().data()),
+            .DataSize      = tbl.data().size() * sizeof(uint8_t)
+        };
     }
-
-    IG_ASSERT(dyntable != nullptr, "Expected valid dyntable pointer");
-    return {
-        .EntryCount    = dyntable->EntryCount,
-        .LookupEntries = (LookupEntry*)dyntable->LookupEntries.ptr(),
-        .DataPtr       = const_cast<uint8*>(dyntable->Data.ptr()),
-        .DataSize      = dyntable->Data.size()
-    };
 }
 
 IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string& name)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
-    auto& tables = mDeviceData.fixtables;
-    auto it      = tables.find(name);
-    if (it != tables.end()) {
-        return mapToProxy(it->second);
-    } else {
-        IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
-        IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
+    if (isGPU()) {
+        auto& tables = mDeviceData.fixtables;
+        auto it      = tables.find(name);
+        if (it != tables.end()) {
+            return mapToProxy(it->second);
+        } else {
+            IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
+            IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
+            const auto& fixtable = mCurrentSceneSettings.database->FixTables.at(name);
 
-        tables[name] = DeviceBuffer{ .Data = copyToDevice(mDeviceID, mCurrentSceneSettings.database->FixTables.at(name).data()) };
-        return mapToProxy(tables.at(name));
+            DeviceBuffer buffer = DeviceBuffer{ .Data = UnifiedArray<uint8>::AllocateUnified(mDeviceID, fixtable.data().size() * sizeof(uint8)) };
+            std::memcpy(buffer.Data.HostPtr, fixtable.data().data(), fixtable.data().size() * sizeof(uint8));
+            return mapToProxy(tables.emplace(name, std::move(buffer)).first->second);
+        }
+    } else {
+        IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
+        const auto& fixtable = mCurrentSceneSettings.database->FixTables.at(name);
+        return FixTableProxy{
+            .DataPtr     = const_cast<uint8*>(fixtable.data().data()),
+            .SizeInBytes = fixtable.data().size() * sizeof(uint8)
+        };
     }
 }
 
@@ -667,22 +612,22 @@ void DeviceInterface::loadEntityBVH(BVHType type, const char* prim_type, void** 
         case BVHType::BVH2: {
             const size_t node_count = bvh.Nodes.size() / sizeof(Node2);
             device.bvh_ents[str]    = IG::Bvh2Ent{
-                std::move(ShallowArray<Node2>(mDeviceID, reinterpret_cast<const Node2*>(bvh.Nodes.data()), node_count)),
-                std::move(ShallowArray<EntityLeaf1>(mDeviceID, reinterpret_cast<const EntityLeaf1*>(bvh.Leaves.data()), leaf_count))
+                std::move(UnifiedArray<Node2>::CreateExternalOrAllocateUnified(mDeviceID, (Node2*)bvh.Nodes.data(), node_count, !isGPU())),
+                std::move(UnifiedArray<EntityLeaf1>::CreateExternalOrAllocateUnified(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
             };
         } break;
         case BVHType::BVH4: {
             const size_t node_count = bvh.Nodes.size() / sizeof(Node4);
             device.bvh_ents[str]    = IG::Bvh4Ent{
-                std::move(ShallowArray<Node4>(mDeviceID, reinterpret_cast<const Node4*>(bvh.Nodes.data()), node_count)),
-                std::move(ShallowArray<EntityLeaf1>(mDeviceID, reinterpret_cast<const EntityLeaf1*>(bvh.Leaves.data()), leaf_count))
+                std::move(UnifiedArray<Node4>::CreateExternalOrAllocateUnified(mDeviceID, (Node4*)bvh.Nodes.data(), node_count, !isGPU())),
+                std::move(UnifiedArray<EntityLeaf1>::CreateExternalOrAllocateUnified(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
             };
         } break;
         case BVHType::BVH8: {
             const size_t node_count = bvh.Nodes.size() / sizeof(Node8);
             device.bvh_ents[str]    = IG::Bvh8Ent{
-                std::move(ShallowArray<Node8>(mDeviceID, reinterpret_cast<const Node8*>(bvh.Nodes.data()), node_count)),
-                std::move(ShallowArray<EntityLeaf1>(mDeviceID, reinterpret_cast<const EntityLeaf1*>(bvh.Leaves.data()), leaf_count))
+                std::move(UnifiedArray<Node8>::CreateExternalOrAllocateUnified(mDeviceID, (Node8*)bvh.Nodes.data(), node_count, !isGPU())),
+                std::move(UnifiedArray<EntityLeaf1>::CreateExternalOrAllocateUnified(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
             };
         } break;
         }
@@ -696,18 +641,18 @@ void DeviceInterface::loadEntityBVH(BVHType type, const char* prim_type, void** 
     default:
     case BVHType::BVH2: {
         auto& bvh = std::get<IG::Bvh2Ent>(it->second);
-        *nodes    = const_cast<Node2*>(bvh.Nodes.ptr());
-        *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
+        *nodes    = const_cast<Node2*>(bvh.Nodes.DevicePtr);
+        *objs     = const_cast<EntityLeaf1*>(bvh.Objs.DevicePtr);
     } break;
     case BVHType::BVH4: {
         auto& bvh = std::get<IG::Bvh4Ent>(it->second);
-        *nodes    = const_cast<Node4*>(bvh.Nodes.ptr());
-        *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
+        *nodes    = const_cast<Node4*>(bvh.Nodes.DevicePtr);
+        *objs     = const_cast<EntityLeaf1*>(bvh.Objs.DevicePtr);
     } break;
     case BVHType::BVH8: {
         auto& bvh = std::get<IG::Bvh8Ent>(it->second);
-        *nodes    = const_cast<Node8*>(bvh.Nodes.ptr());
-        *objs     = const_cast<EntityLeaf1*>(bvh.Objs.ptr());
+        *nodes    = const_cast<Node8*>(bvh.Nodes.DevicePtr);
+        *objs     = const_cast<EntityLeaf1*>(bvh.Objs.DevicePtr);
     } break;
     }
 }
@@ -724,22 +669,44 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
     _SECTION(SectionType::ImageLoading);
 
     IG_LOG(L_DEBUG) << "Loading image '" << filename << "' (C=" << expected_channels << ")" << std::endl;
+    UnifiedArray<float> arr;
+    size_t width, height;
     try {
-        const auto img = Image::load(filename);
-        if (expected_channels != (int32_t)img.channels) {
-            IG_LOG(L_ERROR) << "Image '" << filename << "' is has unexpected channel count" << std::endl;
-            images[filename] = copyToDevice(mDeviceID, Image());
-        } else {
-            auto& res = getCurrentShader().images[filename]; // Get or construct resource info for given resource
-            res.counter++;
-            res.memory_usage = img.width * img.height * img.channels * sizeof(float);
-            images[filename] = copyToDevice(mDeviceID, img);
-        }
+        Image image = Image::load(filename);
+        if (image.channels != (size_t)expected_channels)
+            image = image.castTo((size_t)expected_channels);
+
+        auto& res = getCurrentShader().images[filename]; // Get or construct resource info for given resource
+        res.counter++;
+        res.memory_usage = image.width * image.height * image.channels * sizeof(float);
+
+        arr    = UnifiedArray<float>::AllocateUnified(mDeviceID, res.memory_usage);
+        width  = image.width;
+        height = image.height;
+        std::memcpy(arr.HostPtr, image.pixels.get(), arr.SizeInBytes);
+
     } catch (const ImageLoadException& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
-        images[filename] = copyToDevice(mDeviceID, MissingImage);
+
+        if (MissingImage.channels != (size_t)expected_channels) {
+            Image image = MissingImage.castTo((size_t)expected_channels);
+            arr         = UnifiedArray<float>::AllocateUnified(mDeviceID, image.width * image.height * image.channels * sizeof(float));
+            width       = image.width;
+            height      = image.height;
+            std::memcpy(arr.HostPtr, image.pixels.get(), arr.SizeInBytes);
+        } else {
+            arr    = UnifiedArray<float>::AllocateUnified(mDeviceID, MissingImage.width * MissingImage.height * MissingImage.channels * sizeof(float));
+            width  = MissingImage.width;
+            height = MissingImage.height;
+            std::memcpy(arr.HostPtr, MissingImage.pixels.get(), arr.SizeInBytes);
+        }
     }
-    return mapToProxy(images.at(filename));
+
+    return mapToProxy(images.emplace(filename, DeviceImage{
+                                                   .Data   = std::move(arr),
+                                                   .Width  = width,
+                                                   .Height = height })
+                          .first->second);
 }
 
 IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFromFile(const std::string& filename, int32_t expected_channels, bool linear)
@@ -747,32 +714,44 @@ IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFrom
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     auto& images = mDeviceData.packed_images;
-    auto it      = images.find(filename);
-    if (it != images.end())
+    if (const auto it = images.find(filename); it != images.end())
         return mapToProxy(it->second);
 
     _SECTION(SectionType::PackedImageLoading);
 
     IG_LOG(L_DEBUG) << "Loading (packed) image '" << filename << "' (C=" << expected_channels << ")" << std::endl;
+    std::vector<uint8> hostData;
+    size_t width, height, channels;
     try {
-        std::vector<uint8_t> packed;
-        size_t width, height, channels;
-        Image::loadAsPacked(filename, packed, width, height, channels, linear);
+        Image::loadAsPacked(filename, hostData, width, height, channels, linear);
 
         if (expected_channels != (int32_t)channels) {
             IG_LOG(L_ERROR) << "Packed image '" << filename << "' is has unexpected channel count" << std::endl;
-            images[filename] = copyToDevicePacked(mDeviceID, MissingImage);
+            MissingImage.copyToPackedFormat(hostData);
+            width    = MissingImage.width;
+            height   = MissingImage.height;
+            channels = MissingImage.channels;
         } else {
             auto& res = getCurrentShader().packed_images[filename]; // Get or construct resource info for given resource
             res.counter++;
-            res.memory_usage = packed.size();
-            images[filename] = DevicePackedImage{ copyToDevice(mDeviceID, packed), width, height };
+            res.memory_usage = hostData.size();
         }
     } catch (const ImageLoadException& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
-        images[filename] = copyToDevicePacked(mDeviceID, MissingImage);
+        MissingImage.copyToPackedFormat(hostData);
+        width    = MissingImage.width;
+        height   = MissingImage.height;
+        channels = MissingImage.channels;
     }
-    return mapToProxy(images.at(filename));
+
+    auto arr = UnifiedArray<uint8>::AllocateUnified(mDeviceID, hostData.size() * sizeof(uint8));
+    std::memcpy(arr.HostPtr, hostData.data(), hostData.size() * sizeof(uint8));
+
+    return mapToProxy(images.emplace(filename, DevicePackedImage{
+                                                   .Data   = std::move(arr),
+                                                   .Width  = width,
+                                                   .Height = height })
+                          .first->second);
 }
 
 static std::vector<uint8_t> readBufferFile(const std::string& filename)
@@ -811,9 +790,10 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     if ((vec.size() % sizeof(int32_t)) != 0)
         IG_LOG(L_WARNING) << "Buffer '" << filename << "' is not properly sized!" << std::endl;
 
-    buffers[filename] = DeviceBuffer{ .Data = copyToDevice(mDeviceID, vec) };
+    auto arr = UnifiedArray<uint8>::AllocateUnified(mDeviceID, vec.size() * sizeof(uint8));
+    std::memcpy(arr.HostPtr, vec.data(), vec.size() * sizeof(uint8));
 
-    return mapToProxy(buffers.at(filename));
+    return mapToProxy(buffers.emplace(filename, std::move(arr)).first->second);
 }
 
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferByName(const std::string& name)
@@ -840,7 +820,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     size = (int32_t)roundUp(size, 32);
 
     auto& buffers = mDeviceData.buffers;
-    if (const auto it = buffers.find(name); it != buffers.end() && it->second.Data.size() >= (int64_t)size)
+    if (const auto it = buffers.find(name); it != buffers.end() && it->second.Data.SizeInBytes >= size * sizeof(uint8))
         return mapToProxy(it->second);
 
     DeviceGuard _deviceGuard(this); // Can be called from external
@@ -848,31 +828,25 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
 
     IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;
 
-    void* ptr = anydsl_alloc(mDeviceID, size);
-    if (ptr == nullptr) {
-        IG_LOG(L_FATAL) << "Out of memory" << std::endl;
-        std::abort();
-    }
-
-    buffers[name] = DeviceBuffer{ .Data = anydsl::Array<uint8_t>(mDeviceID, reinterpret_cast<uint8_t*>(ptr), size) };
-    return mapToProxy(buffers.at(name));
+    return mapToProxy(buffers.emplace(name, UnifiedArray<uint8>::AllocateUnified(mDeviceID, size)).first->second);
 }
 
-void DeviceInterface::saveBuffer(const std::string& name, const std::string& filename)
+void DeviceInterface::saveBufferToFile(const std::string& name, const std::string& filename)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
     if (const auto it = mDeviceData.buffers.find(name); it != mDeviceData.buffers.end()) {
-        const size_t size = (size_t)it->second.Data.size();
+        const size_t size = (size_t)it->second.Data.SizeInBytes;
 
         IG_LOG(L_DEBUG) << "Dumping buffer '" << name << "' to '" << filename << "' with " << FormatMemory(size) << std::endl;
 
         // Copy data to host
-        std::vector<uint8_t> host_data(size);
-        anydsl_copy(mDeviceID, it->second.Data.data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+        // std::vector<uint8_t> host_data(size);
+        // anydsl_copy(mDeviceID, it->second.Data.data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
 
         // Dump data as binary glob
         std::ofstream out(filename);
-        out.write(reinterpret_cast<const char*>(host_data.data()), host_data.size());
+        // out.write(reinterpret_cast<const char*>(host_data.data()), host_data.size());
+        out.write(reinterpret_cast<const char*>(it->second.Data.HostPtr), it->second.Data.SizeInBytes);
         out.close();
     } else {
         IG_LOG(L_WARNING) << "Buffer '" << name << "' can not be dumped as it does not exists" << std::endl;
@@ -886,8 +860,8 @@ bool DeviceInterface::copyBufferToHost(const std::string& buffer_name, void* dst
     uint8* ptr  = nullptr;
     size_t size = 0;
     if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
-        ptr  = it->second.Data.data();
-        size = (size_t)it->second.Data.size();
+        ptr  = (uint8*)it->second.Data.HostPtr;
+        size = it->second.Data.SizeInBytes;
     }
 
     if (ptr == nullptr)
@@ -897,7 +871,8 @@ bool DeviceInterface::copyBufferToHost(const std::string& buffer_name, void* dst
     if (size == 0)
         return false;
 
-    anydsl_copy(mDeviceID, ptr, 0, 0 /* Host */, dst, 0, size);
+    std::memcpy(dst, ptr, size);
+    // anydsl_copy(mDeviceID, ptr, 0, 0 /* Host */, dst, 0, size);
 
     return true;
 }
@@ -909,8 +884,8 @@ bool DeviceInterface::copyBufferFromHost(const std::string& buffer_name, const v
     uint8* ptr  = nullptr;
     size_t size = 0;
     if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
-        ptr  = it->second.Data.data();
-        size = (size_t)it->second.Data.size();
+        ptr  = (uint8*)it->second.Data.HostPtr;
+        size = it->second.Data.SizeInBytes;
     }
 
     if (ptr == nullptr)
@@ -920,7 +895,8 @@ bool DeviceInterface::copyBufferFromHost(const std::string& buffer_name, const v
     if (size == 0)
         return false;
 
-    anydsl_copy(0 /* Host */, src, 0, mDeviceID, ptr, 0, size);
+    std::memcpy(ptr, src, size);
+    // anydsl_copy(0 /* Host */, src, 0, mDeviceID, ptr, 0, size);
 
     return true;
 }
@@ -969,171 +945,62 @@ void DeviceInterface::handleDebugOutput()
     std::lock_guard<std::mutex> _guard(mThreadMutex);
     if (const auto it = mDeviceData.buffers.find("__dbg_output"); it != mDeviceData.buffers.end()) {
         DeviceBuffer& buffer = it->second;
-        if (isGPU()) {
-            // Copy data to host
-            std::vector<uint8_t> host_data((size_t)buffer.Data.size());
-            anydsl_copy(mDeviceID, buffer.Data.data(), 0, 0 /* Host */, host_data.data(), 0, host_data.size());
+        // Parse data
+        int32_t* ptr  = reinterpret_cast<int32_t*>(buffer.Data.HostPtr);
+        int32_t occup = std::min(ptr[0], static_cast<int32_t>(buffer.Data.SizeInBytes / sizeof(int32_t)));
 
-            // Parse data
-            int32_t* ptr  = reinterpret_cast<int32_t*>(host_data.data());
-            int32_t occup = std::min(ptr[0], static_cast<int32_t>(host_data.size() / sizeof(int32_t)));
+        if (occup <= 0)
+            return;
 
-            if (occup <= 0)
-                return;
-
-            handleDebug(ptr, occup);
-
-            // Copy back to device
-            anydsl_copy(0 /* Host */, host_data.data(), 0, mDeviceID, buffer.Data.data(), 0, sizeof(int32_t));
-        } else {
-            // Already on the host
-            int32_t* ptr  = reinterpret_cast<int32_t*>(buffer.Data.data());
-            int32_t occup = std::min(ptr[0], static_cast<int32_t>(buffer.Data.size() / sizeof(int32_t)));
-
-            if (occup <= 0)
-                return;
-
-            handleDebug(ptr, occup);
-        }
-    }
-}
-
-IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForCPU(const std::string& aov_name)
-{
-    IG_ASSERT(!isGPU(), "Should only be called if not GPU");
-
-    if (checkIfAOVIsFramebuffer(aov_name))
-        return getFramebuffer();
-
-    if (const auto it = mAOVs.find(aov_name); it != mAOVs.end()) {
-        return { .DataPtr = it->second.Data.data(), .Width = mFramebufferWidth, .Height = mFramebufferHeight };
-    } else {
-        IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' access for CPU" << std::endl;
-        return DeviceImageProxy<float>::Invalid();
+        handleDebug(ptr, occup);
     }
 }
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice(const std::string& aov_name)
 {
-    if (isGPU()) {
-        if (checkIfAOVIsFramebuffer(aov_name)) {
-            if (!mHostFramebuffer.Data.data()) {
-                IG_LOG(L_ERROR) << "Framebuffer not yet initialized. Run a single iteration first" << std::endl;
-                return DeviceImageProxy<float>::Invalid();
-            }
+    const std::string& actual_name = handleAOVName(aov_name);
 
-            return { .DataPtr = mDeviceData.film_pixels.data(), .Width = mFramebufferWidth, .Height = mFramebufferHeight };
-        } else {
-            if (const auto it = mAOVs.find(aov_name); it != mAOVs.end()) {
-                return { .DataPtr = ensurePresentOnDevice(mDeviceID, mDeviceData.aovs[aov_name], mAOVs[aov_name].Data).data(),
-                         .Width   = mFramebufferWidth,
-                         .Height  = mFramebufferHeight };
-            } else {
-                IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' access for device" << (int)aov_name[1] << std::endl;
-                return DeviceImageProxy<float>::Invalid();
-            }
-        }
+    if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
+        return DeviceImageProxy<float>{
+            .DataPtr = it->second.Data.DevicePtr,
+            .Width   = it->second.Width,
+            .Height  = it->second.Height
+        };
     } else {
-        return loadAOVImageForCPU(aov_name);
+        IG_LOG(L_ERROR) << "Unknown aov '" << actual_name << "' access for device" << std::endl;
+        return DeviceImageProxy<float>::Invalid();
     }
 }
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(const std::string& aov_name)
 {
-    DeviceGuard _guard(this);
+    const std::string& actual_name = handleAOVName(aov_name);
 
-    if (isGPU()) {
-        if (checkIfAOVIsFramebuffer(aov_name)) {
-            if (!mHostFramebuffer.Data.data()) {
-                IG_LOG(L_ERROR) << "Framebuffer not yet initialized. Run a single iteration first" << std::endl;
-                return DeviceImageProxy<float>::Invalid();
-            }
-
-            if (mHostFramebuffer.Dirty && mDeviceData.film_pixels.data() != nullptr) {
-                _SECTION(SectionType::FramebufferHostUpdate);
-                anydsl::copy(mDeviceData.film_pixels, mHostFramebuffer.Data);
-                mHostFramebuffer.Dirty = false;
-            }
-            return { .DataPtr = mHostFramebuffer.Data.data(), .Width = mFramebufferWidth, .Height = mFramebufferHeight };
-        } else {
-            if (const auto it = mAOVs.find(aov_name); it != mAOVs.end()) {
-                if (it->second.Dirty && mDeviceData.aovs[aov_name].data() != nullptr) {
-                    _SECTION(SectionType::AOVHostUpdate);
-                    anydsl::copy(mDeviceData.aovs[aov_name], it->second.Data);
-                    it->second.Dirty = false;
-                }
-                return { .DataPtr = it->second.Data.data(), .Width = mFramebufferWidth, .Height = mFramebufferHeight };
-            } else {
-                IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' access for host" << std::endl;
-                return DeviceImageProxy<float>::Invalid();
-            }
-        }
+    if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
+        return DeviceImageProxy<float>{
+            .DataPtr = it->second.Data.HostPtr,
+            .Width   = it->second.Width,
+            .Height  = it->second.Height
+        };
     } else {
-        return loadAOVImageForCPU(aov_name);
+        IG_LOG(L_ERROR) << "Unknown aov '" << actual_name << "' access for device" << std::endl;
+        return DeviceImageProxy<float>::Invalid();
     }
-}
-
-void DeviceInterface::mapAOVBackToDevice(const std::string& aov_name)
-{
-    if (!isGPU()) // Device is host
-        return;
-
-    DeviceGuard _guard(this);
-
-    if (checkIfAOVIsFramebuffer(aov_name)) {
-        _SECTION(SectionType::FramebufferUpdate);
-        anydsl::copy(mHostFramebuffer.Data, mDeviceData.film_pixels);
-        mHostFramebuffer.Dirty = false;
-    } else {
-        if (const auto it = mAOVs.find(aov_name); it != mAOVs.end()) {
-            if (mDeviceData.aovs[aov_name].size() != it->second.Data.size()) {
-                _SECTION(SectionType::AOVUpdate);
-                mDeviceData.aovs[aov_name] = createFramebuffer(mDeviceID);
-            }
-
-            anydsl::copy(it->second.Data, mDeviceData.aovs[aov_name]);
-            it->second.Dirty = false;
-        } else {
-            IG_LOG(L_ERROR) << "Unknown aov '" << aov_name << "' mapping" << std::endl;
-        }
-    }
-}
-
-void DeviceInterface::mapAllAOVsBackToDevice()
-{
-    mapAOVBackToDevice({});
-    for (const auto& p : mAOVs)
-        mapAOVBackToDevice(p.first);
 }
 
 /// Clear specific aov
 void DeviceInterface::clearAOV(const std::string& aov_name)
 {
-    if (!mHostFramebuffer.Data.data())
-        return;
-
-    if (checkIfAOVIsFramebuffer(aov_name)) {
-        mHostFramebuffer.Dirty = true;
-        std::memset(mHostFramebuffer.Data.data(), 0, sizeof(float) * mHostFramebuffer.Data.size());
-        if (mDeviceData.film_pixels.size() == mHostFramebuffer.Data.size())
-            anydsl::copy(mHostFramebuffer.Data, mDeviceData.film_pixels);
-    } else {
-        auto& aov    = mAOVs.at(aov_name);
-        aov.Dirty    = true;
-        auto& buffer = aov.Data;
-        std::memset(buffer.data(), 0, sizeof(float) * buffer.size());
-        if (const auto it = mDeviceData.aovs.find(aov_name); it != mDeviceData.aovs.end()) {
-            if (it->second.size() == buffer.size())
-                anydsl::copy(buffer, it->second);
-        }
-    }
+    const std::string& actual_name = handleAOVName(aov_name);
+    if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end())
+        it->second.Data.fillWithZero();
 }
 
 /// Clear all aovs and the framebuffer
 void DeviceInterface::clearAllAOVs()
 {
     clearAOV({});
-    for (const auto& p : mAOVs)
+    for (const auto& p : mDeviceData.aovs)
         clearAOV(p.first.c_str());
 }
 
@@ -1146,8 +1013,6 @@ void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet
 
     ensureFramebuffer();
     mCurrentRenderSettings = settings;
-
-    resetFramebufferAccess();
 
     if (mSetupSettings.DebugTrace)
         IG_LOG(L_DEBUG) << "TRACE> Device Shader " << mSetupSettings.Target.toString() << std::endl;

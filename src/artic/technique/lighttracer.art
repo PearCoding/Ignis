@@ -59,7 +59,7 @@ fn @make_lt_emitter(light_selector: LightSelector, config: RenderConfig) -> RayE
 
 /////////////////////////////////////
 /// TODO: This ignores the first vertex on the light surface
-fn @make_lt_renderer(camera: Camera, framebuffer: AOVImage, max_path_len: i32, min_path_len: i32, clamp_value: f32) -> Technique {
+fn @make_lt_renderer(camera: Camera, framebuffer: ColorAOVImage, max_path_len: i32, min_path_len: i32, clamp_value: f32) -> Technique {
     let offset : f32 = 0.001;
     let handle_color = make_std_color_handler(clamp_value);
 

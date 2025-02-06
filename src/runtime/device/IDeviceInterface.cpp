@@ -49,7 +49,7 @@ IG_EXPORT void ignis_get_film_data(float** pixels, int* width, int* height)
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
 
-    auto framebuffer = device->getFramebuffer();
+    auto framebuffer = device->getFramebufferForDevice();
     *pixels          = framebuffer.DataPtr;
     *width           = (int)framebuffer.Width;
     *height          = (int)framebuffer.Height;
@@ -184,7 +184,7 @@ IG_EXPORT void ignis_dbg_dump_buffer(const char* name, const char* filename)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
-    device->saveBuffer(name, filename);
+    device->saveBufferToFile(name, filename);
 }
 
 IG_EXPORT void ignis_get_temporary_storage_host(TemporaryStorageHost* temp)

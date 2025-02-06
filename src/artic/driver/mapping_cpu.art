@@ -434,7 +434,7 @@ fn @cpu_traverse_secondary(scene: SceneTracer, size: i32, min_max: MinMax, vecto
     }
 }
 
-fn @cpu_splat(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32, spi: i32) {
+fn @cpu_splat(id: i32, color: Color, framebuffer: ColorAOVImage, vector_width: i32, spi: i32) {
     if vector_width > 1 {
         for lane in unroll(0, vector_width) {
             let j  = bitcast[i32](rv_extract(bitcast[f32](id), lane));
@@ -452,7 +452,7 @@ fn @cpu_splat(id: i32, color: Color, framebuffer: AOVImage, vector_width: i32, s
     }
 }
 
-fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool, vector_width: i32) -> AOVImage {
+fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool, vector_width: i32) -> ColorAOVImage {
     let (film_pixels, film_width, film_height) = cpu_get_film_data();
     if !use_framebuffer {
         make_empty_aov_image(film_width, film_height)
@@ -470,7 +470,7 @@ fn @cpu_hit_shade(primary: &PrimaryStream
     , scene: Scene
     , technique: Technique
     , config: RenderConfig
-    , framebuffer: AOVImage
+    , framebuffer: ColorAOVImage
     , payload_info: PayloadInfo
     , begin: i32
     , end: i32
@@ -582,7 +582,7 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
 fn @cpu_miss_shade(primary: &PrimaryStream
     , technique: Technique
     , config: RenderConfig
-    , framebuffer: AOVImage
+    , framebuffer: ColorAOVImage
     , payload_info: PayloadInfo
     , begin: i32
     , end: i32
@@ -638,7 +638,7 @@ fn @cpu_advanced_shadow(is_hit: bool
     , secondary: &SecondaryStream
     , technique: Technique
     , config: RenderConfig
-    , framebuffer: AOVImage
+    , framebuffer: ColorAOVImage
     , payload_info: PayloadInfo
     , begin: i32
     , end: i32
@@ -702,7 +702,7 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @cpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, vector_width: i32) -> AOVImage {
+fn @cpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, vector_width: i32) -> ColorAOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(id, &mut ptr);

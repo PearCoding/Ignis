@@ -28,12 +28,8 @@ TechniqueInfo SunGuidedPathTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
 
-    if (mMISAOVs) {
-        info.EnabledAOVs.emplace_back("BSDF Weights");
-        info.EnabledAOVs.emplace_back("Guided Weights");
-        info.EnabledAOVs.emplace_back("NEE Weights");
+    if (mMISAOVs)
         info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
-    }
 
     info.Variants[0].UsesLights                = true;
     info.Variants[0].PrimaryPayloadCount       = 8;
@@ -72,7 +68,7 @@ void SunGuidedPathTechnique::generateBody(const SerializationInput& input) const
                      << "  let aov_nee    = device.load_aov_image(\"NEE Weights\", spi);" << std::endl;
     }
 
-    input.Stream << "  let aovs = @|id:i32| -> AOVImage {" << std::endl
+    input.Stream << "  let aovs = @|id:i32| -> ColorAOVImage {" << std::endl
                  << "    match(id) {" << std::endl;
 
     if (mMISAOVs) {

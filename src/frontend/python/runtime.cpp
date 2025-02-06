@@ -440,7 +440,8 @@ void runtime_module(nb::module_& m)
         .def_prop_ro("SPI", &Runtime::samplesPerIteration)
         .def_prop_ro("RenderStartTime", [](const Runtime& r) { return std::chrono::duration_cast<std::chrono::seconds>(r.renderStartTime().time_since_epoch()).count(); })
         .def_prop_ro("SceneBoundingBox", &Runtime::sceneBoundingBox)
-        .def_prop_ro("AOVs", &Runtime::aovs)
+        .def_prop_ro("AOVs", &Runtime::framebufferNames)
+        .def_prop_ro("FramebufferNames", &Runtime::framebufferNames)
         .def_prop_ro_static("AvailableCameraTypes", &Runtime::getAvailableCameraTypes)
         .def_prop_ro_static("AvailableTechniqueTypes", &Runtime::getAvailableTechniqueTypes);
 

@@ -87,9 +87,6 @@ struct TechniqueVariantInfo {
 };
 
 struct TechniqueInfo {
-    /// The AOVs enabled in the current runtime. This option is shared across all variants
-    std::vector<std::string> EnabledAOVs;
-
     /// The variants (or passes) a technique uses. Per default only one variant is available
     std::vector<TechniqueVariantInfo> Variants = { {} };
 

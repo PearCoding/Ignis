@@ -6,7 +6,7 @@ struct ReduceOutputImageInfo {
 
 fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height: i32, settings: &ImageInfoSettings, output: &mut ImageInfoOutput) -> () {
     *output = ig_imageinfo_pipeline2(device, 
-        make_aov_image_from_buffer(
+        make_rgb_aov_image_from_buffer(
             device.get_device_buffer_accessor()(in_pixels, width * height * 3),
             width,
             height
@@ -14,7 +14,7 @@ fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height:
         settings);
 }
 
-fn @ig_imageinfo_pipeline2(device: Device, input: AOVImage, settings: &ImageInfoSettings) -> ImageInfoOutput {
+fn @ig_imageinfo_pipeline2(device: Device, input: ColorAOVImage, settings: &ImageInfoSettings) -> ImageInfoOutput {
     let width  = input.width;
     let height = input.height;
     let size   = width * height;

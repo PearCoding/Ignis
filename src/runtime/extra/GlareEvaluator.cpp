@@ -38,7 +38,7 @@ static const char* HandlerSrc = R"(
     let input = if use_custom {
         let buffer = device.make_buffer_view(userData as &[f32], width * height * u_channels);
         if u_channels == 3 {
-            make_mono_from_rgb_aov(make_aov_image_from_buffer_readonly(buffer, width, height), luminance)
+            make_mono_from_rgb_aov(make_rgb_aov_image_from_buffer_readonly(buffer, width, height), luminance)
         } else {
             make_mono_aov_image_from_buffer_readonly(buffer, width, height)
         }

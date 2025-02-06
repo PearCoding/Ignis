@@ -1,13 +1,11 @@
 #pragma once
 
 #include "Statistics.h"
+#include "UnifiedArray.h"
 #include "device/IDeviceInterface.h"
 #include "device/ShaderKey.h"
-#include "device/ShallowArray.h"
 
 #include "generated_interface.h"
-
-#include <anydsl_runtime.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -15,8 +13,8 @@ namespace IG {
 
 template <typename Node, typename Object>
 struct BvhProxy {
-    ShallowArray<Node> Nodes;
-    ShallowArray<Object> Objs;
+    UnifiedArray<Node> Nodes;
+    UnifiedArray<Object> Objs;
 };
 
 using Bvh2Ent = BvhProxy<Node2, EntityLeaf1>;
@@ -27,13 +25,13 @@ using BvhVariant = std::variant<Bvh2Ent, Bvh4Ent, Bvh8Ent>;
 
 struct DeviceDynTable {
     size_t EntryCount = 0;
-    ShallowArray<::LookupEntry> LookupEntries;
-    ShallowArray<uint8_t> Data;
+    UnifiedArray<::LookupEntry> LookupEntries;
+    UnifiedArray<uint8_t> Data;
 };
 
 struct TemporaryStorageHost {
-    anydsl::Array<int32_t> ray_begins;
-    anydsl::Array<int32_t> ray_ends;
+    UnifiedArray<int32_t> ray_begins;
+    UnifiedArray<int32_t> ray_ends;
 };
 
 struct Resource {
@@ -51,15 +49,9 @@ struct ShaderStats {
     size_t workload_count = 0;
 };
 
-struct AOV {
-    anydsl::Array<float> Data;
-    /// If true, host & device are out of sync
-    bool Dirty = false;
-};
-
 template <typename T>
 struct DeviceImageBase {
-    anydsl::Array<T> Data;
+    UnifiedArray<T> Data;
     size_t Width  = 0;
     size_t Height = 0;
 };
@@ -68,13 +60,13 @@ using DevicePackedImage = DeviceImageBase<uint8_t>; // Packed RGBA
 
 template <typename T>
 struct DeviceBufferBase {
-    anydsl::Array<T> Data;
+    UnifiedArray<T> Data;
 };
 using DeviceBuffer = DeviceBufferBase<uint8_t>;
 
 template <typename T>
 struct DeviceStreamBase {
-    anydsl::Array<T> Data;
+    UnifiedArray<T> Data;
     size_t BlockSize = 0;
 };
 using DeviceStream = DeviceStreamBase<float>;
@@ -92,7 +84,7 @@ struct CPUData {
 constexpr size_t GPUStreamBufferCount = 2;
 
 class DeviceInterface : public IDeviceInterface {
-public:
+private:
     class DeviceData {
         IG_CLASS_NON_COPYABLE(DeviceData);
 
@@ -103,10 +95,9 @@ public:
         std::unordered_map<std::string, BvhVariant> bvh_ents;
         TemporaryStorageHost temporary_storage_host;
         std::array<DeviceStream, GPUStreamBufferCount*(size_t)StreamType::Count> streams;
-        std::unordered_map<std::string, anydsl::Array<float>> aovs;
-        anydsl::Array<float> film_pixels;
-        anydsl::Array<StreamRay> ray_list;
         std::array<DeviceStream*, GPUStreamBufferCount*(size_t)StreamType::Count> current_streams;
+        UnifiedArray<StreamRay> ray_list;
+        std::unordered_map<std::string, DeviceImage> aovs;
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DevicePackedImage> packed_images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
@@ -133,6 +124,7 @@ public:
         }
     };
 
+public:
     explicit DeviceInterface(const Device::SetupSettings& settings);
     virtual ~DeviceInterface();
 
@@ -150,7 +142,8 @@ public:
     std::pair<size_t, size_t> framebufferSize() const override;
     std::pair<size_t, size_t> workSize() const override;
 
-    DeviceImageProxy<float> getFramebuffer() override;
+    std::vector<std::string> getAOVNames() const override;
+    DeviceImageProxy<float> getFramebufferForDevice() override;
     void resizeFramebuffer(size_t width, size_t height) override;
 
     std::string lookupResource(int32_t id) const override;
@@ -179,7 +172,7 @@ public:
     DeviceBufferProxy<uint8_t> loadBufferFromFile(const std::string& filename) override;
     DeviceBufferProxy<uint8_t> loadBufferByName(const std::string& name) override;
     DeviceBufferProxy<uint8_t> requestBuffer(const std::string& name, int32_t size, int32_t flags) override;
-    void saveBuffer(const std::string& name, const std::string& filename) override;
+    void saveBufferToFile(const std::string& name, const std::string& filename) override;
     bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte) override;
     bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte) override;
 
@@ -187,8 +180,6 @@ public:
     DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name) override;
     void clearAOV(const std::string& aov_name) override;
     void clearAllAOVs() override;
-    void mapAOVBackToDevice(const std::string& aov_name) override;
-    void mapAllAOVsBackToDevice() override;
 
     void runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) override;
     void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings) override;
@@ -212,8 +203,6 @@ public:
 
 private:
     void ensureFramebuffer();
-    void resetFramebufferAccess();
-    anydsl::Array<float> createFramebuffer(int dev) const;
 
     void updateSettings(const Device::RenderSettings& settings);
     void updateShaderSet(const TechniqueVariantShaderSet& shaderSet);
@@ -226,8 +215,6 @@ private:
 
     void handleDebugOutput();
 
-    DeviceImageProxy<float> loadAOVImageForCPU(const std::string& aov_name);
-
     void updateStatistics();
 
     const int mDeviceID;
@@ -238,9 +225,6 @@ private:
 
     tbb::concurrent_queue<CPUData*> mAvailableThreadData;
     std::unordered_map<ShaderKey, ShaderInfo, ShaderKeyHash> mShaderInfos;
-
-    std::unordered_map<std::string, AOV> mAOVs;
-    AOV mHostFramebuffer;
 
     size_t mEntityCount;
     size_t mFramebufferWidth;

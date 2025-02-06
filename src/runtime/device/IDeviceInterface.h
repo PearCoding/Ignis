@@ -77,7 +77,8 @@ public:
     inline size_t framebufferArea() const { return std::get<0>(framebufferSize()) * std::get<1>(framebufferSize()); }
     inline size_t workArea() const { return std::get<0>(workSize()) * std::get<1>(workSize()); }
 
-    virtual DeviceImageProxy<float> getFramebuffer()            = 0;
+    virtual std::vector<std::string> getAOVNames() const        = 0;
+    virtual DeviceImageProxy<float> getFramebufferForDevice()   = 0;
     virtual void resizeFramebuffer(size_t width, size_t height) = 0;
 
     virtual std::string lookupResource(int32_t id) const = 0;
@@ -106,7 +107,7 @@ public:
     virtual DeviceBufferProxy<uint8_t> loadBufferFromFile(const std::string& filename)                     = 0;
     virtual DeviceBufferProxy<uint8_t> loadBufferByName(const std::string& name)                           = 0;
     virtual DeviceBufferProxy<uint8_t> requestBuffer(const std::string& name, int32_t size, int32_t flags) = 0;
-    virtual void saveBuffer(const std::string& name, const std::string& filename)                          = 0;
+    virtual void saveBufferToFile(const std::string& name, const std::string& filename)                    = 0;
     virtual bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte)                  = 0;
     virtual bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte)          = 0;
 
@@ -114,8 +115,6 @@ public:
     virtual DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name)   = 0;
     virtual void clearAOV(const std::string& aov_name)                                 = 0;
     virtual void clearAllAOVs()                                                        = 0;
-    virtual void mapAOVBackToDevice(const std::string& aov_name)                       = 0;
-    virtual void mapAllAOVsBackToDevice()                                              = 0;
 
     virtual void runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) = 0;
     virtual void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)    = 0;

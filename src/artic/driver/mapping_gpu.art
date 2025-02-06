@@ -31,14 +31,14 @@ fn @gpu_get_film_data() -> (&mut [f32], i32, i32) {
     (film_pixels, film_width, film_height)
 }
 
-fn @gpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, atomics: Atomics) -> AOVImage {
+fn @gpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, atomics: Atomics) -> ColorAOVImage {
     // Width & height always the same as film_width, film_height
     let mut ptr : &mut [f32];
     ignis_get_aov_image(id, &mut ptr);
     make_atomic_aov_image(ptr, w, h, spi, atomics)
 }
 
-fn @gpu_get_framebuffer(spi: i32, use_framebuffer: bool, atomics: Atomics) -> AOVImage {
+fn @gpu_get_framebuffer(spi: i32, use_framebuffer: bool, atomics: Atomics) -> ColorAOVImage {
     let (film_pixels, film_width, film_height) = gpu_get_film_data();
     if !use_framebuffer {
         make_empty_aov_image(film_width, film_height)
@@ -83,7 +83,7 @@ fn @gpu_traverse_secondary( secondary: SecondaryStream
                           , acc: Accelerator
                           , gpu_config: GPUKernelConfiguration
                           , config: RenderConfig
-                          , framebuffer: AOVImage
+                          , framebuffer: ColorAOVImage
                           , is_advanced: bool
                           ) -> () {
     let spi = config.spi;
@@ -127,7 +127,7 @@ fn @gpu_hit_shade( acc: Accelerator
                  , technique: Technique
                  , config: RenderConfig
                  , payload_info: PayloadInfo
-                 , framebuffer: AOVImage
+                 , framebuffer: ColorAOVImage
                  , primary: PrimaryStream
                  , secondary: SecondaryStream
                  , first: i32, last: i32) -> () {
@@ -239,7 +239,7 @@ fn @gpu_miss_shade( acc: Accelerator
                   , technique: Technique
                   , config: RenderConfig
                   , payload_info: PayloadInfo
-                  , framebuffer: AOVImage
+                  , framebuffer: ColorAOVImage
                   , primary: PrimaryStream
                   , first: i32, last: i32) -> () {
     let n = last - first;
@@ -297,7 +297,7 @@ fn @gpu_advanced_shadow(is_hit: bool
                       , technique: Technique
                       , config: RenderConfig
                       , payload_info: PayloadInfo
-                      , framebuffer: AOVImage
+                      , framebuffer: ColorAOVImage
                       , secondary: SecondaryStream
                       , first: i32, last: i32) -> () {
     let n = last - first;

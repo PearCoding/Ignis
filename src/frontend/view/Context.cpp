@@ -139,10 +139,7 @@ public:
 
     [[nodiscard]] inline std::string currentAOVName() const
     {
-        if (CurrentAOV == 0)
-            return std::string{};
-        else
-            return Runtime->aovs().at(CurrentAOV - 1);
+        return Runtime->framebufferNames().at(CurrentAOV);
     }
 
     [[nodiscard]] inline AOVAccessor currentPixels() const
@@ -152,7 +149,7 @@ public:
 
     void changeAOV(int delta_aov)
     {
-        const int rem = (int)Runtime->aovs().size() + 1;
+        const int rem = (int)Runtime->framebufferNames().size();
         CurrentAOV    = static_cast<size_t>((((int)CurrentAOV + delta_aov) % rem + rem) % rem);
     }
 
@@ -592,8 +589,7 @@ public:
         return Color(
             film[ind * 3 + 0] * inv_iter,
             film[ind * 3 + 1] * inv_iter,
-            film[ind * 3 + 2] * inv_iter
-        );
+            film[ind * 3 + 2] * inv_iter);
     }
 
     void makeScreenshot()
@@ -748,13 +744,14 @@ public:
                 ImGui::PopItemWidth();
             }
 
-            if (!Runtime->aovs().empty()) {
+            const auto aovNames = Runtime->framebufferNames();
+            if (!aovNames.empty()) {
                 if (ImGui::CollapsingHeader("AOV", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    const char* current_aov = CurrentAOV == 0 ? "Color" : Runtime->aovs().at(CurrentAOV - 1).c_str();
+                    const char* current_aov = aovNames.at(CurrentAOV).c_str();
                     if (ImGui::BeginCombo("Display", current_aov)) {
-                        for (size_t i = 0; i < Runtime->aovs().size() + 1; ++i) {
+                        for (size_t i = 0; i < aovNames.size(); ++i) {
                             bool is_selected = (i == CurrentAOV);
-                            const char* name = i == 0 ? "Color" : Runtime->aovs().at(i - 1).c_str();
+                            const char* name = aovNames.at(i).c_str();
                             if (ImGui::Selectable(name, is_selected))
                                 CurrentAOV = (int)i;
                             if (is_selected)

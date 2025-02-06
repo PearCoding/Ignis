@@ -14,7 +14,6 @@ TechniqueInfo EnvCheckTechnique::getInfo(const LoaderContext&) const
     TechniqueInfo info;
     info.Variants[0].UsesLights = true;
     
-    info.EnabledAOVs.emplace_back("Pdf");
     return info;
 }
 

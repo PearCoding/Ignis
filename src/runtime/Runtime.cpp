@@ -309,9 +309,6 @@ bool Runtime::load(const Path& path, const Scene* scene)
     mResourceMap              = ctx->generateResourceMap();
     mSceneParameterDesc       = ctx->SceneParameterDesc;
 
-    if (mOptions.Denoiser.Enabled)
-        mTechniqueInfo.EnabledAOVs.emplace_back("Denoised");
-
     // Setup array of number of entities per material
     mEntityPerMaterial.clear();
     mEntityPerMaterial.reserve(ctx->Materials.size());
@@ -552,7 +549,6 @@ bool Runtime::setupScene()
 {
     Device::SceneSettings settings;
     settings.database            = &mDatabase;
-    settings.aov_map             = &mTechniqueInfo.EnabledAOVs;
     settings.resource_map        = &mResourceMap;
     settings.entity_per_material = &mEntityPerMaterial;
 
@@ -811,19 +807,24 @@ bool Runtime::runPass(const RenderPass& pass)
     return true;
 }
 
+std::vector<std::string> Runtime::framebufferNames() const
+{
+    return mDevice->getFramebufferNames();
+}
+
 bool Runtime::saveFramebuffer(const Path& path) const
 {
     const size_t width  = framebufferWidth();
     const size_t height = framebufferHeight();
 
-    const auto& aovs       = this->aovs();
-    const size_t aov_count = aovs.size() + 1;
+    const auto avl_aov_names = framebufferNames();
+    const size_t aov_count   = avl_aov_names.size();
 
     std::vector<float> images(width * height * 3 * aov_count);
 
     // Copy data
     for (size_t aov = 0; aov < aov_count; ++aov) {
-        const std::string aov_name = aov == 0 ? std::string{} : aovs[aov - 1];
+        const std::string& aov_name = avl_aov_names.at(aov);
 
         float scale = currentIterationCount() > 0 ? 1.0f / currentIterationCount() : 1.0f;
         if (aov_name == "Normals" || aov_name == "Albedo")
@@ -854,6 +855,7 @@ bool Runtime::saveFramebuffer(const Path& path) const
 
     std::vector<const float*> image_ptrs(3 * aov_count);
     std::vector<std::string> image_names(3 * aov_count);
+
     for (size_t aov = 0; aov < aov_count; ++aov) {
         // Swizzle RGB to BGR as some viewers expect it per default
         image_ptrs[3 * aov + 2] = &images[width * height * (3 * aov + 0)];
@@ -861,12 +863,12 @@ bool Runtime::saveFramebuffer(const Path& path) const
         image_ptrs[3 * aov + 0] = &images[width * height * (3 * aov + 2)];
 
         // Framebuffer
-        if (aov == 0) {
+        const std::string& name = avl_aov_names.at(aov);
+        if (name == "Color") {
             image_names[3 * aov + 0] = "B";
             image_names[3 * aov + 1] = "G";
             image_names[3 * aov + 2] = "R";
         } else {
-            std::string name         = this->aovs()[aov - 1];
             image_names[3 * aov + 0] = name + ".B";
             image_names[3 * aov + 1] = name + ".G";
             image_names[3 * aov + 2] = name + ".R";

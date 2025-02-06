@@ -1,7 +1,7 @@
 // TODO: Get rid of this
 fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &TonemapSettings) =
     ig_tonemap_pipeline2(device, 
-        make_aov_image_from_buffer(
+        make_rgb_aov_image_from_buffer(
             device.get_device_buffer_accessor()(in_pixels, width * height * 3),
             width,
             height
@@ -10,7 +10,7 @@ fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32
         settings);
 
 
-fn @ig_tonemap_pipeline2(device: Device, in_pixels: AOVImage, out_pixels: DeviceBuffer, settings: &TonemapSettings) -> () {
+fn @ig_tonemap_pipeline2(device: Device, in_pixels: ColorAOVImage, out_pixels: DeviceBuffer, settings: &TonemapSettings) -> () {
     let scale           = settings.scale;
     let exposure_factor = settings.exposure_factor;
     let exposure_offset = settings.exposure_offset;
