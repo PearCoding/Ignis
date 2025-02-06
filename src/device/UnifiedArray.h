@@ -58,7 +58,8 @@ public:
         void* ptr = allocateUnified(dev, size * sizeof(T));
         return UnifiedArray(
             (T*)ptr,
-            (T*)getDevicePtr(dev, ptr),
+            // (T*)getDevicePtr(dev, ptr),
+            (T*)ptr,
             size * sizeof(T),
             dev,
             MemoryType::Unified);
@@ -126,8 +127,8 @@ public:
 
 private:
     inline UnifiedArray(T* hostPtr, T* devicePtr, size_t sizeInBytes, int device, MemoryType type)
-        : DevicePtr(hostPtr)
-        , HostPtr(devicePtr)
+        : DevicePtr(devicePtr)
+        , HostPtr(hostPtr)
         , SizeInBytes(sizeInBytes)
         , Device(device)
         , Type(type)

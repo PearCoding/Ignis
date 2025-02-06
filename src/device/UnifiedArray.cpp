@@ -5,7 +5,7 @@
 namespace IG {
 void* UnifiedArrayBase::allocateUnified(int dev, size_t sizeInBytes)
 {
-    return anydsl_alloc_host(dev, (int64_t)sizeInBytes);
+    return anydsl_alloc_unified(dev, (int64_t)sizeInBytes);
 }
 
 void* UnifiedArrayBase::allocateDevice(int dev, size_t sizeInBytes)
@@ -16,7 +16,7 @@ void* UnifiedArrayBase::allocateDevice(int dev, size_t sizeInBytes)
 void UnifiedArrayBase::deallocateUnified(int dev, void* ptr)
 {
     if (ptr)
-        anydsl_release_host(dev, ptr);
+        anydsl_release(dev, ptr);
 }
 
 void UnifiedArrayBase::deallocateDevice(int dev, void* ptr)

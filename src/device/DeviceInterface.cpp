@@ -55,7 +55,7 @@ static inline void resizeUnifiedArray(int32_t dev, UnifiedArray<T>& array, size_
     const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
     const size_t n      = capacity * multiplier;
     if (array.SizeInBytes < n * sizeof(T))
-        array = UnifiedArray<T>::AllocateUnified(dev, size * sizeof(T));
+        array = UnifiedArray<T>::AllocateUnified(dev, n);
 }
 
 template <typename T>
@@ -64,7 +64,7 @@ static inline void resizeDeviceArray(int32_t dev, UnifiedArray<T>& array, size_t
     const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
     const size_t n      = capacity * multiplier;
     if (array.SizeInBytes < n * sizeof(T))
-        array = UnifiedArray<T>::AllocateDevice(dev, size * sizeof(T));
+        array = UnifiedArray<T>::AllocateDevice(dev, n);
 }
 
 static inline int computeTargetID(const Target& target)
@@ -217,7 +217,8 @@ void DeviceInterface::resizeFramebuffer(size_t width, size_t height)
 
 void DeviceInterface::ensureFramebuffer()
 {
-    const size_t expectedSize = framebufferArea() * 3 * sizeof(float);
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+    const size_t expectedSize = framebufferArea() * 3;
 
     IG_ASSERT(expectedSize > 0, "Expected host framebuffer to have a valid size");
     if (const auto it = mDeviceData.aovs.find(DefaultFramebufferName); it != mDeviceData.aovs.end()) {
@@ -230,7 +231,7 @@ void DeviceInterface::ensureFramebuffer()
             }
 
             // Resize if needed
-            if (it->second.Data.SizeInBytes < expectedSize) {
+            if (it->second.Data.SizeInBytes < expectedSize * sizeof(float)) {
                 for (auto& p : mDeviceData.aovs) {
                     p.second.Data = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize);
                     p.second.Data.fillWithZero();
@@ -238,12 +239,12 @@ void DeviceInterface::ensureFramebuffer()
             }
         }
     } else {
-        mDeviceData.aovs[DefaultFramebufferName] = DeviceImage{
-            .Data   = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize),
-            .Width  = mFramebufferWidth,
-            .Height = mFramebufferHeight
-        };
-        mDeviceData.aovs[DefaultFramebufferName].Data.fillWithZero();
+        mDeviceData.aovs.emplace(DefaultFramebufferName,
+                                 DeviceImage{
+                                     .Data   = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize),
+                                     .Width  = mFramebufferWidth,
+                                     .Height = mFramebufferHeight })
+            .first->second.Data.fillWithZero();
     }
 }
 
@@ -399,7 +400,7 @@ DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType 
     const size_t offset = isPrimary ? 0 : 1;
 
     auto& stream = isGPU() ? *mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount] : getCurrentThreadData()->streams[offset];
-    resizeUnifiedArray(mDeviceID, stream.Data, size, elements);
+    resizeDeviceArray(mDeviceID, stream.Data, size, elements);
     stream.BlockSize = size;
 
     return {
@@ -419,24 +420,13 @@ DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType 
     }
 
     const size_t offset = isPrimary ? 0 : 1;
+    auto& stream        = isGPU() ? *mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount] : getCurrentThreadData()->streams[offset];
 
-    if (isGPU()) {
-        IG_ASSERT(mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount]->Data.SizeInBytes > 0, "Expected gpu stream to be initialized");
-        auto& stream = *mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount];
-
-        return {
-            .DataPtr   = stream.Data.DevicePtr,
-            .BlockSize = stream.BlockSize
-        };
-    } else {
-        IG_ASSERT(getCurrentThreadData()->streams[offset].Data.SizeInBytes > 0, "Expected cpu stream to be initialized");
-        auto& stream = getCurrentThreadData()->streams[offset];
-
-        return {
-            .DataPtr   = stream.Data.DevicePtr,
-            .BlockSize = stream.BlockSize
-        };
-    }
+    IG_ASSERT(stream.Data.SizeInBytes > 0, "Expected stream to be initialized");
+    return {
+        .DataPtr   = stream.Data.DevicePtr,
+        .BlockSize = stream.BlockSize
+    };
 }
 
 void DeviceInterface::swapGPUStreams(StreamType type)
@@ -540,8 +530,8 @@ IDeviceInterface::DynTableProxy DeviceInterface::loadDynTable(const std::string&
                 .Data          = UnifiedArray<uint8_t>::AllocateUnified(mDeviceID, tbl.data().size())
             };
 
-            std::memcpy(entry.LookupEntries.HostPtr, tbl.lookups().data(), tbl.lookups().size() * sizeof(::LookupEntry));
-            std::memcpy(entry.LookupEntries.HostPtr, tbl.data().data(), tbl.data().size() * sizeof(uint8_t));
+            std::memcpy(entry.LookupEntries.HostPtr, tbl.lookups().data(), entry.LookupEntries.SizeInBytes);
+            std::memcpy(entry.Data.HostPtr, tbl.data().data(), entry.Data.SizeInBytes);
 
             dyntable = &tables.emplace(name, std::move(entry)).first->second;
         }
@@ -570,16 +560,15 @@ IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string&
 
     if (isGPU()) {
         auto& tables = mDeviceData.fixtables;
-        auto it      = tables.find(name);
-        if (it != tables.end()) {
+        if (const auto it = tables.find(name); it != tables.end()) {
             return mapToProxy(it->second);
         } else {
             IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
             IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
             const auto& fixtable = mCurrentSceneSettings.database->FixTables.at(name);
 
-            DeviceBuffer buffer = DeviceBuffer{ .Data = UnifiedArray<uint8>::AllocateUnified(mDeviceID, fixtable.data().size() * sizeof(uint8)) };
-            std::memcpy(buffer.Data.HostPtr, fixtable.data().data(), fixtable.data().size() * sizeof(uint8));
+            DeviceBuffer buffer = DeviceBuffer{ .Data = UnifiedArray<uint8>::AllocateUnified(mDeviceID, fixtable.data().size()) };
+            std::memcpy(buffer.Data.HostPtr, fixtable.data().data(), buffer.Data.SizeInBytes);
             return mapToProxy(tables.emplace(name, std::move(buffer)).first->second);
         }
     } else {
@@ -676,26 +665,25 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
         if (image.channels != (size_t)expected_channels)
             image = image.castTo((size_t)expected_channels);
 
-        auto& res = getCurrentShader().images[filename]; // Get or construct resource info for given resource
-        res.counter++;
-        res.memory_usage = image.width * image.height * image.channels * sizeof(float);
-
-        arr    = UnifiedArray<float>::AllocateUnified(mDeviceID, res.memory_usage);
+        arr    = UnifiedArray<float>::AllocateUnified(mDeviceID, image.width * image.height * image.channels);
         width  = image.width;
         height = image.height;
         std::memcpy(arr.HostPtr, image.pixels.get(), arr.SizeInBytes);
 
+        auto& res = getCurrentShader().images[filename]; // Get or construct resource info for given resource
+        res.counter++;
+        res.memory_usage = arr.SizeInBytes;
     } catch (const ImageLoadException& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
 
         if (MissingImage.channels != (size_t)expected_channels) {
             Image image = MissingImage.castTo((size_t)expected_channels);
-            arr         = UnifiedArray<float>::AllocateUnified(mDeviceID, image.width * image.height * image.channels * sizeof(float));
+            arr         = UnifiedArray<float>::AllocateUnified(mDeviceID, image.width * image.height * image.channels);
             width       = image.width;
             height      = image.height;
             std::memcpy(arr.HostPtr, image.pixels.get(), arr.SizeInBytes);
         } else {
-            arr    = UnifiedArray<float>::AllocateUnified(mDeviceID, MissingImage.width * MissingImage.height * MissingImage.channels * sizeof(float));
+            arr    = UnifiedArray<float>::AllocateUnified(mDeviceID, MissingImage.width * MissingImage.height * MissingImage.channels);
             width  = MissingImage.width;
             height = MissingImage.height;
             std::memcpy(arr.HostPtr, MissingImage.pixels.get(), arr.SizeInBytes);
@@ -744,8 +732,8 @@ IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFrom
         channels = MissingImage.channels;
     }
 
-    auto arr = UnifiedArray<uint8>::AllocateUnified(mDeviceID, hostData.size() * sizeof(uint8));
-    std::memcpy(arr.HostPtr, hostData.data(), hostData.size() * sizeof(uint8));
+    auto arr = UnifiedArray<uint8>::AllocateUnified(mDeviceID, hostData.size());
+    std::memcpy(arr.HostPtr, hostData.data(), arr.SizeInBytes);
 
     return mapToProxy(images.emplace(filename, DevicePackedImage{
                                                    .Data   = std::move(arr),
@@ -781,17 +769,14 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     if (const auto it = buffers.find(filename); it != buffers.end())
         return mapToProxy(it->second);
 
-    DeviceGuard _deviceGuard(this); // Can be called from external
-    _SECTION(SectionType::BufferLoading);
-
     IG_LOG(L_DEBUG) << "Loading buffer '" << filename << "'" << std::endl;
     const auto vec = readBufferFile(filename);
 
     if ((vec.size() % sizeof(int32_t)) != 0)
         IG_LOG(L_WARNING) << "Buffer '" << filename << "' is not properly sized!" << std::endl;
 
-    auto arr = UnifiedArray<uint8>::AllocateUnified(mDeviceID, vec.size() * sizeof(uint8));
-    std::memcpy(arr.HostPtr, vec.data(), vec.size() * sizeof(uint8));
+    auto arr = UnifiedArray<uint8>::AllocateUnified(mDeviceID, vec.size());
+    std::memcpy(arr.HostPtr, vec.data(), arr.SizeInBytes);
 
     return mapToProxy(buffers.emplace(filename, std::move(arr)).first->second);
 }
@@ -823,12 +808,12 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     if (const auto it = buffers.find(name); it != buffers.end() && it->second.Data.SizeInBytes >= size * sizeof(uint8))
         return mapToProxy(it->second);
 
-    DeviceGuard _deviceGuard(this); // Can be called from external
-    _SECTION(SectionType::BufferRequests);
-
     IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;
 
-    return mapToProxy(buffers.emplace(name, UnifiedArray<uint8>::AllocateUnified(mDeviceID, size)).first->second);
+    auto arr = UnifiedArray<uint8>::AllocateUnified(mDeviceID, size);
+    arr.fillWithZero();
+
+    return mapToProxy(buffers.emplace(name, std::move(arr)).first->second);
 }
 
 void DeviceInterface::saveBufferToFile(const std::string& name, const std::string& filename)
@@ -958,22 +943,30 @@ void DeviceInterface::handleDebugOutput()
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice(const std::string& aov_name)
 {
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
-        return DeviceImageProxy<float>{
-            .DataPtr = it->second.Data.DevicePtr,
-            .Width   = it->second.Width,
-            .Height  = it->second.Height
-        };
+        return mapToProxy(it->second);
     } else {
-        IG_LOG(L_ERROR) << "Unknown aov '" << actual_name << "' access for device" << std::endl;
-        return DeviceImageProxy<float>::Invalid();
+        const size_t expectedSize = framebufferArea() * 3;
+
+        auto& aov = mDeviceData.aovs.emplace(actual_name,
+                                             DeviceImage{
+                                                 .Data   = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize),
+                                                 .Width  = mFramebufferWidth,
+                                                 .Height = mFramebufferHeight })
+                        .first->second;
+        aov.Data.fillWithZero();
+        return mapToProxy(aov);
     }
 }
 
 IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(const std::string& aov_name)
 {
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
@@ -983,7 +976,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
             .Height  = it->second.Height
         };
     } else {
-        IG_LOG(L_ERROR) << "Unknown aov '" << actual_name << "' access for device" << std::endl;
+        IG_LOG(L_ERROR) << "Unknown aov '" << actual_name << "' access for host" << std::endl;
         return DeviceImageProxy<float>::Invalid();
     }
 }
@@ -991,6 +984,8 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
 /// Clear specific aov
 void DeviceInterface::clearAOV(const std::string& aov_name)
 {
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
     const std::string& actual_name = handleAOVName(aov_name);
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end())
         it->second.Data.fillWithZero();
@@ -999,9 +994,10 @@ void DeviceInterface::clearAOV(const std::string& aov_name)
 /// Clear all aovs and the framebuffer
 void DeviceInterface::clearAllAOVs()
 {
-    clearAOV({});
-    for (const auto& p : mDeviceData.aovs)
-        clearAOV(p.first.c_str());
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
+    for (auto& p : mDeviceData.aovs)
+        p.second.Data.fillWithZero();
 }
 
 // -------------------------------------------------------- Shader
@@ -1162,7 +1158,6 @@ void DeviceInterface::runMaterialShader(int material_id, int first, int last)
         IG_LOG(L_DEBUG) << "TRACE> Material Shader [M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
     const ShaderType shaderType = material_id >= 0 ? ShaderType::Hit : ShaderType::Miss;
-
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(shaderType, last - first, material_id);
 
