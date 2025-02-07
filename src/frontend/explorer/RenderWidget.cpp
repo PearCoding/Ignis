@@ -425,7 +425,7 @@ private:
         if (mWidth == 0 || mHeight == 0)
             return false;
 
-        mRuntime->setParameter("_aov", mUseDenoiser ? "Denoised" : "");
+        mRuntime->setParameter("_aov", mUseDenoiser ? "Denoised" : "Color");
 
         if (!mGlarePass->run()) {
             IG_LOG(L_ERROR) << "Failed to run glare pass" << std::endl;

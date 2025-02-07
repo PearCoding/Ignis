@@ -13,7 +13,7 @@ constexpr size_t MinPrimaryStreamSize   = (sizeof(PrimaryStream) - sizeof(Primar
 constexpr size_t MinSecondaryStreamSize = (sizeof(SecondaryStream) - sizeof(SecondaryStream::payload)) / sizeof(SecondaryStream::mat_id);
 
 template <typename T>
-inline void getStream(T* dev_stream, IDeviceInterface::DeviceStreamProxy<float>& stream, size_t min_components)
+inline void mapStream(T* dev_stream, const IDeviceInterface::DeviceStreamProxy<float>& stream, size_t min_components)
 {
     static_assert(std::is_standard_layout<T>::value, "Expected stream to be plain old data");
     static_assert((sizeof(T) % sizeof(float*)) == 0, "Expected stream size to be multiple of pointer size");
@@ -206,7 +206,7 @@ IG_EXPORT void ignis_get_primary_stream(int id, PrimaryStream* primary, int size
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
     auto stream = device->getStream(IDeviceInterface::StreamType::Primary, id, size, IG::MinPrimaryStreamSize);
-    IG::getStream(primary, stream, IG::MinPrimaryStreamSize);
+    IG::mapStream(primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_primary_stream_const(int id, PrimaryStream* primary)
@@ -214,7 +214,7 @@ IG_EXPORT void ignis_get_primary_stream_const(int id, PrimaryStream* primary)
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
     auto stream = device->getStream(IDeviceInterface::StreamType::Primary, id);
-    IG::getStream(primary, stream, IG::MinPrimaryStreamSize);
+    IG::mapStream(primary, stream, IG::MinPrimaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream(int id, SecondaryStream* secondary, int size)
@@ -222,7 +222,7 @@ IG_EXPORT void ignis_get_secondary_stream(int id, SecondaryStream* secondary, in
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
     auto stream = device->getStream(IDeviceInterface::StreamType::Secondary, id, size, IG::MinSecondaryStreamSize);
-    IG::getStream(secondary, stream, IG::MinSecondaryStreamSize);
+    IG::mapStream(secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_get_secondary_stream_const(int id, SecondaryStream* secondary)
@@ -230,7 +230,7 @@ IG_EXPORT void ignis_get_secondary_stream_const(int id, SecondaryStream* seconda
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
     auto stream = device->getStream(IDeviceInterface::StreamType::Secondary, id);
-    IG::getStream(secondary, stream, IG::MinSecondaryStreamSize);
+    IG::mapStream(secondary, stream, IG::MinSecondaryStreamSize);
 }
 
 IG_EXPORT void ignis_gpu_swap_primary_streams()

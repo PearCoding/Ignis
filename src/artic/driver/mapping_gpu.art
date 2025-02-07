@@ -261,6 +261,9 @@ fn @gpu_miss_shade( acc: Accelerator
         let payload = get_primary_payload(i, 0);
         let ray     = read_primary_ray(i, 0);
         let ray_id  = primary.rays.id(i);
+
+        if ray_id < 0 { return() } // FIXME: Why is this needed? Should have been catched somewhere else...
+        
         let pixel_l = ray_id / spi;
         let pixel   = make_pixelcoord_from_linear(pixel_l, framebuffer.width, framebuffer.height, 0, 0);
 

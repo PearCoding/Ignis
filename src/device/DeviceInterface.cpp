@@ -69,7 +69,7 @@ static inline int computeTargetID(const Target& target)
 }
 
 template <typename T>
-inline IDeviceInterface::DeviceBufferProxy<T> mapToProxy(const DeviceBufferBase<T>& buffer)
+inline IDeviceInterface::DeviceBufferProxy<T> mapToProxyDevice(const DeviceBufferBase<T>& buffer)
 {
     return IDeviceInterface::DeviceBufferProxy<T>{
         .DataPtr     = const_cast<T*>(buffer.Data.DevicePtr),
@@ -78,7 +78,7 @@ inline IDeviceInterface::DeviceBufferProxy<T> mapToProxy(const DeviceBufferBase<
 }
 
 template <typename T>
-inline IDeviceInterface::DeviceImageProxy<T> mapToProxy(const DeviceImageBase<T>& buffer)
+inline IDeviceInterface::DeviceImageProxy<T> mapToProxyDevice(const DeviceImageBase<T>& buffer)
 {
     return IDeviceInterface::DeviceImageProxy<T>{
         .DataPtr = const_cast<T*>(buffer.Data.DevicePtr),
@@ -88,7 +88,7 @@ inline IDeviceInterface::DeviceImageProxy<T> mapToProxy(const DeviceImageBase<T>
 }
 
 template <typename T>
-inline IDeviceInterface::DeviceStreamProxy<T> mapToProxy(const DeviceStreamBase<T>& buffer)
+inline IDeviceInterface::DeviceStreamProxy<T> mapToProxyDevice(const DeviceStreamBase<T>& buffer)
 {
     return IDeviceInterface::DeviceStreamProxy<T>{
         .DataPtr   = const_cast<T*>(buffer.Data.DevicePtr),
@@ -392,10 +392,7 @@ DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType 
     resizeDeviceArray(mDeviceID, stream.Data, size, elements);
     stream.BlockSize = size;
 
-    return {
-        .DataPtr   = stream.Data.DevicePtr,
-        .BlockSize = stream.BlockSize
-    };
+    return mapToProxyDevice(stream);
 }
 
 DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType type, size_t buffer)
@@ -412,10 +409,7 @@ DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType 
     auto& stream        = isGPU() ? *mDeviceData.current_streams[buffer + offset * GPUStreamBufferCount] : getCurrentThreadData()->streams[offset];
 
     IG_ASSERT(stream.Data.SizeInBytes > 0, "Expected stream to be initialized");
-    return {
-        .DataPtr   = stream.Data.DevicePtr,
-        .BlockSize = stream.BlockSize
-    };
+    return mapToProxyDevice(stream);
 }
 
 void DeviceInterface::swapGPUStreams(StreamType type)
@@ -556,7 +550,7 @@ IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string&
     if (isGPU()) {
         auto& tables = mDeviceData.fixtables;
         if (const auto it = tables.find(name); it != tables.end()) {
-            return mapToProxy(it->second);
+            return mapToProxyDevice(it->second);
         } else {
             IG_LOG(L_DEBUG) << "Loading fixtable '" << name << "'" << std::endl;
             IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
@@ -564,7 +558,7 @@ IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string&
 
             DeviceBuffer buffer = DeviceBuffer{ .Data = UnifiedArray<uint8>::AllocateDevice(mDeviceID, fixtable.data().size()) };
             buffer.Data.copyFromExternalHostToDevice(fixtable.data().data());
-            return mapToProxy(tables.emplace(name, std::move(buffer)).first->second);
+            return mapToProxyDevice(tables.emplace(name, std::move(buffer)).first->second);
         }
     } else {
         IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
@@ -647,7 +641,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
 
     auto& images = mDeviceData.images;
     if (const auto it = images.find(filename); it != images.end())
-        return mapToProxy(it->second);
+        return mapToProxyDevice(it->second);
 
     _SECTION(SectionType::ImageLoading);
 
@@ -684,7 +678,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
         }
     }
 
-    return mapToProxy(images.emplace(filename, DeviceImage{
+    return mapToProxyDevice(images.emplace(filename, DeviceImage{
                                                    .Data   = std::move(arr),
                                                    .Width  = width,
                                                    .Height = height })
@@ -697,7 +691,7 @@ IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFrom
 
     auto& images = mDeviceData.packed_images;
     if (const auto it = images.find(filename); it != images.end())
-        return mapToProxy(it->second);
+        return mapToProxyDevice(it->second);
 
     _SECTION(SectionType::PackedImageLoading);
 
@@ -729,7 +723,7 @@ IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFrom
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, hostData.size());
     arr.copyFromExternalHostToDevice(hostData.data());
 
-    return mapToProxy(images.emplace(filename, DevicePackedImage{
+    return mapToProxyDevice(images.emplace(filename, DevicePackedImage{
                                                    .Data   = std::move(arr),
                                                    .Width  = width,
                                                    .Height = height })
@@ -761,7 +755,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
 
     auto& buffers = mDeviceData.buffers;
     if (const auto it = buffers.find(filename); it != buffers.end())
-        return mapToProxy(it->second);
+        return mapToProxyDevice(it->second);
 
     IG_LOG(L_DEBUG) << "Loading buffer '" << filename << "'" << std::endl;
     const auto vec = readBufferFile(filename);
@@ -772,7 +766,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, vec.size());
     arr.copyFromExternalHostToDevice(vec.data());
 
-    return mapToProxy(buffers.emplace(filename, std::move(arr)).first->second);
+    return mapToProxyDevice(buffers.emplace(filename, std::move(arr)).first->second);
 }
 
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferByName(const std::string& name)
@@ -780,7 +774,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferByName(c
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     if (const auto it = mDeviceData.buffers.find(name); it != mDeviceData.buffers.end())
-        return mapToProxy(it->second);
+        return mapToProxyDevice(it->second);
 
     IG_LOG(L_ERROR) << "No buffer '" << name << "'" << std::endl;
 
@@ -800,12 +794,12 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
 
     auto& buffers = mDeviceData.buffers;
     if (const auto it = buffers.find(name); it != buffers.end() && it->second.Data.SizeInBytes >= size * sizeof(uint8))
-        return mapToProxy(it->second);
+        return mapToProxyDevice(it->second);
 
     IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;
 
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, size);
-    return mapToProxy(buffers.emplace(name, std::move(arr)).first->second);
+    return mapToProxyDevice(buffers.emplace(name, std::move(arr)).first->second);
 }
 
 void DeviceInterface::saveBufferToFile(const std::string& name, const std::string& filename)
@@ -919,7 +913,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
         IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed inbetween iterations");
         it->second.Data.syncForDevice();
-        return mapToProxy(it->second);
+        return mapToProxyDevice(it->second);
     } else {
         const size_t expectedSize = framebufferArea() * 3;
 
@@ -931,7 +925,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
                         .first->second;
         aov.Data.fillHostWithZero();
         aov.Data.syncForDevice();
-        return mapToProxy(aov);
+        return mapToProxyDevice(aov);
     }
 }
 
