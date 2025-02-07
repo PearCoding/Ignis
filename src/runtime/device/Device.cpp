@@ -94,16 +94,14 @@ size_t Device::getBufferSizeInBytes(const std::string& name)
     return size;
 }
 
-bool Device::copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte)
+bool Device::copyBufferToHost(const std::string& name, void* dst)
 {
-    const auto successful = mDevice->copyBufferToHost(name, dst, maxSizeByte);
-    return successful;
+    return mDevice->copyBufferToHost(name, dst);
 }
 
-bool Device::copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte)
+bool Device::copyBufferFromHost(const std::string& name, const void* src)
 {
-    const auto successful = mDevice->copyBufferFromHost(name, src, maxSizeByte);
-    return successful;
+    return mDevice->copyBufferFromHost(name, src);
 }
 
 Device::BufferAccessor Device::getBufferForDevice(const std::string& name)
@@ -142,7 +140,7 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
     mDevice->runTonemapShader(in_pixels, device_out_pixels, settings);
 
     if (mDevice->isGPU())
-        mDevice->copyBufferToHost("__internal_tonemap_output", out_pixels, acc.Width * acc.Height * sizeof(uint32_t));
+        mDevice->copyBufferToHost("__internal_tonemap_output", out_pixels);
 }
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& settings)

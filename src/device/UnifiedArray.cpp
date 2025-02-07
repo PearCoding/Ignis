@@ -41,4 +41,20 @@ void UnifiedArrayBase::fillWithZero(int dev, void* ptr, size_t sizeInBytes)
     std::memset(ptr, 0, sizeInBytes);
 }
 
+void UnifiedArrayBase::copyToHost(int dev, const void* devPtr, void* hostPtr, size_t sizeInBytes)
+{
+    if (dev == 0 /*Host*/ && devPtr == hostPtr)
+        return;
+
+    anydsl_copy(dev, devPtr, 0, 0, hostPtr, 0, (int64)sizeInBytes);
+}
+
+void UnifiedArrayBase::copyFromHost(int dev, void* devPtr, const void* hostPtr, size_t sizeInBytes)
+{
+    if (dev == 0 /*Host*/ && devPtr == hostPtr)
+        return;
+
+    anydsl_copy(0, hostPtr, 0, dev, devPtr, 0, (int64)sizeInBytes);
+}
+
 } // namespace IG

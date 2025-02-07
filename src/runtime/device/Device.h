@@ -70,8 +70,8 @@ public:
     void syncAllFramebufferHostToDevice();
 
     [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name);
-    [[nodiscard]] bool copyBufferToHost(const std::string& name, void* dstBuffer, size_t maxSizeByte);
-    [[nodiscard]] bool copyBufferFromHost(const std::string& name, const void* srcBuffer, size_t maxSizeByte);
+    [[nodiscard]] bool copyBufferToHost(const std::string& name, void* dstBuffer);
+    [[nodiscard]] bool copyBufferFromHost(const std::string& name, const void* srcBuffer);
     [[nodiscard]] BufferAccessor getBufferForDevice(const std::string& name);
     [[nodiscard]] BufferAccessor requestBufferForDevice(const std::string& name, size_t sizeInBytes);
 

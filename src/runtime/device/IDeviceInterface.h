@@ -108,8 +108,8 @@ public:
     virtual DeviceBufferProxy<uint8_t> loadBufferByName(const std::string& name)                           = 0;
     virtual DeviceBufferProxy<uint8_t> requestBuffer(const std::string& name, int32_t size, int32_t flags) = 0;
     virtual void saveBufferToFile(const std::string& name, const std::string& filename)                    = 0;
-    virtual bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte)                  = 0;
-    virtual bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte)          = 0;
+    virtual bool copyBufferToHost(const std::string& name, void* dst)                                      = 0;
+    virtual bool copyBufferFromHost(const std::string& name, const void* src)                              = 0;
 
     virtual DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name) = 0;
     virtual DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name)   = 0;

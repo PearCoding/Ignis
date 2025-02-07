@@ -173,8 +173,8 @@ public:
     DeviceBufferProxy<uint8_t> loadBufferByName(const std::string& name) override;
     DeviceBufferProxy<uint8_t> requestBuffer(const std::string& name, int32_t size, int32_t flags) override;
     void saveBufferToFile(const std::string& name, const std::string& filename) override;
-    bool copyBufferToHost(const std::string& name, void* dst, size_t maxSizeByte) override;
-    bool copyBufferFromHost(const std::string& name, const void* src, size_t maxSizeByte) override;
+    bool copyBufferToHost(const std::string& name, void* dst) override;
+    bool copyBufferFromHost(const std::string& name, const void* src) override;
 
     DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name) override;
     DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name) override;
@@ -203,6 +203,7 @@ public:
 
 private:
     void ensureFramebuffer();
+    void markFramebufferDirty();
 
     void updateSettings(const Device::RenderSettings& settings);
     void updateShaderSet(const TechniqueVariantShaderSet& shaderSet);

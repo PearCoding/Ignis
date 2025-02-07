@@ -94,7 +94,7 @@ std::optional<GlareEvaluator::Result> GlareEvaluator::run()
                 IG_LOG(L_ERROR) << "Could not allocate temporary data on device for glare evaluation" << std::endl;
                 return {};
             }
-            if (!mRuntime->copyBufferFromHost("__glare_framebuffer_host", (const void*)mData, acc.SizeInBytes)) {
+            if (!mRuntime->copyBufferFromHost("__glare_framebuffer_host", (const void*)mData)) {
                 IG_LOG(L_ERROR) << "Could not copy data to device for glare evaluation" << std::endl;
                 return {};
             }
