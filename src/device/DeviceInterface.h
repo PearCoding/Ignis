@@ -220,7 +220,7 @@ private:
     const int mDeviceID;
     DeviceData mDeviceData;
 
-    std::mutex mThreadMutex;
+    mutable std::mutex mThreadMutex;
     std::vector<std::unique_ptr<CPUData>> mThreadData;
 
     tbb::concurrent_queue<CPUData*> mAvailableThreadData;

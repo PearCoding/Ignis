@@ -570,6 +570,8 @@ public:
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
+        IG_ASSERT(buf != nullptr, "Expected valid buffer");
+
         Runtime->tonemap(buf,
                          TonemapSettings{
                              .AOV            = CurrentAOV.c_str(),
@@ -1048,8 +1050,11 @@ Context::UpdateResult Context::update()
         break;
     }
 
-    SDL_RenderClear(mInternal->Renderer);
-    SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr);
+    if (SDL_RenderClear(mInternal->Renderer) != 0)
+        IG_LOG(L_ERROR) << SDL_GetError() << std::endl;
+
+    if (SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr) != 0)
+        IG_LOG(L_ERROR) << SDL_GetError() << std::endl;
 
     ui::newFrame();
 

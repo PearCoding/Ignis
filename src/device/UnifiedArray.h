@@ -162,6 +162,8 @@ public:
     inline void fillHostWithZero()
     {
         UnifiedArrayBase::fillHostWithZero(Device, (void*)HostPtr, SizeInBytes);
+        StatusFlags &= ~(int)Flags::DirtyDevice; // We do not care if the device is "dirty". Cleanup has priority
+        StatusFlags |= (int)Flags::DirtyHost;
     }
 
     inline void copyFromExternalHostToDevice(const T* hostPtr)
@@ -197,40 +199,31 @@ public:
     /// @brief If the array is buffered, will make sure the device buffer is in sync with the host
     inline void syncForDevice()
     {
-        if (Type != MemoryType::Buffered || HostPtr == DevicePtr)
-            return;
+        if (StatusFlags & (int)Flags::DirtyHost) {
+            StatusFlags &= ~(int)Flags::DirtyHost;
 
-        IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
+            if (Type != MemoryType::Buffered || HostPtr == DevicePtr)
+                return;
 
-        if (StatusFlags & (int)Flags::DirtyHost)
+            IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
+
             UnifiedArrayBase::copyFromHost(Device, DevicePtr, HostPtr, SizeInBytes);
-
-        StatusFlags &= ~(int)Flags::DirtyHost;
+        }
     }
 
     /// @brief If the array is buffered, will make sure the device buffer is in sync with the host
     inline void syncForHost()
     {
-        if (Type != MemoryType::Buffered || HostPtr == DevicePtr)
-            return;
+        if (StatusFlags & (int)Flags::DirtyDevice) {
+            StatusFlags &= ~(int)Flags::DirtyDevice;
 
-        IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
+            if (Type != MemoryType::Buffered || HostPtr == DevicePtr)
+                return;
 
-        if (StatusFlags & (int)Flags::DirtyDevice)
+            IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
+
             UnifiedArrayBase::copyToHost(Device, DevicePtr, HostPtr, SizeInBytes);
-
-        StatusFlags &= ~(int)Flags::DirtyDevice;
-    }
-
-private:
-    inline UnifiedArray(T* hostPtr, T* devicePtr, size_t sizeInBytes, int device, MemoryType type)
-        : DevicePtr(devicePtr)
-        , HostPtr(hostPtr)
-        , SizeInBytes(sizeInBytes)
-        , Device(device)
-        , Type(type)
-        , StatusFlags(0)
-    {
+        }
     }
 
     inline void release()
@@ -261,6 +254,17 @@ private:
         Device      = 0;
         Type        = MemoryType::External;
         StatusFlags = 0;
+    }
+
+private:
+    inline UnifiedArray(T* hostPtr, T* devicePtr, size_t sizeInBytes, int device, MemoryType type)
+        : DevicePtr(devicePtr)
+        , HostPtr(hostPtr)
+        , SizeInBytes(sizeInBytes)
+        , Device(device)
+        , Type(type)
+        , StatusFlags(0)
+    {
     }
 };
 } // namespace IG

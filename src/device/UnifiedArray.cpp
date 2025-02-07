@@ -46,7 +46,7 @@ void UnifiedArrayBase::copyToHost(int dev, const void* devPtr, void* hostPtr, si
     if (dev == 0 /*Host*/ && devPtr == hostPtr)
         return;
 
-    anydsl_copy(dev, devPtr, 0, 0, hostPtr, 0, (int64)sizeInBytes);
+    anydsl_copy(dev, devPtr, 0, 0 /*Host*/, hostPtr, 0, (int64)sizeInBytes);
 }
 
 void UnifiedArrayBase::copyFromHost(int dev, void* devPtr, const void* hostPtr, size_t sizeInBytes)
@@ -54,7 +54,7 @@ void UnifiedArrayBase::copyFromHost(int dev, void* devPtr, const void* hostPtr, 
     if (dev == 0 /*Host*/ && devPtr == hostPtr)
         return;
 
-    anydsl_copy(0, hostPtr, 0, dev, devPtr, 0, (int64)sizeInBytes);
+    anydsl_copy(0 /*Host*/, hostPtr, 0, dev, devPtr, 0, (int64)sizeInBytes);
 }
 
 } // namespace IG

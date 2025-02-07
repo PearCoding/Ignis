@@ -5,7 +5,7 @@
 #include "device/DeviceUtils.h"
 #include "table/SceneDatabase.h"
 
-#include <anydsl_runtime.hpp>
+#include <anydsl_runtime.h>
 
 #include <atomic>
 #include <cstdlib>
@@ -175,6 +175,8 @@ void DeviceInterface::setCurrentSceneSettings(const Device::SceneSettings& setti
 
 std::vector<std::string> DeviceInterface::getAOVNames() const
 {
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
     std::vector<std::string> names;
     names.reserve(mDeviceData.aovs.size());
     for (const auto& p : mDeviceData.aovs)
@@ -215,6 +217,8 @@ void DeviceInterface::ensureFramebuffer()
     if (const auto it = mDeviceData.aovs.find(DefaultFramebufferName); it != mDeviceData.aovs.end()) {
         // Check if resize is needed
         if (it->second.Width != mFramebufferWidth || it->second.Height != mFramebufferHeight) {
+            IG_LOG(L_DEBUG) << "Resizing all AOVs from " << it->second.Width << "x" << it->second.Height << " to " << mFramebufferWidth << "x" << mFramebufferHeight << std::endl;
+
             // Update properties
             for (auto& p : mDeviceData.aovs) {
                 p.second.Width  = mFramebufferWidth;
@@ -224,12 +228,14 @@ void DeviceInterface::ensureFramebuffer()
             // Resize if needed
             if (it->second.Data.SizeInBytes < expectedSize * sizeof(float)) {
                 for (auto& p : mDeviceData.aovs) {
+                    p.second.Data.release();
                     p.second.Data = createAOVArray(mDeviceID, expectedSize);
                     p.second.Data.fillHostWithZero();
                 }
             }
         }
     } else {
+        IG_LOG(L_DEBUG) << "Allocating initial AOV '" << DefaultFramebufferName << "' with " << mFramebufferWidth << "x" << mFramebufferHeight << std::endl;
         mDeviceData.aovs.emplace(DefaultFramebufferName,
                                  DeviceImage{
                                      .Data   = createAOVArray(mDeviceID, expectedSize),
