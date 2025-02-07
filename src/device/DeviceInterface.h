@@ -140,7 +140,6 @@ public:
     const Device::RenderSettings& currentRenderSettings() const override;
 
     std::pair<size_t, size_t> framebufferSize() const override;
-    std::pair<size_t, size_t> workSize() const override;
 
     std::vector<std::string> getAOVNames() const override;
     DeviceImageProxy<float> getFramebufferForDevice() override;

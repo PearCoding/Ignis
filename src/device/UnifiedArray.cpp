@@ -35,7 +35,7 @@ void* UnifiedArrayBase::getDevicePtr(int dev, void* hostPtr)
     return nullptr;
 }
 
-void UnifiedArrayBase::fillWithZero(int dev, void* ptr, size_t sizeInBytes)
+void UnifiedArrayBase::fillHostWithZero(int dev, void* ptr, size_t sizeInBytes)
 {
     IG_UNUSED(dev);
     std::memset(ptr, 0, sizeInBytes);

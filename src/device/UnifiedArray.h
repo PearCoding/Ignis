@@ -10,7 +10,7 @@ protected:
     static void deallocateUnified(int dev, void* ptr);
     static void deallocateDevice(int dev, void* ptr);
     [[nodiscard]] static void* getDevicePtr(int dev, void* hostPtr);
-    static void fillWithZero(int dev, void* ptr, size_t sizeInBytes);
+    static void fillHostWithZero(int dev, void* ptr, size_t sizeInBytes);
     static void copyToHost(int dev, const void* devPtr, void* hostPtr, size_t sizeInBytes);
     static void copyFromHost(int dev, void* devPtr, const void* hostPtr, size_t sizeInBytes);
 };
@@ -159,9 +159,9 @@ public:
     /// @return True if device is host at the same time.
     [[nodiscard]] inline bool isDeviceHost() const { return Device == 0; }
 
-    inline void fillWithZero()
+    inline void fillHostWithZero()
     {
-        UnifiedArrayBase::fillWithZero(Device, (void*)HostPtr, SizeInBytes);
+        UnifiedArrayBase::fillHostWithZero(Device, (void*)HostPtr, SizeInBytes);
     }
 
     inline void copyFromExternalHostToDevice(const T* hostPtr)

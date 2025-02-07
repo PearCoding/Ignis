@@ -31,12 +31,11 @@ void VolumePathTechnique::generateBody(const SerializationInput& input) const
     input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
 
     input.Stream << input.Tree.pullHeader()
-                 << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
-                 << "  let aovs = @|_id:i32| make_empty_aov_image(0, 0);" << std::endl
+                 << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree) << std::endl
                  << "  let technique = make_volume_path_renderer("
                  << input.Tree.getInline("max_depth")
                  << ", " << input.Tree.getInline("min_depth")
-                 << ", light_selector, media, aovs"
+                 << ", light_selector, media"
                  << ", " << input.Tree.getInline("clamp")
                  << ", " << (mEnableNEE ? "true" : "false") << ");" << std::endl;
 }

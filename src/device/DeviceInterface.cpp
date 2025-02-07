@@ -24,11 +24,6 @@
 
 namespace IG {
 static const std::string DefaultFramebufferName = "Color";
-static inline bool checkIfAOVIsFramebuffer(const std::string& aov_name)
-{
-    return aov_name.empty() || aov_name == DefaultFramebufferName;
-}
-
 static inline const std::string& handleAOVName(const std::string& aov_name)
 {
     if (aov_name.empty())
@@ -50,21 +45,15 @@ static inline size_t roundUp(size_t num, size_t multiple)
 }
 
 template <typename T>
-static inline void resizeUnifiedArray(int32_t dev, UnifiedArray<T>& array, size_t size, size_t multiplier)
-{
-    const auto capacity = roundUp(size, 32);
-    const size_t n      = capacity * multiplier;
-    if (array.SizeInBytes < n * sizeof(T))
-        array = UnifiedArray<T>::AllocateUnified(dev, n);
-}
-
-template <typename T>
 static inline void resizeDeviceArray(int32_t dev, UnifiedArray<T>& array, size_t size, size_t multiplier)
 {
-    const auto capacity = roundUp(size, 32);
+    const auto capacity = roundUp(std::max<size_t>(1, size), 32);
     const size_t n      = capacity * multiplier;
-    if (array.SizeInBytes < n * sizeof(T))
+    if (array.SizeInBytes < n * sizeof(T)) {
         array = UnifiedArray<T>::AllocateDevice(dev, n);
+        if (array.DevicePtr == nullptr)
+            IG_LOG(L_FATAL) << "Stream allocation resulted in out of memory!" << std::endl;
+    }
 }
 
 static inline int computeTargetID(const Target& target)
@@ -169,13 +158,6 @@ void DeviceInterface::releaseAllMemory()
 }
 
 std::pair<size_t, size_t> DeviceInterface::framebufferSize() const { return { mFramebufferWidth, mFramebufferHeight }; }
-std::pair<size_t, size_t> DeviceInterface::workSize() const
-{
-    if (mCurrentRenderSettings.width > 0 && mCurrentRenderSettings.height > 0)
-        return { mCurrentRenderSettings.width, mCurrentRenderSettings.height };
-    else
-        return framebufferSize();
-}
 
 const Device::SceneSettings& DeviceInterface::currentSceneSettings() const { return mCurrentSceneSettings; }
 const Device::RenderSettings& DeviceInterface::currentRenderSettings() const { return mCurrentRenderSettings; }
@@ -234,7 +216,7 @@ void DeviceInterface::ensureFramebuffer()
             if (it->second.Data.SizeInBytes < expectedSize * sizeof(float)) {
                 for (auto& p : mDeviceData.aovs) {
                     p.second.Data = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize);
-                    p.second.Data.fillWithZero();
+                    p.second.Data.fillHostWithZero();
                 }
             }
         }
@@ -244,7 +226,7 @@ void DeviceInterface::ensureFramebuffer()
                                      .Data   = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize),
                                      .Width  = mFramebufferWidth,
                                      .Height = mFramebufferHeight })
-            .first->second.Data.fillWithZero();
+            .first->second.Data.fillHostWithZero();
     }
 }
 
@@ -935,6 +917,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
+        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed inbetween iterations");
         it->second.Data.syncForDevice();
         return mapToProxy(it->second);
     } else {
@@ -946,7 +929,8 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
                                                  .Width  = mFramebufferWidth,
                                                  .Height = mFramebufferHeight })
                         .first->second;
-        aov.Data.fillWithZero();
+        aov.Data.fillHostWithZero();
+        aov.Data.syncForDevice();
         return mapToProxy(aov);
     }
 }
@@ -958,6 +942,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
+        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed inbetween iterations");
         it->second.Data.syncForHost();
         return DeviceImageProxy<float>{
             .DataPtr = it->second.Data.HostPtr,
@@ -977,7 +962,7 @@ void DeviceInterface::clearAOV(const std::string& aov_name)
 
     const std::string& actual_name = handleAOVName(aov_name);
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end())
-        it->second.Data.fillWithZero();
+        it->second.Data.fillHostWithZero();
 }
 
 /// Clear all aovs and the framebuffer
@@ -986,7 +971,7 @@ void DeviceInterface::clearAllAOVs()
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     for (auto& p : mDeviceData.aovs)
-        p.second.Data.fillWithZero();
+        p.second.Data.fillHostWithZero();
 }
 
 // -------------------------------------------------------- Shader
@@ -1017,6 +1002,7 @@ void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.endShaderLaunch(ShaderType::Device, {});
 
+    // We assume all the framebuffer were invalidated during the previous run
     markFramebufferDirty();
 }
 

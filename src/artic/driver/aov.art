@@ -14,9 +14,6 @@ struct MonoAOVImage {
     get:    fn (PixelCoord) -> f32
 }
 
-// Contains all the aov images available
-type AOVTable = fn (i32) -> ColorAOVImage;
-
 fn @make_empty_aov_image(w: i32, h: i32) = ColorAOVImage {
     width  = w,
     height = h,

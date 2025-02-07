@@ -59,16 +59,20 @@ IG_EXPORT void ignis_get_aov_image(const char* name, float** aov_pixels)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
-    *aov_pixels = device->loadAOVImageForDevice(name).DataPtr;
+
+    auto aov    = device->loadAOVImageForDevice(name);
+    *aov_pixels = aov.DataPtr;
+
+    IG_ASSERT(aov.Width == std::get<0>(device->framebufferSize()) && aov.Height == std::get<1>(device->framebufferSize()), "Expected AOV size to be in sync with the actual framebuffer");
 }
 
 IG_EXPORT void ignis_get_work_info(WorkInfo* info)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
-    const auto workSize = device->workSize();
-    info->width         = (int)std::get<0>(workSize);
-    info->height        = (int)std::get<1>(workSize);
+    const auto framebufferSize = device->framebufferSize();
+    info->width                = (int)std::get<0>(framebufferSize);
+    info->height               = (int)std::get<1>(framebufferSize);
 
     info->advanced_shadows                = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced;
     info->advanced_shadows_with_materials = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::AdvancedWithMaterials;

@@ -88,34 +88,11 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
     // Handle AOVs
     if (is_light_pass) {
         input.Tree.addInteger("max_light_depth", *mTechnique, 8, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
-
-        input.Stream << "  let aovs = @|id:i32| -> ColorAOVImage {" << std::endl
-                     << "    match(id) {" << std::endl
-                     << "      _ => make_empty_aov_image(0, 0)" << std::endl
-                     << "    }" << std::endl
-                     << "  };" << std::endl;
     } else {
         input.Tree.addInteger(max_depth, *mTechnique, DefaultMaxRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
         input.Tree.addInteger(min_depth, *mTechnique, DefaultMinRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
         input.Tree.addNumber("radius", *mTechnique, 0.01f * input.Tree.context().SceneDiameter, ShadingTree::NumberOptions::Zero().MakeGlobal());
         input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
-
-        if (mAOV) {
-            input.Stream << "  let aov_di   = device.load_aov_image(\"Direct Weights\", spi);" << std::endl;
-            input.Stream << "  let aov_merg = device.load_aov_image(\"Merging Weights\", spi);" << std::endl;
-        }
-
-        input.Stream << "  let aovs = @|id:i32| -> ColorAOVImage {" << std::endl
-                     << "    match(id) {" << std::endl;
-
-        if (mAOV) {
-            input.Stream << "      1 => aov_di," << std::endl
-                         << "      2 => aov_merg," << std::endl;
-        }
-
-        input.Stream << "      _ => make_empty_aov_image(0, 0)" << std::endl
-                     << "    }" << std::endl
-                     << "  };" << std::endl;
     }
 
     input.Stream << input.Tree.pullHeader()
@@ -126,12 +103,13 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
     } else {
         input.Stream << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
                      << "  let ppm_radius = ppm_compute_radius(" << input.Tree.getInline("radius") << ", settings.iter);" << std::endl
-                     << "  let technique = make_ppm_path_renderer("
-                     << input.Tree.getInline(max_depth)
+                     << "  let technique = make_ppm_path_renderer(device"
+                     << ", " << input.Tree.getInline(max_depth)
                      << ", " << input.Tree.getInline(min_depth)
-                     << ", light_selector, ppm_radius, aovs"
+                     << ", spi, light_selector, ppm_radius"
                      << ", " << input.Tree.getInline("clamp")
-                     << ", light_cache);" << std::endl;
+                     << ", light_cache"
+                     << ", " << (mAOV ? "true" : "false") << ");" << std::endl;
     }
 }
 
