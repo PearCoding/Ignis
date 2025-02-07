@@ -21,10 +21,10 @@ class UnifiedArray : public UnifiedArrayBase {
 
 public:
     enum class MemoryType {
-        Unified, // Visible on both host & device
-        Device,  // Device only
-        Buffered,  // Device & Host have their own copies and can be synced if necessary
-        External // The device is host! So internal pointers are forwarded to prevent useless copies
+        Unified,  // Visible on both host & device
+        Device,   // Device only
+        Buffered, // Device & Host have their own copies and can be synced if necessary
+        External  // The device is host! So internal pointers are forwarded to prevent useless copies
     };
 
     enum class Flags : int32 {
@@ -208,7 +208,7 @@ public:
         StatusFlags &= ~(int)Flags::DirtyHost;
     }
 
-    /// @brief If the array is Buffered, will make sure the device buffer is in sync with the host
+    /// @brief If the array is buffered, will make sure the device buffer is in sync with the host
     inline void syncForHost()
     {
         if (Type != MemoryType::Buffered || HostPtr == DevicePtr)
