@@ -61,25 +61,6 @@ void SunGuidedPathTechnique::generateBody(const SerializationInput& input) const
         input.Stream << "  let tech_clamp = registry::get_global_parameter_f32(\"__tech_clamp\", 0);" << std::endl;
 
     input.Stream << "  let tech_defensive = registry::get_global_parameter_f32(\"__tech_defensive\", 0);" << std::endl;
-    // Handle AOVs
-    if (mMISAOVs) {
-        input.Stream << "  let aov_direct = device.load_aov_image(\"BSDF Weights\", spi);" << std::endl
-                     << "  let aov_guided = device.load_aov_image(\"Guided Weights\", spi);" << std::endl
-                     << "  let aov_nee    = device.load_aov_image(\"NEE Weights\", spi);" << std::endl;
-    }
-
-    input.Stream << "  let aovs = @|id:i32| -> ColorAOVImage {" << std::endl
-                 << "    match(id) {" << std::endl;
-
-    if (mMISAOVs) {
-        input.Stream << "      1 => aov_direct," << std::endl
-                     << "      2 => aov_guided," << std::endl
-                     << "      3 => aov_nee," << std::endl;
-    }
-
-    input.Stream << "      _ => make_empty_aov_image(0, 0)" << std::endl
-                 << "    }" << std::endl
-                 << "  };" << std::endl;
 
     input.Tree.addNumber("angle", *mTechnique, 4 * FltSunRadiusDegree, ShadingTree::NumberOptions::Dynamic().MakeGlobal());
     input.Tree.addVector("direction", *mTechnique, mSunDirection, ShadingTree::VectorOptions::Dynamic().MakeGlobal());
@@ -92,8 +73,10 @@ void SunGuidedPathTechnique::generateBody(const SerializationInput& input) const
                  << ", math_builtins::cos(rad(" << input.Tree.getInline("angle") << "/2))"
                  << ", color_builtins::black"
                  << ", false);" << std::endl
-                 << "  let technique = make_light_sgpt_renderer(tech_max_depth, tech_min_depth, light_selector, aovs, tech_clamp, "
-                 << (mEnableNEE ? "true" : "false") << ", tech_light, tech_defensive);" << std::endl;
+                 << "  let technique = make_light_sgpt_renderer(device, tech_max_depth, tech_min_depth, spi, light_selector, tech_clamp"
+                 << ", " << (mEnableNEE ? "true" : "false") 
+                 << ", " << (mMISAOVs ? "true" : "false") 
+                 << ", tech_light, tech_defensive);" << std::endl;
 }
 
 } // namespace IG

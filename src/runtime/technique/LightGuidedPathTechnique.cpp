@@ -34,34 +34,17 @@ void LightGuidedPathTechnique::generateBody(const SerializationInput& input) con
     input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
     input.Tree.addNumber("defensive", *mTechnique, 0.3f, ShadingTree::NumberOptions::Dynamic().MakeGlobal());
 
-    // Handle AOVs
-    if (mMISAOVs) {
-        input.Stream << "  let aov_direct = device.load_aov_image(\"BSDF Weights\", spi);" << std::endl
-                     << "  let aov_guided = device.load_aov_image(\"Guided Weights\", spi);" << std::endl
-                     << "  let aov_nee    = device.load_aov_image(\"NEE Weights\", spi);" << std::endl;
-    }
-
-    input.Stream << "  let aovs = @|id:i32| -> ColorAOVImage {" << std::endl
-                 << "    match(id) {" << std::endl;
-
-    if (mMISAOVs) {
-        input.Stream << "      1 => aov_direct," << std::endl
-                     << "      2 => aov_guided," << std::endl
-                     << "      3 => aov_nee," << std::endl;
-    }
-
-    input.Stream << "      _ => make_empty_aov_image(0, 0)" << std::endl
-                 << "    }" << std::endl
-                 << "  };" << std::endl;
-
     input.Stream << input.Tree.pullHeader()
                  << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
-                 << "  let technique = make_light_sgpt_renderer("
-                 << input.Tree.getInline("max_depth")
+                 << "  let technique = make_light_sgpt_renderer(device"
+                 << ", " << input.Tree.getInline("max_depth")
                  << ", " << input.Tree.getInline("min_depth")
-                 << ", light_selector, aovs"
+                 << ", spi"
+                 << ", light_selector"
                  << ", " << input.Tree.getInline("clamp")
-                 << ", " << (mEnableNEE ? "true" : "false") << ", infinite_lights.get(0) /*TODO*/"
+                 << ", " << (mEnableNEE ? "true" : "false") 
+                 << ", " << (mMISAOVs ? "true" : "false") 
+                 << ", infinite_lights.get(0) /*TODO*/"
                  << ", " << input.Tree.getInline("defensive")
                  << ");" << std::endl;
 }

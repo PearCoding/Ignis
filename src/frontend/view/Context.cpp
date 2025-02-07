@@ -528,11 +528,18 @@ public:
         return reset ? Context::InputResult::Reset : Context::InputResult::Continue;
     }
 
+    inline float getIterationScale() const
+    {
+        if (CurrentAOV == "Normals" || CurrentAOV == "Albedo")
+            return 1;
+        return Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f;
+    }
+
     void analyzeLuminance()
     {
         ImageInfoSettings settings{
             .AOV               = CurrentAOV.c_str(),
-            .Scale             = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f,
+            .Scale             = getIterationScale(),
             .Bins              = HISTOGRAM_SIZE,
             .HistogramR        = Histogram.data() + 0 * HISTOGRAM_SIZE,
             .HistogramG        = Histogram.data() + 1 * HISTOGRAM_SIZE,
@@ -568,7 +575,7 @@ public:
                              .AOV            = CurrentAOV.c_str(),
                              .Method         = (size_t)ToneMappingMethod,
                              .UseGamma       = ToneMappingGamma,
-                             .Scale          = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f,
+                             .Scale          = getIterationScale(),
                              .ExposureFactor = ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                              .ExposureOffset = ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
@@ -578,16 +585,15 @@ public:
     [[nodiscard]] inline Color getFilmData(size_t width, size_t height, uint32_t x, uint32_t y)
     {
         IG_UNUSED(height);
-
-        const auto acc       = currentPixels();
-        const float* film    = acc.Data;
-        const float inv_iter = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 0.0f;
-        const size_t ind     = y * width + x;
+        const auto acc    = currentPixels();
+        const float* film = acc.Data;
+        const float scale = getIterationScale();
+        const size_t ind  = y * width + x;
 
         return Color(
-            film[ind * 3 + 0] * inv_iter,
-            film[ind * 3 + 1] * inv_iter,
-            film[ind * 3 + 2] * inv_iter);
+            film[ind * 3 + 0] * scale,
+            film[ind * 3 + 1] * scale,
+            film[ind * 3 + 2] * scale);
     }
 
     void makeScreenshot()
@@ -749,7 +755,7 @@ public:
                     if (ImGui::BeginCombo("Display", current_aov)) {
                         for (size_t i = 0; i < aovNames.size(); ++i) {
                             const std::string& name = aovNames.at(i).c_str();
-                            bool is_selected = (name == CurrentAOV);
+                            bool is_selected        = (name == CurrentAOV);
                             if (ImGui::Selectable(name.c_str(), is_selected))
                                 CurrentAOV = name;
                             if (is_selected)
@@ -863,7 +869,7 @@ public:
             int mouse_x, mouse_y;
             SDL_GetMouseState(&mouse_x, &mouse_y);
             const auto acc = currentPixels();
-            ui_inspect_image(mouse_x, mouse_y, Width, Height, Runtime->currentIterationCount() == 0 ? 1.0f : 1.0f / Runtime->currentIterationCount(), acc.Data, Buffer.data());
+            ui_inspect_image(mouse_x, mouse_y, Width, Height, getIterationScale(), acc.Data, Buffer.data());
         }
 
         return result;

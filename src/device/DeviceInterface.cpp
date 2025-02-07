@@ -871,7 +871,21 @@ bool DeviceInterface::copyBufferFromHost(const std::string& buffer_name, const v
 
 void DeviceInterface::handleDebugOutput()
 {
-    const auto& handleDebug = [](int32_t* ptr, int32_t occup) {
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+    if (const auto it = mDeviceData.buffers.find("__dbg_output"); it != mDeviceData.buffers.end()) {
+        DeviceBuffer& buffer = it->second;
+
+        std::vector<uint8> host_data(isGPU() ? buffer.Data.SizeInBytes : 0);
+        if (isGPU())
+            buffer.Data.copyFromDeviceToExternalHost(host_data.data());
+
+        // Parse data
+        int32_t* ptr  = reinterpret_cast<int32_t*>(!isGPU() ? buffer.Data.DevicePtr : host_data.data());
+        int32_t occup = std::min(ptr[0], static_cast<int32_t>(buffer.Data.SizeInBytes / sizeof(int32_t)));
+
+        if (occup <= 0)
+            return;
+
         for (int32_t k = 0; k < occup; ++k) {
             int32_t op = ptr[k + 1];
 
@@ -908,24 +922,6 @@ void DeviceInterface::handleDebugOutput()
 
         // Reset data
         ptr[0] = 0;
-    };
-
-    std::lock_guard<std::mutex> _guard(mThreadMutex);
-    if (const auto it = mDeviceData.buffers.find("__dbg_output"); it != mDeviceData.buffers.end()) {
-        DeviceBuffer& buffer = it->second;
-
-        std::vector<uint8> host_data(isGPU() ? buffer.Data.SizeInBytes : 0);
-        if (isGPU())
-            buffer.Data.copyFromDeviceToExternalHost(host_data.data());
-
-        // Parse data
-        int32_t* ptr  = reinterpret_cast<int32_t*>(!isGPU() ? buffer.Data.DevicePtr : host_data.data());
-        int32_t occup = std::min(ptr[0], static_cast<int32_t>(buffer.Data.SizeInBytes / sizeof(int32_t)));
-
-        if (occup <= 0)
-            return;
-
-        handleDebug(ptr, occup);
 
         if (isGPU())
             buffer.Data.copyFromExternalHostToDevice(host_data.data());
