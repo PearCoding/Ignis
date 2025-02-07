@@ -52,7 +52,7 @@ static inline size_t roundUp(size_t num, size_t multiple)
 template <typename T>
 static inline void resizeUnifiedArray(int32_t dev, UnifiedArray<T>& array, size_t size, size_t multiplier)
 {
-    const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
+    const auto capacity = roundUp(size, 32);
     const size_t n      = capacity * multiplier;
     if (array.SizeInBytes < n * sizeof(T))
         array = UnifiedArray<T>::AllocateUnified(dev, n);
@@ -61,7 +61,7 @@ static inline void resizeUnifiedArray(int32_t dev, UnifiedArray<T>& array, size_
 template <typename T>
 static inline void resizeDeviceArray(int32_t dev, UnifiedArray<T>& array, size_t size, size_t multiplier)
 {
-    const auto capacity = (size & ~((1 << 5) - 1)) + 32; // round to 32
+    const auto capacity = roundUp(size, 32);
     const size_t n      = capacity * multiplier;
     if (array.SizeInBytes < n * sizeof(T))
         array = UnifiedArray<T>::AllocateDevice(dev, n);
@@ -484,7 +484,10 @@ void* DeviceInterface::loadRayList()
 
     IG_ASSERT(mCurrentRenderSettings.rays != nullptr, "Expected list of rays to be available");
 
-    device.ray_list = UnifiedArray<StreamRay>::AllocateUnified(mDeviceID, count * sizeof(StreamRay));
+    device.ray_list = UnifiedArray<StreamRay>::AllocateDevice(mDeviceID, count);
+
+    std::vector<StreamRay> host_data(isGPU() ? count : 0);
+    StreamRay* ptr = isGPU() ? host_data.data() : device.ray_list.DevicePtr;
 
     for (size_t i = 0; i < count; ++i) {
         const auto dRay = mCurrentRenderSettings.rays[i];
@@ -508,8 +511,11 @@ void* DeviceInterface::loadRayList()
         ray.tmin = dRay.Range(0);
         ray.tmax = dRay.Range(1);
 
-        device.ray_list.HostPtr[i] = ray;
+        ptr[i] = ray;
     }
+
+    if (isGPU())
+        device.ray_list.copyFromDeviceToExternalHost(host_data.data());
 
     return device.ray_list.DevicePtr;
 }
@@ -658,8 +664,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     auto& images = mDeviceData.images;
-    auto it      = images.find(filename);
-    if (it != images.end())
+    if (const auto it = images.find(filename); it != images.end())
         return mapToProxy(it->second);
 
     _SECTION(SectionType::ImageLoading);
@@ -908,14 +913,22 @@ void DeviceInterface::handleDebugOutput()
     std::lock_guard<std::mutex> _guard(mThreadMutex);
     if (const auto it = mDeviceData.buffers.find("__dbg_output"); it != mDeviceData.buffers.end()) {
         DeviceBuffer& buffer = it->second;
+
+        std::vector<uint8> host_data(isGPU() ? buffer.Data.SizeInBytes : 0);
+        if (isGPU())
+            buffer.Data.copyFromDeviceToExternalHost(host_data.data());
+
         // Parse data
-        int32_t* ptr  = reinterpret_cast<int32_t*>(buffer.Data.HostPtr);
+        int32_t* ptr  = reinterpret_cast<int32_t*>(!isGPU() ? buffer.Data.DevicePtr : host_data.data());
         int32_t occup = std::min(ptr[0], static_cast<int32_t>(buffer.Data.SizeInBytes / sizeof(int32_t)));
 
         if (occup <= 0)
             return;
 
         handleDebug(ptr, occup);
+
+        if (isGPU())
+            buffer.Data.copyFromExternalHostToDevice(host_data.data());
     }
 }
 
@@ -926,6 +939,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
+        it->second.Data.syncForDevice();
         return mapToProxy(it->second);
     } else {
         const size_t expectedSize = framebufferArea() * 3;
@@ -948,6 +962,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
+        it->second.Data.syncForHost();
         return DeviceImageProxy<float>{
             .DataPtr = it->second.Data.HostPtr,
             .Width   = it->second.Width,
@@ -986,7 +1001,6 @@ void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet
     updateSettings(settings);
 
     ensureFramebuffer();
-    markFramebufferDirty();
 
     mCurrentRenderSettings = settings;
 
@@ -1006,6 +1020,8 @@ void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.endShaderLaunch(ShaderType::Device, {});
+
+    markFramebufferDirty();
 }
 
 void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)

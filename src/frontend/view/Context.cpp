@@ -76,7 +76,7 @@ public:
     bool ToneMappingGamma                   = true;
     IG::ToneMappingMethod ToneMappingMethod = ToneMappingMethod::PbrNeutral;
 
-    size_t CurrentAOV = 0;
+    std::string CurrentAOV = "Color";
 
     bool Running       = true;
     bool ShowDebugMode = false;
@@ -137,20 +137,20 @@ public:
         ui::notifyResize(Window, Renderer);
     }
 
-    [[nodiscard]] inline std::string currentAOVName() const
-    {
-        return Runtime->framebufferNames().at(CurrentAOV);
-    }
-
     [[nodiscard]] inline AOVAccessor currentPixels() const
     {
-        return Runtime->getFramebufferForHost(currentAOVName());
+        return Runtime->getFramebufferForHost(CurrentAOV);
     }
 
     void changeAOV(int delta_aov)
     {
-        const int rem = (int)Runtime->framebufferNames().size();
-        CurrentAOV    = static_cast<size_t>((((int)CurrentAOV + delta_aov) % rem + rem) % rem);
+        const auto names = Runtime->framebufferNames();
+        if (names.empty())
+            return;
+
+        const int pos = std::distance(names.begin(), std::find(names.begin(), names.end(), CurrentAOV));
+        const int rem = (int)names.size();
+        CurrentAOV    = names.at((((int)pos + delta_aov) % rem + rem) % rem);
     }
 
     enum MouseMode {
@@ -530,9 +530,8 @@ public:
 
     void analyzeLuminance()
     {
-        const std::string aov_name = currentAOVName();
         ImageInfoSettings settings{
-            .AOV               = aov_name.c_str(),
+            .AOV               = CurrentAOV.c_str(),
             .Scale             = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f,
             .Bins              = HISTOGRAM_SIZE,
             .HistogramR        = Histogram.data() + 0 * HISTOGRAM_SIZE,
@@ -560,14 +559,13 @@ public:
 
     void updateSurface()
     {
-        const std::string aov_name = currentAOVName();
         analyzeLuminance();
 
         // TODO: It should be possible to directly change the device buffer (if the computing device is the display device)... but thats very advanced
         uint32* buf = Buffer.data();
         Runtime->tonemap(buf,
                          TonemapSettings{
-                             .AOV            = aov_name.c_str(),
+                             .AOV            = CurrentAOV.c_str(),
                              .Method         = (size_t)ToneMappingMethod,
                              .UseGamma       = ToneMappingGamma,
                              .Scale          = Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f,
@@ -747,13 +745,13 @@ public:
             const auto aovNames = Runtime->framebufferNames();
             if (!aovNames.empty()) {
                 if (ImGui::CollapsingHeader("AOV", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    const char* current_aov = aovNames.at(CurrentAOV).c_str();
+                    const char* current_aov = CurrentAOV.c_str();
                     if (ImGui::BeginCombo("Display", current_aov)) {
                         for (size_t i = 0; i < aovNames.size(); ++i) {
-                            bool is_selected = (i == CurrentAOV);
-                            const char* name = aovNames.at(i).c_str();
-                            if (ImGui::Selectable(name, is_selected))
-                                CurrentAOV = (int)i;
+                            const std::string& name = aovNames.at(i).c_str();
+                            bool is_selected = (name == CurrentAOV);
+                            if (ImGui::Selectable(name.c_str(), is_selected))
+                                CurrentAOV = name;
                             if (is_selected)
                                 ImGui::SetItemDefaultFocus();
                         }

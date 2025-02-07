@@ -70,7 +70,6 @@ public:
         void* ptr = allocateUnified(dev, size * sizeof(T));
         return UnifiedArray(
             (T*)ptr,
-            // (T*)getDevicePtr(dev, ptr),
             (T*)ptr,
             size * sizeof(T),
             dev,
@@ -91,7 +90,7 @@ public:
     {
         void* devPtr = allocateDevice(dev, size * sizeof(T));
         return UnifiedArray(
-            dev != 0 ? (T*)allocateDevice(0 /*Host*/, size * sizeof(T)) : (T*)devPtr, // Only allocate buffer if the array has a device != host
+            dev != 0 ? (T*)allocateDevice(0 /*Host*/, size * sizeof(T)) : (T*)devPtr, // Only allocate buffer if the device != host
             (T*)devPtr,
             size * sizeof(T),
             dev,
@@ -198,7 +197,7 @@ public:
     /// @brief If the array is shared, will make sure the device buffer is in sync with the host
     inline void syncForDevice()
     {
-        if (Type != MemoryType::Shared && HostPtr != DevicePtr)
+        if (Type != MemoryType::Shared || HostPtr == DevicePtr)
             return;
 
         IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
@@ -212,7 +211,7 @@ public:
     /// @brief If the array is shared, will make sure the device buffer is in sync with the host
     inline void syncForHost()
     {
-        if (Type != MemoryType::Shared && HostPtr != DevicePtr)
+        if (Type != MemoryType::Shared || HostPtr == DevicePtr)
             return;
 
         IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
