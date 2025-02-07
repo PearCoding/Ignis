@@ -197,6 +197,15 @@ void DeviceInterface::resizeFramebuffer(size_t width, size_t height)
     ensureFramebuffer();
 }
 
+static inline UnifiedArray<float> createAOVArray(int device, size_t size)
+{
+#if 1
+    return UnifiedArray<float>::AllocateBuffered(device, size);
+#else
+    return UnifiedArray<float>::AllocateUnified(device, size);
+#endif
+}
+
 void DeviceInterface::ensureFramebuffer()
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
@@ -215,7 +224,7 @@ void DeviceInterface::ensureFramebuffer()
             // Resize if needed
             if (it->second.Data.SizeInBytes < expectedSize * sizeof(float)) {
                 for (auto& p : mDeviceData.aovs) {
-                    p.second.Data = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize);
+                    p.second.Data = createAOVArray(mDeviceID, expectedSize);
                     p.second.Data.fillHostWithZero();
                 }
             }
@@ -223,7 +232,7 @@ void DeviceInterface::ensureFramebuffer()
     } else {
         mDeviceData.aovs.emplace(DefaultFramebufferName,
                                  DeviceImage{
-                                     .Data   = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize),
+                                     .Data   = createAOVArray(mDeviceID, expectedSize),
                                      .Width  = mFramebufferWidth,
                                      .Height = mFramebufferHeight })
             .first->second.Data.fillHostWithZero();
@@ -678,11 +687,12 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
         }
     }
 
-    return mapToProxyDevice(images.emplace(filename, DeviceImage{
-                                                   .Data   = std::move(arr),
-                                                   .Width  = width,
-                                                   .Height = height })
-                          .first->second);
+    return mapToProxyDevice(images.emplace(filename,
+                                           DeviceImage{
+                                               .Data   = std::move(arr),
+                                               .Width  = width,
+                                               .Height = height })
+                                .first->second);
 }
 
 IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFromFile(const std::string& filename, int32_t expected_channels, bool linear)
@@ -723,11 +733,12 @@ IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFrom
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, hostData.size());
     arr.copyFromExternalHostToDevice(hostData.data());
 
-    return mapToProxyDevice(images.emplace(filename, DevicePackedImage{
-                                                   .Data   = std::move(arr),
-                                                   .Width  = width,
-                                                   .Height = height })
-                          .first->second);
+    return mapToProxyDevice(images.emplace(filename,
+                                           DevicePackedImage{
+                                               .Data   = std::move(arr),
+                                               .Width  = width,
+                                               .Height = height })
+                                .first->second);
 }
 
 static std::vector<uint8_t> readBufferFile(const std::string& filename)
@@ -919,7 +930,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
 
         auto& aov = mDeviceData.aovs.emplace(actual_name,
                                              DeviceImage{
-                                                 .Data   = UnifiedArray<float>::AllocateUnified(mDeviceID, expectedSize),
+                                                 .Data   = createAOVArray(mDeviceID, expectedSize),
                                                  .Width  = mFramebufferWidth,
                                                  .Height = mFramebufferHeight })
                         .first->second;

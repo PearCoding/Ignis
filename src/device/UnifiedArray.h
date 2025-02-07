@@ -23,13 +23,13 @@ public:
     enum class MemoryType {
         Unified, // Visible on both host & device
         Device,  // Device only
-        Shared,  // Device & Host have their own copies and can be synced if necessary
+        Buffered,  // Device & Host have their own copies and can be synced if necessary
         External // The device is host! So internal pointers are forwarded to prevent useless copies
     };
 
     enum class Flags : int32 {
-        DirtyDevice = 0x1, // The device buffer is dirty and should be mapped to the host (only for shared arrays)
-        DirtyHost   = 0x2, // The host buffer is dirty and should be mapped to the device (only for shared arrays)
+        DirtyDevice = 0x1, // The device buffer is dirty and should be mapped to the host (only for buffered arrays)
+        DirtyHost   = 0x2, // The host buffer is dirty and should be mapped to the device (only for buffered arrays)
     };
 
     T* DevicePtr;
@@ -86,7 +86,7 @@ public:
             MemoryType::Device);
     }
 
-    static inline UnifiedArray AllocateShared(int dev, size_t size)
+    static inline UnifiedArray AllocateBuffered(int dev, size_t size)
     {
         void* devPtr = allocateDevice(dev, size * sizeof(T));
         return UnifiedArray(
@@ -94,7 +94,7 @@ public:
             (T*)devPtr,
             size * sizeof(T),
             dev,
-            MemoryType::Shared);
+            MemoryType::Buffered);
     }
 
     static inline UnifiedArray CreateExternal(int dev, T* ptr, size_t size)
@@ -187,17 +187,17 @@ public:
         StatusFlags |= (int)Flags::DirtyHost;
     }
 
-    /// @brief If the array is shared, will make sure both buffers are in sync
+    /// @brief If the array is buffered, will make sure both buffers are in sync
     inline void sync()
     {
         syncForDevice();
         syncForHost();
     }
 
-    /// @brief If the array is shared, will make sure the device buffer is in sync with the host
+    /// @brief If the array is buffered, will make sure the device buffer is in sync with the host
     inline void syncForDevice()
     {
-        if (Type != MemoryType::Shared || HostPtr == DevicePtr)
+        if (Type != MemoryType::Buffered || HostPtr == DevicePtr)
             return;
 
         IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
@@ -208,10 +208,10 @@ public:
         StatusFlags &= ~(int)Flags::DirtyHost;
     }
 
-    /// @brief If the array is shared, will make sure the device buffer is in sync with the host
+    /// @brief If the array is Buffered, will make sure the device buffer is in sync with the host
     inline void syncForHost()
     {
-        if (Type != MemoryType::Shared || HostPtr == DevicePtr)
+        if (Type != MemoryType::Buffered || HostPtr == DevicePtr)
             return;
 
         IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
@@ -242,7 +242,7 @@ private:
         case MemoryType::Device:
             deallocateDevice(Device, (void*)DevicePtr);
             break;
-        case MemoryType::Shared:
+        case MemoryType::Buffered:
             if (HostPtr != DevicePtr) {
                 deallocateDevice(0 /*Host*/, (void*)HostPtr);
                 deallocateDevice(Device, (void*)DevicePtr);
