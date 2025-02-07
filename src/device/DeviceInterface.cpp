@@ -673,7 +673,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
         height = image.height;
         arr.copyFromExternalHostToDevice(image.pixels.get());
 
-        auto& res = getCurrentShader().images[filename]; // Get or construct resource info for given resource
+        auto& res = getCurrentShader().images.at(filename); // Get or construct resource info for given resource
         res.counter++;
         res.memory_usage = arr.SizeInBytes;
     } catch (const ImageLoadException& e) {
@@ -783,7 +783,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, vec.size());
     arr.copyFromExternalHostToDevice(vec.data());
 
-    return mapToProxyDevice(buffers.emplace(filename, std::move(arr)).first->second);
+    return mapToProxyDevice(buffers.emplace(filename, DeviceBuffer{ .Data = std::move(arr) }).first->second);
 }
 
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferByName(const std::string& name)
@@ -816,7 +816,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
     IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;
 
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, size);
-    return mapToProxyDevice(buffers.emplace(name, std::move(arr)).first->second);
+    return mapToProxyDevice(buffers.insert_or_assign(name, DeviceBuffer{ .Data = std::move(arr) }).first->second);
 }
 
 void DeviceInterface::saveBufferToFile(const std::string& name, const std::string& filename)
