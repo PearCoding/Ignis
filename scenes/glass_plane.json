@@ -22,8 +22,8 @@
 		{
 			"type": "checkerboard",
 			"name": "check",
-			"scale_x": 10,
-			"scale_y": 10,
+			"scale_x": 8,
+			"scale_y": 8,
 			"color0": [0,0,0],
 			"color1": [1,1,1]
 		}
