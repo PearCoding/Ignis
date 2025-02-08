@@ -99,7 +99,7 @@ void PhotonMappingTechnique::generateBody(const SerializationInput& input) const
                  << "  let light_cache = make_ppm_lightcache(device, " << input.Tree.getInline("photon_count") << ", scene_bbox);" << std::endl;
 
     if (is_light_pass) {
-        input.Stream << "  let technique = make_ppm_light_renderer(" << input.Tree.getInline("max_light_depth") << ", aovs, light_cache);" << std::endl;
+        input.Stream << "  let technique = make_ppm_light_renderer(" << input.Tree.getInline("max_light_depth") << ", light_cache);" << std::endl;
     } else {
         input.Stream << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
                      << "  let ppm_radius = ppm_compute_radius(" << input.Tree.getInline("radius") << ", settings.iter);" << std::endl

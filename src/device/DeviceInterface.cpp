@@ -201,6 +201,7 @@ void DeviceInterface::resizeFramebuffer(size_t width, size_t height)
 
 static inline UnifiedArray<float> createAOVArray(int device, size_t size)
 {
+    // Unified memory on Windows (Nvidia RTX 4070 Ti Super) has quite a penalty for our AOV access pattern. AOVs in general are easy to sync in access so it is not worth it.
 #if 1
     return UnifiedArray<float>::AllocateBuffered(device, size);
 #else
