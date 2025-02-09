@@ -1,7 +1,9 @@
 #include "Image.h"
 #include "Color.h"
 #include "Logger.h"
+#include "MemoryArena.h"
 #include "StringUtils.h"
+#include "config/Build.h"
 
 #include <fstream>
 #include <numeric>
@@ -385,12 +387,9 @@ Image Image::createSolidImage(const Vector4f& color, size_t width, size_t height
 
 static inline std::string getStringAttribute(const EXRAttribute& attr)
 {
-    int len;
-    memcpy(&len, attr.value, sizeof(len));
-
     std::string str;
-    str.resize(len);
-    memcpy(str.data(), attr.value + sizeof(len), len);
+    str.resize(attr.size);
+    strncpy(str.data(), (const char*)attr.value, attr.size);
 
     return str;
 }
@@ -419,81 +418,67 @@ static inline float getFloatAttribute(const EXRAttribute& attr)
     return *reinterpret_cast<const float*>(attr.value);
 }
 
-// attr.value has to be deleted!
-EXRAttribute makeStringAttribute(const std::string_view& name, const std::string_view& data)
+struct EXRChromaticitiesAttribute {
+    float Red[2];
+    float Green[2];
+    float Blue[2];
+    float White[2];
+};
+
+struct EXRVec2f {
+    float X;
+    float Y;
+
+    inline EXRVec2f(const Vector2f& a)
+        : X(a.x())
+        , Y(a.y())
+    {
+    }
+};
+
+struct EXRVec3f {
+    float X;
+    float Y;
+    float Z;
+
+    inline EXRVec3f(const Vector3f& a)
+        : X(a.x())
+        , Y(a.y())
+        , Z(a.z())
+    {
+    }
+};
+
+template <typename T>
+static inline EXRAttribute makeGenericAttribute(MemoryArena& arena, const std::string_view& name, const std::string_view& type, const T& data)
+{
+    EXRAttribute attr;
+    strcpy(attr.name, name.data());
+    strcpy(attr.type, type.data());
+
+    attr.value = (unsigned char*)arena.allocateObject<T>(data);
+    attr.size  = sizeof(data);
+
+    return attr;
+}
+
+static inline EXRAttribute makeAttribute(MemoryArena& arena, const std::string_view& name, const EXRChromaticitiesAttribute& data) { return makeGenericAttribute(arena, name, "chromaticities", data); }
+static inline EXRAttribute makeAttribute(MemoryArena& arena, const std::string_view& name, const EXRVec2f& data) { return makeGenericAttribute(arena, name, "v2f", data); }
+static inline EXRAttribute makeAttribute(MemoryArena& arena, const std::string_view& name, const EXRVec3f& data) { return makeGenericAttribute(arena, name, "v3f", data); }
+static inline EXRAttribute makeAttribute(MemoryArena& arena, const std::string_view& name, int data) { return makeGenericAttribute(arena, name, "int", data); }
+static inline EXRAttribute makeAttribute(MemoryArena& arena, const std::string_view& name, float data) { return makeGenericAttribute(arena, name, "float", data); }
+
+static inline EXRAttribute makeAttribute(MemoryArena& arena, const std::string_view& name, const std::string_view& data)
 {
     EXRAttribute attr;
     strcpy(attr.name, name.data());
     strcpy(attr.type, "string");
 
     int len    = (int)data.size();
-    attr.value = new unsigned char[len + sizeof(int)];
-    memcpy(attr.value, reinterpret_cast<unsigned char*>(&len), sizeof(len));
-    strncpy(reinterpret_cast<char*>(attr.value + sizeof(len)), data.data(), len);
+    attr.value = (unsigned char*)arena.allocateRaw(len);
+    strncpy(reinterpret_cast<char*>(attr.value), data.data(), len);
 
-    attr.size = sizeof(len) + len;
-
-    return attr;
-}
-
-// attr.value has to be deleted!
-EXRAttribute makeVec2Attribute(const std::string_view& name, const Vector2f& data)
-{
-    EXRAttribute attr;
-    strcpy(attr.name, name.data());
-    strcpy(attr.type, "v2f");
-
-    const float xy[2] = { data.x(), data.y() };
-    attr.value        = new unsigned char[2 * sizeof(float)];
-    memcpy(attr.value, reinterpret_cast<const unsigned char*>(xy), 2 * sizeof(float));
-
-    attr.size = 2 * sizeof(float);
-
-    return attr;
-}
-
-// attr.value has to be deleted!
-EXRAttribute makeVec3Attribute(const std::string_view& name, const Vector3f& data)
-{
-    EXRAttribute attr;
-    strcpy(attr.name, name.data());
-    strcpy(attr.type, "v3f");
-
-    const float xyz[3] = { data.x(), data.y(), data.z() };
-    attr.value         = new unsigned char[3 * sizeof(float)];
-    memcpy(attr.value, reinterpret_cast<const unsigned char*>(xyz), 3 * sizeof(float));
-
-    attr.size = 3 * sizeof(float);
-
-    return attr;
-}
-
-// attr.value has to be deleted!
-EXRAttribute makeIntAttribute(const std::string_view& name, int data)
-{
-    EXRAttribute attr;
-    strcpy(attr.name, name.data());
-    strcpy(attr.type, "int");
-
-    attr.value = new unsigned char[sizeof(data)];
-    memcpy(attr.value, reinterpret_cast<unsigned char*>(&data), sizeof(data));
-
-    attr.size = sizeof(data);
-
-    return attr;
-}
-
-// attr.value has to be deleted!
-EXRAttribute makeFloatAttribute(const std::string_view& name, float data)
-{
-    EXRAttribute attr;
-    strcpy(attr.name, name.data());
-    strcpy(attr.type, "float");
-
-    attr.value = new unsigned char[sizeof(data)];
-    memcpy(attr.value, reinterpret_cast<unsigned char*>(&data), sizeof(data));
-
-    attr.size = sizeof(data);
+    attr.size = len;
 
     return attr;
 }
@@ -955,6 +940,8 @@ bool Image::save(const Path& path, size_t width, size_t height,
 {
     IG_ASSERT(layer_ptrs.size() == layer_names.size(), "Expected layer pointers and layer names of the same size");
 
+    MemoryArena arena(1 * 1024 * 1024 /* 1 MB */);
+
     // Make sure the directory containing the new file exists
     if (!path.parent_path().empty())
         std::filesystem::create_directories(path.parent_path());
@@ -987,7 +974,7 @@ bool Image::save(const Path& path, size_t width, size_t height,
     image.height       = (int)height;
 
     header.num_channels = image.num_channels;
-    header.channels     = new EXRChannelInfo[header.num_channels];
+    header.channels     = (EXRChannelInfo*)arena.allocateRaw(header.num_channels * sizeof(EXRChannelInfo));
 
     constexpr size_t BUFFER_MAX = 255;
     for (int i = 0; i < image.num_channels; ++i) {
@@ -997,8 +984,8 @@ bool Image::save(const Path& path, size_t width, size_t height,
             header.channels[i].name[BUFFER_MAX - 1] = '\0';
     }
 
-    header.pixel_types           = new int[header.num_channels];
-    header.requested_pixel_types = new int[header.num_channels];
+    header.pixel_types           = (int*)arena.allocateRaw(header.num_channels * sizeof(int));
+    header.requested_pixel_types = (int*)arena.allocateRaw(header.num_channels * sizeof(int));
     for (int i = 0; i < header.num_channels; ++i) {
         header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
         header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
@@ -1008,42 +995,61 @@ bool Image::save(const Path& path, size_t width, size_t height,
     std::vector<EXRAttribute> attributes;
     if (metaData) {
         if (metaData->CameraType.has_value())
-            attributes.emplace_back(makeStringAttribute("igCameraType", metaData->CameraType.value()));
+            attributes.emplace_back(makeAttribute(arena, "igCameraType", metaData->CameraType.value()));
         if (metaData->TechniqueType.has_value())
-            attributes.emplace_back(makeStringAttribute("igTechniqueType", metaData->TechniqueType.value()));
+            attributes.emplace_back(makeAttribute(arena, "igTechniqueType", metaData->TechniqueType.value()));
         if (metaData->TargetString.has_value())
-            attributes.emplace_back(makeStringAttribute("igTarget", metaData->TargetString.value()));
+            attributes.emplace_back(makeAttribute(arena, "igTarget", metaData->TargetString.value()));
         if (metaData->CameraEye.has_value())
-            attributes.emplace_back(makeVec3Attribute("igCameraEye", metaData->CameraEye.value()));
+            attributes.emplace_back(makeAttribute(arena, "igCameraEye", EXRVec3f(metaData->CameraEye.value())));
         if (metaData->CameraUp.has_value())
-            attributes.emplace_back(makeVec3Attribute("igCameraUp", metaData->CameraUp.value()));
+            attributes.emplace_back(makeAttribute(arena, "igCameraUp", EXRVec3f(metaData->CameraUp.value())));
         if (metaData->CameraDir.has_value())
-            attributes.emplace_back(makeVec3Attribute("igCameraDir", metaData->CameraDir.value()));
+            attributes.emplace_back(makeAttribute(arena, "igCameraDir", EXRVec3f(metaData->CameraDir.value())));
         if (metaData->Seed.has_value())
-            attributes.emplace_back(makeIntAttribute("igSeed", (int)metaData->Seed.value()));
+            attributes.emplace_back(makeAttribute(arena, "igSeed", (int)metaData->Seed.value()));
         if (metaData->SamplePerPixel.has_value())
-            attributes.emplace_back(makeIntAttribute("igSPP", (int)metaData->SamplePerPixel.value()));
+            attributes.emplace_back(makeAttribute(arena, "igSPP", (int)metaData->SamplePerPixel.value()));
         if (metaData->SamplePerIteration.has_value())
-            attributes.emplace_back(makeIntAttribute("igSPI", (int)metaData->SamplePerIteration.value()));
+            attributes.emplace_back(makeAttribute(arena, "igSPI", (int)metaData->SamplePerIteration.value()));
         if (metaData->Iteration.has_value())
-            attributes.emplace_back(makeIntAttribute("igIteration", (int)metaData->Iteration.value()));
+            attributes.emplace_back(makeAttribute(arena, "igIteration", (int)metaData->Iteration.value()));
         if (metaData->Frame.has_value())
-            attributes.emplace_back(makeIntAttribute("igFrame", (int)metaData->Frame.value()));
+            attributes.emplace_back(makeAttribute(arena, "igFrame", (int)metaData->Frame.value()));
         if (metaData->RendertimeInMilliseconds.has_value())
-            attributes.emplace_back(makeIntAttribute("igRendertimeMS", (int)metaData->RendertimeInMilliseconds.value()));
+            attributes.emplace_back(makeAttribute(arena, "igRendertimeMS", (int)metaData->RendertimeInMilliseconds.value()));
         if (metaData->RendertimeInSeconds.has_value())
-            attributes.emplace_back(makeIntAttribute("igRendertimeS", (int)metaData->RendertimeInSeconds.value()));
+            attributes.emplace_back(makeAttribute(arena, "igRendertimeS", (int)metaData->RendertimeInSeconds.value()));
+
+        // TODO: Make this adaptive?
+        attributes.emplace_back(makeAttribute(arena, "chromaticities", EXRChromaticitiesAttribute{ .Red = { 0.6400f, 0.3300f }, .Green = { 0.3000f, 0.6000f }, .Blue = { 0.1500f, 0.0600f }, .White = { 0.3127f, 0.3290f } }));
+        // TODO: Add worldToCamera & worldToNDC
 
         for (const auto& attrib : metaData->CustomStrings)
-            attributes.emplace_back(makeStringAttribute(attrib.first, attrib.second));
+            attributes.emplace_back(makeAttribute(arena, attrib.first, attrib.second));
         for (const auto& attrib : metaData->CustomIntegers)
-            attributes.emplace_back(makeIntAttribute(attrib.first, (int)attrib.second));
+            attributes.emplace_back(makeAttribute(arena, attrib.first, (int)attrib.second));
         for (const auto& attrib : metaData->CustomFloats)
-            attributes.emplace_back(makeFloatAttribute(attrib.first, attrib.second));
+            attributes.emplace_back(makeAttribute(arena, attrib.first, (float)attrib.second));
         for (const auto& attrib : metaData->CustomVec2s)
-            attributes.emplace_back(makeVec2Attribute(attrib.first, attrib.second));
+            attributes.emplace_back(makeAttribute(arena, attrib.first, EXRVec2f(attrib.second)));
         for (const auto& attrib : metaData->CustomVec3s)
-            attributes.emplace_back(makeVec3Attribute(attrib.first, attrib.second));
+            attributes.emplace_back(makeAttribute(arena, attrib.first, EXRVec3f(attrib.second)));
+    }
+
+    // Include some extra information
+    // TODO: Maybe make this optional?
+    if (true) {
+        namespace sc = std::chrono;
+
+        const auto now        = sc::system_clock::now();
+        const auto local_time = sc::zoned_time{ sc::current_zone(), sc::floor<sc::seconds>(now) };
+        const auto utc_offset = sc::time_point_cast<sc::milliseconds>(now).time_since_epoch().count() / 1000.0f;
+
+        attributes.emplace_back(makeAttribute(arena, "igVersion", Build::getVersionString()));
+        attributes.emplace_back(makeAttribute(arena, "comments", Build::getBuildString()));
+        attributes.emplace_back(makeAttribute(arena, "capDate", std::format("{0:%Y}:{0:%m}:{0:%d} {0:%H}:{0:%M}:{0:%S}", local_time)));
+        attributes.emplace_back(makeAttribute(arena, "utcOffset", (float)utc_offset));
     }
 
     if (!attributes.empty()) {
@@ -1066,13 +1072,6 @@ bool Image::save(const Path& path, size_t width, size_t height,
         stream.write((const char*)mem, mem_size);
     }
     free(mem);
-
-    for (auto& attr : attributes)
-        delete[] attr.value;
-
-    delete[] header.channels;
-    delete[] header.pixel_types;
-    delete[] header.requested_pixel_types;
 
     return true;
 }
