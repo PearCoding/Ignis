@@ -674,7 +674,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
         height = image.height;
         arr.copyFromExternalHostToDevice(image.pixels.get());
 
-        auto& res = getCurrentShader().images.at(filename); // Get or construct resource info for given resource
+        auto& res = getCurrentShader().images[filename]; // Get or construct resource info for given resource
         res.counter++;
         res.memory_usage = arr.SizeInBytes;
     } catch (const ImageLoadException& e) {
