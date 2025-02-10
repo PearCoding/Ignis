@@ -166,16 +166,20 @@ public:
         StatusFlags |= (int)Flags::DirtyHost;
     }
 
-    inline void copyFromExternalHostToDevice(const T* hostPtr)
+    inline void copyFromExternalHostToDevice(const T* hostPtr, size_t sizeInBytes)
     {
-        UnifiedArrayBase::copyFromHost(Device, DevicePtr, hostPtr, SizeInBytes);
+        UnifiedArrayBase::copyFromHost(Device, DevicePtr, hostPtr, sizeInBytes);
         StatusFlags |= (int)Flags::DirtyDevice;
     }
 
-    inline void copyFromDeviceToExternalHost(T* hostPtr)
+    inline void copyFromExternalHostToDevice(const T* hostPtr) { copyFromExternalHostToDevice(hostPtr, SizeInBytes); }
+
+    inline void copyFromDeviceToExternalHost(T* hostPtr, size_t sizeInBytes)
     {
-        UnifiedArrayBase::copyToHost(Device, DevicePtr, hostPtr, SizeInBytes);
+        UnifiedArrayBase::copyToHost(Device, DevicePtr, hostPtr, sizeInBytes);
     }
+
+    inline void copyFromDeviceToExternalHost(T* hostPtr) { copyFromDeviceToExternalHost(hostPtr, SizeInBytes); }
 
     inline void markDirtyOnDevice()
     {

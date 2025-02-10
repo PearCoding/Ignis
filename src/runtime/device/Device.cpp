@@ -94,14 +94,14 @@ size_t Device::getBufferSizeInBytes(const std::string& name)
     return size;
 }
 
-bool Device::copyBufferToHost(const std::string& name, void* dst)
+bool Device::copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes)
 {
-    return mDevice->copyBufferToHost(name, dst);
+    return mDevice->copyBufferToHost(name, dst, sizeInBytes);
 }
 
-bool Device::copyBufferFromHost(const std::string& name, const void* src)
+bool Device::copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes)
 {
-    return mDevice->copyBufferFromHost(name, src);
+    return mDevice->copyBufferFromHost(name, src, sizeInBytes);
 }
 
 Device::BufferAccessor Device::getBufferForDevice(const std::string& name)
@@ -132,15 +132,17 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
     const auto acc   = mDevice->loadAOVImageForDevice(settings.AOV);
     float* in_pixels = acc.DataPtr;
 
+    const size_t size           = mDevice->framebufferArea() * sizeof(uint32_t);
     uint32_t* device_out_pixels = out_pixels;
+
     // Allocate a new buffer and map back to host
     if (mDevice->isGPU())
-        device_out_pixels = (uint32_t*)mDevice->requestBuffer("__internal_tonemap_output", (int)(acc.Width * acc.Height * sizeof(uint32_t)), 0).DataPtr;
+        device_out_pixels = (uint32_t*)mDevice->requestBuffer("__internal_tonemap_output", (int)size, 0).DataPtr;
 
     mDevice->runTonemapShader(in_pixels, device_out_pixels, settings);
 
     if (mDevice->isGPU())
-        mDevice->copyBufferToHost("__internal_tonemap_output", out_pixels);
+        mDevice->copyBufferToHost("__internal_tonemap_output", out_pixels, size);
 }
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& settings)

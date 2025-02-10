@@ -24,8 +24,8 @@ size_t RenderPass::getOutputSizeInBytes(const std::string& name) const
     return mRuntime->getBufferSizeInBytes(name);
 }
 
-bool RenderPass::copyOutputToHost(const std::string& name, void* dst)
+bool RenderPass::copyOutputToHost(const std::string& name, void* dst, size_t sizeInBytes)
 {
-    return mRuntime->copyBufferToHost(name, dst);
+    return mRuntime->copyBufferToHost(name, dst, sizeInBytes);
 }
 } // namespace IG

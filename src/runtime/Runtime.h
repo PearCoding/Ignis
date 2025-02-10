@@ -80,8 +80,8 @@ public:
     [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name) const;
     [[nodiscard]] BufferAccessor getBufferForDevice(const std::string& name) const;
     BufferAccessor requestBufferForDevice(const std::string& name, size_t sizeInBytes) const;
-    bool copyBufferToHost(const std::string& name, void* dst);
-    bool copyBufferFromHost(const std::string& name, const void* src);
+    bool copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes);
+    bool copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes);
 
     // A frame consists of multiple iterations until target SPP is (ever) reached.
     // An iteration consists of SPI samples per iteration.

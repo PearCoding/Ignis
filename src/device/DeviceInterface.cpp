@@ -37,7 +37,7 @@ static inline size_t roundUp(size_t num, size_t multiple)
     if (multiple == 0)
         return num;
 
-    size_t remainder = num % multiple;
+    const size_t remainder = num % multiple;
     if (remainder == 0)
         return num;
 
@@ -841,23 +841,25 @@ void DeviceInterface::saveBufferToFile(const std::string& name, const std::strin
     }
 }
 
-bool DeviceInterface::copyBufferToHost(const std::string& buffer_name, void* dst)
+bool DeviceInterface::copyBufferToHost(const std::string& buffer_name, void* dst, size_t sizeInBytes)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
-        it->second.Data.copyFromDeviceToExternalHost((uint8*)dst);
+        IG_ASSERT(it->second.Data.SizeInBytes <= sizeInBytes, "Trying to copy beyond the size of the buffer");
+        it->second.Data.copyFromDeviceToExternalHost((uint8*)dst, sizeInBytes);
         return true;
     }
     return false;
 }
 
-bool DeviceInterface::copyBufferFromHost(const std::string& buffer_name, const void* src)
+bool DeviceInterface::copyBufferFromHost(const std::string& buffer_name, const void* src, size_t sizeInBytes)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
-        it->second.Data.copyFromExternalHostToDevice((const uint8*)src);
+        IG_ASSERT(it->second.Data.SizeInBytes <= sizeInBytes, "Trying to copy beyond the size of the buffer");
+        it->second.Data.copyFromExternalHostToDevice((const uint8*)src, sizeInBytes);
         return true;
     }
     return false;

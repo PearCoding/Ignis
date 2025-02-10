@@ -401,7 +401,7 @@ private:
             return false;
         }
 
-        if (!pass->copyOutputToHost(aov, pixels)) {
+        if (!pass->copyOutputToHost(aov, pixels, mHeight * mWidth * sizeof(uint32))) {
             SDL_UnlockTexture(mTexture);
             IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
             return false;

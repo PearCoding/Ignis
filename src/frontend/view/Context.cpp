@@ -130,9 +130,9 @@ public:
         IG_LOG(L_INFO) << "Resizing framebuffer to " << width << "x" << height << std::endl;
 
         Runtime->resizeFramebuffer((size_t)width, (size_t)height);
+        setupTextureBuffer((size_t)width, (size_t)height);
         Width  = width;
         Height = height;
-        setupTextureBuffer((size_t)width, (size_t)height);
 
         ui::notifyResize(Window, Renderer);
     }

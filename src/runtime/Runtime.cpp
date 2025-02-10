@@ -494,14 +494,14 @@ BufferAccessor Runtime::requestBufferForDevice(const std::string& name, size_t s
     return mDevice->requestBufferForDevice(name, sizeInBytes);
 }
 
-bool Runtime::copyBufferToHost(const std::string& name, void* dst)
+bool Runtime::copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes)
 {
-    return mDevice->copyBufferToHost(name, dst);
+    return mDevice->copyBufferToHost(name, dst, sizeInBytes);
 }
 
-bool Runtime::copyBufferFromHost(const std::string& name, const void* src)
+bool Runtime::copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes)
 {
-    return mDevice->copyBufferFromHost(name, src);
+    return mDevice->copyBufferFromHost(name, src, sizeInBytes);
 }
 
 void Runtime::reset()

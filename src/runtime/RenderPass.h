@@ -37,7 +37,7 @@ public:
     bool run();
 
     [[nodiscard]] size_t getOutputSizeInBytes(const std::string& name) const;
-    bool copyOutputToHost(const std::string& name, void* dst);
+    bool copyOutputToHost(const std::string& name, void* dst, size_t sizeInBytes);
 
     [[nodiscard]] inline std::shared_ptr<ParameterSet> parameter() const { return mRegistry; }
     [[nodiscard]] inline void* internalCallback() const { return mCallback; }

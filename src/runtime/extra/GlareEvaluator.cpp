@@ -89,12 +89,13 @@ std::optional<GlareEvaluator::Result> GlareEvaluator::run()
     } else {
         const size_t channels = mIsSRGB ? 3 : 1;
         if (mDataIsOnHost && mRuntime->target().isGPU()) {
-            const auto acc = mRuntime->requestBufferForDevice("__glare_framebuffer_host", mDataWidth * mDataHeight * channels * sizeof(float));
+            const size_t size = mDataWidth * mDataHeight * channels * sizeof(float);
+            const auto acc = mRuntime->requestBufferForDevice("__glare_framebuffer_host", size);
             if (acc.Data == nullptr) {
                 IG_LOG(L_ERROR) << "Could not allocate temporary data on device for glare evaluation" << std::endl;
                 return {};
             }
-            if (!mRuntime->copyBufferFromHost("__glare_framebuffer_host", (const void*)mData)) {
+            if (!mRuntime->copyBufferFromHost("__glare_framebuffer_host", (const void*)mData, size)) {
                 IG_LOG(L_ERROR) << "Could not copy data to device for glare evaluation" << std::endl;
                 return {};
             }
