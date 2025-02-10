@@ -846,7 +846,7 @@ bool DeviceInterface::copyBufferToHost(const std::string& buffer_name, void* dst
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
-        IG_ASSERT(it->second.Data.SizeInBytes <= sizeInBytes, "Trying to copy beyond the size of the buffer");
+        IG_ASSERT(it->second.Data.SizeInBytes >= sizeInBytes, "Trying to copy beyond the size of the buffer");
         it->second.Data.copyFromDeviceToExternalHost((uint8*)dst, sizeInBytes);
         return true;
     }
@@ -858,7 +858,7 @@ bool DeviceInterface::copyBufferFromHost(const std::string& buffer_name, const v
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     if (const auto it = mDeviceData.buffers.find(buffer_name); it != mDeviceData.buffers.end()) {
-        IG_ASSERT(it->second.Data.SizeInBytes <= sizeInBytes, "Trying to copy beyond the size of the buffer");
+        IG_ASSERT(it->second.Data.SizeInBytes >= sizeInBytes, "Trying to copy beyond the size of the buffer");
         it->second.Data.copyFromExternalHostToDevice((const uint8*)src, sizeInBytes);
         return true;
     }
