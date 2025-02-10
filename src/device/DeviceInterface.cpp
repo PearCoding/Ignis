@@ -963,6 +963,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
             .Height  = it->second.Height
         };
     } else {
+        // Note: Currently only the device side is allowed to create new AOVs. This is only by design to catch some common mistakes, but if a use-case arise we might change this in the future.
         IG_LOG(L_ERROR) << "Unknown aov '" << actual_name << "' access for host" << std::endl;
         return DeviceImageProxy<float>::Invalid();
     }
