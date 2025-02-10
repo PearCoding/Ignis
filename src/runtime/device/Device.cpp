@@ -52,17 +52,17 @@ std::vector<std::string> Device::getFramebufferNames() const
     return mDevice->getAOVNames();
 }
 
-Device::AOVAccessor Device::getFramebufferForHost(const std::string& name)
+Device::AOVAccessor Device::getFramebufferForHost(const std::string& name, bool willBeModified)
 {
-    const auto acc = mDevice->loadAOVImageForHost(name);
+    const auto acc = mDevice->loadAOVImageForHost(name, willBeModified);
     return {
         .Data = acc.DataPtr
     };
 }
 
-Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name)
+Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name, bool willBeModified)
 {
-    const auto acc = mDevice->loadAOVImageForDevice(name);
+    const auto acc = mDevice->loadAOVImageForDevice(name, willBeModified);
     return {
         .Data = acc.DataPtr
     };
@@ -76,16 +76,6 @@ void Device::clearAllFramebuffer()
 void Device::clearFramebuffer(const std::string& name)
 {
     mDevice->clearAOV(name);
-}
-
-void Device::syncFramebufferHostToDevice(const std::string& name)
-{
-    // mDevice->mapAOVBackToDevice(name);
-}
-
-void Device::syncAllFramebufferHostToDevice()
-{
-    // mDevice->mapAllAOVsBackToDevice();
 }
 
 size_t Device::getBufferSizeInBytes(const std::string& name)
@@ -129,7 +119,7 @@ const Statistics& Device::getStatistics()
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
 {
-    const auto acc   = mDevice->loadAOVImageForDevice(settings.AOV);
+    const auto acc   = mDevice->loadAOVImageForDevice(settings.AOV, false);
     float* in_pixels = acc.DataPtr;
 
     const size_t size           = mDevice->framebufferArea() * sizeof(uint32_t);
@@ -147,7 +137,7 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& settings)
 {
-    const auto acc   = mDevice->loadAOVImageForDevice(settings.AOV);
+    const auto acc   = mDevice->loadAOVImageForDevice(settings.AOV, false);
     float* in_pixels = acc.DataPtr;
 
     return mDevice->runImageInfoShader(in_pixels, settings);

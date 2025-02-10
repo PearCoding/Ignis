@@ -49,10 +49,12 @@ IG_EXPORT void ignis_get_film_data(float** pixels, int* width, int* height)
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
 
-    auto framebuffer = device->getFramebufferForDevice();
-    *pixels          = framebuffer.DataPtr;
-    *width           = (int)framebuffer.Width;
-    *height          = (int)framebuffer.Height;
+    auto aov = device->loadAOVImageForDevice({}, !device->currentRenderSettings().info.LockFramebuffer /* Framebuffer will not be modified if it is locked */);
+    *pixels  = aov.DataPtr;
+    *width   = (int)aov.Width;
+    *height  = (int)aov.Height;
+
+    IG_ASSERT(aov.Width == std::get<0>(device->framebufferSize()) && aov.Height == std::get<1>(device->framebufferSize()), "Expected framebuffer size to be in sync with the internal framebuffer size");
 }
 
 IG_EXPORT void ignis_get_aov_image(const char* name, float** aov_pixels)
@@ -60,7 +62,7 @@ IG_EXPORT void ignis_get_aov_image(const char* name, float** aov_pixels)
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
 
-    auto aov    = device->loadAOVImageForDevice(name);
+    auto aov    = device->loadAOVImageForDevice(name, true); // Assume the AOV will be modified
     *aov_pixels = aov.DataPtr;
 
     IG_ASSERT(aov.Width == std::get<0>(device->framebufferSize()) && aov.Height == std::get<1>(device->framebufferSize()), "Expected AOV size to be in sync with the actual framebuffer");

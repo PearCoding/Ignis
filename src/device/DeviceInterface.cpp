@@ -96,6 +96,16 @@ inline IDeviceInterface::DeviceStreamProxy<T> mapToProxyDevice(const DeviceStrea
     };
 }
 
+inline IDeviceInterface::DynTableProxy mapToProxyDevice(const DeviceDynTable& dyntable)
+{
+    return IDeviceInterface::DynTableProxy{
+        .EntryCount    = dyntable.EntryCount,
+        .LookupEntries = (LookupEntry*)dyntable.LookupEntries.DevicePtr,
+        .DataPtr       = const_cast<uint8*>(dyntable.Data.DevicePtr),
+        .DataSize      = dyntable.Data.SizeInBytes
+    };
+}
+
 static const Image MissingImage = Image::createSolidImage(Vector4f(1, 0, 1, 1));
 
 /// @brief Guard to ensure `getCurrentThreadData()` and fast math.
@@ -185,11 +195,6 @@ std::vector<std::string> DeviceInterface::getAOVNames() const
     return names;
 }
 
-IDeviceInterface::DeviceImageProxy<float> DeviceInterface::getFramebufferForDevice()
-{
-    return loadAOVImageForDevice(DefaultFramebufferName);
-}
-
 void DeviceInterface::resizeFramebuffer(size_t width, size_t height)
 {
     IG_ASSERT(width > 0 && height > 0, "Expected given width & height to be greater than 0");
@@ -237,20 +242,13 @@ void DeviceInterface::ensureFramebuffer()
         }
     } else {
         IG_LOG(L_DEBUG) << "Allocating initial AOV '" << DefaultFramebufferName << "' with " << mFramebufferWidth << "x" << mFramebufferHeight << std::endl;
-        mDeviceData.aovs.emplace(DefaultFramebufferName,
-                                 DeviceImage{
-                                     .Data   = createAOVArray(mDeviceID, expectedSize),
-                                     .Width  = mFramebufferWidth,
-                                     .Height = mFramebufferHeight })
+        mDeviceData.aovs.try_emplace(DefaultFramebufferName,
+                                     DeviceImage{
+                                         .Data   = createAOVArray(mDeviceID, expectedSize),
+                                         .Width  = mFramebufferWidth,
+                                         .Height = mFramebufferHeight })
             .first->second.Data.fillHostWithZero();
     }
-}
-
-void DeviceInterface::markFramebufferDirty()
-{
-    std::lock_guard<std::mutex> _guard(mThreadMutex);
-    for (auto& p : mDeviceData.aovs)
-        p.second.Data.markDirtyOnDevice();
 }
 
 std::string DeviceInterface::lookupResource(int32_t id) const
@@ -519,11 +517,9 @@ IDeviceInterface::DynTableProxy DeviceInterface::loadDynTable(const std::string&
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     if (isGPU()) {
-        DeviceDynTable* dyntable;
-
         auto& tables = mDeviceData.dyntables;
         if (const auto it = tables.find(name); it != tables.end()) {
-            dyntable = &it->second;
+            return mapToProxyDevice(it->second);
         } else {
             IG_LOG(L_DEBUG) << "Loading dyntable '" << name << "'" << std::endl;
 
@@ -538,16 +534,8 @@ IDeviceInterface::DynTableProxy DeviceInterface::loadDynTable(const std::string&
             entry.LookupEntries.copyFromExternalHostToDevice((const ::LookupEntry*)tbl.lookups().data());
             entry.Data.copyFromExternalHostToDevice(tbl.data().data());
 
-            dyntable = &tables.emplace(name, std::move(entry)).first->second;
+            return mapToProxyDevice(tables.try_emplace(name, std::move(entry)).first->second);
         }
-
-        IG_ASSERT(dyntable != nullptr, "Expected valid dyntable pointer");
-        return {
-            .EntryCount    = dyntable->EntryCount,
-            .LookupEntries = (LookupEntry*)dyntable->LookupEntries.DevicePtr,
-            .DataPtr       = const_cast<uint8*>(dyntable->Data.DevicePtr),
-            .DataSize      = dyntable->Data.SizeInBytes
-        };
     } else {
         const auto& tbl = mCurrentSceneSettings.database->DynTables.at(name);
         return {
@@ -572,9 +560,14 @@ IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string&
             IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
             const auto& fixtable = mCurrentSceneSettings.database->FixTables.at(name);
 
-            DeviceBuffer buffer = DeviceBuffer{ .Data = UnifiedArray<uint8>::AllocateDevice(mDeviceID, fixtable.data().size()) };
-            buffer.Data.copyFromExternalHostToDevice(fixtable.data().data());
-            return mapToProxyDevice(tables.emplace(name, std::move(buffer)).first->second);
+            if (fixtable.data().empty()) {
+                // Special case: No entities in the scene
+                return FixTableProxy::Invalid();
+            } else {
+                DeviceBuffer buffer = DeviceBuffer{ .Data = UnifiedArray<uint8>::AllocateDevice(mDeviceID, fixtable.data().size()) };
+                buffer.Data.copyFromExternalHostToDevice(fixtable.data().data());
+                return mapToProxyDevice(tables.try_emplace(name, std::move(buffer)).first->second);
+            }
         }
     } else {
         IG_ASSERT(mCurrentSceneSettings.database->FixTables.count(name) > 0, "Expected given fixtable name to be available");
@@ -694,11 +687,11 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
         }
     }
 
-    return mapToProxyDevice(images.emplace(filename,
-                                           DeviceImage{
-                                               .Data   = std::move(arr),
-                                               .Width  = width,
-                                               .Height = height })
+    return mapToProxyDevice(images.try_emplace(filename,
+                                               DeviceImage{
+                                                   .Data   = std::move(arr),
+                                                   .Width  = width,
+                                                   .Height = height })
                                 .first->second);
 }
 
@@ -740,11 +733,11 @@ IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFrom
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, hostData.size());
     arr.copyFromExternalHostToDevice(hostData.data());
 
-    return mapToProxyDevice(images.emplace(filename,
-                                           DevicePackedImage{
-                                               .Data   = std::move(arr),
-                                               .Width  = width,
-                                               .Height = height })
+    return mapToProxyDevice(images.try_emplace(filename,
+                                               DevicePackedImage{
+                                                   .Data   = std::move(arr),
+                                                   .Width  = width,
+                                                   .Height = height })
                                 .first->second);
 }
 
@@ -784,7 +777,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, vec.size());
     arr.copyFromExternalHostToDevice(vec.data());
 
-    return mapToProxyDevice(buffers.emplace(filename, DeviceBuffer{ .Data = std::move(arr) }).first->second);
+    return mapToProxyDevice(buffers.try_emplace(filename, DeviceBuffer{ .Data = std::move(arr) }).first->second);
 }
 
 IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferByName(const std::string& name)
@@ -924,7 +917,7 @@ void DeviceInterface::handleDebugOutput()
     }
 }
 
-IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice(const std::string& aov_name)
+IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice(const std::string& aov_name, bool willBeModified)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
@@ -933,23 +926,27 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
         IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed inbetween iterations");
         it->second.Data.syncForDevice();
+        if (willBeModified)
+            it->second.Data.markDirtyOnDevice();
         return mapToProxyDevice(it->second);
     } else {
         const size_t expectedSize = framebufferArea() * 3;
 
-        auto& aov = mDeviceData.aovs.emplace(actual_name,
-                                             DeviceImage{
-                                                 .Data   = createAOVArray(mDeviceID, expectedSize),
-                                                 .Width  = mFramebufferWidth,
-                                                 .Height = mFramebufferHeight })
-                        .first->second;
+        auto aov = DeviceImage{
+            .Data   = createAOVArray(mDeviceID, expectedSize),
+            .Width  = mFramebufferWidth,
+            .Height = mFramebufferHeight
+        };
+
         aov.Data.fillHostWithZero();
         aov.Data.syncForDevice();
-        return mapToProxyDevice(aov);
+        if (willBeModified)
+            aov.Data.markDirtyOnDevice();
+        return mapToProxyDevice(mDeviceData.aovs.try_emplace(actual_name, std::move(aov)).first->second);
     }
 }
 
-IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(const std::string& aov_name)
+IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(const std::string& aov_name, bool willBeModified)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
@@ -958,6 +955,8 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
         IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed inbetween iterations");
         it->second.Data.syncForHost();
+        if (willBeModified)
+            it->second.Data.markDirtyOnHost();
         return DeviceImageProxy<float>{
             .DataPtr = it->second.Data.HostPtr,
             .Width   = it->second.Width,
@@ -1015,9 +1014,6 @@ void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.endShaderLaunch(ShaderType::Device, {});
-
-    // We assume all the framebuffer were invalidated during the previous run
-    markFramebufferDirty();
 }
 
 void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)

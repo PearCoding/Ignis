@@ -142,7 +142,6 @@ public:
     std::pair<size_t, size_t> framebufferSize() const override;
 
     std::vector<std::string> getAOVNames() const override;
-    DeviceImageProxy<float> getFramebufferForDevice() override;
     void resizeFramebuffer(size_t width, size_t height) override;
 
     std::string lookupResource(int32_t id) const override;
@@ -175,8 +174,8 @@ public:
     bool copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes) override;
     bool copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes) override;
 
-    DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name) override;
-    DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name) override;
+    DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name, bool willBeModified) override;
+    DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name, bool willBeModified) override;
     void clearAOV(const std::string& aov_name) override;
     void clearAllAOVs() override;
 
@@ -202,7 +201,6 @@ public:
 
 private:
     void ensureFramebuffer();
-    void markFramebufferDirty();
 
     void updateSettings(const Device::RenderSettings& settings);
     void updateShaderSet(const TechniqueVariantShaderSet& shaderSet);

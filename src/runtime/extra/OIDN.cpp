@@ -22,14 +22,25 @@ static void errorFunc(void* userPtr, oidn::Error code, const char* message)
 #if OIDN_VERSION_MAJOR >= 2
 class OIDNContext {
 public:
-    OIDNContext(bool prefilter, bool highQuality)
+    OIDNContext(const Target& target, bool prefilter, bool highQuality)
         : mPrefilter(prefilter)
         , mHighQuality(highQuality)
         , mWidth(0)
         , mHeight(0)
         , mDeviceType()
     {
-        mDevice = oidn::newDevice(oidn::DeviceType::Default);
+        if (target.isCPU()) {
+            mDevice = oidn::newDevice(oidn::DeviceType::CPU);
+        } else {
+            switch (target.gpuArchitecture()) {
+            case GPUArchitecture::Nvidia:
+                mDevice = oidn::newCUDADevice(0, nullptr);
+                break;
+            default:
+                mDevice = oidn::newDevice(oidn::DeviceType::Default);
+                break;
+            }
+        }
 
         mDevice.setErrorFunction(errorFunc);
         mDevice.commit();
@@ -102,7 +113,7 @@ public:
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
         const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised");
+        const auto output = device->getFramebufferForHost("Denoised", true);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -127,7 +138,6 @@ public:
         mMainFilter.execute();
 
         mOutputBuffer.read(0, sizeof(float) * framebufferSize, output.Data);
-        device->syncFramebufferHostToDevice("Denoised");
     }
 
     inline void filterDevice(Device* device)
@@ -135,7 +145,7 @@ public:
         const auto color  = device->getFramebufferForDevice({});
         const auto normal = device->getFramebufferForDevice("Normals");
         const auto albedo = device->getFramebufferForDevice("Albedo");
-        const auto output = device->getFramebufferForDevice("Denoised");
+        const auto output = device->getFramebufferForDevice("Denoised", true);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -245,12 +255,14 @@ private:
 // Old, CPU only version
 class OIDNContext {
 public:
-    OIDNContext(bool prefilter, bool highQuality)
+    OIDNContext(const Target& target, bool prefilter, bool highQuality)
         : mPrefilter(prefilter)
         , mHighQuality(highQuality)
         , mWidth(0)
         , mHeight(0)
     {
+        IG_UNUSED(target);
+
         mDevice = oidn::newDevice(oidn::DeviceType::CPU);
 
         mDevice.setErrorFunction(errorFunc);
@@ -267,7 +279,7 @@ public:
         const auto color  = device->getFramebufferForHost({});
         const auto normal = device->getFramebufferForHost("Normals");
         const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised");
+        const auto output = device->getFramebufferForHost("Denoised", true);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -285,8 +297,6 @@ public:
             mAlbedoFilter.execute();
         }
         mMainFilter.execute();
-
-        device->syncFramebufferHostToDevice("Denoised");
     }
 
 private:
@@ -355,7 +365,7 @@ class OIDNContext {
 
 OIDN::OIDN(Runtime* runtime)
 #ifdef IG_HAS_DENOISER
-    : mInternal(std::make_unique<OIDNContext>(runtime->options().Denoiser.Prefilter, runtime->options().Denoiser.HighQuality))
+    : mInternal(std::make_unique<OIDNContext>(runtime->target(), runtime->options().Denoiser.Prefilter, runtime->options().Denoiser.HighQuality))
 #else
     : mInternal()
 #endif
@@ -388,7 +398,18 @@ bool OIDN::isAvailable()
 bool OIDN::hasGPU()
 {
 #if defined(OIDN_DEVICE_CUDA) || defined(OIDN_DEVICE_SYCL) || defined(OIDN_DEVICE_HIP) || defined(OIDN_DEVICE_METAL)
+#if OIDN_VERSION_MAJOR >= 2
+    const int devices = oidn::getNumPhysicalDevices();
+    for (int i = 0; i < devices; ++i) {
+        const auto type = oidn::PhysicalDeviceRef(i).get<oidn::DeviceType>("type");
+        // Check if a device 'we' support is available
+        if (type == oidn::DeviceType::CUDA || type == oidn::DeviceType::HIP)
+            return true;
+    }
+    return false;
+#else // Just assume we have GPU
     return true;
+#endif
 #else
     return false;
 #endif

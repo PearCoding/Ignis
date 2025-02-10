@@ -62,12 +62,10 @@ public:
 
     [[nodiscard]] std::vector<std::string> getFramebufferNames() const;
 
-    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name);
-    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name);
+    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name, bool willBeModified = false);
+    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name, bool willBeModified = false);
     void clearFramebuffer(const std::string& name);
     void clearAllFramebuffer();
-    void syncFramebufferHostToDevice(const std::string& name);
-    void syncAllFramebufferHostToDevice();
 
     [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name);
     [[nodiscard]] bool copyBufferToHost(const std::string& name, void* dstBuffer, size_t sizeInBytes);
