@@ -138,14 +138,14 @@ TriMesh load(const Path& path, const std::optional<size_t>& shape_index)
         tri_mesh.vertices.emplace_back(attrib.vertices[3 * vi + 0], attrib.vertices[3 * vi + 1], attrib.vertices[3 * vi + 2]);
 
         if (has_norms) {
-            if (IG_LIKELY(ni >= 0))
+            if (ni >= 0) [[likely]]
                 tri_mesh.normals.emplace_back(attrib.normals[3 * ni + 0], attrib.normals[3 * ni + 1], attrib.normals[3 * ni + 2]);
             else
                 tri_mesh.normals.emplace_back(0.0f, 0.0f, 1.0f); // TODO: Maybe fix with a follow-up pass?
         }
 
         if (has_tex) {
-            if (IG_LIKELY(ti >= 0))
+            if (ti >= 0)  [[likely]]
                 tri_mesh.texcoords.emplace_back(attrib.texcoords[2 * ti + 0], attrib.texcoords[2 * ti + 1]);
             else
                 tri_mesh.texcoords.emplace_back(0.0f, 0.0f);

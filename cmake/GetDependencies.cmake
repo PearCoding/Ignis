@@ -63,3 +63,13 @@ CPMAddPackage(
     GIT_TAG master
     EXCLUDE_FROM_ALL YES
 )
+
+CPMAddPackage(
+    NAME cpptrace
+    GITHUB_REPOSITORY jeremy-rifkin/cpptrace
+    GIT_TAG v0.7.5
+    EXCLUDE_FROM_ALL YES
+    SYSTEM
+    OPTIONS
+    "CPPTRACE_BUILD_SHARED OFF"
+)

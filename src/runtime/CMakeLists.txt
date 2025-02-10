@@ -25,6 +25,7 @@ if(NOT WIN32)
 endif()
 
 target_link_libraries(ig_runtime PUBLIC std::filesystem PRIVATE pugixml TBB::tbb ZLIB::ZLIB pexpr)
+target_link_libraries(ig_runtime PRIVATE cpptrace::cpptrace) # Remove this dependency when <stacktrace> becomes properly available with C++23
 target_include_directories(ig_runtime SYSTEM PUBLIC ${eigen_SOURCE_DIR})
 target_include_directories(ig_runtime SYSTEM PRIVATE ${tinyobjloader_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include ${stb_SOURCE_DIR} ${tinyexr_SOURCE_DIR} ${tinygltf_SOURCE_DIR} ${libbvh_SOURCE_DIR}/src)
 target_include_directories(ig_runtime PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)

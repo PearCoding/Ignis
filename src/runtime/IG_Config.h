@@ -108,40 +108,15 @@ namespace IG {
 #endif
 #endif
 
-#if defined(IG_CC_GNU) || defined(IG_CC_CLANG)
-#define IG_LIKELY(x) __builtin_expect(!!(x), 1)
-#define IG_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
-#define IG_LIKELY(x) (x)
-#define IG_UNLIKELY(x) (x)
-#endif
-
 #if defined(IG_WITH_ASSERTS) || (!defined(IG_NO_ASSERTS) && defined(IG_DEBUG))
-#include <assert.h>
-#define _IG_ASSERT_MSG(msg)                                 \
-    std::cerr << "[IGNIS] ASSERT | " << __FILE__            \
-              << ":" << __LINE__ << " " << IG_FUNCTION_NAME \
-              << " | " << (msg) << std::endl
-#ifndef IG_DEBUG
-#define IG_ASSERT(cond, msg)        \
-    do {                            \
-        if (IG_UNLIKELY(!(cond))) { \
-            _IG_ASSERT_MSG((msg));  \
-            std::abort();           \
-        }                           \
+#define IG_ASSERT(cond, msg)                                                          \
+    do {                                                                              \
+        if (!(cond)) [[unlikely]] {                                                   \
+            IG::internal_assert_handler(__FILE__, __LINE__, IG_FUNCTION_NAME, (msg)); \
+        }                                                                             \
     } while (false)
 #else
-#define IG_ASSERT(cond, msg)        \
-    do {                            \
-        if (IG_UNLIKELY(!(cond))) { \
-            _IG_ASSERT_MSG((msg));  \
-            IG_DEBUG_BREAK();       \
-            std::abort();           \
-        }                           \
-    } while (false)
-#endif
-#else
-#define IG_ASSERT(cond, msg) ((void)0)
+#define IG_ASSERT(cond, msg) IG_NOOP
 #endif
 
 #define IG_CLASS_NON_MOVEABLE(C) \
@@ -295,4 +270,6 @@ struct hash_tuple {
         return hash;
     }
 };
+
+[[noreturn]] void IG_LIB internal_assert_handler(const char* file, int line, const char* func, const char* msg);
 } // namespace IG
