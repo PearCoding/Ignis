@@ -142,15 +142,15 @@ public:
         return Runtime->getFramebufferForHost(CurrentAOV);
     }
 
-    void changeAOV(int delta_aov)
+    void changeAOV(ptrdiff_t delta_aov)
     {
         const auto names = Runtime->framebufferNames();
         if (names.empty())
             return;
 
-        const int pos = std::distance(names.begin(), std::find(names.begin(), names.end(), CurrentAOV));
-        const int rem = (int)names.size();
-        CurrentAOV    = names.at((((int)pos + delta_aov) % rem + rem) % rem);
+        const ptrdiff_t pos = std::distance(names.begin(), std::find(names.begin(), names.end(), CurrentAOV));
+        const ptrdiff_t rem = (ptrdiff_t)names.size();
+        CurrentAOV          = names.at(((pos + delta_aov) % rem + rem) % rem);
     }
 
     enum MouseMode {
