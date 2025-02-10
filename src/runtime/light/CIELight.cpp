@@ -41,12 +41,10 @@ void CIELight::serialize(const SerializationInput& input) const
 {
     input.Tree.beginClosure(name());
 
-    input.Tree.addColor("scale", *mLight, Vector3f::Ones());
     input.Tree.addColor("zenith", *mLight, Vector3f::Ones());
     input.Tree.addColor("ground", *mLight, Vector3f::Ones());
     input.Tree.addNumber("ground_brightness", *mLight, 0.2f);
     input.Tree.addComputedMatrix3("_transform", mLight->property("transform").getTransform().linear().transpose().inverse());
-    input.Tree.addVector("direction", *mLight, mSunDirection);
 
     if (mClassification == CIEType::Uniform || mClassification == CIEType::Cloudy) {
         bool cloudy = mClassification == CIEType::Cloudy;
@@ -62,6 +60,9 @@ void CIELight::serialize(const SerializationInput& input) const
                      << ", " << (mHasGround ? "true" : "false")
                      << ", " << input.Tree.getInlineMatrix3("_transform") << ");" << std::endl;
     } else {
+        input.Tree.addColor("scale", *mLight, Vector3f::Ones());
+        input.Tree.addVector("direction", *mLight, mSunDirection);
+
         auto ea = LoaderUtils::getEA(*mLight);
         if (ea.Elevation > 87 * Deg2Rad) {
             IG_LOG(L_WARNING) << " Sun too close to zenith, reducing elevation to 87 degrees" << std::endl;
