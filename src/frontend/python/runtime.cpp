@@ -337,13 +337,12 @@ void runtime_module(nb::module_& m)
         .def("step", &Runtime::step, "ignoreDenoiser"_a = false)
         .def("trace", [](Runtime& r, const std::vector<Ray>& rays) {
             r.trace(rays);
-            return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, { rays.size(), 3ul }, nb::handle());
-        })
+            return nb::ndarray<nb::numpy, float, nb::shape<-1, 3>>(r.getFramebufferForHost(std::string{}).Data, { rays.size(), 3ul }, nb::handle()); }, nb::rv_policy::reference_internal)
         .def("reset", &Runtime::reset, "Reset internal counters etc. This should be used if data (like camera orientation) has changed. Frame counter will NOT be reset")
         .def("getFramebufferForHost", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
-                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, { height, width, 3ul }, nb::handle()); }, "aov"_a = "")
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu>(r.getFramebufferForHost(aov).Data, { height, width, 3ul }, nb::handle()); }, "aov"_a = "", nb::rv_policy::reference_internal)
         .def("getFramebufferForDevice", [](const Runtime& r, const std::string& aov) {
                 const size_t width  = r.framebufferWidth();
                 const size_t height = r.framebufferHeight();
@@ -368,7 +367,7 @@ void runtime_module(nb::module_& m)
                     }
                 }
 
-                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, { height, width, 3ul }, nb::handle(), {}, nb::dtype<float>(), deviceType, deviceId); }, "aov"_a = "")
+                return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, 3>>(r.getFramebufferForDevice(aov).Data, { height, width, 3ul }, nb::handle(), {}, nb::dtype<float>(), deviceType, deviceId); }, "aov"_a = "", nb::rv_policy::reference_internal)
         .def("tonemap", [](Runtime& r, nb::ndarray<uint32_t, nb::ndim<2>, nb::c_contig, nb::device::cpu> output) {
             if(!output.is_valid())
                 throw nb::buffer_error("Invalid input buffer");
