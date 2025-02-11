@@ -390,15 +390,16 @@ ShaderInfo& DeviceInterface::getCurrentShader()
 DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType type, size_t buffer, size_t size, size_t minComponents)
 {
     const bool isPrimary = type == StreamType::Primary;
-    if (mSetupSettings.DebugTrace) {
-        if (isPrimary)
-            IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Get Primary Streams" << std::endl;
-        else
-            IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Get Secondary Streams" << std::endl;
-    }
 
     const size_t payloads = isPrimary ? mCurrentRenderSettings.info.PrimaryPayloadCount : mCurrentRenderSettings.info.SecondaryPayloadCount;
     const size_t elements = roundUp(minComponents + payloads, 4);
+
+    if (mSetupSettings.DebugTrace) {
+        if (isPrimary)
+            IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Get Primary Streams [Index=" << buffer << ", Size=" << size << ", C=" << elements << "]" << std::endl;
+        else
+            IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Get Secondary Streams [Index=" << buffer << ", Size=" << size << ", C=" << elements << "]" << std::endl;
+    }
 
     const size_t offset = isPrimary ? 0 : 1;
 
@@ -414,9 +415,9 @@ DeviceInterface::DeviceStreamProxy<float> DeviceInterface::getStream(StreamType 
     const bool isPrimary = type == StreamType::Primary;
     if (mSetupSettings.DebugTrace) {
         if (isPrimary)
-            IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Get Readonly Primary Streams" << std::endl;
+            IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Get Readonly Primary Streams [Index=" << buffer << "]" << std::endl;
         else
-            IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Get Readonly Secondary Streams" << std::endl;
+            IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Get Readonly Secondary Streams [Index=" << buffer << "]" << std::endl;
     }
 
     const size_t offset = isPrimary ? 0 : 1;
@@ -431,9 +432,9 @@ void DeviceInterface::swapGPUStreams(StreamType type)
     const bool isPrimary = type == StreamType::Primary;
     if (mSetupSettings.DebugTrace) {
         if (isPrimary)
-            IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Swap GPU Primary Streams" << std::endl;
+            IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Swap GPU Primary Streams" << std::endl;
         else
-            IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Swap GPU Secondary Streams" << std::endl;
+            IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Swap GPU Secondary Streams" << std::endl;
     }
 
     const size_t offset = isPrimary ? 0 : 1;
@@ -465,7 +466,7 @@ IDeviceInterface::TemporaryStorageHostProxy DeviceInterface::getTemporaryStorage
 void* DeviceInterface::loadRayList()
 {
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Load Ray List" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Load Ray List" << std::endl;
 
     size_t count = mCurrentRenderSettings.width;
     auto& device = mDeviceData;
@@ -582,7 +583,7 @@ IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string&
 void DeviceInterface::loadEntityBVH(BVHType type, const char* prim_type, void** nodes, void** objs)
 {
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Load Entity BVH" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Load Entity BVH" << std::endl;
 
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
@@ -1000,7 +1001,7 @@ void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet
     mCurrentRenderSettings = settings;
 
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Device Shader " << mSetupSettings.Target.toString() << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Device Shader " << mSetupSettings.Target.toString() << std::endl;
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::Device, 1, {});
@@ -1023,7 +1024,7 @@ void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pi
     ensureFramebuffer();
 
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Tonemap Shader" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Tonemap Shader" << std::endl;
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::Tonemap, 1, {});
@@ -1053,7 +1054,7 @@ ImageInfoOutput DeviceInterface::runImageInfoShader(float* in_pixels, const Imag
     ensureFramebuffer();
 
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Imageinfo Shader" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Imageinfo Shader" << std::endl;
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::ImageInfo, 1, {});
@@ -1098,7 +1099,7 @@ ImageInfoOutput DeviceInterface::runImageInfoShader(float* in_pixels, const Imag
 void DeviceInterface::runTraversalShader(TraversalStage stage, int size)
 {
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Traversal Shader [T=" << (int)stage << ", S=" << size << "]" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Traversal Shader [T=" << (int)stage << ", S=" << size << "]" << std::endl;
 
     const ShaderType shaderType = stage == TraversalStage::Primary ? ShaderType::PrimaryTraversal : ShaderType::SecondaryTraversal;
 
@@ -1122,7 +1123,7 @@ void DeviceInterface::runTraversalShader(TraversalStage stage, int size)
 int DeviceInterface::runRayGenerationShader(int next_id, int size, int xmin, int ymin, int xmax, int ymax)
 {
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Ray Generation Shader [S=" << size << ", I=" << next_id << "]" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Ray Generation Shader [S=" << size << ", I=" << next_id << "]" << std::endl;
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::RayGeneration, (xmax - xmin) * (ymax - ymin), {});
@@ -1144,7 +1145,7 @@ int DeviceInterface::runRayGenerationShader(int next_id, int size, int xmin, int
 void DeviceInterface::runMaterialShader(int material_id, int first, int last)
 {
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Material Shader [M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Material Shader [M=" << material_id << ", S=" << first << ", E=" << last << "]" << std::endl;
 
     const ShaderType shaderType = material_id >= 0 ? ShaderType::Hit : ShaderType::Miss;
     if (mSetupSettings.AcquireStats)
@@ -1170,7 +1171,7 @@ void DeviceInterface::runAdvancedShadowShader(int material_id, int first, int la
     const ShaderType shaderType = is_hit ? ShaderType::AdvancedShadowHit : ShaderType::AdvancedShadowMiss;
 
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Advanced Shadow Shader [I=" << material_id << ", S=" << first << ", E=" << last << ", Hit=" << (is_hit ? "true" : "false") << "]" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Advanced Shadow Shader [I=" << material_id << ", S=" << first << ", E=" << last << ", Hit=" << (is_hit ? "true" : "false") << "]" << std::endl;
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(shaderType, last - first, material_id);
@@ -1205,7 +1206,7 @@ void DeviceInterface::runCallbackShader(int type)
 
     if (callback != nullptr) {
         if (mSetupSettings.DebugTrace)
-            IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Callback Shader [T=" << type << "]" << std::endl;
+            IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Callback Shader [T=" << type << "]" << std::endl;
 
         if (mSetupSettings.AcquireStats)
             getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::Callback, 1, type);
@@ -1228,7 +1229,7 @@ void DeviceInterface::runBakeShader(const ShaderOutput<void*>& shader, const std
     IG_ASSERT(shader.Exec != nullptr, "Expected bake shader to be valid");
 
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Bake Shader" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Bake Shader" << std::endl;
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::Bake, 1, {});
@@ -1258,7 +1259,7 @@ void DeviceInterface::runPassShader(const ShaderOutput<void*>& shader, void* use
     IG_ASSERT(shader.Exec != nullptr, "Expected pass shader to be valid");
 
     if (mSetupSettings.DebugTrace)
-        IG_LOG(L_DEBUG) << "TRACE[V" << mCurrentRenderSettings.variant << "]> Pass Shader" << std::endl;
+        IG_LOG(L_DEBUG) << "TRACE[P" << mCurrentRenderSettings.variant << "]> Pass Shader" << std::endl;
 
     if (mSetupSettings.AcquireStats)
         getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::Pass, 1, {});
