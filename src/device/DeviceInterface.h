@@ -1,7 +1,7 @@
 #pragma once
 
+#include "DeviceArray.h"
 #include "Statistics.h"
-#include "UnifiedArray.h"
 #include "device/IDeviceInterface.h"
 #include "device/ShaderKey.h"
 
@@ -13,8 +13,8 @@ namespace IG {
 
 template <typename Node, typename Object>
 struct BvhProxy {
-    UnifiedArray<Node> Nodes;
-    UnifiedArray<Object> Objs;
+    DeviceArray<Node> Nodes;
+    DeviceArray<Object> Objs;
 };
 
 using Bvh2Ent = BvhProxy<Node2, EntityLeaf1>;
@@ -25,13 +25,13 @@ using BvhVariant = std::variant<Bvh2Ent, Bvh4Ent, Bvh8Ent>;
 
 struct DeviceDynTable {
     size_t EntryCount = 0;
-    UnifiedArray<::LookupEntry> LookupEntries;
-    UnifiedArray<uint8_t> Data;
+    DeviceArray<::LookupEntry> LookupEntries;
+    DeviceArray<uint8_t> Data;
 };
 
 struct TemporaryStorageHost {
-    UnifiedArray<int32_t> ray_begins;
-    UnifiedArray<int32_t> ray_ends;
+    DeviceArray<int32_t> ray_begins;
+    DeviceArray<int32_t> ray_ends;
 };
 
 struct Resource {
@@ -51,7 +51,7 @@ struct ShaderStats {
 
 template <typename T>
 struct DeviceImageBase {
-    UnifiedArray<T> Data;
+    DeviceArray<T> Data;
     size_t Width  = 0;
     size_t Height = 0;
 };
@@ -60,13 +60,13 @@ using DevicePackedImage = DeviceImageBase<uint8_t>; // Packed RGBA
 
 template <typename T>
 struct DeviceBufferBase {
-    UnifiedArray<T> Data;
+    DeviceArray<T> Data;
 };
 using DeviceBuffer = DeviceBufferBase<uint8_t>;
 
 template <typename T>
 struct DeviceStreamBase {
-    UnifiedArray<T> Data;
+    DeviceArray<T> Data;
     size_t BlockSize = 0;
 };
 using DeviceStream = DeviceStreamBase<float>;
@@ -96,7 +96,7 @@ private:
         TemporaryStorageHost temporary_storage_host;
         std::array<DeviceStream, GPUStreamBufferCount*(size_t)StreamType::Count> streams;
         std::array<DeviceStream*, GPUStreamBufferCount*(size_t)StreamType::Count> current_streams;
-        UnifiedArray<StreamRay> ray_list;
+        DeviceArray<StreamRay> ray_list;
         std::unordered_map<std::string, DeviceImage> aovs;
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DevicePackedImage> packed_images;

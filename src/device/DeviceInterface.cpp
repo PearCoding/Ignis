@@ -45,12 +45,12 @@ static inline size_t roundUp(size_t num, size_t multiple)
 }
 
 template <typename T>
-static inline void resizeDeviceArray(int32_t dev, UnifiedArray<T>& array, size_t size, size_t multiplier)
+static inline void resizeDeviceArray(int32_t dev, DeviceArray<T>& array, size_t size, size_t multiplier)
 {
     const auto capacity = roundUp(std::max<size_t>(1, size), 32);
     const size_t n      = capacity * multiplier;
     if (array.SizeInBytes < n * sizeof(T)) {
-        array = UnifiedArray<T>::AllocateDevice(dev, n);
+        array = DeviceArray<T>::AllocateDevice(dev, n);
         if (array.DevicePtr == nullptr)
             IG_LOG(L_FATAL) << "Stream allocation resulted in out of memory!" << std::endl;
     }
@@ -204,13 +204,13 @@ void DeviceInterface::resizeFramebuffer(size_t width, size_t height)
     ensureFramebuffer();
 }
 
-static inline UnifiedArray<float> createAOVArray(int device, size_t size)
+static inline DeviceArray<float> createAOVArray(int device, size_t size)
 {
     // Unified memory on Windows (Nvidia RTX 4070 Ti Super) has quite a penalty for our AOV access pattern. AOVs in general are easy to sync in access so it is not worth it.
 #if 1
-    return UnifiedArray<float>::AllocateBuffered(device, size);
+    return DeviceArray<float>::AllocateBuffered(device, size);
 #else
-    return UnifiedArray<float>::AllocateUnified(device, size);
+    return DeviceArray<float>::AllocateUnified(device, size);
 #endif
 }
 
@@ -474,7 +474,7 @@ void* DeviceInterface::loadRayList()
 
     IG_ASSERT(mCurrentRenderSettings.rays != nullptr, "Expected list of rays to be available");
 
-    device.ray_list = UnifiedArray<StreamRay>::AllocateDevice(mDeviceID, count);
+    device.ray_list = DeviceArray<StreamRay>::AllocateDevice(mDeviceID, count);
 
     std::vector<StreamRay> host_data(isGPU() ? count : 0);
     StreamRay* ptr = isGPU() ? host_data.data() : device.ray_list.DevicePtr;
@@ -527,8 +527,8 @@ IDeviceInterface::DynTableProxy DeviceInterface::loadDynTable(const std::string&
 
             DeviceDynTable entry = DeviceDynTable{
                 .EntryCount    = tbl.entryCount(),
-                .LookupEntries = UnifiedArray<::LookupEntry>::AllocateDevice(mDeviceID, tbl.lookups().size()),
-                .Data          = UnifiedArray<uint8_t>::AllocateDevice(mDeviceID, tbl.data().size())
+                .LookupEntries = DeviceArray<::LookupEntry>::AllocateDevice(mDeviceID, tbl.lookups().size()),
+                .Data          = DeviceArray<uint8_t>::AllocateDevice(mDeviceID, tbl.data().size())
             };
 
             entry.LookupEntries.copyFromExternalHostToDevice((const ::LookupEntry*)tbl.lookups().data());
@@ -564,7 +564,7 @@ IDeviceInterface::FixTableProxy DeviceInterface::loadFixTable(const std::string&
                 // Special case: No entities in the scene
                 return FixTableProxy::Invalid();
             } else {
-                DeviceBuffer buffer = DeviceBuffer{ .Data = UnifiedArray<uint8>::AllocateDevice(mDeviceID, fixtable.data().size()) };
+                DeviceBuffer buffer = DeviceBuffer{ .Data = DeviceArray<uint8>::AllocateDevice(mDeviceID, fixtable.data().size()) };
                 buffer.Data.copyFromExternalHostToDevice(fixtable.data().data());
                 return mapToProxyDevice(tables.try_emplace(name, std::move(buffer)).first->second);
             }
@@ -599,22 +599,22 @@ void DeviceInterface::loadEntityBVH(BVHType type, const char* prim_type, void** 
         case BVHType::BVH2: {
             const size_t node_count = bvh.Nodes.size() / sizeof(Node2);
             device.bvh_ents[str]    = IG::Bvh2Ent{
-                std::move(UnifiedArray<Node2>::CreateExternalOrAllocateDevice(mDeviceID, (Node2*)bvh.Nodes.data(), node_count, !isGPU())),
-                std::move(UnifiedArray<EntityLeaf1>::CreateExternalOrAllocateDevice(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
+                std::move(DeviceArray<Node2>::CreateExternalOrAllocateDevice(mDeviceID, (Node2*)bvh.Nodes.data(), node_count, !isGPU())),
+                std::move(DeviceArray<EntityLeaf1>::CreateExternalOrAllocateDevice(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
             };
         } break;
         case BVHType::BVH4: {
             const size_t node_count = bvh.Nodes.size() / sizeof(Node4);
             device.bvh_ents[str]    = IG::Bvh4Ent{
-                std::move(UnifiedArray<Node4>::CreateExternalOrAllocateDevice(mDeviceID, (Node4*)bvh.Nodes.data(), node_count, !isGPU())),
-                std::move(UnifiedArray<EntityLeaf1>::CreateExternalOrAllocateDevice(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
+                std::move(DeviceArray<Node4>::CreateExternalOrAllocateDevice(mDeviceID, (Node4*)bvh.Nodes.data(), node_count, !isGPU())),
+                std::move(DeviceArray<EntityLeaf1>::CreateExternalOrAllocateDevice(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
             };
         } break;
         case BVHType::BVH8: {
             const size_t node_count = bvh.Nodes.size() / sizeof(Node8);
             device.bvh_ents[str]    = IG::Bvh8Ent{
-                std::move(UnifiedArray<Node8>::CreateExternalOrAllocateDevice(mDeviceID, (Node8*)bvh.Nodes.data(), node_count, !isGPU())),
-                std::move(UnifiedArray<EntityLeaf1>::CreateExternalOrAllocateDevice(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
+                std::move(DeviceArray<Node8>::CreateExternalOrAllocateDevice(mDeviceID, (Node8*)bvh.Nodes.data(), node_count, !isGPU())),
+                std::move(DeviceArray<EntityLeaf1>::CreateExternalOrAllocateDevice(mDeviceID, (EntityLeaf1*)bvh.Leaves.data(), leaf_count, !isGPU()))
             };
         } break;
         }
@@ -655,14 +655,14 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
     _SECTION(SectionType::ImageLoading);
 
     IG_LOG(L_DEBUG) << "Loading image '" << filename << "' (C=" << expected_channels << ")" << std::endl;
-    UnifiedArray<float> arr;
+    DeviceArray<float> arr;
     size_t width, height;
     try {
         Image image = Image::load(filename);
         if (image.channels != (size_t)expected_channels)
             image = image.castTo((size_t)expected_channels);
 
-        arr    = UnifiedArray<float>::AllocateDevice(mDeviceID, image.width * image.height * image.channels);
+        arr    = DeviceArray<float>::AllocateDevice(mDeviceID, image.width * image.height * image.channels);
         width  = image.width;
         height = image.height;
         arr.copyFromExternalHostToDevice(image.pixels.get());
@@ -675,12 +675,12 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadImageFromFile(con
 
         if (MissingImage.channels != (size_t)expected_channels) {
             Image image = MissingImage.castTo((size_t)expected_channels);
-            arr         = UnifiedArray<float>::AllocateDevice(mDeviceID, image.width * image.height * image.channels);
+            arr         = DeviceArray<float>::AllocateDevice(mDeviceID, image.width * image.height * image.channels);
             width       = image.width;
             height      = image.height;
             arr.copyFromExternalHostToDevice(image.pixels.get());
         } else {
-            arr    = UnifiedArray<float>::AllocateDevice(mDeviceID, MissingImage.width * MissingImage.height * MissingImage.channels);
+            arr    = DeviceArray<float>::AllocateDevice(mDeviceID, MissingImage.width * MissingImage.height * MissingImage.channels);
             width  = MissingImage.width;
             height = MissingImage.height;
             arr.copyFromExternalHostToDevice(MissingImage.pixels.get());
@@ -730,7 +730,7 @@ IDeviceInterface::DeviceImageProxy<uint8_t> DeviceInterface::loadPackedImageFrom
         channels = MissingImage.channels;
     }
 
-    auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, hostData.size());
+    auto arr = DeviceArray<uint8>::AllocateDevice(mDeviceID, hostData.size());
     arr.copyFromExternalHostToDevice(hostData.data());
 
     return mapToProxyDevice(images.try_emplace(filename,
@@ -774,7 +774,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::loadBufferFromFile
     if ((vec.size() % sizeof(int32_t)) != 0)
         IG_LOG(L_WARNING) << "Buffer '" << filename << "' is not properly sized!" << std::endl;
 
-    auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, vec.size());
+    auto arr = DeviceArray<uint8>::AllocateDevice(mDeviceID, vec.size());
     arr.copyFromExternalHostToDevice(vec.data());
 
     return mapToProxyDevice(buffers.try_emplace(filename, DeviceBuffer{ .Data = std::move(arr) }).first->second);
@@ -809,7 +809,7 @@ IDeviceInterface::DeviceBufferProxy<uint8_t> DeviceInterface::requestBuffer(cons
 
     IG_LOG(L_DEBUG) << "Requested buffer '" << name << "' with " << FormatMemory(size) << std::endl;
 
-    auto arr = UnifiedArray<uint8>::AllocateDevice(mDeviceID, size);
+    auto arr = DeviceArray<uint8>::AllocateDevice(mDeviceID, size);
     return mapToProxyDevice(buffers.insert_or_assign(name, DeviceBuffer{ .Data = std::move(arr) }).first->second);
 }
 

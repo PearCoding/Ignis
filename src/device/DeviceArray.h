@@ -3,7 +3,7 @@
 #include "IG_Config.h"
 
 namespace IG {
-class UnifiedArrayBase {
+class DeviceArrayBase {
 protected:
     [[nodiscard]] static void* allocateUnified(int dev, size_t sizeInBytes);
     [[nodiscard]] static void* allocateDevice(int dev, size_t sizeInBytes);
@@ -16,8 +16,8 @@ protected:
 };
 
 template <typename T>
-class UnifiedArray : public UnifiedArrayBase {
-    IG_CLASS_NON_COPYABLE(UnifiedArray);
+class DeviceArray : public DeviceArrayBase {
+    IG_CLASS_NON_COPYABLE(DeviceArray);
 
 public:
     enum class MemoryType {
@@ -39,7 +39,7 @@ public:
     MemoryType Type;
     int32 StatusFlags;
 
-    inline UnifiedArray()
+    inline DeviceArray()
         : DevicePtr(nullptr)
         , HostPtr(nullptr)
         , SizeInBytes(0)
@@ -49,7 +49,7 @@ public:
     {
     }
 
-    inline UnifiedArray(UnifiedArray&& arr)
+    inline DeviceArray(DeviceArray&& arr)
         : DevicePtr(arr.DevicePtr)
         , HostPtr(arr.HostPtr)
         , SizeInBytes(arr.SizeInBytes)
@@ -65,10 +65,10 @@ public:
         arr.StatusFlags = 0;
     }
 
-    static inline UnifiedArray AllocateUnified(int dev, size_t size)
+    static inline DeviceArray AllocateUnified(int dev, size_t size)
     {
         void* ptr = allocateUnified(dev, size * sizeof(T));
-        return UnifiedArray(
+        return DeviceArray(
             (T*)ptr,
             (T*)ptr,
             size * sizeof(T),
@@ -76,9 +76,9 @@ public:
             MemoryType::Unified);
     }
 
-    static inline UnifiedArray AllocateDevice(int dev, size_t size)
+    static inline DeviceArray AllocateDevice(int dev, size_t size)
     {
-        return UnifiedArray(
+        return DeviceArray(
             nullptr,
             (T*)allocateDevice(dev, size * sizeof(T)),
             size * sizeof(T),
@@ -86,10 +86,10 @@ public:
             MemoryType::Device);
     }
 
-    static inline UnifiedArray AllocateBuffered(int dev, size_t size)
+    static inline DeviceArray AllocateBuffered(int dev, size_t size)
     {
         void* devPtr = allocateDevice(dev, size * sizeof(T));
-        return UnifiedArray(
+        return DeviceArray(
             dev != 0 ? (T*)allocateDevice(0 /*Host*/, size * sizeof(T)) : (T*)devPtr, // Only allocate buffer if the device != host
             (T*)devPtr,
             size * sizeof(T),
@@ -97,9 +97,9 @@ public:
             MemoryType::Buffered);
     }
 
-    static inline UnifiedArray CreateExternal(int dev, T* ptr, size_t size)
+    static inline DeviceArray CreateExternal(int dev, T* ptr, size_t size)
     {
-        return UnifiedArray(
+        return DeviceArray(
             ptr,
             ptr,
             size * sizeof(T),
@@ -107,7 +107,7 @@ public:
             MemoryType::External);
     }
 
-    static inline UnifiedArray CreateExternalOrAllocateUnified(int dev, T* ptr, size_t size, bool externalFlag)
+    static inline DeviceArray CreateExternalOrAllocateUnified(int dev, T* ptr, size_t size, bool externalFlag)
     {
         if (externalFlag) {
             return CreateExternal(dev, ptr, size);
@@ -118,7 +118,7 @@ public:
         }
     }
 
-    static inline UnifiedArray CreateExternalOrAllocateDevice(int dev, T* ptr, size_t size, bool externalFlag)
+    static inline DeviceArray CreateExternalOrAllocateDevice(int dev, T* ptr, size_t size, bool externalFlag)
     {
         if (externalFlag) {
             return CreateExternal(dev, ptr, size);
@@ -129,12 +129,12 @@ public:
         }
     }
 
-    inline ~UnifiedArray()
+    inline ~DeviceArray()
     {
         release();
     }
 
-    inline UnifiedArray& operator=(UnifiedArray&& arr)
+    inline DeviceArray& operator=(DeviceArray&& arr)
     {
         release();
 
@@ -161,14 +161,14 @@ public:
 
     inline void fillHostWithZero()
     {
-        UnifiedArrayBase::fillHostWithZero(Device, (void*)HostPtr, SizeInBytes);
+        DeviceArrayBase::fillHostWithZero(Device, (void*)HostPtr, SizeInBytes);
         StatusFlags &= ~(int)Flags::DirtyDevice; // We do not care if the device is "dirty". Cleanup has priority
         StatusFlags |= (int)Flags::DirtyHost;
     }
 
     inline void copyFromExternalHostToDevice(const T* hostPtr, size_t sizeInBytes)
     {
-        UnifiedArrayBase::copyFromHost(Device, DevicePtr, hostPtr, sizeInBytes);
+        DeviceArrayBase::copyFromHost(Device, DevicePtr, hostPtr, sizeInBytes);
         StatusFlags |= (int)Flags::DirtyDevice;
     }
 
@@ -176,7 +176,7 @@ public:
 
     inline void copyFromDeviceToExternalHost(T* hostPtr, size_t sizeInBytes)
     {
-        UnifiedArrayBase::copyToHost(Device, DevicePtr, hostPtr, sizeInBytes);
+        DeviceArrayBase::copyToHost(Device, DevicePtr, hostPtr, sizeInBytes);
     }
 
     inline void copyFromDeviceToExternalHost(T* hostPtr) { copyFromDeviceToExternalHost(hostPtr, SizeInBytes); }
@@ -211,7 +211,7 @@ public:
 
             IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
 
-            UnifiedArrayBase::copyFromHost(Device, DevicePtr, HostPtr, SizeInBytes);
+            DeviceArrayBase::copyFromHost(Device, DevicePtr, HostPtr, SizeInBytes);
         }
     }
 
@@ -226,7 +226,7 @@ public:
 
             IG_ASSERT((StatusFlags & ((int)Flags::DirtyDevice | (int)Flags::DirtyHost)) != ((int)Flags::DirtyDevice | (int)Flags::DirtyHost), "Unified array can not deal with device and host buffer being out of sync at the same time!");
 
-            UnifiedArrayBase::copyToHost(Device, DevicePtr, HostPtr, SizeInBytes);
+            DeviceArrayBase::copyToHost(Device, DevicePtr, HostPtr, SizeInBytes);
         }
     }
 
@@ -261,7 +261,7 @@ public:
     }
 
 private:
-    inline UnifiedArray(T* hostPtr, T* devicePtr, size_t sizeInBytes, int device, MemoryType type)
+    inline DeviceArray(T* hostPtr, T* devicePtr, size_t sizeInBytes, int device, MemoryType type)
         : DevicePtr(devicePtr)
         , HostPtr(hostPtr)
         , SizeInBytes(sizeInBytes)
