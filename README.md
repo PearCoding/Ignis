@@ -47,13 +47,17 @@ Information about building Ignis is available in the documentation [online](http
 
 Run a frontend of your choice like this:
 
-    igview scene/diamond_scene.json
+```bash
+igview scene/diamond_scene.json
+```
 
 ## Documentation
 
 All available components are documented in the `docs/` folder. A documentation can be created with 
 
-    cmake --build . -t ig_documentation
+```bash
+cmake --build . -t ig_documentation
+```
 
 from the `build/` folder.
 
