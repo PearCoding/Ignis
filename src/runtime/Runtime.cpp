@@ -380,6 +380,7 @@ void Runtime::stepPass(size_t pass)
     settings.user_seed = mOptions.Seed;
     settings.pass      = pass;
 
+    mDevice->resize(mFilmWidth, mFilmHeight); // Ensure the device is properly sized
     mDevice->render(mTechniqueShaderSet, settings);
 
     if (!info.LockFramebuffer)
@@ -433,6 +434,7 @@ void Runtime::tracePass(const std::vector<Ray>& rays, size_t pass)
     settings.user_seed = mOptions.Seed;
     settings.pass      = pass;
 
+    mDevice->resize(rays.size(), 1); // Ensure the device is properly sized
     mDevice->render(mTechniqueShaderSet, settings);
 
     if (!info.LockFramebuffer)
