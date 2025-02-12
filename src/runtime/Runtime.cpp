@@ -928,6 +928,15 @@ bool Runtime::loadPreviousFramebuffer(const Path& path)
     if (metaData.Seed.has_value() && mOptions.Seed == *metaData.Seed)
         mOptions.Seed = metaData.Seed.value() + 1; // We HAVE to change the seed to render something new
 
+    if (metaData.CameraDir.has_value()
+        && metaData.CameraEye.has_value()
+        && metaData.CameraUp.has_value()) {
+        setCameraOrientation(CameraOrientation{
+            .Eye = *metaData.CameraEye,
+            .Dir = *metaData.CameraDir,
+            .Up  = *metaData.CameraUp });
+    }
+
     IG_LOG(L_INFO) << "Continuing rendering from " << mCurrentSampleCount << " samples per pixel." << std::endl;
 
     return true;

@@ -94,12 +94,13 @@ int main(int argc, char** argv)
 
     runtime->mergeParametersFrom(cmd.UserEntries);
 
+    runtime->setCameraOrientation(runtime->initialCameraOrientation());
     if (!cmd.ContinueImage.empty())
         runtime->loadPreviousFramebuffer(cmd.ContinueImage);
 
     timer_loading.stop();
 
-    const auto def = runtime->initialCameraOrientation();
+    const auto def = runtime->getCameraOrientation();
     CameraProxy camera(cmd.EyeVector().value_or(def.Eye), cmd.DirVector().value_or(def.Dir), cmd.UpVector().value_or(def.Up));
     runtime->setCameraOrientation(camera.asOrientation());
 
