@@ -113,9 +113,9 @@ public:
     virtual void clearAOV(const std::string& aov_name)                                                      = 0;
     virtual void clearAllAOVs()                                                                             = 0;
 
-    virtual void runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) = 0;
-    virtual void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)    = 0;
-    virtual ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings)                  = 0;
+    virtual void runDeviceShader(const TechniqueDescriptorShaderSet& shaderSet, const Device::RenderSettings& settings) = 0;
+    virtual void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)       = 0;
+    virtual ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings)                     = 0;
 
     virtual void runTraversalShader(TraversalStage stage, int size)                                                            = 0;
     virtual int runRayGenerationShader(int next_id, int size, int xmin, int ymin, int xmax, int ymax)                          = 0;

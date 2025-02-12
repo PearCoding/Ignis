@@ -93,8 +93,8 @@ Runtime::Runtime(const RuntimeOptions& opts)
     , mInitialCameraOrientation()
     , mTechniqueName()
     , mTechniqueInfo()
-    , mTechniqueVariants()
-    , mTechniqueVariantShaderSets()
+    , mTechniqueSourceSet()
+    , mTechniqueShaderSet()
 {
     checkCacheDirectory();
 
@@ -295,31 +295,31 @@ bool Runtime::load(const Path& path, const Scene* scene)
     IG_LOG(L_DEBUG) << "Loading scene" << std::endl;
     const auto startLoader = std::chrono::high_resolution_clock::now();
 
-    auto ctx = Loader::load(lopts);
-    if (!ctx)
-        return false;
-    mDatabase = std::move(ctx->Database);
-    IG_LOG(L_DEBUG) << "Loading scene took " << (std::chrono::high_resolution_clock::now() - startLoader) << std::endl;
+    {
+        auto result = Loader::load(lopts);
+        if (!result)
+            return false;
+        mDatabase = std::move(result->Context.Database);
+        IG_LOG(L_DEBUG) << "Loading scene took " << (std::chrono::high_resolution_clock::now() - startLoader) << std::endl;
 
-    mCameraName               = ctx->Options.CameraType;
-    mTechniqueName            = ctx->Options.TechniqueType;
-    mTechniqueInfo            = ctx->Technique->info();
-    mInitialCameraOrientation = ctx->Camera->getOrientation(*ctx);
-    mTechniqueVariants        = std::move(ctx->TechniqueVariants);
-    mResourceMap              = ctx->generateResourceMap();
-    mSceneParameterDesc       = ctx->SceneParameterDesc;
+        mCameraName               = result->Context.Options.CameraType;
+        mTechniqueName            = result->Context.Options.TechniqueType;
+        mTechniqueInfo            = result->Context.Technique->info();
+        mInitialCameraOrientation = result->Context.Camera->getOrientation(result->Context);
+        mResourceMap              = result->Context.generateResourceMap();
+        mSceneParameterDesc       = result->Context.SceneParameterDesc;
 
-    // Setup array of number of entities per material
-    mEntityPerMaterial.clear();
-    mEntityPerMaterial.reserve(ctx->Materials.size());
-    for (const auto& mat : ctx->Materials)
-        mEntityPerMaterial.emplace_back((int)mat.Count);
+        mTechniqueSourceSet = std::move(result->Sources);
 
-    // Merge global registry
-    mGlobalRegistry.mergeFrom(ctx->GlobalRegistry);
+        // Setup array of number of entities per material
+        mEntityPerMaterial.clear();
+        mEntityPerMaterial.reserve(result->Context.Materials.size());
+        for (const auto& mat : result->Context.Materials)
+            mEntityPerMaterial.emplace_back((int)mat.Count);
 
-    // Free memory from loader context
-    ctx.reset();
+        // Merge global registry
+        mGlobalRegistry.mergeFrom(result->Context.GlobalRegistry);
+    }
 
     // Preload camera orientation
     setCameraOrientation(mInitialCameraOrientation);
@@ -344,23 +344,18 @@ void Runtime::step(bool ignoreDenoiser)
         return;
     }
 
-    if (mTechniqueVariants.empty()) {
-        IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return;
-    }
-
     handleTime();
 
-    if (mTechniqueInfo.VariantSelector) {
-        const auto active = mTechniqueInfo.VariantSelector(mCurrentIteration);
+    if (mTechniqueInfo.PassSelector) {
+        const auto active = mTechniqueInfo.PassSelector(mCurrentIteration);
 
         IG_ASSERT(active.size() > 0, "Expected some variants to be returned by the technique variant selector");
 
         for (size_t i = 0; i < active.size(); ++i)
-            stepVariant(active[i]);
+            stepPass(active[i]);
     } else {
-        for (size_t i = 0; i < mTechniqueVariants.size(); ++i)
-            stepVariant((int)i);
+        for (size_t i = 0; i < mTechniqueInfo.Passes.size(); ++i)
+            stepPass((int)i);
     }
 
     if (mDenoiser && !ignoreDenoiser)
@@ -369,25 +364,23 @@ void Runtime::step(bool ignoreDenoiser)
     ++mCurrentIteration;
 }
 
-void Runtime::stepVariant(size_t variant)
+void Runtime::stepPass(size_t pass)
 {
-    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
-    const auto& info = mTechniqueInfo.Variants[variant];
-
-    // IG_LOG(L_DEBUG) << "Rendering iteration " << mCurrentIteration << ", variant " << variant << std::endl;
+    IG_ASSERT(pass < mTechniqueInfo.Passes.size(), "Expected technique pass to be well selected");
+    const auto& info = mTechniqueInfo.Passes.at(pass);
 
     Device::RenderSettings settings;
     settings.rays      = nullptr; // No artificial ray streams
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = info.GetWidth(mFilmWidth);
     settings.height    = info.GetHeight(mFilmHeight);
-    settings.info      = info;
+    settings.info      = mTechniqueInfo;
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
     settings.user_seed = mOptions.Seed;
-    settings.pass      = variant;
+    settings.pass      = pass;
 
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings);
+    mDevice->render(mTechniqueShaderSet, settings);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -400,20 +393,15 @@ void Runtime::trace(const std::vector<Ray>& rays)
         return;
     }
 
-    if (mTechniqueVariants.empty()) {
-        IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return;
-    }
-
     handleTime();
 
-    if (mTechniqueInfo.VariantSelector) {
-        const auto& active = mTechniqueInfo.VariantSelector(mCurrentIteration);
+    if (mTechniqueInfo.PassSelector) {
+        const auto& active = mTechniqueInfo.PassSelector(mCurrentIteration);
         for (const auto& ind : active)
-            traceVariant(rays, ind);
+            tracePass(rays, ind);
     } else {
-        for (size_t i = 0; i < mTechniqueVariants.size(); ++i)
-            traceVariant(rays, i);
+        for (size_t i = 0; i < mTechniqueInfo.Passes.size(); ++i)
+            tracePass(rays, i);
     }
 
     ++mCurrentIteration;
@@ -429,25 +417,23 @@ void Runtime::trace(const std::vector<Ray>& rays, std::vector<float>& data)
     std::memcpy(data.data(), data_ptr, sizeof(float) * data.size());
 }
 
-void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
+void Runtime::tracePass(const std::vector<Ray>& rays, size_t pass)
 {
-    IG_ASSERT(variant < mTechniqueVariants.size(), "Expected technique variant to be well selected");
-    const auto& info = mTechniqueInfo.Variants[variant];
-
-    // IG_LOG(L_DEBUG) << "Tracing iteration " << mCurrentIteration << ", variant " << variant << std::endl;
+    IG_ASSERT(pass < mTechniqueInfo.Passes.size(), "Expected technique pass to be well selected");
+    const auto& info = mTechniqueInfo.Passes.at(pass);
 
     Device::RenderSettings settings;
     settings.rays      = rays.data();
     settings.spi       = info.GetSPI(mSamplesPerIteration);
     settings.width     = rays.size();
     settings.height    = 1;
-    settings.info      = info;
+    settings.info      = mTechniqueInfo;
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
     settings.user_seed = mOptions.Seed;
-    settings.pass      = variant;
+    settings.pass      = pass;
 
-    mDevice->render(mTechniqueVariantShaderSets.at(variant), settings);
+    mDevice->render(mTechniqueShaderSet, settings);
 
     if (!info.LockFramebuffer)
         mCurrentSampleCount += settings.spi;
@@ -528,23 +514,23 @@ static void dumpRegistries(std::ostream& stream, const std::string& name, const 
            << shader.LocalRegistry->dump();
 }
 
-static void dumpRegistries(std::ostream& stream, const TechniqueVariantBase<void*>& variant)
+static void dumpRegistries(std::ostream& stream, const TechniqueDescriptorShaderSet& shaderSet)
 {
-    dumpRegistries(stream, "Device", variant.DeviceShader);
-    dumpRegistries(stream, "Tonemap", variant.TonemapShader);
-    dumpRegistries(stream, "Imageinfo", variant.ImageinfoShader);
-    dumpRegistries(stream, "PrimaryTraversal", variant.PrimaryTraversalShader);
-    dumpRegistries(stream, "SecondaryTraversal", variant.SecondaryTraversalShader);
-    dumpRegistries(stream, "RayGeneration", variant.RayGenerationShader);
-    dumpRegistries(stream, "Miss", variant.MissShader);
-    for (size_t i = 0; i < variant.HitShaders.size(); ++i)
-        dumpRegistries(stream, "Hit[" + std::to_string(i) + "]", variant.HitShaders.at(i));
-    for (size_t i = 0; i < variant.AdvancedShadowHitShaders.size(); ++i)
-        dumpRegistries(stream, "AdvancedShadowHit[" + std::to_string(i) + "]", variant.AdvancedShadowHitShaders.at(i));
-    for (size_t i = 0; i < variant.AdvancedShadowMissShaders.size(); ++i)
-        dumpRegistries(stream, "AdvancedShadowMiss[" + std::to_string(i) + "]", variant.AdvancedShadowMissShaders.at(i));
-    for (size_t i = 0; i < variant.CallbackShaders.size(); ++i)
-        dumpRegistries(stream, "Callback[" + std::to_string(i) + "]", variant.CallbackShaders.at(i));
+    dumpRegistries(stream, "Device", shaderSet.DeviceShader);
+    dumpRegistries(stream, "Tonemap", shaderSet.TonemapShader);
+    dumpRegistries(stream, "Imageinfo", shaderSet.ImageinfoShader);
+    dumpRegistries(stream, "PrimaryTraversal", shaderSet.PrimaryTraversalShader);
+    dumpRegistries(stream, "SecondaryTraversal", shaderSet.SecondaryTraversalShader);
+    dumpRegistries(stream, "RayGeneration", shaderSet.RayGenerationShader);
+    dumpRegistries(stream, "Miss", shaderSet.MissShader);
+    for (size_t i = 0; i < shaderSet.HitShaders.size(); ++i)
+        dumpRegistries(stream, "Hit[" + std::to_string(i) + "]", shaderSet.HitShaders.at(i));
+    for (size_t i = 0; i < shaderSet.AdvancedShadowHitShaders.size(); ++i)
+        dumpRegistries(stream, "AdvancedShadowHit[" + std::to_string(i) + "]", shaderSet.AdvancedShadowHitShaders.at(i));
+    for (size_t i = 0; i < shaderSet.AdvancedShadowMissShaders.size(); ++i)
+        dumpRegistries(stream, "AdvancedShadowMiss[" + std::to_string(i) + "]", shaderSet.AdvancedShadowMissShaders.at(i));
+    for (size_t i = 0; i < shaderSet.CallbackShaders.size(); ++i)
+        dumpRegistries(stream, "Callback[" + std::to_string(i) + "]", shaderSet.CallbackShaders.at(i));
 }
 
 bool Runtime::setupScene()
@@ -597,11 +583,9 @@ bool Runtime::setupScene()
 
     if (IG_LOGGER.verbosity() <= L_DEBUG) {
         if (mOptions.DumpRegistryFull) {
-            for (size_t i = 0; i < mTechniqueVariantShaderSets.size(); ++i) {
-                auto& stream = IG_LOG_UNSAFE(L_DEBUG);
-                stream << "Local Variant [" << i << "] Registries:" << std::endl;
-                dumpRegistries(stream, mTechniqueVariantShaderSets.at(i));
-            }
+            auto& stream = IG_LOG_UNSAFE(L_DEBUG);
+            stream << "Local Registries:" << std::endl;
+            dumpRegistries(stream, mTechniqueShaderSet);
         }
     }
 
@@ -628,9 +612,8 @@ bool Runtime::compileShaders()
     threads = std::max<size_t>(1, threads);
 
     ShaderManager manager;
-    const auto registerShader = [&](size_t i, const std::string& name, const std::string& function, const ShaderOutput<std::string>* source, ShaderOutput<void*>* compiled) {
-        const std::string id = "v" + std::to_string(i) + " " + name;
-        manager.add(id,
+    const auto registerShader = [&](const std::string& name, const std::string& function, const ShaderOutput<std::string>* source, ShaderOutput<void*>* compiled) {
+        manager.add(name,
                     ShaderManager::ShaderEntry{
                         .Source   = source,
                         .Function = function,
@@ -639,40 +622,33 @@ bool Runtime::compileShaders()
     };
 
     // Register all types
-    mTechniqueVariantShaderSets.resize(mTechniqueVariants.size());
-    for (size_t i = 0; i < mTechniqueVariants.size(); ++i) {
-        const auto& variant = mTechniqueVariants[i];
-        auto& shaders       = mTechniqueVariantShaderSets[i];
-        shaders.ID          = (uint32)i;
+    registerShader("device", "ig_callback_shader", &mTechniqueSourceSet.DeviceShader, &mTechniqueShaderSet.DeviceShader);
+    if (mOptions.EnableTonemapping) {
+        registerShader("tonemap", "ig_tonemap_shader", &mTechniqueSourceSet.TonemapShader, &mTechniqueShaderSet.TonemapShader);
+        registerShader("imageinfo", "ig_imageinfo_shader", &mTechniqueSourceSet.ImageinfoShader, &mTechniqueShaderSet.ImageinfoShader);
+    }
+    registerShader("primary traversal", "ig_traversal_shader", &mTechniqueSourceSet.PrimaryTraversalShader, &mTechniqueShaderSet.PrimaryTraversalShader);
+    registerShader("secondary traversal", "ig_traversal_shader", &mTechniqueSourceSet.SecondaryTraversalShader, &mTechniqueShaderSet.SecondaryTraversalShader);
+    registerShader("ray generation", "ig_ray_generation_shader", &mTechniqueSourceSet.RayGenerationShader, &mTechniqueShaderSet.RayGenerationShader);
+    registerShader("miss", "ig_material_shader", &mTechniqueSourceSet.MissShader, &mTechniqueShaderSet.MissShader);
 
-        registerShader(i, "device", "ig_callback_shader", &variant.DeviceShader, &shaders.DeviceShader);
-        if (mOptions.EnableTonemapping) {
-            registerShader(i, "tonemap", "ig_tonemap_shader", &variant.TonemapShader, &shaders.TonemapShader);
-            registerShader(i, "imageinfo", "ig_imageinfo_shader", &variant.ImageinfoShader, &shaders.ImageinfoShader);
-        }
-        registerShader(i, "primary traversal", "ig_traversal_shader", &variant.PrimaryTraversalShader, &shaders.PrimaryTraversalShader);
-        registerShader(i, "secondary traversal", "ig_traversal_shader", &variant.SecondaryTraversalShader, &shaders.SecondaryTraversalShader);
-        registerShader(i, "ray generation", "ig_ray_generation_shader", &variant.RayGenerationShader, &shaders.RayGenerationShader);
-        registerShader(i, "miss", "ig_material_shader", &variant.MissShader, &shaders.MissShader);
+    mTechniqueShaderSet.HitShaders.resize(mTechniqueSourceSet.HitShaders.size());
+    for (size_t j = 0; j < mTechniqueSourceSet.HitShaders.size(); ++j)
+        registerShader("hit shader " + std::to_string(j), "ig_material_shader", &mTechniqueSourceSet.HitShaders[j], &mTechniqueShaderSet.HitShaders[j]);
 
-        shaders.HitShaders.resize(variant.HitShaders.size());
-        for (size_t j = 0; j < variant.HitShaders.size(); ++j)
-            registerShader(i, "hit shader " + std::to_string(j), "ig_material_shader", &variant.HitShaders[j], &shaders.HitShaders[j]);
+    mTechniqueShaderSet.AdvancedShadowHitShaders.resize(mTechniqueSourceSet.AdvancedShadowHitShaders.size());
+    for (size_t j = 0; j < mTechniqueSourceSet.AdvancedShadowHitShaders.size(); ++j)
+        registerShader("advanced shadow hit shader " + std::to_string(j), "ig_advanced_shadow_shader", &mTechniqueSourceSet.AdvancedShadowHitShaders[j], &mTechniqueShaderSet.AdvancedShadowHitShaders[j]);
 
-        shaders.AdvancedShadowHitShaders.resize(variant.AdvancedShadowHitShaders.size());
-        for (size_t j = 0; j < variant.AdvancedShadowHitShaders.size(); ++j)
-            registerShader(i, "advanced shadow hit shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowHitShaders[j], &shaders.AdvancedShadowHitShaders[j]);
+    mTechniqueShaderSet.AdvancedShadowMissShaders.resize(mTechniqueSourceSet.AdvancedShadowMissShaders.size());
+    for (size_t j = 0; j < mTechniqueSourceSet.AdvancedShadowMissShaders.size(); ++j)
+        registerShader("advanced shadow miss shader " + std::to_string(j), "ig_advanced_shadow_shader", &mTechniqueSourceSet.AdvancedShadowMissShaders[j], &mTechniqueShaderSet.AdvancedShadowMissShaders[j]);
 
-        shaders.AdvancedShadowMissShaders.resize(variant.AdvancedShadowMissShaders.size());
-        for (size_t j = 0; j < variant.AdvancedShadowMissShaders.size(); ++j)
-            registerShader(i, "advanced shadow miss shader " + std::to_string(j), "ig_advanced_shadow_shader", &variant.AdvancedShadowMissShaders[j], &shaders.AdvancedShadowMissShaders[j]);
-
-        for (size_t j = 0; j < variant.CallbackShaders.size(); ++j) {
-            if (variant.CallbackShaders[j].Exec.empty()) {
-                shaders.CallbackShaders[j].Exec = nullptr;
-            } else {
-                registerShader(i, "callback " + std::to_string(j), "ig_callback_shader", &variant.CallbackShaders[j], &shaders.CallbackShaders[j]);
-            }
+    for (size_t j = 0; j < mTechniqueSourceSet.CallbackShaders.size(); ++j) {
+        if (mTechniqueSourceSet.CallbackShaders[j].Exec.empty()) {
+            mTechniqueShaderSet.CallbackShaders[j].Exec = nullptr;
+        } else {
+            registerShader("callback " + std::to_string(j), "ig_callback_shader", &mTechniqueSourceSet.CallbackShaders[j], &mTechniqueShaderSet.CallbackShaders[j]);
         }
     }
 
@@ -686,11 +662,6 @@ bool Runtime::compileShaders()
 
 void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
 {
-    if (mTechniqueVariants.empty()) {
-        IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return;
-    }
-
     IG_ASSERT(mDevice, "Expected device to be available");
     if (mDevice)
         mDevice->tonemap(out_pixels, settings);
@@ -698,11 +669,6 @@ void Runtime::tonemap(uint32* out_pixels, const TonemapSettings& settings)
 
 ImageInfoOutput Runtime::imageinfo(const ImageInfoSettings& settings)
 {
-    if (mTechniqueVariants.empty()) {
-        IG_LOG(L_ERROR) << "No scene loaded!" << std::endl;
-        return ImageInfoOutput{};
-    }
-
     IG_ASSERT(mDevice, "Expected device to be available");
     if (mDevice)
         return mDevice->imageinfo(settings);

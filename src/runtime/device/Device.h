@@ -3,8 +3,6 @@
 #include "RuntimeStructs.h"
 #include "device/Target.h"
 #include "technique/TechniqueInfo.h"
-#include "technique/TechniqueVariant.h"
-#include <vector>
 
 namespace IG {
 
@@ -35,7 +33,9 @@ public:
         size_t frame     = 0;
         size_t user_seed = 0;
         size_t pass      = 0;
-        TechniqueVariantInfo info;
+        TechniqueInfo info;
+
+        [[nodiscard]] inline const TechniquePassInfo& getPassInfo() const { return info.Passes.at(pass); }
     };
 
     struct AOVAccessor {
@@ -52,7 +52,7 @@ public:
 
     void connectGlobalRegistry(ParameterSet* parameter_set);
     void assignScene(const SceneSettings& settings);
-    void render(const TechniqueVariantShaderSet& shader_set, const RenderSettings& settings);
+    void render(const TechniqueDescriptorShaderSet& shader_set, const RenderSettings& settings);
     void resize(size_t width, size_t height);
 
     void releaseAll();

@@ -9,9 +9,9 @@ WireframeTechnique::WireframeTechnique()
 TechniqueInfo WireframeTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
-    info.Variants[0].RequiresExplicitCamera    = true; // We make use of the camera differential!
-    info.Variants[0].PrimaryPayloadCount       = 2;
-    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_wireframe_raypayload)";
+    info.RequiresExplicitCamera    = true; // We make use of the camera differential!
+    info.PrimaryPayloadCount       = 2;
+    info.EmitterPayloadInitializer = "make_simple_payload_initializer(init_wireframe_raypayload)";
     return info;
 }
 

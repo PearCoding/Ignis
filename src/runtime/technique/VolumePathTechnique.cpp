@@ -16,10 +16,10 @@ VolumePathTechnique::VolumePathTechnique(const std::shared_ptr<SceneObject>& obj
 TechniqueInfo VolumePathTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
-    info.Variants[0].UsesLights                = true;
-    info.Variants[0].UsesMedia                 = true;
-    info.Variants[0].PrimaryPayloadCount       = 7;
-    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_vpt_raypayload)";
+    info.UsesLights                = true;
+    info.UsesMedia                 = true;
+    info.PrimaryPayloadCount       = 7;
+    info.EmitterPayloadInitializer = "make_simple_payload_initializer(init_vpt_raypayload)";
 
     return info;
 }

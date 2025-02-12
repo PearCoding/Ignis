@@ -12,7 +12,7 @@ EnvCheckTechnique::EnvCheckTechnique()
 TechniqueInfo EnvCheckTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
-    info.Variants[0].UsesLights = true;
+    info.UsesLights = true;
     
     return info;
 }

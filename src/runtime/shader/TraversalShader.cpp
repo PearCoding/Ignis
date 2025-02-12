@@ -48,8 +48,6 @@ std::string TraversalShader::setupPrimary(const LoaderContext& ctx)
 
 std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
 {
-    const bool is_advanced = ctx.CurrentTechniqueVariantInfo().ShadowHandlingMode != ShadowHandlingMode::Simple;
-
     std::stringstream stream;
 
     if (ctx.Entities->entityCount() == 0) {
@@ -58,9 +56,12 @@ std::string TraversalShader::setupSecondary(const LoaderContext& ctx)
                << end();
     } else {
         stream << begin(ctx) << std::endl
-               << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
                << setupInternal(ctx)
-               << "  device.handle_traversal_secondary(tracer, size, " << (is_advanced ? "true" : "false") << ", use_framebuffer);" << std::endl
+               << "  if work_info.advanced_shadows || work_info.advanced_shadows_with_materials {"
+               << "    device.handle_traversal_secondary(tracer, size, true);" << std::endl
+               << "  } else {" << std::endl
+               << "    device.handle_traversal_secondary(tracer, size, false);" << std::endl
+               << "  }" << std::endl
                << end();
     }
     return stream.str();

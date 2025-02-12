@@ -11,6 +11,7 @@ struct RayGenerationShader {
 
     /// Will generate the default pixel sampler. Expected to be called between begin & end
     static std::string generatePixelSampler(const LoaderContext& ctx, const std::string_view& varName = "pixel_sampler");
+    static std::string generateDefaultCamera(LoaderContext& ctx, const std::string_view& emitterName = "emitter");
 
     /// Will generate the default complete shader. Will call begin & end internally
     static std::string setup(LoaderContext& ctx);

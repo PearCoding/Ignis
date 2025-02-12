@@ -27,16 +27,16 @@ struct Device {
     handle_traversal_primary: fn (SceneTracer, i32 /* size */) -> (), 
 
     // [Internal] Handle a traversal secondary shader
-    handle_traversal_secondary: fn (SceneTracer, i32 /* size */, bool /* is_advanced */, bool /* use_framebuffer */) -> (), 
+    handle_traversal_secondary: fn (SceneTracer, i32 /* size */, bool /* is_advanced */) -> (), 
 
     // [Internal] Handle a miss shader
-    handle_miss_shader: fn (Technique, PayloadInfo, i32 /* first */, i32 /* last */, bool /* use_framebuffer */) -> (), 
+    handle_miss_shader: fn (Technique, PayloadInfo, i32 /* first */, i32 /* last */) -> (), 
 
     // [Internal] Handle a hit shader
-    handle_hit_shader: fn (MaterialShader, Scene, Technique, PayloadInfo, i32 /* first */, i32 /* last */, bool /* use_framebuffer */) -> (),
+    handle_hit_shader: fn (MaterialShader, Scene, Technique, PayloadInfo, i32 /* first */, i32 /* last */) -> (),
 
     // [Internal] Handle an advanced shadow shader (can be hit or miss)
-    handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32 /* first */, i32 /* last */, bool /* use_framebuffer */, bool /* is_hit */) -> (), 
+    handle_advanced_shadow_shader: fn (MaterialShader, Technique, PayloadInfo, i32 /* first */, i32 /* last */, bool /* is_hit */) -> (), 
 
     // [Internal] Special local handler for multilevel traversal
     get_traversal_handler_multiple: fn (BVHTable) -> SceneTraverseLocalHandler,

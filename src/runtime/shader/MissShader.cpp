@@ -24,27 +24,26 @@ std::string MissShader::setup(LoaderContext& ctx)
 
     ShadingTree tree(ctx);
 
-    if ((ctx.CurrentTechniqueVariantInfo().UsesLights && ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
-        || ctx.CurrentTechniqueVariantInfo().UsesMedia)
+    if ((ctx.Technique->info().UsesLights && ctx.Technique->info().UsesAllLightsInMiss)
+        || ctx.Technique->info().UsesMedia)
         stream << ShaderUtils::generateDatabase(ctx) << std::endl;
 
-    if (ctx.CurrentTechniqueVariantInfo().UsesLights)
-        stream << ctx.Lights->generate(tree, !ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss)
+    if (ctx.Technique->info().UsesLights)
+        stream << ctx.Lights->generate(tree, !ctx.Technique->info().UsesAllLightsInMiss)
                << std::endl;
 
-    if (ctx.CurrentTechniqueVariantInfo().UsesMedia)
+    if (ctx.Technique->info().UsesMedia)
         stream << ctx.Media->generate(tree) << std::endl;
 
     // Include camera if necessary
-    if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
+    if (ctx.Technique->info().RequiresExplicitCamera)
         stream << ctx.Camera->generate(tree) << std::endl;
 
     // Will define technique
     stream << ctx.Technique->generate(tree) << std::endl
            << std::endl;
 
-    stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_miss_shader(full_technique, payload_info, first, last, use_framebuffer)" << std::endl
+    stream << "  device.handle_miss_shader(full_technique, payload_info, first, last)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

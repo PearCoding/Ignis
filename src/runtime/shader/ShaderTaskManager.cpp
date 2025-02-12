@@ -225,12 +225,12 @@ ShaderTaskManager::~ShaderTaskManager()
 void ShaderTaskManager::add(const std::string& id, const std::string& name, const std::string& script, const std::string& function)
 {
     if (mDumpLevel == ShaderDumpVerbosity::Light)
-        dumpShader(whitespace_escaped(name) + ".art", script);
+        dumpShader("shader_" + whitespace_escaped(name) + ".art", script);
 
     const std::string full_script = mInternal->mInternalCompiler->prepare(script);
 
     if (mDumpLevel == ShaderDumpVerbosity::Full)
-        dumpShader(whitespace_escaped(name) + ".art", full_script);
+        dumpShader("shader_full_" + whitespace_escaped(name) + ".art", full_script);
 
     if (mThreadCount == 1) {
         // Fallback internal compilation

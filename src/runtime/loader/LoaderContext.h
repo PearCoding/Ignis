@@ -48,7 +48,6 @@ public:
     ~LoaderContext();
 
     LoaderContext copyForBake() const;
-
     LoaderOptions Options;
 
     std::shared_ptr<LoaderCache> Cache;
@@ -64,11 +63,6 @@ public:
     std::unique_ptr<class LoaderCamera> Camera;
 
     SceneDatabase Database;
-    std::vector<TechniqueVariant> TechniqueVariants; // TODO: Refactor this out, as no loader requires this, but will produce it...
-
-    size_t CurrentTechniqueVariant;
-    [[nodiscard]] inline const IG::TechniqueVariantInfo CurrentTechniqueVariantInfo() const { return Technique->info().Variants.at(CurrentTechniqueVariant); }
-
     ParameterDescSet SceneParameterDesc;
 
     ParameterSet GlobalRegistry; // Global registry, will be merged with the user registry at the end (user preceding over)

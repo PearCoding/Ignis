@@ -192,8 +192,8 @@ private:
     bool load(const Path& path, const Scene* scene);
     bool setupScene();
     bool compileShaders();
-    void stepVariant(size_t variant);
-    void traceVariant(const std::vector<Ray>& rays, size_t variant);
+    void stepPass(size_t pass);
+    void tracePass(const std::vector<Ray>& rays, size_t pass);
     void handleTime();
 
     const RuntimeOptions mOptions;
@@ -228,7 +228,7 @@ private:
     std::vector<std::string> mResourceMap;
     std::vector<int> mEntityPerMaterial;
 
-    std::vector<TechniqueVariant> mTechniqueVariants;
-    std::vector<TechniqueVariantShaderSet> mTechniqueVariantShaderSets; // Compiled shaders
+    TechniqueDescriptorSourceSet mTechniqueSourceSet;
+    TechniqueDescriptorShaderSet mTechniqueShaderSet;
 };
 } // namespace IG

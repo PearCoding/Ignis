@@ -452,11 +452,9 @@ fn @cpu_splat(id: i32, color: Color, framebuffer: ColorAOVImage, vector_width: i
     }
 }
 
-fn @cpu_get_framebuffer(spi: i32, use_framebuffer: bool, vector_width: i32) -> ColorAOVImage {
+fn @cpu_get_framebuffer(spi: i32, vector_width: i32) -> ColorAOVImage {
     let (film_pixels, film_width, film_height) = cpu_get_film_data();
-    if !use_framebuffer {
-        make_empty_aov_image(film_width, film_height)
-    } else if vector_width > 1 { 
+    if vector_width > 1 { 
         make_rv_aov_image(film_pixels, film_width, film_height, spi)
     } else {
         make_std_aov_image(film_pixels, film_width, film_height, spi)
@@ -566,7 +564,6 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
     , begin: i32
     , end: i32
     , capacity: i32
-    , use_framebuffer: bool
     , vector_width: i32
     , is_payload_soa: bool) -> () {
     let mut primary : PrimaryStream;
@@ -574,7 +571,7 @@ fn @cpu_hit_shade_handler(shader: MaterialShader
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(0, &mut secondary);
 
-    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
+    let framebuffer = cpu_get_framebuffer(config.spi, vector_width);
     cpu_hit_shade(primary, secondary, shader, scene, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
@@ -622,13 +619,12 @@ fn @cpu_miss_shade_handler(technique: Technique
     , end: i32
     , capacity: i32
     , payload_info: PayloadInfo
-    , use_framebuffer: bool
     , vector_width: i32
     , is_payload_soa: bool) -> () {
     let mut primary : PrimaryStream;
     ignis_get_primary_stream_const(0, &mut primary);
 
-    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
+    let framebuffer = cpu_get_framebuffer(config.spi, vector_width);
     cpu_miss_shade(primary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
@@ -682,14 +678,13 @@ fn @cpu_advanced_shadow_handler(shader: MaterialShader
     , begin: i32
     , end: i32
     , capacity: i32
-    , use_framebuffer: bool
     , is_hit: bool
     , vector_width: i32
     , is_payload_soa: bool) -> () {
     let mut secondary : SecondaryStream;
     ignis_get_secondary_stream_const(0, &mut secondary);
 
-    let framebuffer = cpu_get_framebuffer(config.spi, use_framebuffer, vector_width);
+    let framebuffer = cpu_get_framebuffer(config.spi, vector_width);
     cpu_advanced_shadow(is_hit, shader, secondary, technique, config, framebuffer, payload_info, begin, end, capacity, vector_width, is_payload_soa);
 }
 
@@ -739,7 +734,7 @@ fn @cpu_trace( scene: Scene
         ignis_get_primary_stream(  0, &mut primary,   capacity);
         ignis_get_secondary_stream(0, &mut secondary, capacity);
 
-        let framebuffer = cpu_get_framebuffer(spi, true/*!work_info.framebuffer_locked*/, vector_width); // Will only be used if framebuffer is not locked down the line
+        let framebuffer = cpu_get_framebuffer(spi, vector_width);
 
         let mut temp_host : TemporaryStorageHost;
         ignis_get_temporary_storage_host(&mut temp_host);
@@ -883,17 +878,17 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
     handle_traversal_primary = @ | scene_tracer, size | {
         cpu_traverse_primary(scene_tracer, size, min_max, vector_width);
     },
-    handle_traversal_secondary = @ | scene_tracer, size, _is_advanced, _use_framebuffer | {
+    handle_traversal_secondary = @ | scene_tracer, size, _is_advanced | {
         cpu_traverse_secondary(scene_tracer, size, min_max, vector_width);
     },
-    handle_miss_shader = @ | technique, payload_info, first, last, use_framebuffer | {
-        cpu_miss_shade_handler(technique, config, first, last, @cpu_get_stream_capacity(config.spi, tile_size), payload_info, use_framebuffer, vector_width, is_payload_soa);
+    handle_miss_shader = @ | technique, payload_info, first, last | {
+        cpu_miss_shade_handler(technique, config, first, last, @cpu_get_stream_capacity(config.spi, tile_size), payload_info, vector_width, is_payload_soa);
     },
-    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last, use_framebuffer | {
-        cpu_hit_shade_handler(shader, scene, technique, config, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), use_framebuffer, vector_width, is_payload_soa);
+    handle_hit_shader = @ | shader, scene, technique, payload_info, first, last | {
+        cpu_hit_shade_handler(shader, scene, technique, config, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), vector_width, is_payload_soa);
     },
-    handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, use_framebuffer, is_hit | {
-        cpu_advanced_shadow_handler(shader, technique, config, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), use_framebuffer, is_hit, vector_width, is_payload_soa);
+    handle_advanced_shadow_shader = @ | shader, technique, payload_info, first, last, is_hit | {
+        cpu_advanced_shadow_handler(shader, technique, config, payload_info, first, last, @cpu_get_stream_capacity(config.spi, tile_size), is_hit, vector_width, is_payload_soa);
     },
     get_traversal_handler_multiple = @ | prims | make_cpu_scene_local_handler_multiple(prims, vector_width, single, min_max), 
     sync = @ || {},

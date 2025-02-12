@@ -22,7 +22,7 @@ size_t Device::framebufferHeight() const { return std::get<1>(mDevice->framebuff
 
 void Device::connectGlobalRegistry(ParameterSet* parameter_set) { mDevice->connectGlobalRegistry(parameter_set); }
 void Device::assignScene(const SceneSettings& settings) { mDevice->setCurrentSceneSettings(settings); }
-void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) { mDevice->runDeviceShader(shaderSet, settings); }
+void Device::render(const TechniqueDescriptorShaderSet& shaderSet, const Device::RenderSettings& settings) { mDevice->runDeviceShader(shaderSet, settings); }
 void Device::resize(size_t width, size_t height) { mDevice->resizeFramebuffer(width, height); }
 void Device::releaseAll() { mDevice->releaseAllMemory(); }
 

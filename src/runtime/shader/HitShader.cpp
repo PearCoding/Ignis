@@ -27,26 +27,25 @@ std::string HitShader::setup(size_t mat_id, LoaderContext& ctx)
     stream << ShaderUtils::inlineScene(ctx, false);
 
     ShadingTree tree(ctx);
-    const bool requireLights = ctx.CurrentTechniqueVariantInfo().UsesLights;
+    const bool requireLights = ctx.Technique->info().UsesLights;
     if (requireLights)
         stream << ctx.Lights->generate(tree, false) << std::endl;
 
-    const bool requireMedia = ctx.CurrentTechniqueVariantInfo().UsesMedia;
+    const bool requireMedia = ctx.Technique->info().UsesMedia;
     if (requireMedia)
         stream << ctx.Media->generate(tree) << std::endl;
 
     stream << ShaderUtils::generateMaterialShader(tree, mat_id, requireLights, "shader") << std::endl;
 
     // Include camera if necessary
-    if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
+    if (ctx.Technique->info().RequiresExplicitCamera)
         stream << ctx.Camera->generate(tree) << std::endl;
 
     // Will define technique
     stream << ctx.Technique->generate(tree) << std::endl
            << std::endl;
 
-    stream << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_hit_shader(shader, scene, full_technique, payload_info, first, last, use_framebuffer);" << std::endl
+    stream << "  device.handle_hit_shader(shader, scene, full_technique, payload_info, first, last);" << std::endl
            << "}" << std::endl;
 
     return stream.str();

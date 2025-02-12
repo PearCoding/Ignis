@@ -147,7 +147,7 @@ DeviceInterface::DeviceInterface(const Device::SetupSettings& setup)
     setupThreadData();
 
     // Special purpose bake shader
-    mShaderInfos[ShaderKey(0, ShaderType::Bake, 0)] = {};
+    mShaderInfos[ShaderKey(ShaderType::Bake, 0)] = {};
 }
 
 DeviceInterface::~DeviceInterface()
@@ -338,31 +338,31 @@ void DeviceInterface::updateSettings(const Device::RenderSettings& settings)
     mCurrentDriverSettings.seed   = (int)settings.user_seed;
 }
 
-void DeviceInterface::updateShaderSet(const TechniqueVariantShaderSet& shaderSet)
+void DeviceInterface::updateShaderSet(const TechniqueDescriptorShaderSet& shaderSet)
 {
     mCurrentShaderSet = shaderSet;
 
     // Prepare cache data
     mShaderInfos.clear();
 
-    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Device, 0));
+    mShaderInfos.try_emplace(ShaderKey(ShaderType::Device, 0));
     if (mCurrentShaderSet.TonemapShader.Exec) {
-        mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Tonemap, 0));
-        mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::ImageInfo, 0));
+        mShaderInfos.try_emplace(ShaderKey(ShaderType::Tonemap, 0));
+        mShaderInfos.try_emplace(ShaderKey(ShaderType::ImageInfo, 0));
     }
 
-    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::PrimaryTraversal, 0));
-    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::SecondaryTraversal, 0));
-    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::RayGeneration, 0));
-    mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Miss, 0));
+    mShaderInfos.try_emplace(ShaderKey(ShaderType::PrimaryTraversal, 0));
+    mShaderInfos.try_emplace(ShaderKey(ShaderType::SecondaryTraversal, 0));
+    mShaderInfos.try_emplace(ShaderKey(ShaderType::RayGeneration, 0));
+    mShaderInfos.try_emplace(ShaderKey(ShaderType::Miss, 0));
     for (size_t i = 0; i < mCurrentShaderSet.HitShaders.size(); ++i)
-        mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Hit, (uint32)i));
+        mShaderInfos.try_emplace(ShaderKey(ShaderType::Hit, (uint32)i));
     for (size_t i = 0; i < mCurrentShaderSet.AdvancedShadowHitShaders.size(); ++i)
-        mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::AdvancedShadowHit, (uint32)i));
+        mShaderInfos.try_emplace(ShaderKey(ShaderType::AdvancedShadowHit, (uint32)i));
     for (size_t i = 0; i < mCurrentShaderSet.AdvancedShadowMissShaders.size(); ++i)
-        mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::AdvancedShadowMiss, (uint32)i));
+        mShaderInfos.try_emplace(ShaderKey(ShaderType::AdvancedShadowMiss, (uint32)i));
     for (size_t i = 0; i < mCurrentShaderSet.CallbackShaders.size(); ++i)
-        mShaderInfos.try_emplace(ShaderKey(mCurrentShaderSet.ID, ShaderType::Callback, (uint32)i));
+        mShaderInfos.try_emplace(ShaderKey(ShaderType::Callback, (uint32)i));
 }
 
 void DeviceInterface::setCurrentShader(int workload, const ShaderKey& key, const ShaderOutput<void*>& shader)
@@ -993,7 +993,7 @@ void DeviceInterface::clearAllAOVs()
 }
 
 // -------------------------------------------------------- Shader
-void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings)
+void DeviceInterface::runDeviceShader(const TechniqueDescriptorShaderSet& shaderSet, const Device::RenderSettings& settings)
 {
     DeviceGuard _guard(this);
     updateShaderSet(shaderSet);
@@ -1012,7 +1012,7 @@ void DeviceInterface::runDeviceShader(const TechniqueVariantShaderSet& shaderSet
     using Callback = decltype(ig_callback_shader);
     auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.DeviceShader.Exec);
     IG_ASSERT(callback != nullptr, "Expected device shader to be valid");
-    setCurrentShader(1, ShaderKey(mCurrentShaderSet.ID, ShaderType::Device, 0), mCurrentShaderSet.DeviceShader);
+    setCurrentShader(1, ShaderKey(ShaderType::Device, 0), mCurrentShaderSet.DeviceShader);
     callback(&mCurrentDriverSettings);
 
     handleDebugOutput();
@@ -1035,7 +1035,7 @@ void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pi
     using Callback = decltype(ig_tonemap_shader);
     auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.TonemapShader.Exec);
     IG_ASSERT(callback != nullptr, "Expected tonemap shader to be valid");
-    setCurrentShader(1, ShaderKey(mCurrentShaderSet.ID, ShaderType::Tonemap, 0), mCurrentShaderSet.TonemapShader);
+    setCurrentShader(1, ShaderKey(ShaderType::Tonemap, 0), mCurrentShaderSet.TonemapShader);
 
     ::TonemapSettings driver_settings;
     driver_settings.method          = (int)settings.Method;
@@ -1065,7 +1065,7 @@ ImageInfoOutput DeviceInterface::runImageInfoShader(float* in_pixels, const Imag
     using Callback = decltype(ig_imageinfo_shader);
     auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.ImageinfoShader.Exec);
     IG_ASSERT(callback != nullptr, "Expected imageinfo shader to be valid");
-    setCurrentShader(1, ShaderKey(mCurrentShaderSet.ID, ShaderType::ImageInfo, 0), mCurrentShaderSet.ImageinfoShader);
+    setCurrentShader(1, ShaderKey(ShaderType::ImageInfo, 0), mCurrentShaderSet.ImageinfoShader);
 
     ::ImageInfoSettings driver_settings;
     driver_settings.scale               = settings.Scale;
@@ -1114,7 +1114,7 @@ void DeviceInterface::runTraversalShader(TraversalStage stage, int size)
     using Callback = decltype(ig_traversal_shader);
     auto callback  = reinterpret_cast<Callback*>(shader.Exec);
     IG_ASSERT(callback != nullptr, "Expected traversal shader to be valid");
-    setCurrentShader(size, ShaderKey(mCurrentShaderSet.ID, shaderType, 0), shader);
+    setCurrentShader(size, ShaderKey(shaderType, 0), shader);
     callback(&mCurrentDriverSettings, size);
 
     handleDebugOutput();
@@ -1134,7 +1134,7 @@ int DeviceInterface::runRayGenerationShader(int next_id, int size, int xmin, int
     using Callback = decltype(ig_ray_generation_shader);
     auto callback  = reinterpret_cast<Callback*>(mCurrentShaderSet.RayGenerationShader.Exec);
     IG_ASSERT(callback != nullptr, "Expected ray generation shader to be valid");
-    setCurrentShader((xmax - xmin) * (ymax - ymin), ShaderKey(mCurrentShaderSet.ID, ShaderType::RayGeneration, 0), mCurrentShaderSet.RayGenerationShader);
+    setCurrentShader((xmax - xmin) * (ymax - ymin), ShaderKey(ShaderType::RayGeneration, 0), mCurrentShaderSet.RayGenerationShader);
     const int ret = callback(&mCurrentDriverSettings, next_id, size, xmin, ymin, xmax, ymax);
 
     handleDebugOutput();
@@ -1158,7 +1158,7 @@ void DeviceInterface::runMaterialShader(int material_id, int first, int last)
     const auto& output = material_id >= 0 ? mCurrentShaderSet.HitShaders.at(material_id) : mCurrentShaderSet.MissShader;
     auto callback      = reinterpret_cast<Callback*>(output.Exec);
     IG_ASSERT(callback != nullptr, "Expected hit shader to be valid");
-    setCurrentShader(last - first, ShaderKey(mCurrentShaderSet.ID, shaderType, material_id >= 0 ? (uint32)material_id : 0), output);
+    setCurrentShader(last - first, ShaderKey(shaderType, material_id >= 0 ? (uint32)material_id : 0), output);
     callback(&mCurrentDriverSettings, material_id, first, last);
 
     handleDebugOutput();
@@ -1187,7 +1187,7 @@ void DeviceInterface::runAdvancedShadowShader(int material_id, int first, int la
     const auto& output = outputs.at(material_id);
     auto callback      = reinterpret_cast<Callback*>(output.Exec);
     IG_ASSERT(callback != nullptr, "Expected advanced shadow shader to be valid");
-    setCurrentShader(last - first, ShaderKey(mCurrentShaderSet.ID, shaderType, (uint32)material_id), output);
+    setCurrentShader(last - first, ShaderKey(shaderType, (uint32)material_id), output);
     callback(&mCurrentDriverSettings, material_id, first, last);
 
     handleDebugOutput();
@@ -1214,7 +1214,7 @@ void DeviceInterface::runCallbackShader(int type)
         if (mSetupSettings.AcquireStats)
             getCurrentThreadData()->stats.beginShaderLaunch(ShaderType::Callback, 1, type);
 
-        setCurrentShader(1, ShaderKey(mCurrentShaderSet.ID, ShaderType::Callback, (uint32)type), output);
+        setCurrentShader(1, ShaderKey(ShaderType::Callback, (uint32)type), output);
         callback(&mCurrentDriverSettings);
 
         handleDebugOutput();
@@ -1243,7 +1243,7 @@ void DeviceInterface::runBakeShader(const ShaderOutput<void*>& shader, const std
     using Callback = decltype(ig_bake_shader);
     auto callback  = reinterpret_cast<Callback*>(shader.Exec);
 
-    setCurrentShader(1, ShaderKey(0, ShaderType::Bake, 0), shader);
+    setCurrentShader(1, ShaderKey(ShaderType::Bake, 0), shader);
     callback(&mCurrentDriverSettings, output);
 
     handleDebugOutput();
@@ -1270,7 +1270,7 @@ void DeviceInterface::runPassShader(const ShaderOutput<void*>& shader, void* use
     using Callback = decltype(ig_pass_main);
     auto callback  = reinterpret_cast<Callback*>(shader.Exec);
 
-    setCurrentShader(1, ShaderKey(0, ShaderType::Pass, 0), shader);
+    setCurrentShader(1, ShaderKey(ShaderType::Pass, 0), shader);
     callback(&mCurrentDriverSettings, (int32*)userData);
 
     handleDebugOutput();

@@ -4,8 +4,8 @@
 
 namespace IG {
 enum class CallbackType {
-    BeforeIteration = 0,
-    AfterIteration,
+    BeforePass = 0,
+    AfterPass,
     _COUNT
 };
 
@@ -16,8 +16,7 @@ struct ShaderOutput {
 };
 
 template <typename T>
-struct TechniqueVariantBase {
-    uint32 ID;
+struct TechniqueDescriptorBase {
     ShaderOutput<T> DeviceShader;
     ShaderOutput<T> TonemapShader;
     ShaderOutput<T> ImageinfoShader;
@@ -31,6 +30,6 @@ struct TechniqueVariantBase {
     std::array<ShaderOutput<T>, (size_t)CallbackType::_COUNT> CallbackShaders{};
 };
 
-using TechniqueVariant          = TechniqueVariantBase<std::string>;
-using TechniqueVariantShaderSet = TechniqueVariantBase<void*>;
+using TechniqueDescriptorSourceSet = TechniqueDescriptorBase<std::string>;
+using TechniqueDescriptorShaderSet = TechniqueDescriptorBase<void*>;
 } // namespace IG

@@ -34,16 +34,16 @@ TechniqueInfo LightTracerTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
 
-    info.Variants[0].UsesLights = false; // LT makes no use of other lights (but starts on one)
+    info.UsesLights = false; // LT makes no use of other lights (but starts on one)
 
-    info.Variants[0].PrimaryPayloadCount   = 5;
-    info.Variants[0].SecondaryPayloadCount = 2;
+    info.PrimaryPayloadCount   = 5;
+    info.SecondaryPayloadCount = 2;
 
     // To start from a light source, we do have to override the standard camera generator for LT
-    info.Variants[0].OverrideCameraGenerator = [&](LoaderContext& ctx) { return lt_light_camera_generator(ctx, mLightSelector); };
+    info.OverrideCameraGenerator = [&](LoaderContext& ctx) { return lt_light_camera_generator(ctx, mLightSelector); };
 
-    info.Variants[0].RequiresExplicitCamera = true;
-    info.Variants[0].ShadowHandlingMode     = ShadowHandlingMode::Advanced;
+    info.RequiresExplicitCamera       = true;
+    info.Passes[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
 
     return info;
 }

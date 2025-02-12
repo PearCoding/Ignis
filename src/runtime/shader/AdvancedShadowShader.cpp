@@ -25,8 +25,8 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
            << "  let scene_bbox = " << ShaderUtils::inlineSceneBBox(ctx) << "; maybe_unused(scene_bbox);" << std::endl
            << std::endl;
 
-    if (ctx.CurrentTechniqueVariantInfo().UsesLights) {
-        bool requireAreaLight = is_hit || ctx.CurrentTechniqueVariantInfo().UsesAllLightsInMiss;
+    if (ctx.Technique->info().UsesLights) {
+        bool requireAreaLight = is_hit || ctx.Technique->info().UsesAllLightsInMiss;
         if (requireAreaLight)
             stream << ShaderUtils::generateDatabase(ctx) << std::endl;
 
@@ -34,18 +34,19 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
                << std::endl;
     }
 
-    if (ctx.CurrentTechniqueVariantInfo().UsesMedia)
+    if (ctx.Technique->info().UsesMedia)
         stream << ctx.Media->generate(tree) << std::endl;
 
-    if (ctx.CurrentTechniqueVariantInfo().ShadowHandlingMode == ShadowHandlingMode::AdvancedWithMaterials) {
-        stream << ShaderUtils::generateMaterialShader(tree, mat_id, ctx.CurrentTechniqueVariantInfo().UsesLights, "shader") << std::endl;
+    const auto maxShadowMode = ctx.Technique->info().getMaximumShadowHandlingMode();
+    if (maxShadowMode == ShadowHandlingMode::AdvancedWithMaterials) {
+        stream << ShaderUtils::generateMaterialShader(tree, mat_id, ctx.Technique->info().UsesLights, "shader") << std::endl;
     } else {
         stream << "  let shader : MaterialShader = @|ctx| make_material(mat_id, make_black_bsdf(ctx.surf), no_medium_interface());" << std::endl
                << std::endl;
     }
 
     // Include camera if necessary
-    if (ctx.CurrentTechniqueVariantInfo().RequiresExplicitCamera)
+    if (ctx.Technique->info().RequiresExplicitCamera)
         stream << ctx.Camera->generate(tree) << std::endl;
 
     // Will define technique
@@ -53,8 +54,7 @@ std::string AdvancedShadowShader::setup(bool is_hit, size_t mat_id, LoaderContex
            << std::endl;
 
     stream << "  let is_hit = " << (is_hit ? "true" : "false") << ";" << std::endl
-           << "  let use_framebuffer = " << (!ctx.CurrentTechniqueVariantInfo().LockFramebuffer ? "true" : "false") << ";" << std::endl
-           << "  device.handle_advanced_shadow_shader(shader, full_technique, payload_info, first, last, use_framebuffer, is_hit)" << std::endl
+           << "  device.handle_advanced_shadow_shader(shader, full_technique, payload_info, first, last, is_hit)" << std::endl
            << "}" << std::endl;
 
     return stream.str();

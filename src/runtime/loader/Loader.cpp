@@ -81,7 +81,7 @@ static ParameterDescSet handleUserParameters(const LoaderOptions& opts)
     return params;
 }
 
-std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
+std::optional<Loader::Result> Loader::load(const LoaderOptions& opts)
 {
     LoaderContext ctx;
     ctx.Options = opts;
@@ -135,9 +135,9 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->shapeCount() << " shapes" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->triShapeCount() << " triangular shapes" << std::endl;
     if (ctx.Shapes->planeShapeCount() > 0)
-        IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->planeShapeCount() << " shapes which are approximative planar" << std::endl;
+        IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->planeShapeCount() << " shapes which are approximate planar" << std::endl;
     if (ctx.Shapes->sphereShapeCount() > 0)
-        IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->sphereShapeCount() << " shapes which are approximative spherical" << std::endl;
+        IG_LOG(L_DEBUG) << "Got " << ctx.Shapes->sphereShapeCount() << " shapes which are approximate spherical" << std::endl;
     IG_LOG(L_DEBUG) << "Got " << ctx.Entities->entityCount() << " entities" << std::endl;
 
     ctx.Database.MaterialCount = ctx.Materials.size(); // TODO: Refactor this
@@ -150,84 +150,81 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
     if (!ctx.Technique->hasTechnique())
         return std::nullopt;
 
-    if (ctx.Technique->info().Variants.empty()) {
-        IG_LOG(L_ERROR) << "Invalid technique with no variants" << std::endl;
+    const auto& info = ctx.Technique->info();
+    if (info.Passes.empty()) {
+        IG_LOG(L_ERROR) << "Invalid technique with no passes" << std::endl;
         return std::nullopt;
     }
 
-    if (ctx.Technique->info().Variants.size() == 1)
-        IG_LOG(L_DEBUG) << "Generating shaders for a single variant" << std::endl;
+    if (info.Passes.size() == 1)
+        IG_LOG(L_DEBUG) << "Generating shaders for a single pass" << std::endl;
     else
-        IG_LOG(L_DEBUG) << "Generating shaders for " << ctx.Technique->info().Variants.size() << " variants" << std::endl;
+        IG_LOG(L_DEBUG) << "Generating shaders for " << info.Passes.size() << " passes" << std::endl;
 
-    ctx.TechniqueVariants.resize(ctx.Technique->info().Variants.size());
-    for (size_t i = 0; i < ctx.Technique->info().Variants.size(); ++i) {
-        const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
-            try {
-                ctx.resetLocalRegistry();
-                IG_LOG(L_DEBUG) << "Generating " << name << " shader for variant " << i << std::endl;
-                output.Exec = func();
-                if (output.Exec.empty())
-                    throw std::runtime_error("Constructed empty " + name + " shader.");
-                output.LocalRegistry = std::make_shared<ParameterSet>(std::move(ctx.LocalRegistry));
-            } catch (const std::exception& e) {
-                IG_LOG(L_ERROR) << "Exception in " << name << " shader for variant " << i << ": " << e.what() << std::endl;
-                ctx.signalError();
-            }
-        };
+    const auto setup = [&](const std::string& name, const std::function<std::string()>& func, ShaderOutput<std::string>& output) {
+        try {
+            ctx.resetLocalRegistry();
+            IG_LOG(L_DEBUG) << "Generating " << name << " shader" << std::endl;
+            output.Exec = func();
+            if (output.Exec.empty())
+                throw std::runtime_error("Constructed empty " + name + " shader.");
+            output.LocalRegistry = std::make_shared<ParameterSet>(std::move(ctx.LocalRegistry));
+        } catch (const std::exception& e) {
+            IG_LOG(L_ERROR) << "Exception in " << name << " shader: " << e.what() << std::endl;
+            ctx.signalError();
+        }
+    };
 
-        auto& variant                   = ctx.TechniqueVariants[i];
-        const auto& info                = ctx.Technique->info().Variants[i];
-        ctx.CurrentTechniqueVariant     = i;
-        ctx.Options.SamplesPerIteration = info.GetSPI(opts.SamplesPerIteration);
+    // Generate shaders
+    TechniqueDescriptorSourceSet sources;
 
-        // Generate shaders
-        setup(
-            "device", [&]() { return DeviceShader::setup(ctx); }, variant.DeviceShader);
-        setup(
-            "tonemap", [&]() { return UtilityShader::setupTonemap(ctx); }, variant.TonemapShader);
-        setup(
-            "imageinfo", [&]() { return UtilityShader::setupImageinfo(ctx); }, variant.ImageinfoShader);
-        setup(
-            "primary traversal", [&]() { return TraversalShader::setupPrimary(ctx); }, variant.PrimaryTraversalShader);
-        setup(
-            "secondary traversal", [&]() { return TraversalShader::setupSecondary(ctx); }, variant.SecondaryTraversalShader);
-        setup(
-            "ray generation", [&]() { return info.OverrideCameraGenerator ? info.OverrideCameraGenerator(ctx) : RayGenerationShader::setup(ctx); }, variant.RayGenerationShader);
-        setup(
-            "miss", [&]() { return MissShader::setup(ctx); }, variant.MissShader);
+    setup(
+        "device", [&]() { return DeviceShader::setup(ctx); }, sources.DeviceShader);
+    setup(
+        "tonemap", [&]() { return UtilityShader::setupTonemap(ctx); }, sources.TonemapShader);
+    setup(
+        "imageinfo", [&]() { return UtilityShader::setupImageinfo(ctx); }, sources.ImageinfoShader);
+    setup(
+        "primary traversal", [&]() { return TraversalShader::setupPrimary(ctx); }, sources.PrimaryTraversalShader);
+    setup(
+        "secondary traversal", [&]() { return TraversalShader::setupSecondary(ctx); }, sources.SecondaryTraversalShader);
+    setup(
+        "ray generation", [&]() { return info.OverrideCameraGenerator ? info.OverrideCameraGenerator(ctx) : RayGenerationShader::setup(ctx); }, sources.RayGenerationShader);
+    setup(
+        "miss", [&]() { return MissShader::setup(ctx); }, sources.MissShader);
 
-        // Generate hit shaders
-        for (size_t j = 0; j < ctx.Materials.size(); ++j) {
+    // Generate hit shaders
+    for (size_t j = 0; j < ctx.Materials.size(); ++j) {
+        ShaderOutput<std::string> output;
+        setup(
+            "hit " + std::to_string(j), [&]() { return HitShader::setup(j, ctx); }, output);
+        sources.HitShaders.emplace_back(std::move(output));
+    }
+
+    // Generate advanced shadow shaders if requested
+    const ShadowHandlingMode maxShadowMode = info.getMaximumShadowHandlingMode();
+
+    if (maxShadowMode != ShadowHandlingMode::Simple) {
+        const size_t max_materials = maxShadowMode == ShadowHandlingMode::Advanced ? 1 : ctx.Materials.size();
+        for (size_t j = 0; j < max_materials; ++j) {
             ShaderOutput<std::string> output;
             setup(
-                "hit " + std::to_string(j), [&]() { return HitShader::setup(j, ctx); }, output);
-            variant.HitShaders.emplace_back(std::move(output));
+                "advanced shadow hit " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(true, j, ctx); }, output);
+            sources.AdvancedShadowHitShaders.emplace_back(std::move(output));
         }
-
-        // Generate advanced shadow shaders if requested
-        if (info.ShadowHandlingMode != ShadowHandlingMode::Simple) {
-            const size_t max_materials = info.ShadowHandlingMode == ShadowHandlingMode::Advanced ? 1 : ctx.Materials.size();
-            for (size_t j = 0; j < max_materials; ++j) {
-                ShaderOutput<std::string> output;
-                setup(
-                    "advanced shadow hit " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(true, j, ctx); }, output);
-                variant.AdvancedShadowHitShaders.emplace_back(std::move(output));
-            }
-            for (size_t j = 0; j < max_materials; ++j) {
-                ShaderOutput<std::string> output;
-                setup(
-                    "advanced shadow miss " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(false, j, ctx); }, output);
-                variant.AdvancedShadowMissShaders.emplace_back(std::move(output));
-            }
+        for (size_t j = 0; j < max_materials; ++j) {
+            ShaderOutput<std::string> output;
+            setup(
+                "advanced shadow miss " + std::to_string(j), [&]() { return AdvancedShadowShader::setup(false, j, ctx); }, output);
+            sources.AdvancedShadowMissShaders.emplace_back(std::move(output));
         }
+    }
 
-        // Generate callback shaders if requested
-        for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
-            if (info.CallbackGenerators.at(j) != nullptr) {
-                setup(
-                    "callback " + std::to_string(j), [&]() { return info.CallbackGenerators.at(j)(ctx); }, variant.CallbackShaders[j]);
-            }
+    // Generate callback shaders if requested
+    for (size_t j = 0; j < info.CallbackGenerators.size(); ++j) {
+        if (info.CallbackGenerators.at(j) != nullptr) {
+            setup(
+                "callback " + std::to_string(j), [&]() { return info.CallbackGenerators.at(j)(ctx); }, sources.CallbackShaders[j]);
         }
     }
 
@@ -244,7 +241,10 @@ std::optional<LoaderContext> Loader::load(const LoaderOptions& opts)
         IG_LOG(L_ERROR) << "Aborting loading due to previous errors." << std::endl;
         return std::nullopt;
     } else {
-        return std::optional<LoaderContext>(std::in_place, std::move(ctx));
+        return Result{
+            .Context = std::move(ctx),
+            .Sources = std::move(sources)
+        };
     }
 }
 

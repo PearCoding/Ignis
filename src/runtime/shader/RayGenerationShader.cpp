@@ -49,23 +49,29 @@ std::string RayGenerationShader::generatePixelSampler(const LoaderContext& ctx, 
     return stream.str();
 }
 
+std::string RayGenerationShader::generateDefaultCamera(LoaderContext& ctx, const std::string_view& emitterName)
+{
+    std::stringstream stream;
+    stream << "  let init_raypayload = " << ctx.Technique->info().getEmitterPayloadInitializer() << ";" << std::endl;
+
+    if (ctx.Options.IsTracer) {
+        stream << "  let " << emitterName << " = make_list_emitter(device.load_rays(), render_config, init_raypayload);" << std::endl;
+    } else {
+        ShadingTree tree(ctx);
+        stream << ctx.Camera->generate(tree) << std::endl // Will set `camera`
+               << generatePixelSampler(ctx) << std::endl  // Will set `pixel_sampler`
+               << "  let " << emitterName << " = make_camera_emitter(camera, render_config, pixel_sampler, init_raypayload);" << std::endl;
+    }
+    return stream.str();
+}
+
 std::string RayGenerationShader::setup(LoaderContext& ctx)
 {
     std::stringstream stream;
 
     stream << begin(ctx) << std::endl
-           << "  let init_raypayload = " << ctx.CurrentTechniqueVariantInfo().GetEmitterPayloadInitializer() << ";" << std::endl;
-
-    if (ctx.Options.IsTracer) {
-        stream << "  let emitter = make_list_emitter(device.load_rays(), render_config, init_raypayload);" << std::endl;
-    } else {
-        ShadingTree tree(ctx);
-        stream << ctx.Camera->generate(tree) << std::endl // Will set `camera`
-               << generatePixelSampler(ctx) << std::endl  // Will set `pixel_sampler`
-               << "  let emitter = make_camera_emitter(camera, render_config, pixel_sampler, init_raypayload);" << std::endl;
-    }
-
-    stream << end();
+           << generateDefaultCamera(ctx) << std::endl
+           << end();
 
     return stream.str();
 }

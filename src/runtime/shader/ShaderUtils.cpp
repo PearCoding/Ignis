@@ -16,6 +16,7 @@ std::string ShaderUtils::constructDevice(const LoaderOptions& opts)
 
     stream << "  let spi = " << ShaderUtils::inlineSPI(opts) << ";" << std::endl
            << "  let render_config = make_render_config_from_settings(settings, spi);" << std::endl
+           << "  let work_info = get_work_info(); maybe_unused(work_info);" << std::endl
            << "  let device = ";
 
     if (opts.Target.isCPU()) {
@@ -207,9 +208,9 @@ std::string ShaderUtils::inlinePayloadInfo(const LoaderContext& ctx)
 {
     std::stringstream stream;
 
-    stream << "PayloadInfo{ primary_count = "
-           << ctx.CurrentTechniqueVariantInfo().PrimaryPayloadCount
-           << ", secondary_count = " << ctx.CurrentTechniqueVariantInfo().SecondaryPayloadCount
+    stream << "PayloadInfo{"
+           << " primary_count = " << ctx.Technique->info().PrimaryPayloadCount
+           << ", secondary_count = " << ctx.Technique->info().SecondaryPayloadCount
            << " }";
 
     return stream.str();

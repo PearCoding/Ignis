@@ -16,7 +16,7 @@ DebugTechnique::DebugTechnique(const std::shared_ptr<SceneObject>& obj)
 TechniqueInfo DebugTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
-    info.Variants[0].UsesLights = true; // We make use of the emissive information!
+    info.UsesLights = true; // We make use of the emissive information!
     return info;
 }
 

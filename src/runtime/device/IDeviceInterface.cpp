@@ -49,7 +49,7 @@ IG_EXPORT void ignis_get_aov_image(const char* name, float** pixels, int* width,
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
 
-    const bool willBeModified = !device->currentRenderSettings().info.LockFramebuffer; /* Framebuffer will not be modified if it is locked */
+    const bool willBeModified = !device->currentRenderSettings().getPassInfo().LockFramebuffer; /* Framebuffer will not be modified if it is locked */
     auto aov = device->loadAOVImageForDevice(name, willBeModified);
     *pixels  = aov.DataPtr;
     *width   = (int)aov.Width;
@@ -64,9 +64,9 @@ IG_EXPORT void ignis_get_work_info(WorkInfo* info)
     IG_ASSERT(device, "Expected valid interface");
     info->width                           = (int)device->currentRenderSettings().width;
     info->height                          = (int)device->currentRenderSettings().height;
-    info->advanced_shadows                = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced;
-    info->advanced_shadows_with_materials = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::AdvancedWithMaterials;
-    info->framebuffer_locked              = device->currentRenderSettings().info.LockFramebuffer;
+    info->advanced_shadows                = device->currentRenderSettings().getPassInfo().ShadowHandlingMode == IG::ShadowHandlingMode::Advanced;
+    info->advanced_shadows_with_materials = device->currentRenderSettings().getPassInfo().ShadowHandlingMode == IG::ShadowHandlingMode::AdvancedWithMaterials;
+    info->framebuffer_locked              = device->currentRenderSettings().getPassInfo().LockFramebuffer;
     info->debug_trace                     = device->setupSettings().DebugTrace;
 }
 
@@ -293,7 +293,7 @@ IG_EXPORT void ignis_handle_advanced_shadow_shader(int material_id, int first, i
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
-    if (device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced)
+    if (device->currentRenderSettings().getPassInfo().ShadowHandlingMode == IG::ShadowHandlingMode::Advanced)
         device->runAdvancedShadowShader(0 /* Fix to 0 */, first, last, is_hit);
     else
         device->runAdvancedShadowShader(material_id, first, last, is_hit);

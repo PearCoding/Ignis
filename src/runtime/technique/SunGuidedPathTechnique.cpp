@@ -29,11 +29,11 @@ TechniqueInfo SunGuidedPathTechnique::getInfo(const LoaderContext&) const
     TechniqueInfo info;
 
     if (mMISAOVs)
-        info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
+        info.Passes[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
 
-    info.Variants[0].UsesLights                = true;
-    info.Variants[0].PrimaryPayloadCount       = 8;
-    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_sgpt_raypayload)";
+    info.UsesLights                = true;
+    info.PrimaryPayloadCount       = 8;
+    info.EmitterPayloadInitializer = "make_simple_payload_initializer(init_sgpt_raypayload)";
     return info;
 }
 

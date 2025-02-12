@@ -1,11 +1,10 @@
 #pragma once
 
-#include "technique/TechniqueVariant.h"
 #include "ShaderDumpVerbosity.h"
+#include "technique/TechniqueDescriptor.h"
 
 namespace IG {
 class ScriptCompiler;
-
 
 class ShaderManager {
 public:

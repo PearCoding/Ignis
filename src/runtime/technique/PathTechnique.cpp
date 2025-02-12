@@ -19,11 +19,11 @@ TechniqueInfo PathTechnique::getInfo(const LoaderContext&) const
     TechniqueInfo info;
 
     if (mMISAOVs)
-        info.Variants[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
+        info.Passes[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
 
-    info.Variants[0].UsesLights                = true;
-    info.Variants[0].PrimaryPayloadCount       = 6;
-    info.Variants[0].EmitterPayloadInitializer = "make_simple_payload_initializer(init_pt_raypayload)";
+    info.UsesLights                = true;
+    info.PrimaryPayloadCount       = 6;
+    info.EmitterPayloadInitializer = "make_simple_payload_initializer(init_pt_raypayload)";
     return info;
 }
 

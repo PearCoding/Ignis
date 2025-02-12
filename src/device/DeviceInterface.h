@@ -77,7 +77,7 @@ struct CPUData {
     TemporaryStorageHost temporary_storage_host;
     Statistics stats;
     ParameterSet* current_local_registry = nullptr;
-    ShaderKey current_shader_key         = ShaderKey(0, ShaderType::Device, 0);
+    ShaderKey current_shader_key         = ShaderKey(ShaderType::Device, 0);
     std::unordered_map<ShaderKey, ShaderStats, ShaderKeyHash> shader_stats;
 };
 
@@ -110,7 +110,7 @@ private:
         inline DeviceData()
             : streams()
             , current_streams()
-            , current_shader_key(0, ShaderType::Device, 0)
+            , current_shader_key(ShaderType::Device, 0)
         {
             setupLinks();
         }
@@ -180,7 +180,7 @@ public:
     void clearAOV(const std::string& aov_name) override;
     void clearAllAOVs() override;
 
-    void runDeviceShader(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) override;
+    void runDeviceShader(const TechniqueDescriptorShaderSet& shaderSet, const Device::RenderSettings& settings) override;
     void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings) override;
     ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings) override;
 
@@ -204,7 +204,7 @@ private:
     void ensureFramebuffer();
 
     void updateSettings(const Device::RenderSettings& settings);
-    void updateShaderSet(const TechniqueVariantShaderSet& shaderSet);
+    void updateShaderSet(const TechniqueDescriptorShaderSet& shaderSet);
 
     void setCurrentShader(int workload, const ShaderKey& key, const ShaderOutput<void*>& shader);
     ShaderInfo& getCurrentShader();
@@ -233,7 +233,7 @@ private:
     Device::SceneSettings mCurrentSceneSettings;
     Device::RenderSettings mCurrentRenderSettings;
     ParameterSet* mCurrentParameters = nullptr;
-    TechniqueVariantShaderSet mCurrentShaderSet;
+    TechniqueDescriptorShaderSet mCurrentShaderSet;
     ::Settings mCurrentDriverSettings;
 
     Statistics mAcquiredStats;

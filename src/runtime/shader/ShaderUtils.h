@@ -8,6 +8,7 @@ struct LoaderOptions;
 class ShapeProvider;
 class IG_LIB ShaderUtils {
 public:
+    /// Returns a device and defines `device`, `spi`, `render_config` and `work_info`.
     static std::string constructDevice(const LoaderOptions& opts);
     static std::string generateDatabase(const LoaderContext& ctx);
     static std::string generateShapeLookup(const LoaderContext& ctx);

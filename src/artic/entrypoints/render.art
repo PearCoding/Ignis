@@ -20,7 +20,7 @@ fn @ig_render_pipeline(device: Device, scene: Scene, payload_info: PayloadInfo) 
         }
     };
 
-    ignis_handle_callback_shader(0/*BeforeIteration*/);
+    ignis_handle_callback_shader(0/*BeforePass*/);
     device.trace(scene, pipeline, payload_info);
-    ignis_handle_callback_shader(1/*AfterIteration*/);
+    ignis_handle_callback_shader(1/*AfterPass*/);
 }

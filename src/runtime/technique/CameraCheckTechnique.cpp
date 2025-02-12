@@ -9,7 +9,7 @@ CameraCheckTechnique::CameraCheckTechnique()
 TechniqueInfo CameraCheckTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
-    info.Variants[0].RequiresExplicitCamera = true; // We make use of the camera differential!
+    info.RequiresExplicitCamera = true; // We make use of the camera differential!
     return info;
 }
 

@@ -9,6 +9,12 @@ struct WorkInfo {
     debug_trace:                     bool
 }
 
+fn @get_work_info() -> WorkInfo {
+    let mut work_info : WorkInfo;
+    ignis_get_work_info(&mut work_info);
+    work_info
+}
+
 // Driver functions ----------------------------------------------------------------
 
 #[import(cc = "C")] fn ignis_get_work_info(&mut WorkInfo) -> ();
@@ -60,9 +66,3 @@ struct WorkInfo {
 #[import(cc = "C")] fn ignis_set_parameter_f32(&[u8], f32, bool) -> ();
 #[import(cc = "C")] fn ignis_set_parameter_vector(&[u8], f32, f32, f32, bool) -> ();
 #[import(cc = "C")] fn ignis_set_parameter_color(&[u8], f32, f32, f32, f32, bool) -> ();
-
-fn @get_work_info() -> WorkInfo {
-    let mut work_info : WorkInfo;
-    ignis_get_work_info(&mut work_info);
-    work_info
-}
