@@ -594,37 +594,37 @@ Image Image::load(const Path& path, ImageMetaData* metaData, const std::string* 
         int channels = 0;
         std::unordered_set<std::string> channel_names; // Only populated if metaData != nullptr
         for (int c = 0; c < exr_header.num_channels; ++c) {
-            const std::string name = to_lowercase(std::string(exr_header.channels[c].name));
+            const std::string name = std::string(exr_header.channels[c].name);
 
             if (optionalLayerName) {
-                if (name == (*optionalLayerName + ".a"))
+                if (string_equal_icase(name, (*optionalLayerName + ".a")))
                     idxA = c;
-                else if (name == (*optionalLayerName + ".r"))
+                else if (string_equal_icase(name, (*optionalLayerName + ".r")))
                     idxR = c;
-                else if (name == (*optionalLayerName + ".g"))
+                else if (string_equal_icase(name, (*optionalLayerName + ".g")))
                     idxG = c;
-                else if (name == (*optionalLayerName + ".b"))
+                else if (string_equal_icase(name, (*optionalLayerName + ".b")))
                     idxB = c;
-                else if (name == (*optionalLayerName + ".y"))
+                else if (string_equal_icase(name, (*optionalLayerName + ".y")))
                     idxY = c;
-                else if (name == *optionalLayerName)
+                else if (string_equal_icase(name, *optionalLayerName))
                     idxY = c;
             } else {
-                if (name == "a" || name == "default.a")
+                if (string_equal_icase(name, "a") || string_equal_icase(name, "default.a"))
                     idxA = c;
-                else if (name == "r" || name == "default.r")
+                else if (string_equal_icase(name, "r") || string_equal_icase(name, "default.r"))
                     idxR = c;
-                else if (name == "g" || name == "default.g")
+                else if (string_equal_icase(name, "g") || string_equal_icase(name, "default.g"))
                     idxG = c;
-                else if (name == "b" || name == "default.b")
+                else if (string_equal_icase(name, "b") || string_equal_icase(name, "default.b"))
                     idxB = c;
-                else if (name == "y" || name == "default.y")
+                else if (string_equal_icase(name, "y") || string_equal_icase(name, "default.y"))
                     idxY = c;
             }
 
             if (metaData) {
                 const std::string extractedName = extractChannelName(name);
-                if (extractedName != "a" && extractedName != "r" && extractedName != "g" && extractedName != "b" && extractedName != "y")
+                if (!string_equal_icase(extractedName, "a") && !string_equal_icase(extractedName, "r") && !string_equal_icase(extractedName, "g") && !string_equal_icase(extractedName, "b") && !string_equal_icase(extractedName, "y"))
                     channel_names.emplace(extractedName);
             }
             ++channels;

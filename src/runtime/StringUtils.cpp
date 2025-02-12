@@ -63,6 +63,11 @@ bool string_ends_with(const std::string& str, const std::string& suffix)
     return string_ends_with((std::string_view)str, (std::string_view)suffix);
 }
 
+bool string_equal_icase(std::string_view a, std::string_view b)
+{
+    return std::equal(a.begin(), a.end(), b.begin(), b.end(), [](auto ca, auto cb) { return ::tolower(ca) == ::tolower(cb); });
+}
+
 void string_left_trim(std::string& s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {

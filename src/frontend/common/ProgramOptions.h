@@ -85,6 +85,7 @@ public:
     Path Output;
     Path InputScene;
     Path InputRay;
+    Path ContinueImage;
 
     Path ScriptDir;
 

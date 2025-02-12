@@ -88,6 +88,16 @@ inline IDeviceInterface::DeviceImageProxy<T> mapToProxyDevice(const DeviceImageB
 }
 
 template <typename T>
+inline IDeviceInterface::DeviceImageProxy<T> mapToProxyHost(const DeviceImageBase<T>& buffer)
+{
+    return IDeviceInterface::DeviceImageProxy<T>{
+        .DataPtr = const_cast<T*>(buffer.Data.HostPtr),
+        .Width   = buffer.Width,
+        .Height  = buffer.Height
+    };
+}
+
+template <typename T>
 inline IDeviceInterface::DeviceStreamProxy<T> mapToProxyDevice(const DeviceStreamBase<T>& buffer)
 {
     return IDeviceInterface::DeviceStreamProxy<T>{
@@ -928,7 +938,7 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
-        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed inbetween iterations");
+        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed between iterations");
         it->second.Data.syncForDevice();
         if (willBeModified)
             it->second.Data.markDirtyOnDevice();
@@ -957,19 +967,25 @@ IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(c
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
-        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed inbetween iterations");
+        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed between iterations");
         it->second.Data.syncForHost();
         if (willBeModified)
             it->second.Data.markDirtyOnHost();
-        return DeviceImageProxy<float>{
-            .DataPtr = it->second.Data.HostPtr,
-            .Width   = it->second.Width,
-            .Height  = it->second.Height
-        };
+        return mapToProxyHost(it->second);
     } else {
-        // Note: Currently only the device side is allowed to create new AOVs. This is only by design to catch some common mistakes, but if a use-case arise we might change this in the future.
-        IG_LOG(L_ERROR) << "Unknown aov '" << actual_name << "' access for host" << std::endl;
-        return DeviceImageProxy<float>::Invalid();
+        const size_t expectedSize = framebufferArea() * 3;
+
+        auto aov = DeviceImage{
+            .Data   = createAOVArray(mDeviceID, expectedSize),
+            .Width  = mFramebufferWidth,
+            .Height = mFramebufferHeight
+        };
+
+        if (willBeModified)
+            aov.Data.markDirtyOnHost();
+        else
+            aov.Data.fillHostWithZero();
+        return mapToProxyHost(mDeviceData.aovs.try_emplace(actual_name, std::move(aov)).first->second);
     }
 }
 

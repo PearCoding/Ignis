@@ -53,6 +53,10 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
     app.set_help_flag("-h,--help", "Shows help message and exit");
 
     app.add_option("scene", InputScene, "Scene file to load. Can be a Ignis scene file or a glTF file.")->required()->check(CLI::ExistingFile);
+
+    if (type != ApplicationType::Trace)
+        app.add_option("--continue", ContinueImage, "Image to continue rendering from. Must be an output of Ignis with embedded meta-data and the same input scene and settings.")->check(CLI::ExistingFile);
+
     app.add_flag("-q,--quiet", Quiet, "Do not print messages into console");
     app.add_flag_callback(
         "-v,--verbose", [&]() { VerbosityLevel = L_DEBUG; }, "Set the verbosity level to 'debug'. Shortcut for --log-level debug");

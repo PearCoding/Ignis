@@ -77,6 +77,9 @@ public:
     /// Will clear specific framebuffer
     void clearFramebuffer(const std::string& name);
 
+    /// Will try to recover the framebuffer and spp settings from a previous image
+    bool loadPreviousFramebuffer(const Path& path);
+
     [[nodiscard]] size_t getBufferSizeInBytes(const std::string& name) const;
     [[nodiscard]] BufferAccessor getBufferForDevice(const std::string& name) const;
     BufferAccessor requestBufferForDevice(const std::string& name, size_t sizeInBytes) const;

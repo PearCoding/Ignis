@@ -93,6 +93,10 @@ int main(int argc, char** argv)
     }
 
     runtime->mergeParametersFrom(cmd.UserEntries);
+
+    if (!cmd.ContinueImage.empty())
+        runtime->loadPreviousFramebuffer(cmd.ContinueImage);
+
     timer_loading.stop();
 
     const auto def = runtime->initialCameraOrientation();

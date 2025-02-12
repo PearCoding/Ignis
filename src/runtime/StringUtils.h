@@ -22,6 +22,8 @@ namespace IG {
 [[nodiscard]] IG_LIB bool string_ends_with(std::string_view str, std::string_view suffix);
 [[nodiscard]] IG_LIB bool string_ends_with(const std::string& str, const std::string& suffix);
 
+[[nodiscard]] IG_LIB bool string_equal_icase(std::string_view a, std::string_view b);
+
 /// Trim string from the left side in place
 IG_LIB void string_left_trim(std::string& s);
 

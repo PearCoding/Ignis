@@ -97,6 +97,10 @@ int main(int argc, char** argv)
     }
 
     runtime->mergeParametersFrom(cmd.UserEntries);
+
+    if (!cmd.ContinueImage.empty())
+        runtime->loadPreviousFramebuffer(cmd.ContinueImage);
+
     timer_loading.stop();
 
     auto orientation = runtime->initialCameraOrientation();
@@ -111,6 +115,9 @@ int main(int argc, char** argv)
     if (cmd.SPP.has_value() && (cmd.SPP.value() % SPI) != 0)
         IG_LOG(L_WARNING) << "Given spp " << cmd.SPP.value() << " is not a multiple of the spi " << SPI << ". Using spp " << desired_iter * SPI << " instead" << std::endl;
 
+    if (runtime->currentSampleCount() >= (size_t)cmd.SPP.value_or(std::numeric_limits<int>::max()))
+        IG_LOG(L_WARNING) << "Requested spp already satisfied. No need to continue." << std::endl;
+
     StatusObserver observer(!cmd.NoColor, 2, desired_iter * SPI /* Approx */, cmd.RenderTime.value_or(0));
     observer.begin();
 
@@ -119,7 +126,7 @@ int main(int argc, char** argv)
     std::vector<double> samples_sec;
 
     SectionTimer timer_render;
-    while (true) {
+    while (runtime->currentSampleCount() < (size_t)cmd.SPP.value_or(std::numeric_limits<int>::max())) {
         if (!cmd.NoProgress)
             observer.update(runtime->currentSampleCount());
 
@@ -132,14 +139,17 @@ int main(int argc, char** argv)
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
 
         samples_sec.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
-        if (desired_iter > 0 && samples_sec.size() == desired_iter)
-            break;
-        else if (cmd.RenderTime.has_value() && timer_render.duration_ms / 1000 > cmd.RenderTime.value())
+        if (cmd.RenderTime.has_value() && timer_render.duration_ms / 1000 > cmd.RenderTime.value())
             break;
     }
 
     if (!cmd.NoProgress)
         observer.end();
+
+    if (samples_sec.empty()) {
+        IG_LOG(L_WARNING) << "Nothing rendered." << std::endl;
+        return EXIT_SUCCESS;
+    }
 
     SectionTimer timer_saving;
     timer_saving.start();
