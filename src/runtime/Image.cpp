@@ -57,6 +57,8 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
 {
     IG_ASSERT(isValid(), "Expected valid image");
 
+    const size_t maxC = std::min<size_t>(3, channels);
+
     if (!sRGB) {
         const float factor = !inverse ? 1 / 2.2f : 2.2f;
 
@@ -64,8 +66,8 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
             tbb::blocked_range<size_t>(0, width * height),
             [&](tbb::blocked_range<size_t> r) {
                 for (size_t k = r.begin(); k < r.end(); ++k) {
-                    auto* pix = &pixels[4 * k];
-                    for (int i = 0; i < 3; ++i)
+                    auto* pix = &pixels[channels * k];
+                    for (size_t i = 0; i < maxC; ++i)
                         pix[i] = std::pow(pix[i], factor);
                 }
             });
@@ -75,8 +77,8 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
                 tbb::blocked_range<size_t>(0, width * height),
                 [&](tbb::blocked_range<size_t> r) {
                     for (size_t k = r.begin(); k < r.end(); ++k) {
-                        auto* pix = &pixels[4 * k];
-                        for (int i = 0; i < 3; ++i)
+                        auto* pix = &pixels[channels * k];
+                        for (size_t i = 0; i < maxC; ++i)
                             pix[i] = srgb_gamma(pix[i]);
                     }
                 });
@@ -85,8 +87,8 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
                 tbb::blocked_range<size_t>(0, width * height),
                 [&](tbb::blocked_range<size_t> r) {
                     for (size_t k = r.begin(); k < r.end(); ++k) {
-                        auto* pix = &pixels[4 * k];
-                        for (int i = 0; i < 3; ++i)
+                        auto* pix = &pixels[channels * k];
+                        for (size_t i = 0; i < maxC; ++i)
                             pix[i] = srgb_invgamma(pix[i]);
                     }
                 });
@@ -97,13 +99,19 @@ void Image::applyGammaCorrection(bool inverse, bool sRGB)
 void Image::applyExposureOffset(float exposure, float offset)
 {
     const float factor = std::pow(2.0f, exposure);
+    applyScaleOffset(factor, offset);
+}
+
+void Image::applyScaleOffset(float scale, float offset)
+{
+    const size_t maxC = std::min<size_t>(3, channels);
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, width * height),
         [&](tbb::blocked_range<size_t> r) {
             for (size_t k = r.begin(); k < r.end(); ++k) {
-                auto* pix = &pixels[4 * k];
-                for (int i = 0; i < 3; ++i)
-                    pix[i] = factor * pix[i] + offset;
+                auto* pix = &pixels[channels * k];
+                for (size_t i = 0; i < maxC; ++i)
+                    pix[i] = scale * pix[i] + offset;
             }
         });
 }

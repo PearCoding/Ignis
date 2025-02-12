@@ -78,6 +78,9 @@ struct IG_LIB Image {
     /// In contrary to proper tonemapping, this applies for each component individually
     void applyExposureOffset(float exposure, float offset = 0);
 
+    /// Apply scale and offset
+    void applyScaleOffset(float scale, float offset = 0);
+
     /// Flip image in y-axis
     void flipY();
 

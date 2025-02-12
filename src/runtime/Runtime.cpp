@@ -469,67 +469,6 @@ void Runtime::clearFramebuffer(const std::string& name)
     mDevice->clearFramebuffer(name);
 }
 
-bool Runtime::loadPreviousFramebuffer(const Path& path)
-{
-    if (mOptions.IsTracer) {
-        IG_LOG(L_ERROR) << "Trying to load a previous framebuffer for a trace runtime!" << std::endl;
-        return false;
-    }
-
-    ImageMetaData metaData;
-    Image image = Image::load(path, &metaData);
-    if (!image.isValid()) {
-        IG_LOG(L_ERROR) << "Could not load previous framebuffer " << path << std::endl;
-        return false;
-    }
-    image.flipY();
-
-    if (!metaData.Frame.has_value()
-        || !metaData.Iteration.has_value()
-        || !metaData.SamplePerIteration.has_value()
-        || !metaData.SamplePerPixel.has_value()) {
-        IG_LOG(L_ERROR) << "Trying to load a previous framebuffer using an image without proper meta-data. Are you sure this image was generated with Ignis?" << std::endl;
-        return false;
-    }
-
-    if (metaData.TechniqueType.has_value() && *metaData.TechniqueType != technique())
-        IG_LOG(L_WARNING) << "Previous framebuffer was rendered with a different technique. Previous '" << *metaData.TechniqueType << "' might be incompatible with the current '" << technique() << "'." << std::endl;
-    if (metaData.CameraType.has_value() && *metaData.CameraType != camera())
-        IG_LOG(L_WARNING) << "Previous framebuffer was rendered with a different camera. Previous '" << *metaData.CameraType << "' might be incompatible with the current '" << camera() << "'." << std::endl;
-
-    if (image.channels != 3)
-        image = image.castTo(3);
-
-    IG_ASSERT(mDevice, "Expected device to be available");
-    mDevice->resize(mFilmWidth, mFilmHeight); // Ensure the device is properly sized
-
-    const auto framebuffer = mDevice->getFramebufferForHost({}, true);
-    std::memcpy(framebuffer.Data, image.pixels.get(), image.width * image.height * image.channels * sizeof(float));
-
-    for (const auto& layerName : metaData.AdditionalLayerNames) {
-        if (layerName.empty() || layerName == "Color")
-            continue;
-
-        Image layer = Image::load(path, nullptr, &layerName);
-        IG_ASSERT(layer.isValid(), "Loading a promised layer from an existing image failed.");
-        layer.flipY();
-
-        if (layer.channels != 3)
-            layer = layer.castTo(3);
-
-        const auto aov = mDevice->getFramebufferForHost(layerName, true);
-        std::memcpy(aov.Data, layer.pixels.get(), layer.width * layer.height * layer.channels * sizeof(float));
-    }
-
-    mCurrentIteration   = *metaData.Iteration;
-    mCurrentSampleCount = *metaData.SamplePerPixel;
-    mCurrentFrame       = *metaData.Frame;
-
-    IG_LOG(L_INFO) << "Continuing rendering from " << mCurrentSampleCount << " samples per pixel." << std::endl;
-
-    return true;
-}
-
 size_t Runtime::getBufferSizeInBytes(const std::string& name) const
 {
     return mDevice->getBufferSizeInBytes(name);
@@ -868,8 +807,8 @@ bool Runtime::saveFramebuffer(const Path& path) const
         float* dst_b     = &images[width * height * (3 * aov + 2)];
 
         tbb::parallel_for(tbb::blocked_range<size_t>(0, width * height),
-                          [&](tbb::blocked_range<size_t> r) {
-                              for (size_t i = r.begin(); i < r.end(); ++i) {
+                          [&](tbb::blocked_range<size_t> range) {
+                              for (size_t i = range.begin(); i < range.end(); ++i) {
                                   const float r = src[i * 3 + 0];
                                   const float g = src[i * 3 + 1];
                                   const float b = src[i * 3 + 2];
@@ -923,6 +862,75 @@ bool Runtime::saveFramebuffer(const Path& path) const
     metaData.CameraDir = orientation.Dir;
 
     return Image::save(path, width, height, image_ptrs, image_names, &metaData);
+}
+
+bool Runtime::loadPreviousFramebuffer(const Path& path)
+{
+    if (mOptions.IsTracer) {
+        IG_LOG(L_ERROR) << "Trying to load a previous framebuffer for a trace runtime!" << std::endl;
+        return false;
+    }
+
+    ImageMetaData metaData;
+    Image image = Image::load(path, &metaData);
+    if (!image.isValid()) {
+        IG_LOG(L_ERROR) << "Could not load previous framebuffer " << path << std::endl;
+        return false;
+    }
+
+    if (!metaData.Frame.has_value()
+        || !metaData.Iteration.has_value()
+        || !metaData.SamplePerIteration.has_value()
+        || !metaData.SamplePerPixel.has_value()) {
+        IG_LOG(L_ERROR) << "Trying to load a previous framebuffer using an image without proper meta-data. Are you sure this image was generated with Ignis?" << std::endl;
+        return false;
+    }
+
+    if (metaData.TechniqueType.has_value() && *metaData.TechniqueType != technique())
+        IG_LOG(L_WARNING) << "Previous framebuffer was rendered with a different technique. Previous '" << *metaData.TechniqueType << "' might be incompatible with the current '" << technique() << "'." << std::endl;
+    if (metaData.CameraType.has_value() && *metaData.CameraType != camera())
+        IG_LOG(L_WARNING) << "Previous framebuffer was rendered with a different camera. Previous '" << *metaData.CameraType << "' might be incompatible with the current '" << camera() << "'." << std::endl;
+
+    image.flipY();
+    image.applyScaleOffset((float)*metaData.Iteration);
+
+    if (image.channels != 3)
+        image = image.castTo(3);
+
+    IG_ASSERT(mDevice, "Expected device to be available");
+    mDevice->resize(mFilmWidth, mFilmHeight); // Ensure the device is properly sized
+
+    const auto framebuffer = mDevice->getFramebufferForHost({}, true);
+    std::memcpy(framebuffer.Data, image.pixels.get(), image.width * image.height * image.channels * sizeof(float));
+
+    for (const auto& layerName : metaData.AdditionalLayerNames) {
+        if (layerName.empty() || layerName == "Color")
+            continue;
+
+        Image layer = Image::load(path, nullptr, &layerName);
+        IG_ASSERT(layer.isValid(), "Loading a promised layer from an existing image failed.");
+        layer.flipY();
+
+        if (layerName != "Normals" && layerName != "Albedo")
+            layer.applyScaleOffset((float)*metaData.Iteration);
+
+        if (layer.channels != 3)
+            layer = layer.castTo(3);
+
+        const auto aov = mDevice->getFramebufferForHost(layerName, true);
+        std::memcpy(aov.Data, layer.pixels.get(), layer.width * layer.height * layer.channels * sizeof(float));
+    }
+
+    mCurrentIteration   = *metaData.Iteration;
+    mCurrentSampleCount = *metaData.SamplePerPixel;
+    mCurrentFrame       = *metaData.Frame;
+
+    if (metaData.Seed.has_value() && mOptions.Seed == *metaData.Seed)
+        mOptions.Seed = metaData.Seed.value() + 1; // We HAVE to change the seed to render something new
+
+    IG_LOG(L_INFO) << "Continuing rendering from " << mCurrentSampleCount << " samples per pixel." << std::endl;
+
+    return true;
 }
 
 std::shared_ptr<GlareEvaluator> Runtime::createGlareEvaluator()

@@ -199,7 +199,7 @@ private:
     void tracePass(const std::vector<Ray>& rays, size_t pass);
     void handleTime();
 
-    const RuntimeOptions mOptions;
+    RuntimeOptions mOptions;
 
     SceneDatabase mDatabase;
     ParameterSet mGlobalRegistry;
