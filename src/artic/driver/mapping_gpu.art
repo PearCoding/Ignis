@@ -27,15 +27,16 @@ fn @gpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
     let mut film_height : i32;
-    ignis_get_film_data(&mut film_pixels, &mut film_width, &mut film_height);
+    ignis_get_aov_image("", &mut film_pixels, &mut film_width, &mut film_height);
     (film_pixels, film_width, film_height)
 }
 
-fn @gpu_get_aov_image(id: &[u8], w: i32, h: i32, spi: i32, atomics: Atomics) -> ColorAOVImage {
-    // Width & height always the same as film_width, film_height
-    let mut ptr : &mut [f32];
-    ignis_get_aov_image(id, &mut ptr);
-    make_atomic_aov_image(ptr, w, h, spi, atomics)
+fn @gpu_get_aov_image(id: &[u8], spi: i32, atomics: Atomics) -> ColorAOVImage {
+    let mut film_pixels : &mut [f32];
+    let mut film_width  : i32;
+    let mut film_height : i32;
+    ignis_get_aov_image(id, &mut film_pixels, &mut film_width, &mut film_height);
+    make_atomic_aov_image(film_pixels, film_width, film_height, spi, atomics)
 }
 
 fn @gpu_get_framebuffer(spi: i32, use_framebuffer: bool, atomics: Atomics) -> ColorAOVImage {
@@ -223,7 +224,7 @@ fn @gpu_hit_shade_handler(acc: Accelerator
                         , payload_info: PayloadInfo
                         , begin: i32
                         , end: i32
-                        , use_framebuffer: bool) -> () {    
+                        , use_framebuffer: bool) -> () {
     let mut primary : PrimaryStream;
     ignis_get_primary_stream_const(0, &mut primary);
     let mut secondary : SecondaryStream;
@@ -623,16 +624,16 @@ fn @gpu_generate_rays( primary: PrimaryStream
                      , config: RenderConfig
                      , payload_info: PayloadInfo
                      , gen_info: GenerateRayInfo
-                     , film_width: i32
-                     , film_height: i32
+                     , work_width: i32
+                     , work_height: i32
                      ) -> i32 {
     let spi          = config.spi;
     let current_size = gen_info.size;
     let first_ray_id = gen_info.next_id;
     let first_dst_id = current_size;
-    let film_size    = film_width * film_height;
-    let num_rays     = min(spi * film_size - first_ray_id, gpu_config.stream_capacity - first_dst_id);
-    let film_div     = make_fast_div(film_width as u32);
+    let work_size    = work_width * work_height;
+    let num_rays     = min(spi * work_size - first_ray_id, gpu_config.stream_capacity - first_dst_id);
+    let work_div     = make_fast_div(work_width as u32);
 
     let ray_ids   = primary.rays.id;
     let write_ray = make_ray_stream_writer(primary.rays, 1);
@@ -653,11 +654,11 @@ fn @gpu_generate_rays( primary: PrimaryStream
         let dst_id = first_dst_id + gid;
         let sample = ray_id % spi;
         let pixel  = ray_id / spi;
-        let y = fast_div(film_div, pixel as u32) as i32;
-        let x = pixel - y * film_width;
+        let y = fast_div(work_div, pixel as u32) as i32;
+        let x = pixel - y * work_width;
         let payload = get_payload(dst_id, 0);
 
-        let (ray, rnd) = @emitter(sample, x, y, film_width, film_height, payload);
+        let (ray, rnd) = @emitter(sample, x, y, work_width, work_height, payload);
         if let Option[Ray]::Some(actual_ray) = ray {
             write_ray(dst_id, 0, actual_ray);
             write_rnd(dst_id, 0, rnd.get_counter());
@@ -789,7 +790,7 @@ fn @gpu_trace( acc: Accelerator
             let last = temp_host.ray_ends(mat_id);
             if first < last {
                 pipeline.on_hit_shade(mat_id, first, last);
-                // acc.sync(); // Uncomment this for debugging
+                if work_info.debug_trace { acc.sync(); }
                 first = last;
             }
         }
@@ -1065,8 +1066,7 @@ fn @make_gpu_device( dev_id: i32
         }
     },
     load_aov_image = @ |id, spi| {
-        let work_info = get_work_info();
-        gpu_get_aov_image(id, work_info.width, work_info.height, spi, atomics)
+        gpu_get_aov_image(id, spi, atomics)
     },
     load_rays = @ || {
         let mut rays: &[StreamRay]; // TODO: Alignment?

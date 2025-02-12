@@ -60,7 +60,7 @@ fn @make_ppm_lightcache(device: Device, photon_count: i32, scene_bbox: BBox) -> 
             let id = light_cache_buffer.add_atomic_i32(0, 1);
             store_ppm_photon(photon, id, light_cache_buffer)
         },
-        get = @ |id| load_ppm_photon(id, light_cache_buffer),
+        get   = @ |id| load_ppm_photon(id, light_cache_buffer),
         query = @ |pos, radius, body| -> Color {
             if radius <= flt_eps || actual_photon_count == 0 { return(color_builtins::black) }
 
@@ -209,12 +209,10 @@ fn @make_ppm_light_renderer(max_path_len: i32, light_cache: LightCache) -> Techn
             if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, true) {
                 let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
                 if color_average(contrib) > flt_eps {
-                    write_ppmraypayload(payload, PPMRayPayload {
-                        contrib         = contrib,
-                        depth           = pt.depth + 1,
-                        eta             = pt.eta * mat_sample.eta,
-                        radius_or_light = pt.radius_or_light,
-                        path_type       = pt.path_type, // Not used
+                    write_ppmraypayload(payload, pt.{
+                        contrib = contrib,
+                        depth   = pt.depth + 1,
+                        eta     = pt.eta * mat_sample.eta
                     });
                     return(make_option(
                         make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
@@ -231,9 +229,6 @@ fn @make_ppm_light_renderer(max_path_len: i32, light_cache: LightCache) -> Techn
         on_bounce = on_bounce,
     }
 }
-
-static AOV_PPM_DIRECT  = 1;
-static AOV_PPM_MERGING = 2;
 
 // fn @ppm_compute_radius(max_radius: f32, _iter: i32) = math_builtins::fmax(max_radius, 1e-5:f32);
 fn @ppm_compute_radius(max_radius: f32, iter: i32) -> f32 {
@@ -389,10 +384,9 @@ fn @make_ppm_path_renderer(device: Device, max_path_len: i32, min_path_len: i32,
     }
 
     make_empty_technique().{
-        on_hit         = on_hit,
-        on_miss        = on_miss,
-        on_shadow      = TechniqueNoShadowFunction, //on_shadow,
-        on_bounce      = on_bounce,
+        on_hit    = on_hit,
+        on_miss   = on_miss,
+        on_bounce = on_bounce,
     }
 }
 

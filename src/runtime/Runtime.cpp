@@ -385,7 +385,7 @@ void Runtime::stepVariant(size_t variant)
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
     settings.user_seed = mOptions.Seed;
-    settings.variant   = variant;
+    settings.pass      = variant;
 
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings);
 
@@ -445,7 +445,7 @@ void Runtime::traceVariant(const std::vector<Ray>& rays, size_t variant)
     settings.iteration = mCurrentIteration;
     settings.frame     = mCurrentFrame;
     settings.user_seed = mOptions.Seed;
-    settings.variant   = variant;
+    settings.pass      = variant;
 
     mDevice->render(mTechniqueVariantShaderSets.at(variant), settings);
 

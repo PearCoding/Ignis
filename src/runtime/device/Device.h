@@ -29,12 +29,12 @@ public:
     struct RenderSettings {
         const Ray* rays  = nullptr; // If non-null, width contains the number of rays and height is set to 1
         size_t spi       = 8;
-        size_t width     = 0;
-        size_t height    = 0;
+        size_t width     = 0; // The workload width.  Not necessarily the same as the framebuffer
+        size_t height    = 0; // The workload height. Not necessarily the same as the framebuffer
         size_t iteration = 0;
         size_t frame     = 0;
         size_t user_seed = 0;
-        size_t variant   = 0;
+        size_t pass      = 0;
         TechniqueVariantInfo info;
     };
 

@@ -138,6 +138,7 @@ public:
     void setCurrentSceneSettings(const Device::SceneSettings&) override;
     const Device::SceneSettings& currentSceneSettings() const override;
     const Device::RenderSettings& currentRenderSettings() const override;
+    const Device::SetupSettings& setupSettings() const override;
 
     std::pair<size_t, size_t> framebufferSize() const override;
 

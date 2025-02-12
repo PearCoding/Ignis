@@ -193,6 +193,11 @@ public:
         StatusFlags |= (int)Flags::DirtyHost;
     }
 
+    inline void markClean()
+    {
+        StatusFlags &= ~((int)Flags::DirtyDevice | (int)Flags::DirtyHost);
+    }
+
     /// @brief If the array is buffered, will make sure both buffers are in sync
     inline void sync()
     {

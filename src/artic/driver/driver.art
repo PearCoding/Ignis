@@ -1,17 +1,18 @@
-// TODO: Refactor out
+// The actual work for the main loop to do.
+// `width` and `height` do not have to be related to the framebuffer.
 struct WorkInfo {
     width:                           i32,
     height:                          i32,
     advanced_shadows:                bool,
     advanced_shadows_with_materials: bool,
-    framebuffer_locked:              bool
+    framebuffer_locked:              bool,
+    debug_trace:                     bool
 }
 
 // Driver functions ----------------------------------------------------------------
 
 #[import(cc = "C")] fn ignis_get_work_info(&mut WorkInfo) -> ();
-#[import(cc = "C")] fn ignis_get_film_data(&mut &mut [f32], &mut i32, &mut i32) -> ();
-#[import(cc = "C")] fn ignis_get_aov_image(&[u8], &mut &mut [f32]) -> ();
+#[import(cc = "C")] fn ignis_get_aov_image(&[u8], &mut &mut [f32], &mut i32, &mut i32) -> ();
 
 #[import(cc = "C")] fn ignis_get_primary_stream(i32, &mut PrimaryStream, i32) -> ();
 #[import(cc = "C")] fn ignis_get_primary_stream_const(i32, &mut PrimaryStream) -> ();

@@ -44,26 +44,16 @@ static inline DynTableData assignDynTable(const IDeviceInterface::DynTableProxy&
 
 using namespace IG;
 extern "C" {
-IG_EXPORT void ignis_get_film_data(float** pixels, int* width, int* height)
+IG_EXPORT void ignis_get_aov_image(const char* name, float** pixels, int* width, int* height)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
 
-    auto aov = device->loadAOVImageForDevice({}, !device->currentRenderSettings().info.LockFramebuffer /* Framebuffer will not be modified if it is locked */);
+    const bool willBeModified = !device->currentRenderSettings().info.LockFramebuffer; /* Framebuffer will not be modified if it is locked */
+    auto aov = device->loadAOVImageForDevice(name, willBeModified);
     *pixels  = aov.DataPtr;
     *width   = (int)aov.Width;
     *height  = (int)aov.Height;
-
-    IG_ASSERT(aov.Width == std::get<0>(device->framebufferSize()) && aov.Height == std::get<1>(device->framebufferSize()), "Expected framebuffer size to be in sync with the internal framebuffer size");
-}
-
-IG_EXPORT void ignis_get_aov_image(const char* name, float** aov_pixels)
-{
-    IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
-    IG_ASSERT(device, "Expected valid interface");
-
-    auto aov    = device->loadAOVImageForDevice(name, true); // Assume the AOV will be modified
-    *aov_pixels = aov.DataPtr;
 
     IG_ASSERT(aov.Width == std::get<0>(device->framebufferSize()) && aov.Height == std::get<1>(device->framebufferSize()), "Expected AOV size to be in sync with the actual framebuffer");
 }
@@ -72,13 +62,12 @@ IG_EXPORT void ignis_get_work_info(WorkInfo* info)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
-    const auto framebufferSize = device->framebufferSize();
-    info->width                = (int)std::get<0>(framebufferSize);
-    info->height               = (int)std::get<1>(framebufferSize);
-
+    info->width                           = (int)device->currentRenderSettings().width;
+    info->height                          = (int)device->currentRenderSettings().height;
     info->advanced_shadows                = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::Advanced;
     info->advanced_shadows_with_materials = device->currentRenderSettings().info.ShadowHandlingMode == IG::ShadowHandlingMode::AdvancedWithMaterials;
     info->framebuffer_locked              = device->currentRenderSettings().info.LockFramebuffer;
+    info->debug_trace                     = device->setupSettings().DebugTrace;
 }
 
 IG_EXPORT void ignis_load_bvh2_ent(const char* prim_type, Node2** nodes, EntityLeaf1** objs)

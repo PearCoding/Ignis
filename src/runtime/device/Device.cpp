@@ -17,82 +17,24 @@ Device::~Device()
 }
 
 Target Device::target() const { return mDevice->target(); }
-
 size_t Device::framebufferWidth() const { return std::get<0>(mDevice->framebufferSize()); }
-
 size_t Device::framebufferHeight() const { return std::get<1>(mDevice->framebufferSize()); }
 
-void Device::connectGlobalRegistry(ParameterSet* parameter_set)
-{
-    mDevice->connectGlobalRegistry(parameter_set);
-}
+void Device::connectGlobalRegistry(ParameterSet* parameter_set) { mDevice->connectGlobalRegistry(parameter_set); }
+void Device::assignScene(const SceneSettings& settings) { mDevice->setCurrentSceneSettings(settings); }
+void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings) { mDevice->runDeviceShader(shaderSet, settings); }
+void Device::resize(size_t width, size_t height) { mDevice->resizeFramebuffer(width, height); }
+void Device::releaseAll() { mDevice->releaseAllMemory(); }
 
-void Device::assignScene(const SceneSettings& settings)
-{
-    mDevice->setCurrentSceneSettings(settings);
-}
+std::vector<std::string> Device::getFramebufferNames() const { return mDevice->getAOVNames(); }
+Device::AOVAccessor Device::getFramebufferForHost(const std::string& name, bool willBeModified) { return Device::AOVAccessor{ .Data = mDevice->loadAOVImageForHost(name, willBeModified).DataPtr }; }
+Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name, bool willBeModified) { return Device::AOVAccessor{ .Data = mDevice->loadAOVImageForDevice(name, willBeModified).DataPtr }; }
+void Device::clearAllFramebuffer() { mDevice->clearAllAOVs(); }
+void Device::clearFramebuffer(const std::string& name) { mDevice->clearAOV(name); }
 
-void Device::render(const TechniqueVariantShaderSet& shaderSet, const Device::RenderSettings& settings)
-{
-    mDevice->runDeviceShader(shaderSet, settings);
-}
-
-void Device::resize(size_t width, size_t height)
-{
-    mDevice->resizeFramebuffer(width, height);
-}
-
-void Device::releaseAll()
-{
-    mDevice->releaseAllMemory();
-}
-
-std::vector<std::string> Device::getFramebufferNames() const
-{
-    return mDevice->getAOVNames();
-}
-
-Device::AOVAccessor Device::getFramebufferForHost(const std::string& name, bool willBeModified)
-{
-    const auto acc = mDevice->loadAOVImageForHost(name, willBeModified);
-    return {
-        .Data = acc.DataPtr
-    };
-}
-
-Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name, bool willBeModified)
-{
-    const auto acc = mDevice->loadAOVImageForDevice(name, willBeModified);
-    return {
-        .Data = acc.DataPtr
-    };
-}
-
-void Device::clearAllFramebuffer()
-{
-    mDevice->clearAllAOVs();
-}
-
-void Device::clearFramebuffer(const std::string& name)
-{
-    mDevice->clearAOV(name);
-}
-
-size_t Device::getBufferSizeInBytes(const std::string& name)
-{
-    const size_t size = mDevice->loadBufferByName(name).SizeInBytes;
-    return size;
-}
-
-bool Device::copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes)
-{
-    return mDevice->copyBufferToHost(name, dst, sizeInBytes);
-}
-
-bool Device::copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes)
-{
-    return mDevice->copyBufferFromHost(name, src, sizeInBytes);
-}
+size_t Device::getBufferSizeInBytes(const std::string& name) { return mDevice->loadBufferByName(name).SizeInBytes; }
+bool Device::copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes) { return mDevice->copyBufferToHost(name, dst, sizeInBytes); }
+bool Device::copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes) { return mDevice->copyBufferFromHost(name, src, sizeInBytes); }
 
 Device::BufferAccessor Device::getBufferForDevice(const std::string& name)
 {
@@ -112,10 +54,7 @@ Device::BufferAccessor Device::requestBufferForDevice(const std::string& name, s
     };
 }
 
-const Statistics& Device::getStatistics()
-{
-    return mDevice->getAcquiredStatistics();
-}
+const Statistics& Device::getStatistics() { return mDevice->getAcquiredStatistics(); }
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
 {
@@ -143,13 +82,6 @@ ImageInfoOutput Device::imageinfo(const ImageInfoSettings& settings)
     return mDevice->runImageInfoShader(in_pixels, settings);
 }
 
-void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output)
-{
-    mDevice->runBakeShader(shader, resource_map, output);
-}
-
-void Device::runPass(const ShaderOutput<void*>& shader, void* userData)
-{
-    mDevice->runPassShader(shader, userData);
-}
+void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output) { mDevice->runBakeShader(shader, resource_map, output); }
+void Device::runPass(const ShaderOutput<void*>& shader, void* userData) { mDevice->runPassShader(shader, userData); }
 } // namespace IG

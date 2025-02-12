@@ -70,6 +70,7 @@ public:
     virtual void setCurrentSceneSettings(const Device::SceneSettings&)  = 0;
     virtual const Device::SceneSettings& currentSceneSettings() const   = 0;
     virtual const Device::RenderSettings& currentRenderSettings() const = 0;
+    virtual const Device::SetupSettings& setupSettings() const          = 0;
 
     virtual std::pair<size_t, size_t> framebufferSize() const = 0;
     inline size_t framebufferArea() const { return std::get<0>(framebufferSize()) * std::get<1>(framebufferSize()); }
