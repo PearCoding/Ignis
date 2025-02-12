@@ -50,6 +50,18 @@ static std::string beautiful_time(uint64 ms)
     return stream.str();
 }
 
+static inline Path append_iteration(const Path& p, size_t iteration)
+{
+    const std::string suffix = "_iter_" + std::to_string(iteration);
+    return Path(p).replace_filename(p.stem().generic_string() + suffix + p.extension().generic_string());
+}
+
+static inline Path append_seconds(const Path& p, size_t seconds)
+{
+    const std::string suffix = "_time_" + std::to_string(seconds);
+    return Path(p).replace_filename(p.stem().generic_string() + suffix + p.extension().generic_string());
+}
+
 int main(int argc, char** argv)
 {
     ProgramOptions cmd(argc, argv, ApplicationType::CLI, "Command Line Interface");
@@ -125,6 +137,7 @@ int main(int argc, char** argv)
 
     std::vector<double> samples_sec;
 
+    auto progress_time = std::chrono::high_resolution_clock::now();
     SectionTimer timer_render;
     while (runtime->currentSampleCount() < (size_t)cmd.SPP.value_or(std::numeric_limits<int>::max())) {
         if (!cmd.NoProgress)
@@ -136,7 +149,21 @@ int main(int argc, char** argv)
         runtime->step(samples_sec.size() != desired_iter - 1);
         timer_render.stop();
 
-        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
+        const auto elapsed_ms     = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
+        const auto elapsed_prog_s = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - progress_time).count();
+
+        if (cmd.StatusEveryIteration.has_value() && (runtime->currentIterationCount() % *cmd.StatusEveryIteration) == 0) {
+            const Path tmp_output = append_iteration(cmd.Output, runtime->currentIterationCount());
+            if (!runtime->saveFramebuffer(tmp_output))
+                IG_LOG(L_ERROR) << "Failed to save EXR file " << tmp_output << std::endl;
+        }
+
+        if (cmd.StatusEverySeconds.has_value() && (size_t)elapsed_prog_s > *cmd.StatusEverySeconds) {
+            progress_time         = std::chrono::high_resolution_clock::now();
+            const Path tmp_output = append_seconds(cmd.Output, (size_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - runtime->renderStartTime()).count());
+            if (!runtime->saveFramebuffer(tmp_output))
+                IG_LOG(L_ERROR) << "Failed to save EXR file " << tmp_output << std::endl;
+        }
 
         samples_sec.emplace_back(1000.0 * double(SPI * runtime->framebufferWidth() * runtime->framebufferHeight()) / double(elapsed_ms));
         if (cmd.RenderTime.has_value() && timer_render.duration_ms / 1000 > cmd.RenderTime.value())

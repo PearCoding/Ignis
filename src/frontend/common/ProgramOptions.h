@@ -58,6 +58,9 @@ public:
     std::optional<int> SPI;
     IG::SPPMode SPPMode = SPPMode::Fixed;
 
+    std::optional<int> StatusEveryIteration;
+    std::optional<size_t> StatusEverySeconds;
+
     int Seed = 0;
 
     bool AcquireStats     = false;

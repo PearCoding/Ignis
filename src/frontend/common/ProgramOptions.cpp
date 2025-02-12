@@ -103,8 +103,11 @@ ProgramOptions::ProgramOptions(int argc, char** argv, ApplicationType type, cons
             "--realtime", [&]() { this->SPPMode = SPPMode::Continuous; SPI = 1; SPP = 1; },
             "Same as setting SPPMode='Continuous', SPI=1 and SPP=1 to emulate realtime rendering");
     }
-    if (type == ApplicationType::CLI)
+    if (type == ApplicationType::CLI) {
         app.add_option("--time", RenderTime, "Instead of spp, specify the maximum time in seconds to render")->excludes("--spp");
+        app.add_option("--progress", StatusEveryIteration, "Save rendering every `n` iterations to a snapshot file siffoxed with the current iteration.");
+        app.add_option("--progress-time", StatusEverySeconds, "Save rendering every `n` seconds to a snapshot file siffoxed with the current time.")->excludes("--progress");
+    }
 
     app.add_option("--seed", Seed, "Seed for the random generators. Depending on the technique this will enforce reproducibility");
 
