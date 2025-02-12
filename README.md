@@ -27,7 +27,7 @@ Currently, four frontends are available:
  - `Python API` <details><summary>Python module for scripts and notebooks.</summary>This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more. The API is only available if Python3 was found in the system. You might disable the API by setting the CMake option `IG_WITH_PYTHON_API` to Off. </details>
 
 > [!TIP]
-> Use the `--help` argument with each executables to learn more about possible parameters.
+> Use the `--help` argument with each executable to learn more about possible parameters.
 
 ## Branches
 
@@ -66,16 +66,21 @@ from the `build/` folder.
 
 ## Scene description and compatibility
 
-- <details open><summary>Own format</summary>Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures. A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
+- <details open><summary>Own format</summary>
+  Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures. A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
 </details>
 
-- <details><summary><a href="https://www.blender.org/">Blender</a></summary>A Blender plugin is available in `scripts/blender_exporter/`.</details>
+- <details><summary><a href="https://www.blender.org/">Blender</a></summary>
+  A Blender plugin is available in `scripts/blender_exporter/`.</details>
 
-- <details><summary><a href="https://www.khronos.org/gltf/">glTF</a></summary>Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.</details>
+- <details><summary><a href="https://www.khronos.org/gltf/">glTF</a></summary>
+  Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.</details>
 
-- <details><summary><a href="https://www.radiance-online.org/">Radiance</a></summary>You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.</details>
+- <details><summary><a href="https://www.radiance-online.org/">Radiance</a></summary>
+  You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.</details>
 
-- <details><summary><a href="https://www.mitsuba-renderer.org/">Mitsuba</a></summary>You might use the `igutil` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.</details>
+- <details><summary><a href="https://www.mitsuba-renderer.org/">Mitsuba</a></summary>
+  You might use the `igutil` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.</details>
 
 ## Extra tools
 
@@ -146,7 +151,7 @@ The Ignis client has an optional UI and multiple ways to interact with the scene
  - `Numpad 7` to switch to top view.
  - `Numpad 9` to look behind you.
  - `Numpad 2468` to rotate the camera.
- - Use with `Strg/Ctrl` to rotate the camera around the center of the scene. Use with `Alt` to enable first person camera behaviour. 
+ - Use with `Strg/Ctrl` to rotate the camera around the center of the scene. Use with `Alt` to enable first person camera behavior. 
 
 ## Funding and Cooperation
 
