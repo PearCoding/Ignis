@@ -15,6 +15,70 @@ A sample scene from https://github.com/KhronosGroup/glTF-Sample-Models directly 
 
 ![DragonAttenuation scene by Stanford Scan and Morgan McGuire's Computer Graphics Archive](docs/gallery3.jpeg)
 
+## Frontends
+
+The frontends of the raytracer communicate with the user and the runtime.
+Currently, four frontends are available:
+
+ - `igview` <details><summary>Standard UI interface for progressive rendering.</summary> This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position. Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms. Switching to the UI-less frontend `igcli` might be a good idea if no preview is necessary. Note, `igview` will be only available if the UI feature is enabled and SDL2 is available on your system. Disable this frontend by setting the CMake option `IG_WITH_VIEWER` to Off.</details>
+ - `igexplorer` <details><summary>Special frontend developed for glare risk assessment.</summary> Capable of loading scenes and delivering the usual window based application experience. Disable this frontend by setting the CMake option `IG_WITH_EXPLORER` to Off. </details>
+ - `igcli` <details><summary>Commandline only frontend to render images.</summary> This is the same as `igview` but without any UI specific features and no interactive controls. In contrary to `igview`, `igcli` requires a maximum iteration or time budget to be specified by the user. Progressive rendering is not that useful without a preview. (We might add progressive rendering back, but I need a convincing argument for that...) </details>
+ - `igtrace` <details><summary>Commandline only frontend to trace user-specified rays into a scene.</summary> This frontend ignores camera specific information and expects a list of rays from the user. It returns the contribution back to the user for each ray initially specified. </details>
+ - `Python API` <details><summary>Python module for scripts and notebooks.</summary>This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more. The API is only available if Python3 was found in the system. You might disable the API by setting the CMake option `IG_WITH_PYTHON_API` to Off. </details>
+
+> [!TIP]
+> Use the `--help` argument with each executables to learn more about possible parameters.
+
+## Branches
+
+Ignis has multiple branches here on Github.
+
+ - `master` The main branch. Is quite stable, fingers crossed.
+ - `development` Main development branch. Most recent stuff. Can be problematic to build. Bugs and errors included for free.
+ - `docs` Internal branch used to build the documentation automatically.
+ - `feature/*` Some upcoming but isolated features.
+ - `*` Everything else. Might be features, bug fixes or other upcoming pull requests.
+   
+## Building
+
+Information about building Ignis is available in the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/building.html) or in the offline version of the documentation inside `docs/`
+
+## Running
+
+Run a frontend of your choice like this:
+
+    igview scene/diamond_scene.json
+
+## Documentation
+
+All available components are documented in the `docs/` folder. A documentation can be created with 
+
+    cmake --build . -t ig_documentation
+
+from the `build/` folder.
+
+> [!IMPORTANT]
+> A recent version of the above documentation is available at: https://pearcoding.github.io/Ignis/ 
+
+## Scene description and compatibility
+
+- <details open><summary>Own format</summary>Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures. A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
+</details>
+
+- <details><summary>[Blender](https://www.blender.org/)</summary>A Blender plugin is available in `scripts/blender_exporter/`.</details>
+
+- <details><summary>[glTF](https://www.khronos.org/gltf/)</summary>Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.</details>
+
+- <details><summary>[Radiance](https://www.radiance-online.org/)</summary>You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.</details>
+
+- <details><summary>[Mitsuba](https://www.mitsuba-renderer.org/)</summary>You might use the `igutil` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.</details>
+
+## Extra tools
+
+The tool `igutil` is able to convert between multiple formats like the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa. Further it can output information embedded inside images.
+
+This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option `IG_WITH_TOOLS` to Off.
+
 ## Dependencies
 
  - AnyDSL <https://github.com/AnyDSL/anydsl>
@@ -32,6 +96,7 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - bvh <https://github.com/madmann91/bvh>
  - Catch2 <https://github.com/catchorg/Catch2>
  - CLI11 <https://github.com/CLIUtils/CLI11>
+ - cpptrace <https://github.com/jeremy-rifkin/cpptrace>
  - Eigen3 <http://eigen.tuxfamily.org>
  - imgui <https://github.com/ocornut/imgui>
  - imgui-markdown <https://github.com/juliettef/imgui_markdown>
@@ -46,74 +111,11 @@ Have a look at [CPM](https://github.com/cpm-cmake/CPM.cmake) for more informatio
  - tinyobjloader <https://github.com/tinyobjloader/tinyobjloader>
  - tinyparser-mitsuba <https://github.com/PearCoding/TinyParser-Mitsuba>
 
-## Docker Image
+## Docker Image *(currently not maintained)*
 
 Ignis is available on docker hub with some preconfigured flavours! [pearcoding/ignis](https://hub.docker.com/repository/docker/pearcoding/ignis)
 
 More information is available here [docker/README.md](docker/README.md)
-
-## Branches
-
-Ignis has multiple branches here on Github.
-
- - `master` The main branch. Is quite stable, fingers crossed.
- - `development` Main development branch. Most recent stuff. Can be problematic to build. Bugs and errors included for free.
- - `docs` Internal branch used to build the documentation automatically.
- - `feature/*` Some upcoming but isolated features.
- - `*` Everything else. Might be features, bug fixes or other upcoming pull requests.
-   
-## Building
-
-Information about building Ignis is available in the documentation [online](https://pearcoding.github.io/Ignis/src/getting_started/building.html) or in the offline version of the documentation inside `docs/`
-
-## Frontends
-
-The frontends of the raytracer communicate with the user and the runtime.
-Currently, four frontends are available:
-
- - `igview` This is the standard UI interface which displays the scene getting progressively rendered. This frontend is very good to get a first impression of the rendered scene and fly around to pick the one best camera position. Keep in mind that some power of your underlying hardware is used to render the UI and the tonemapping algorithms. Switching to the UI-less frontend `igcli` might be a good idea if no preview is necessary. Note, `igview` will be only available if the UI feature is enabled and SDL2 is available on your system. Disable this frontend by setting the CMake option `IG_WITH_VIEWER` to Off.
- - `igexplorer` A special frontend developed for glare risk assessment. Capable of loading scenes and delivering the usual window based application experience. Disable this frontend by setting the CMake option `IG_WITH_EXPLORER` to Off.
- - `igcli` The commandline only frontend is the same as `igview` but without any UI specific features and no interactive controls. In contrary to `igview`, `igcli` requires a maximum iteration or time budget to be specified by the user. Progressive rendering is not that useful without a preview. (We might add progressive rendering back, but I need a convincing argument for that...)
- - `igtrace` This commandline only frontend ignores camera specific information and expects a list of rays from the user. It returns the contribution back to the user for each ray initially specified.
- - `Python API` This simple python API allows to communicate with the runtime and allows you to work with the raytracer in interactive notebooks and more. The API is only available if Python3 was found in the system. You might disable the API by setting the CMake option `IG_WITH_PYTHON_API` to Off.
-
-Use the `--help` argument on each of the executables to get information of possible arguments for each frontend.
-
-## Running
-
-Run a frontend of your choice like this:
-
-    igview scene/diamond_scene.json
-
-
-## Documentation
-
-All available components are documented in the `docs/` folder. A documentation can be created with 
-
-    cmake --build . -t ig_documentation
-
-from the `build/` folder.
-
-A quite recent version of the above documentation is available at: https://pearcoding.github.io/Ignis/ 
-
-## Scene description
-
-Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures.
-A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
-
-You might use the `igutil` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.
-
-You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.
-
-Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.
-
-A Blender plugin is available in `scripts/blender_exporter/`.
-
-## Extra tools
-
-The tool `igutil` is able to convert between multiple formats like the Radiance favorite image format HDR to the advanced OpenEXR format and vice versa. Further it can output information embedded inside images.
-
-This is useful to ease the transfer from Radiance to our raytracer, but you can disable them by setting the CMake option `IG_WITH_TOOLS` to Off.
 
 ## How to use `igview`
 
