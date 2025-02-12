@@ -65,13 +65,13 @@ from the `build/` folder.
 - <details open><summary>Own format</summary>Ignis uses a JSON based flat scene description with instancing. Support for shading nodes is available via PExpr, image and procedural textures. A schema is available at [docs/refs/ignis.schema.json](docs/refs/ignis.schema.json)
 </details>
 
-- <details><summary>[Blender](https://www.blender.org/)</summary>A Blender plugin is available in `scripts/blender_exporter/`.</details>
+- <details><summary><a href="https://www.blender.org/">Blender</a></summary>A Blender plugin is available in `scripts/blender_exporter/`.</details>
 
-- <details><summary>[glTF](https://www.khronos.org/gltf/)</summary>Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.</details>
+- <details><summary><a href="https://www.khronos.org/gltf/">glTF</a></summary>Ignis is able to understand glTF files. You can embed glTF files in Ignis's own scene description file or directly use the glTF file as an input to the multiple frontends.</details>
 
-- <details><summary>[Radiance](https://www.radiance-online.org/)</summary>You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.</details>
+- <details><summary><a href="https://www.radiance-online.org/">Radiance</a></summary>You can also use `rad2json` to convert geometry used in the Radiance framework to our tool. Keep in mind that no BSDF and lights are mapped as the two raytracers are vastile different in these regards.</details>
 
-- <details><summary>[Mitsuba](https://www.mitsuba-renderer.org/)</summary>You might use the `igutil` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.</details>
+- <details><summary><a href="https://www.mitsuba-renderer.org/">Mitsuba</a></summary>You might use the `igutil` to convert a Mitsuba scene description to our own format. Keep in mind that this feature is very experimental and not all BSDFs work out of the box.</details>
 
 ## Extra tools
 
