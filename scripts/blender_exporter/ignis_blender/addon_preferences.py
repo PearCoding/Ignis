@@ -6,11 +6,9 @@ from bpy.props import (
 )
 from bpy.types import AddonPreferences
 
-package_name = __import__(__name__.split('.')[0])
-
 
 class IgnisPreferences(AddonPreferences):
-    bl_idname = package_name.__package__
+    bl_idname = __package__
 
     api_dir: StringProperty(
         name="API Directory",
@@ -56,4 +54,4 @@ def unregister():
 
 
 def get_prefs():
-    return bpy.context.preferences.addons[package_name.__package__].preferences
+    return bpy.context.preferences.addons[__package__].preferences

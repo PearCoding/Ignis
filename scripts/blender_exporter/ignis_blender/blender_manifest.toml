@@ -1,0 +1,13 @@
+schema_version = "1.0.0"
+
+id = "ignis"
+version = "0.5.4"
+name = "Ignis Scene"
+tagline = "Export scene to Ignis or render within Blender"
+maintainer = "Ömercan Yazici, Maher Rayes, Pascal Grittmann"
+type = "add-on"
+website = "https://pearcoding.github.io/Ignis/"
+tags = ["Import-Export", "Render"]
+
+blender_version_min = "4.2.0"
+license = ["SPDX:MIT"]
