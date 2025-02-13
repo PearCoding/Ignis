@@ -18,7 +18,7 @@ class IgnisRenderUpdater:
         self.previous_iter = 0
 
     def update(self, runtime):
-        # Only update if the iteration count has changed. This will also skip the phase were no iteration was made yet
+        # Only update if the iteration count has changed. This will also skip the phase in which no iteration was made yet
         if self.previous_iter == runtime.IterationCount:
             return
         self.previous_iter = runtime.IterationCount
@@ -43,13 +43,16 @@ class IgnisRenderUpdater:
                 layer.passes["Combined"].rect = buffer
             else:
                 # Our channels only have three channels
-                layer.passes[aov_name].rect = buffer
+                try:
+                    layer.passes[aov_name].rect = buffer
+                except KeyError as e:
+                    self.report({'ERROR'}, f"Ignis: Expected {aov_name} to be registered in the first iteration. Ignoring output")
 
         self.renderer.update_result(self.result)
 
-    def finalize(self):
+    def finalize(self, canceled: bool):
         if self.result is not None:
-            self.renderer.end_result(self.result)
+            self.renderer.end_result(self.result, cancel=canceled)
 
     def _setup(self, runtime):
         # Add aovs as passes and assume the
@@ -132,7 +135,7 @@ class IgnisRender(bpy.types.RenderEngine):
             opts.Target = ig.Target.pickGPU()
         opts.Target.ThreadCount = threads
         opts.OverrideFilmSize = [x, y]
-        opts.Denoiser.Enabled = False#scene.ignis.use_denoiser
+        opts.Denoiser.Enabled = scene.ignis.use_denoiser
 
         with ig.loadFromString(json.dumps(exported_scene), sceneDir, opts) as runtime:
             if not runtime:
@@ -161,7 +164,7 @@ class IgnisRender(bpy.types.RenderEngine):
             bpy.app.timers.unregister(_time_func)
 
             updater.update(runtime)
-            updater.finalize()
+            updater.finalize(self.test_break())
         
         self.update_stats("", "")
 
