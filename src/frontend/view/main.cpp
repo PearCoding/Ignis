@@ -112,7 +112,7 @@ int main(int argc, char** argv)
 
     std::unique_ptr<Context> ui;
     try {
-        ui = std::make_unique<Context>(cmd.SPPMode, runtime.get(), runtime->technique() == "debug", cmd.DPI.value_or(-1));
+        ui = std::make_unique<Context>(cmd.SPPMode, runtime.get(), cmd.DPI.value_or(-1));
     } catch (...) {
         return EXIT_FAILURE;
     }
@@ -128,8 +128,6 @@ int main(int argc, char** argv)
     BoundingBox bbox = runtime->sceneBoundingBox();
     bbox.extend(camera.Eye);
     ui->setTravelSpeed(std::max(1e-4f, bbox.diameter().maxCoeff() / 50));
-
-    auto lastDebugMode = ui->currentDebugMode();
 
     IG_LOG(L_INFO) << "Started rendering..." << std::endl;
 
@@ -164,12 +162,6 @@ int main(int argc, char** argv)
             break;
         default:
             break;
-        }
-
-        if (lastDebugMode != ui->currentDebugMode()) {
-            runtime->setParameter("__debug_mode", (int)ui->currentDebugMode());
-            request_reset = true;
-            lastDebugMode = ui->currentDebugMode();
         }
         timer_input.stop();
 

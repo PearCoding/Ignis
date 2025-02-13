@@ -2,7 +2,6 @@
 
 #include "CameraProxy.h"
 #include "SPPMode.h"
-#include "technique/DebugMode.h"
 
 #include <memory>
 
@@ -20,7 +19,7 @@ enum class ToneMappingMethod {
 class Runtime;
 class Context {
 public:
-    Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi);
+    Context(SPPMode sppmode, Runtime* runtime, float dpi);
     ~Context();
 
     void setTitle(const std::string& str);
@@ -40,13 +39,10 @@ public:
     };
     [[nodiscard]] UpdateResult update();
 
-    [[nodiscard]] inline DebugMode currentDebugMode() const { return mDebugMode; }
-
     void setTravelSpeed(float v);
 
 private:
     const SPPMode mSPPMode;
-    DebugMode mDebugMode;
 
     friend class ContextInternal;
     std::unique_ptr<class ContextInternal> mInternal;

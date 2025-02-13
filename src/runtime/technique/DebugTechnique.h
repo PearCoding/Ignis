@@ -1,6 +1,5 @@
 #pragma once
 
-#include "DebugMode.h"
 #include "Technique.h"
 
 namespace IG {
@@ -11,8 +10,5 @@ public:
 
     TechniqueInfo getInfo(const LoaderContext& ctx) const override;
     void generateBody(const SerializationInput& input) const override;
-
-private:
-    DebugMode mInitialDebugMode;
 };
 } // namespace IG

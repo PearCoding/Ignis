@@ -78,8 +78,7 @@ public:
 
     std::string CurrentAOV = "Color";
 
-    bool Running       = true;
-    bool ShowDebugMode = false;
+    bool Running = true;
 
     IG::PoseManager PoseManager;
     CameraPose LastCameraPose;
@@ -769,26 +768,6 @@ public:
                 }
             }
 
-            if (ShowDebugMode) {
-                if (ImGui::CollapsingHeader("Debug", ImGuiTreeNodeFlags_DefaultOpen)) {
-                    static auto debugModeNames = getDebugModeNames();
-                    ImGui::BeginDisabled(!Running);
-                    std::string current_method = debugModeToString(Parent->mDebugMode);
-                    if (ImGui::BeginCombo("Mode", current_method.c_str())) {
-                        for (const auto& s : debugModeNames) {
-                            bool is_selected = (current_method == s);
-                            if (ImGui::Selectable(s.c_str(), is_selected) && Running)
-                                Parent->mDebugMode = stringToDebugMode(s).value();
-                            if (is_selected && Running)
-                                ImGui::SetItemDefaultFocus();
-                        }
-
-                        ImGui::EndCombo();
-                    }
-                    ImGui::EndDisabled();
-                }
-            }
-
             if (ImGui::CollapsingHeader("ToneMapping", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Checkbox("Automatic", &ToneMapping_Automatic);
                 if (!ToneMapping_Automatic) {
@@ -880,9 +859,8 @@ public:
 
 ////////////////////////////////////////////////////////////////
 
-Context::Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi)
+Context::Context(SPPMode sppmode, Runtime* runtime, float dpi)
     : mSPPMode(sppmode)
-    , mDebugMode(DebugMode::Normal)
     , mInternal(std::make_unique<ContextInternal>())
 {
 #ifdef IG_OS_WINDOWS
@@ -894,12 +872,11 @@ Context::Context(SPPMode sppmode, Runtime* runtime, bool showDebug, float dpi)
         throw std::runtime_error("Could not setup UI");
     }
 
-    mInternal->Runtime       = runtime;
-    mInternal->Parent        = this;
-    mInternal->Width         = runtime->framebufferWidth();
-    mInternal->Height        = runtime->framebufferHeight();
-    mInternal->ShowDebugMode = showDebug;
-    mInternal->ZoomIsScale   = runtime->camera() == "orthogonal";
+    mInternal->Runtime     = runtime;
+    mInternal->Parent      = this;
+    mInternal->Width       = runtime->framebufferWidth();
+    mInternal->Height      = runtime->framebufferHeight();
+    mInternal->ZoomIsScale = runtime->camera() == "orthogonal";
 
     if (auto it = runtime->parameters().FloatParameters.find("__camera_scale"); it != runtime->parameters().FloatParameters.end())
         mInternal->DefaultCameraScale = it->second;

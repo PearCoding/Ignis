@@ -194,6 +194,7 @@ void DeviceInterface::setCurrentSceneSettings(const Device::SceneSettings& setti
     mEntityCount          = mCurrentSceneSettings.database->FixTables.count("entities") > 0 ? mCurrentSceneSettings.database->FixTables.at("entities").entryCount() : 0;
 }
 
+// TODO: Make this more performant...
 std::vector<std::string> DeviceInterface::getAOVNames() const
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
@@ -202,6 +203,7 @@ std::vector<std::string> DeviceInterface::getAOVNames() const
     names.reserve(mDeviceData.aovs.size());
     for (const auto& p : mDeviceData.aovs)
         names.push_back(p.first);
+    std::sort(names.begin(), names.end());
 
     return names;
 }
