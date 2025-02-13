@@ -158,6 +158,7 @@ if(IG_HAS_UI AND IG_WITH_EXPLORER)
 endif()
 
 if(IG_WITH_PYTHON_API)
+	set(Python_FIND_VIRTUALENV FIRST) # Take virtual environments into account
 	if (WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.26 AND Python_INTERPRETER_ID STREQUAL "Python")
 		# Windows stable ABI builds for CPython require Development.SABIModule provided by CMake>=3.26
 		find_package(Python 3.8 COMPONENTS Interpreter Development.Module Development.SABIModule)
