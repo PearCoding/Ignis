@@ -5,6 +5,11 @@ use super as all;
 use super::math_builtins;
 use super::interval;
 
+fn @safe_atan2(x: f32, y: f32) -> f32 {
+    let v = math_builtins::atan2(x, y);
+    all::select(math_builtins::isfinite(v), v, 0:f32)
+}
+
 fn @erf(x: f32) -> f32  {
     let a1 =  0.254829592:f32;
     let a2 = -0.284496736:f32;

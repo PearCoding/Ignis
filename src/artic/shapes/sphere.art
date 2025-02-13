@@ -128,7 +128,7 @@ fn @intersect_sphere(sphere: Sphere, ray: Ray) -> Option[Hit] {
     let tmin = select(t0 < ray.tmin, t1, t0);
 
 	if tmin >= ray.tmin && tmin <= ray.tmax {
-        let dir = vec3_mulf(vec3_add(L, vec3_mulf(ray.dir, tmin)), 1 / sphere.radius);
+        let dir = vec3_normalize(vec3_add(L, vec3_mulf(ray.dir, tmin)));
         make_option(make_hit(InvalidHitId, 0, tmin, sphere_map_uv(dir))) 
 	} else {
         Option[Hit]::None
