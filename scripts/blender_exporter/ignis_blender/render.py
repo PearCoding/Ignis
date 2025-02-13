@@ -15,11 +15,19 @@ class IgnisRenderUpdater:
         self.size = size
         self.result = None
         self.aov_names= []
+        self.previous_iter = 0
 
     def update(self, runtime):
+        # Only update if the iteration count has changed. This will also skip the phase were no iteration was made yet
+        if self.previous_iter == runtime.IterationCount:
+            return
+        self.previous_iter = runtime.IterationCount
+
+        # Setup the Blender side of things
         if self.result is None:
             self._setup(runtime)
         
+        # Update each pass/aov in the current layer
         layer = self.result.layers[0]
         for aov_name in self.aov_names:
             scale = 1 / runtime.IterationCount if runtime.IterationCount > 0 else 1
@@ -29,10 +37,13 @@ class IgnisRenderUpdater:
             aov = runtime.getFramebufferForHost(aov_name)
 
             buffer = np.flip(aov, axis=0).reshape(self.size[0] * self.size[1], 3) * scale
-            buffer = np.hstack([buffer, np.ones(shape=(self.size[0] * self.size[1], 1))])
-
-            pass_name = "Combined" if aov_name == "Color" else aov_name
-            layer.passes[pass_name].rect = buffer
+            if aov_name == "Color":
+                # Combined has four channels
+                buffer = np.hstack([buffer, np.ones(shape=(self.size[0] * self.size[1], 1))])
+                layer.passes["Combined"].rect = buffer
+            else:
+                # Our channels only have three channels
+                layer.passes[aov_name].rect = buffer
 
         self.renderer.update_result(self.result)
 
@@ -45,9 +56,9 @@ class IgnisRenderUpdater:
         self.aov_names = list(runtime.FramebufferNames)
         for aov_name in self.aov_names:
             if aov_name != "Color":
-                self.add_pass(aov_name)
+                self.renderer.add_pass(aov_name, channels=3, chan_id="rgb")
             
-        self.result = self.begin_result(0, 0, self.size[0], self.size[1])
+        self.result = self.renderer.begin_result(0, 0, self.size[0], self.size[1])
 
 
 class IgnisRender(bpy.types.RenderEngine):
@@ -121,7 +132,7 @@ class IgnisRender(bpy.types.RenderEngine):
             opts.Target = ig.Target.pickGPU()
         opts.Target.ThreadCount = threads
         opts.OverrideFilmSize = [x, y]
-        opts.Denoiser.Enabled = scene.ignis.use_denoiser
+        opts.Denoiser.Enabled = False#scene.ignis.use_denoiser
 
         with ig.loadFromString(json.dumps(exported_scene), sceneDir, opts) as runtime:
             if not runtime:
@@ -135,14 +146,19 @@ class IgnisRender(bpy.types.RenderEngine):
             # Update image
             updater = IgnisRenderUpdater(self, (x, y))
 
+            def _time_func():
+                updater.update(runtime)
+                return 2.0 # Every 2 seconds
+
+            bpy.app.timers.register(_time_func)
+
             while runtime.SampleCount < spp:
                 if self.test_break():
                     break
                 runtime.step()
                 self._handle_render_stat(runtime, spp)
-                if self.test_break():
-                    break
-                updater.update(runtime)
+
+            bpy.app.timers.unregister(_time_func)
 
             updater.update(runtime)
             updater.finalize()
