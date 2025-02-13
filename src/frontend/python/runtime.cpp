@@ -389,17 +389,17 @@ void runtime_module(nb::module_& m)
             // TODO: Check stride?
             r.tonemap((uint32*)output.data(), settings); })
         // .def("createGlareEvaluator", &Runtime::createGlareEvaluator, nb::keep_alive<1, 0>())
-        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
+        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminance) {
             if(!data.is_valid())
                 throw nb::buffer_error("Invalid input buffer");
             GlareEvaluator eval(&r);
             eval.setUserData(data.data(), data.shape(1), data.shape(0), false, data.device_type() == nb::device::cpu::value);
             if (multiplier.has_value())
                 eval.setMultiplier(multiplier.value());
-            if (verticalIlluminace.has_value())
-                eval.setVerticalIlluminance(verticalIlluminace.value());
+            if (verticalIlluminance.has_value())
+                eval.setVerticalIlluminance(verticalIlluminance.value());
             return eval.run(); }, "data"_a, "multiplier"_a.none() = std::nullopt, "verticalIlluminance"_a.none() = std::nullopt)
-        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1, -1>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminace) {
+        .def("runGlareEvaluation", [](Runtime& r, nb::ndarray<const float, nb::shape<-1, -1, -1>, nb::c_contig> data, std::optional<float> multiplier, std::optional<float> verticalIlluminance) {
             if(!data.is_valid())
                 throw nb::buffer_error("Invalid input buffer");
             if(data.shape(2) != 1 && data.shape(2) != 3)
@@ -408,8 +408,8 @@ void runtime_module(nb::module_& m)
             eval.setUserData(data.data(), data.shape(1), data.shape(0), data.shape(2) == 3, data.device_type() == nb::device::cpu::value);
             if (multiplier.has_value())
                 eval.setMultiplier(multiplier.value());
-            if (verticalIlluminace.has_value())
-                eval.setVerticalIlluminance(verticalIlluminace.value());
+            if (verticalIlluminance.has_value())
+                eval.setVerticalIlluminance(verticalIlluminance.value());
             return eval.run(); }, "data"_a, "multiplier"_a.none() = std::nullopt, "verticalIlluminance"_a.none() = std::nullopt)
         .def("setParameter", nb::overload_cast<const std::string&, int>(&Runtime::setParameter))
         .def("setParameter", nb::overload_cast<const std::string&, float>(&Runtime::setParameter))
@@ -425,6 +425,7 @@ void runtime_module(nb::module_& m)
         .def("clearFramebuffer", nb::overload_cast<>(&Runtime::clearFramebuffer))
         .def("clearFramebuffer", nb::overload_cast<const std::string&>(&Runtime::clearFramebuffer))
         .def("saveFramebuffer", &Runtime::saveFramebuffer)
+        .def("loadPreviousFramebuffer", &Runtime::loadPreviousFramebuffer)
         .def_prop_ro("InitialCameraOrientation", &Runtime::initialCameraOrientation)
         .def_prop_ro("IterationCount", &Runtime::currentIterationCount)
         .def_prop_ro("SampleCount", &Runtime::currentSampleCount)
@@ -492,7 +493,7 @@ void runtime_module(nb::module_& m)
         .def("loadImage", [](const Path& path, const std::string& layer) {
                 Image image = Image::load(path, nullptr, !layer.empty() ? &layer : nullptr);
                 if (!image.isValid())
-                    throw std::runtime_error("Errror while loading image");
+                    throw std::runtime_error("Error while loading image");
 
                 return nb::ndarray<nb::numpy, float, nb::ndim<3>>(image.pixels.get(), {image.height, image.width, image.channels}, nb::handle(), {}, nb::dtype<float>(), nb::device::cpu::value, 0, 'C').cast(); }, "Load image from the filesystem", "path"_a, "layer"_a = "");
 }
