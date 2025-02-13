@@ -8,6 +8,7 @@ from bpy.props import (
     IntProperty,
     FloatProperty,
     EnumProperty,
+    BoolProperty,
     PointerProperty,
 )
 
@@ -65,6 +66,11 @@ class IgnisSceneProperties(PropertyGroup):
         description="Target device to use in rendering",
         items=enums.enum_target,
         default='GPU'
+    )
+    use_denoiser: BoolProperty(
+        name="Use Denoiser",
+        description="Apply denoising if available",
+        default=True
     )
 
 

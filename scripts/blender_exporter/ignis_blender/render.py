@@ -9,6 +9,47 @@ import numpy as np
 from . import exporter, addon_preferences, api
 
 
+class IgnisRenderUpdater:
+    def __init__(self, renderer:bpy.types.RenderEngine, size: tuple[int, int]):
+        self.renderer = renderer
+        self.size = size
+        self.result = None
+        self.aov_names= []
+
+    def update(self, runtime):
+        if self.result is None:
+            self._setup(runtime)
+        
+        layer = self.result.layers[0]
+        for aov_name in self.aov_names:
+            scale = 1 / runtime.IterationCount if runtime.IterationCount > 0 else 1
+            if aov_name == "Normals" or aov_name == "Albedo":
+                scale = 1
+        
+            aov = runtime.getFramebufferForHost(aov_name)
+
+            buffer = np.flip(aov, axis=0).reshape(self.size[0] * self.size[1], 3) * scale
+            buffer = np.hstack([buffer, np.ones(shape=(self.size[0] * self.size[1], 1))])
+
+            pass_name = "Combined" if aov_name == "Color" else aov_name
+            layer.passes[pass_name].rect = buffer
+
+        self.renderer.update_result(self.result)
+
+    def finalize(self):
+        if self.result is not None:
+            self.renderer.end_result(self.result)
+
+    def _setup(self, runtime):
+        # Add aovs as passes and assume the
+        self.aov_names = list(runtime.FramebufferNames)
+        for aov_name in self.aov_names:
+            if aov_name != "Color":
+                self.add_pass(aov_name)
+            
+        self.result = self.begin_result(0, 0, self.size[0], self.size[1])
+
+
 class IgnisRender(bpy.types.RenderEngine):
     bl_idname = 'IGNIS_RENDER'
     bl_label = "Ignis"
@@ -80,6 +121,7 @@ class IgnisRender(bpy.types.RenderEngine):
             opts.Target = ig.Target.pickGPU()
         opts.Target.ThreadCount = threads
         opts.OverrideFilmSize = [x, y]
+        opts.Denoiser.Enabled = scene.ignis.use_denoiser
 
         with ig.loadFromString(json.dumps(exported_scene), sceneDir, opts) as runtime:
             if not runtime:
@@ -91,18 +133,7 @@ class IgnisRender(bpy.types.RenderEngine):
                 return
 
             # Update image
-            result = self.begin_result(0, 0, x, y)
-            layer = result.layers[0]
-
-            def update_image():
-                # runtime.tonemap(layer.passes["Combined"].rect)
-                scale = 1 / runtime.IterationCount if runtime.IterationCount > 0 else 1
-                buffer = np.flip(np.asarray(runtime.getFramebufferForHost()), axis=0).reshape(
-                    x * y, 3) * scale
-                buffer = np.hstack([buffer, np.ones(shape=(x * y, 1))])
-
-                layer.passes["Combined"].rect = buffer
-                self.update_result(result)
+            updater = IgnisRenderUpdater(self, (x, y))
 
             while runtime.SampleCount < spp:
                 if self.test_break():
@@ -111,10 +142,10 @@ class IgnisRender(bpy.types.RenderEngine):
                 self._handle_render_stat(runtime, spp)
                 if self.test_break():
                     break
-                update_image()
+                updater.update(runtime)
 
-            update_image()
-            self.end_result(result)
+            updater.update(runtime)
+            updater.finalize()
         
         self.update_stats("", "")
 

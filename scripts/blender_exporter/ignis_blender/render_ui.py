@@ -68,6 +68,7 @@ class IGNIS_RENDER_PT_pr_render(IgnisButtonsPanel, bpy.types.Panel):
 
         layout.separator()
         layout.prop(scene.ignis, "integrator")
+        layout.prop(scene.ignis, "use_denoiser")
 
 
 class IGNIS_RENDER_PT_pr_performance(IgnisButtonsPanel, bpy.types.Panel):
