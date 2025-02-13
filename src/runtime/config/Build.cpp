@@ -149,7 +149,6 @@ std::string getBuildString()
            << ") built " << getBuildTime()
            << " with " << getCompilerName()
            << " { OS: " << getOSName()
-           << "; Author: " IG_GIT_AUTHOR
            << "; Branch: " IG_GIT_BRANCH
            << "; Rev: " IG_GIT_REVISION
            << "; Date: " << getGitTimeOfCommit()
