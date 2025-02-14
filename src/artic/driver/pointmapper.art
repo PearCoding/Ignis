@@ -1,6 +1,6 @@
 type PointMapper = fn (Vec3) -> Vec3;
-fn @make_zero_pointmapper()                              = @|_: Vec3| vec3_expand(0);
-fn @make_identity_pointmapper()                          = @|p: Vec3| p;
+fn @make_zero_pointmapper()     = @|_: Vec3| vec3_expand(0);
+fn @make_identity_pointmapper() = @|p: Vec3| p;
 fn @make_normalized_pointmapper(get_bbox: fn () -> BBox, mat: Mat3x4) = @|p: Vec3| {
     let lp = mat3x4_transform_point(mat, p);
     let bbox = get_bbox();
@@ -25,12 +25,15 @@ fn @make_identity_pointmapperset() = PointMapperSet{
     to_global_normal    = make_identity_pointmapper(),
     to_normalized_point = make_identity_pointmapper()
 };
-fn @make_standard_pointmapperset(shape: Shape, entity: Entity) = PointMapperSet{
-    to_local_point      = @|p:Vec3| mat3x4_transform_point(entity.local_mat, p),
-    to_local_direction  = @|p:Vec3| mat3x3_mul(mat3x4_linear(entity.local_mat), p),
-    to_local_normal     = @|p:Vec3| mat3x3_left_mul(entity.normal_mat, p),//vec3_mulf(mat3x3_left_mul(entity.normal_mat, p), 1/vec3_len2(mat3x3_diag(entity.normal_mat))), // TODO: Really? Invalid scaling...
-    to_global_point     = @|p:Vec3| mat3x4_transform_point(entity.global_mat, p),
-    to_global_direction = @|p:Vec3| mat3x3_mul(mat3x4_linear(entity.global_mat), p),
-    to_global_normal    = @|p:Vec3| mat3x3_mul(entity.normal_mat, p),
-    to_normalized_point = make_normalized_pointmapper(shape.local_bbox, entity.local_mat)
-};
+fn @make_standard_pointmapperset(shape: Shape, entity: Entity) -> PointMapperSet {
+    let inv_normal_mat = mat3x3_invert(entity.normal_mat);
+    PointMapperSet{
+        to_local_point      = @|p:Vec3| mat3x4_transform_point(entity.local_mat, p),
+        to_local_direction  = @|p:Vec3| mat3x3_mul(mat3x4_linear(entity.local_mat), p),
+        to_local_normal     = @|p:Vec3| mat3x3_mul(inv_normal_mat, p),
+        to_global_point     = @|p:Vec3| mat3x4_transform_point(entity.global_mat, p),
+        to_global_direction = @|p:Vec3| mat3x3_mul(mat3x4_linear(entity.global_mat), p),
+        to_global_normal    = @|p:Vec3| mat3x3_mul(entity.normal_mat, p),
+        to_normalized_point = make_normalized_pointmapper(shape.local_bbox, entity.local_mat)
+    }
+}
