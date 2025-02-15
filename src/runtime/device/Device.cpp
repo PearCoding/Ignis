@@ -27,8 +27,17 @@ void Device::resize(size_t width, size_t height) { mDevice->resizeFramebuffer(wi
 void Device::releaseAll() { mDevice->releaseAllMemory(); }
 
 std::vector<std::string> Device::getFramebufferNames() const { return mDevice->getAOVNames(); }
-Device::AOVAccessor Device::getFramebufferForHost(const std::string& name, bool willBeModified) { return Device::AOVAccessor{ .Data = mDevice->loadAOVImageForHost(name, willBeModified).DataPtr }; }
-Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name, bool willBeModified) { return Device::AOVAccessor{ .Data = mDevice->loadAOVImageForDevice(name, willBeModified).DataPtr }; }
+Device::AOVAccessor Device::getFramebufferForHost(const std::string& name, AOVFlags flags)
+{
+    const auto acc = mDevice->loadAOVImageForHost(name, flags);
+    return Device::AOVAccessor{ .Data = acc.DataPtr, .Flags = acc.Flags };
+}
+Device::AOVAccessor Device::getFramebufferForDevice(const std::string& name, AOVFlags flags)
+{
+    const auto acc = mDevice->loadAOVImageForDevice(name, flags);
+    return Device::AOVAccessor{ .Data = acc.DataPtr, .Flags = acc.Flags };
+}
+
 void Device::clearAllFramebuffer() { mDevice->clearAllAOVs(); }
 void Device::clearFramebuffer(const std::string& name) { mDevice->clearAOV(name); }
 
@@ -58,8 +67,7 @@ const Statistics& Device::getStatistics() { return mDevice->getAcquiredStatistic
 
 void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
 {
-    const auto acc   = mDevice->loadAOVImageForDevice(settings.AOV, false);
-    float* in_pixels = acc.DataPtr;
+    mDevice->getCurrentGlobalRegistry()->set("__internal_tonemap_aov", settings.AOV);
 
     const size_t size           = mDevice->framebufferArea() * sizeof(uint32_t);
     uint32_t* device_out_pixels = out_pixels;
@@ -68,7 +76,7 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
     if (mDevice->isGPU())
         device_out_pixels = (uint32_t*)mDevice->requestBuffer("__internal_tonemap_output", (int)size, 0).DataPtr;
 
-    mDevice->runTonemapShader(in_pixels, device_out_pixels, settings);
+    mDevice->runTonemapShader(device_out_pixels, settings);
 
     if (mDevice->isGPU())
         mDevice->copyBufferToHost("__internal_tonemap_output", out_pixels, size);
@@ -76,10 +84,8 @@ void Device::tonemap(uint32_t* out_pixels, const TonemapSettings& settings)
 
 ImageInfoOutput Device::imageinfo(const ImageInfoSettings& settings)
 {
-    const auto acc   = mDevice->loadAOVImageForDevice(settings.AOV, false);
-    float* in_pixels = acc.DataPtr;
-
-    return mDevice->runImageInfoShader(in_pixels, settings);
+    mDevice->getCurrentGlobalRegistry()->set("__internal_imageinfo_aov", settings.AOV);
+    return mDevice->runImageInfoShader(settings);
 }
 
 void Device::bake(const ShaderOutput<void*>& shader, const std::vector<std::string>* resource_map, float* output) { mDevice->runBakeShader(shader, resource_map, output); }

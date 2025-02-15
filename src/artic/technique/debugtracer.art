@@ -1,30 +1,30 @@
 
 
 fn @make_debug_renderer(device: Device, spi: i32) -> Technique {
-    let global_normal_aov           = device.load_aov_image("Global Normal",           spi);
-    let global_tangent_aov          = device.load_aov_image("Global Tangent",          spi);
-    let global_bitangent_aov        = device.load_aov_image("Global Bitangent",        spi);
-    let global_geometric_normal_aov = device.load_aov_image("Global Geometric Normal", spi);
-    let local_normal_aov            = device.load_aov_image("Local Normal",            spi);
-    let local_tangent_aov           = device.load_aov_image("Local Tangent",           spi);
-    let local_bitangent_aov         = device.load_aov_image("Local Bitangent",         spi);
-    let local_geometric_normal_aov  = device.load_aov_image("Local Geometric Normal",  spi);
-    let texcoord_aov                = device.load_aov_image("Texcoord",                spi);
-    let primcoord_aov               = device.load_aov_image("Primcoord",               spi);
-    let generated_coord_aov         = device.load_aov_image("Gencoord",                spi);
-    let global_point_aov            = device.load_aov_image("Global Point",            spi);
-    let local_point_aov             = device.load_aov_image("Local Point",             spi);
-    let hit_distance_aov            = device.load_aov_image("Hit Distance ",           spi);
-    let area_aov                    = device.load_aov_image("Area",                    spi);
-    let prim_id_map_aov             = device.load_aov_image("PrimID",                  spi);
-    let entity_id_map_aov           = device.load_aov_image("EntityID",                spi);
-    let material_id_map_aov         = device.load_aov_image("MaterialID",              spi);
-    let object_id_raw_aov           = device.load_aov_image("Raw IDs",                 spi);
-    let bsdf_type_aov               = device.load_aov_image("BSDF Type",               spi);
-    let check_bsdf_aov              = device.load_aov_image("Check BSDF",              spi);
-    let medium_inner_map_aov        = device.load_aov_image("Medium Inner",            spi);
-    let medium_outer_map_aov        = device.load_aov_image("Medium Outer",            spi);
-    let medium_raw_aov              = device.load_aov_image("Raw Medium IDs",          spi);
+    let global_normal_aov           = device.load_aov_image("Global Normal",           spi, 0);
+    let global_tangent_aov          = device.load_aov_image("Global Tangent",          spi, 0);
+    let global_bitangent_aov        = device.load_aov_image("Global Bitangent",        spi, 0);
+    let global_geometric_normal_aov = device.load_aov_image("Global Geometric Normal", spi, 0);
+    let local_normal_aov            = device.load_aov_image("Local Normal",            spi, 0);
+    let local_tangent_aov           = device.load_aov_image("Local Tangent",           spi, 0);
+    let local_bitangent_aov         = device.load_aov_image("Local Bitangent",         spi, 0);
+    let local_geometric_normal_aov  = device.load_aov_image("Local Geometric Normal",  spi, 0);
+    let texcoord_aov                = device.load_aov_image("Texcoord",                spi, 0);
+    let primcoord_aov               = device.load_aov_image("Primcoord",               spi, 0);
+    let generated_coord_aov         = device.load_aov_image("Gencoord",                spi, 0);
+    let global_point_aov            = device.load_aov_image("Global Point",            spi, 0);
+    let local_point_aov             = device.load_aov_image("Local Point",             spi, 0);
+    let hit_distance_aov            = device.load_aov_image("Hit Distance ",           spi, 0);
+    let area_aov                    = device.load_aov_image("Area",                    spi, 0);
+    let prim_id_map_aov             = device.load_aov_image("PrimID",                  spi, 0);
+    let entity_id_map_aov           = device.load_aov_image("EntityID",                spi, 0);
+    let material_id_map_aov         = device.load_aov_image("MaterialID",              spi, 0);
+    let object_id_raw_aov           = device.load_aov_image("Raw IDs",                 spi, 0);
+    let bsdf_type_aov               = device.load_aov_image("BSDF Type",               spi, 0);
+    let check_bsdf_aov              = device.load_aov_image("Check BSDF",              spi, 0);
+    let medium_inner_map_aov        = device.load_aov_image("Medium Inner",            spi, 0);
+    let medium_outer_map_aov        = device.load_aov_image("Medium Outer",            spi, 0);
+    let medium_raw_aov              = device.load_aov_image("Raw Medium IDs",          spi, 0);
 
     fn @map_normal_to_color(n: Vec3) = make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), math_builtins::fabs(n.z), 1);
     fn @map_tex_to_color(n: Vec2)    = make_color(math_builtins::fabs(n.x), math_builtins::fabs(n.y), 0, 1);

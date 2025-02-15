@@ -22,3 +22,11 @@ fn @bbox_size(bbox: BBox)    = vec3_sub(bbox.max, bbox.min);
 fn @bbox_center(bbox: BBox)  = vec3_add(bbox.min, vec3_mulf(bbox_size(bbox), 0.5));
 fn @bbox_radius2(bbox: BBox) = vec3_len2(bbox_size(bbox)) / 4;
 fn @bbox_radius(bbox: BBox)  = vec3_len(bbox_size(bbox)) / 2;
+
+fn @bbox_check_point(bbox: BBox, pos: Vec3) =  bbox.min.x <= pos.x && bbox.max.x >= pos.x
+                                            && bbox.min.y <= pos.y && bbox.max.y >= pos.y
+                                            && bbox.min.z <= pos.z && bbox.max.z >= pos.z;
+
+fn @bbox_grow(bbox: BBox, scale: f32) = make_bbox(
+        vec3_sub(bbox.min, vec3_expand(scale/2)),
+        vec3_add(bbox.max, vec3_expand(scale/2)));

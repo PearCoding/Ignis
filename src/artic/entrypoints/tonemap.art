@@ -1,16 +1,4 @@
-// TODO: Get rid of this
-fn @ig_tonemap_pipeline(device: Device, in_pixels: &[f32], out_pixels: &mut [u32], width: i32, height: i32, settings: &TonemapSettings) =
-    ig_tonemap_pipeline2(device, 
-        make_rgb_aov_image_from_buffer(
-            device.get_device_buffer_accessor()(in_pixels, width * height * 3),
-            width,
-            height
-        ),
-        device.get_device_buffer_accessor()(out_pixels as &[f32], width * height),
-        settings);
-
-
-fn @ig_tonemap_pipeline2(device: Device, in_pixels: ColorAOVImage, out_pixels: DeviceBuffer, settings: &TonemapSettings) -> () {
+fn @ig_tonemap_pipeline(device: Device, in_pixels: ColorAOVImage, settings: TonemapSettings, out_pixels: DeviceBuffer) -> () {
     let scale           = settings.scale;
     let exposure_factor = settings.exposure_factor;
     let exposure_offset = settings.exposure_offset;
@@ -77,4 +65,15 @@ fn @ig_tonemap_pipeline2(device: Device, in_pixels: ColorAOVImage, out_pixels: D
     };
     
     device.sync();
+}
+
+fn @ig_tonemap_pipeline_std(device: Device, settings: TonemapSettings, out_pixels: &mut [u32]) {
+    let aov_name = registry::get_global_parameter_string("__internal_tonemap_aov", "");
+    let aov      = device.load_aov_image(aov_name, 1, AOV_FLAG_READONLY);
+
+    ig_tonemap_pipeline(device, aov,
+        settings.{
+            scale = if aov_is_once(aov) || aov_is_snapshot(aov) { 1:f32 } else { settings.scale }
+        },
+        device.get_device_buffer_accessor()(out_pixels as &[f32], aov.width * aov.height))
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AOVFlags.h"
 #include "RuntimeStructs.h"
 #include "device/Target.h"
 #include "technique/TechniqueInfo.h"
@@ -40,6 +41,7 @@ public:
 
     struct AOVAccessor {
         float* Data;
+        AOVFlags Flags;
     };
 
     struct BufferAccessor {
@@ -63,8 +65,8 @@ public:
 
     [[nodiscard]] std::vector<std::string> getFramebufferNames() const;
 
-    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name, bool willBeModified = false);
-    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name, bool willBeModified = false);
+    [[nodiscard]] AOVAccessor getFramebufferForHost(const std::string& name, AOVFlags flags);
+    [[nodiscard]] AOVAccessor getFramebufferForDevice(const std::string& name, AOVFlags flags);
     void clearFramebuffer(const std::string& name);
     void clearAllFramebuffer();
 

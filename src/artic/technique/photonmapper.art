@@ -246,8 +246,8 @@ fn @make_ppm_path_renderer(device: Device, max_path_len: i32, min_path_len: i32,
     let offset : f32 = 0.001;
     let handle_color = make_std_color_handler(clamp_value);
     
-    let aov_di      = if enable_aovs { device.load_aov_image("Direct Weights", spi)  } else { make_empty_aov_image(0, 0) };
-    let aov_merging = if enable_aovs { device.load_aov_image("Merging Weights", spi) } else { make_empty_aov_image(0, 0) };
+    let aov_di      = if enable_aovs { device.load_aov_image("Direct Weights",  spi, 0) } else { make_empty_aov_image(0, 0) };
+    let aov_merging = if enable_aovs { device.load_aov_image("Merging Weights", spi, 0) } else { make_empty_aov_image(0, 0) };
 
     fn @get_radius(hit: Hit, payload: PPMRayPayload) -> f32 {
         if payload.depth > 1 { 

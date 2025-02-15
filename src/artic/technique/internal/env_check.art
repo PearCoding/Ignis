@@ -1,5 +1,5 @@
 fn @make_env_check_renderer(device: Device, spi: i32, light_selector: LightSelector) -> Technique {
-    let aov_pdf = device.load_aov_image("Pdf", spi);
+    let aov_pdf = device.load_aov_image("Pdf", spi, 0);
 
     fn @on_miss( ctx: ShadingContext
         , _: RayPayload) -> Option[Color] {

@@ -71,6 +71,11 @@ struct DeviceStreamBase {
 };
 using DeviceStream = DeviceStreamBase<float>;
 
+struct DeviceAOV {
+    DeviceImage Image;
+    AOVFlags Flags;
+};
+
 struct CPUData {
     std::atomic<size_t> ref_count = 0;
     std::array<DeviceStream, (size_t)IDeviceInterface::StreamType::Count> streams;
@@ -97,7 +102,7 @@ private:
         std::array<DeviceStream, GPUStreamBufferCount*(size_t)StreamType::Count> streams;
         std::array<DeviceStream*, GPUStreamBufferCount*(size_t)StreamType::Count> current_streams;
         DeviceArray<StreamRay> ray_list;
-        std::unordered_map<std::string, DeviceImage> aovs;
+        std::unordered_map<std::string, DeviceAOV> aovs;
         std::unordered_map<std::string, DeviceImage> images;
         std::unordered_map<std::string, DevicePackedImage> packed_images;
         std::unordered_map<std::string, DeviceBuffer> buffers;
@@ -175,14 +180,14 @@ public:
     bool copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes) override;
     bool copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes) override;
 
-    DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name, bool willBeModified) override;
-    DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name, bool willBeModified) override;
+    DeviceAOVProxy<float> loadAOVImageForDevice(const std::string& aov_name, AOVFlags flags) override;
+    DeviceAOVProxy<float> loadAOVImageForHost(const std::string& aov_name, AOVFlags flags) override;
     void clearAOV(const std::string& aov_name) override;
     void clearAllAOVs() override;
 
     void runDeviceShader(const TechniqueDescriptorShaderSet& shaderSet, const Device::RenderSettings& settings) override;
-    void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings) override;
-    ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings) override;
+    void runTonemapShader(uint32_t* device_out_pixels, const TonemapSettings& settings) override;
+    ImageInfoOutput runImageInfoShader(const ImageInfoSettings& settings) override;
 
     void runTraversalShader(TraversalStage stage, int size) override;
     int runRayGenerationShader(int next_id, int size, int xmin, int ymin, int xmax, int ymax) override;
@@ -202,6 +207,7 @@ public:
 
 private:
     void ensureFramebuffer();
+    void handleAOVSnapshots();
 
     void updateSettings(const Device::RenderSettings& settings);
     void updateShaderSet(const TechniqueDescriptorShaderSet& shaderSet);

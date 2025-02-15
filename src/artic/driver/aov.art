@@ -3,6 +3,7 @@
 struct ColorAOVImage {
     width:  i32,
     height: i32,
+    flags:  i32,
     splat:  fn (PixelCoord, Color) -> (),
     get:    fn (PixelCoord) -> Color
 }
@@ -10,13 +11,22 @@ struct ColorAOVImage {
 struct MonoAOVImage {
     width:  i32,
     height: i32,
+    flags:  i32,
     splat:  fn (PixelCoord, f32) -> (),
     get:    fn (PixelCoord) -> f32
 }
 
+static AOV_FLAG_READONLY : i32 = 0x1;
+static AOV_FLAG_SNAPSHOT : i32 = 0x2;
+static AOV_FLAG_ONCE     : i32 = 0x4;
+
+fn @aov_is_snapshot(aov: ColorAOVImage) = (aov.flags & AOV_FLAG_SNAPSHOT) == AOV_FLAG_SNAPSHOT;
+fn @aov_is_once(aov: ColorAOVImage)     = (aov.flags & AOV_FLAG_ONCE)     == AOV_FLAG_ONCE;
+
 fn @make_empty_aov_image(w: i32, h: i32) = ColorAOVImage {
     width  = w,
     height = h,
+    flags  = 0,
     splat  = @|_, _| -> () {},
     get    = @|_| -> Color { color_builtins::black }
 };
@@ -24,15 +34,17 @@ fn @make_empty_aov_image(w: i32, h: i32) = ColorAOVImage {
 fn @make_empty_mono_aov_image(w: i32, h: i32) = MonoAOVImage {
     width  = w,
     height = h,
+    flags  = 0,
     splat  = @|_, _| -> () {},
     get    = @|_| -> f32 { 0:f32 }
 };
 
-fn @make_atomic_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32, atomics: Atomics) -> ColorAOVImage {
+fn @make_atomic_aov_image(pixels: &mut [f32], w: i32, h: i32, flags: i32, spi: i32, atomics: Atomics) -> ColorAOVImage {
     let accumulate = make_atomic_accumulator(atomics, pixels, spi);
     ColorAOVImage{
         width  = w,
         height = h,
+        flags  = flags,
         splat  = @|coord, color| -> () { accumulate(coord.linear, color) },
         get    = @|coord| -> Color     {
             let ptr2 = &pixels(coord.linear * 3) as &[f32];
@@ -41,11 +53,12 @@ fn @make_atomic_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32, atomics:
     }
 }
 
-fn @make_std_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32) -> ColorAOVImage {
+fn @make_std_aov_image(pixels: &mut [f32], w: i32, h: i32, flags: i32, spi: i32) -> ColorAOVImage {
     let accumulate = make_standard_accumulator(pixels, spi);
     ColorAOVImage {
         width  = w,
         height = h,
+        flags  = flags,
         splat  = @|coord, color| -> () { accumulate(coord.linear, color); },
         get    = @|coord| -> Color {
             let ptr2 = &pixels(coord.linear * 3) as &[f32];
@@ -54,11 +67,12 @@ fn @make_std_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32) -> ColorAOV
     }
 }
 
-fn @make_rv_aov_image(pixels: &mut [f32], w: i32, h: i32, spi: i32) -> ColorAOVImage {
+fn @make_rv_aov_image(pixels: &mut [f32], w: i32, h: i32, flags: i32, spi: i32) -> ColorAOVImage {
     let accumulate = make_standard_accumulator(pixels, spi);
     ColorAOVImage {
         width  = w,
         height = h,
+        flags  = flags,
         splat  = @|coord, color| -> () { 
             for lane in unroll(0, rv_num_lanes()) {
                 let j = bitcast[i32](rv_extract(bitcast[f32](coord.linear), lane));
@@ -98,6 +112,7 @@ fn @device_buffer_store_vec3_unaligned(buffer: DeviceBuffer,  index: i32, value:
 fn @make_rgb_aov_image_from_buffer(buffer: DeviceBuffer, width: i32, height: i32) = ColorAOVImage {
     width  = width,
     height = height,
+    flags  = 0,
     splat  = @|coord, color| -> () { device_buffer_store_vec3_unaligned(buffer, coord.linear*3, vec3_add(device_buffer_load_vec3_unaligned(buffer, coord.linear * 3), color_to_vec3(color))); },
     get    = @|coord| vec3_to_color(device_buffer_load_vec3_unaligned(buffer, coord.linear * 3))
 };
@@ -105,6 +120,7 @@ fn @make_rgb_aov_image_from_buffer(buffer: DeviceBuffer, width: i32, height: i32
 fn @make_rgb_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, height: i32) = ColorAOVImage {
     width  = width,
     height = height,
+    flags  = 0,
     splat  = @|_, _| -> () { /* Nothing */ },
     get    = @|coord| vec3_to_color(shallow_buffer_load_vec3_unaligned(buffer, coord.linear * 3))
 };
@@ -112,6 +128,7 @@ fn @make_rgb_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, h
 fn @make_mono_aov_image_from_buffer(buffer: DeviceBuffer, width: i32, height: i32) = MonoAOVImage {
     width  = width,
     height = height,
+    flags  = 0,
     splat  = @|coord, value| -> () { buffer.store_f32(coord.linear, value); },
     get    = @|coord| buffer.load_f32(coord.linear)
 };
@@ -119,6 +136,7 @@ fn @make_mono_aov_image_from_buffer(buffer: DeviceBuffer, width: i32, height: i3
 fn @make_mono_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, height: i32) = MonoAOVImage {
     width  = width,
     height = height,
+    flags  = 0,
     splat  = @|_, _| -> () { /* Nothing */ },
     get    = @|coord| buffer.load_f32(coord.linear)
 };
@@ -126,6 +144,7 @@ fn @make_mono_aov_image_from_buffer_readonly(buffer: ShallowBuffer, width: i32, 
 fn @make_mono_from_rgb_aov(rgb: ColorAOVImage, luminance: fn(Color)->f32) = MonoAOVImage {
     width  = rgb.width,
     height = rgb.height,
+    flags  = rgb.flags,
     splat  = @|coord, value| -> () { rgb.splat(coord, make_gray_color(value)); },
     get    = @|coord| luminance(rgb.get(coord))
 };

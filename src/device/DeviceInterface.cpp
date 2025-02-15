@@ -87,13 +87,23 @@ inline IDeviceInterface::DeviceImageProxy<T> mapToProxyDevice(const DeviceImageB
     };
 }
 
-template <typename T>
-inline IDeviceInterface::DeviceImageProxy<T> mapToProxyHost(const DeviceImageBase<T>& buffer)
+inline IDeviceInterface::DeviceAOVProxy<float> mapToProxyDevice(const DeviceAOV& buffer)
 {
-    return IDeviceInterface::DeviceImageProxy<T>{
-        .DataPtr = const_cast<T*>(buffer.Data.HostPtr),
-        .Width   = buffer.Width,
-        .Height  = buffer.Height
+    return IDeviceInterface::DeviceAOVProxy<float>{
+        .DataPtr = const_cast<float*>(buffer.Image.Data.DevicePtr),
+        .Width   = buffer.Image.Width,
+        .Height  = buffer.Image.Height,
+        .Flags   = buffer.Flags
+    };
+}
+
+inline IDeviceInterface::DeviceAOVProxy<float> mapToProxyHost(const DeviceAOV& buffer)
+{
+    return IDeviceInterface::DeviceAOVProxy<float>{
+        .DataPtr = const_cast<float*>(buffer.Image.Data.HostPtr),
+        .Width   = buffer.Image.Width,
+        .Height  = buffer.Image.Height,
+        .Flags   = buffer.Flags
     };
 }
 
@@ -235,26 +245,26 @@ void DeviceInterface::ensureFramebuffer()
     IG_ASSERT(expectedSize > 0, "Expected host framebuffer to have a valid size");
     if (const auto it = mDeviceData.aovs.find(DefaultFramebufferName); it != mDeviceData.aovs.end()) {
         // Check if resize is needed
-        if (it->second.Width != mFramebufferWidth || it->second.Height != mFramebufferHeight) {
-            IG_LOG(L_DEBUG) << "Resizing all AOVs from " << it->second.Width << "x" << it->second.Height << " to " << mFramebufferWidth << "x" << mFramebufferHeight << std::endl;
+        if (it->second.Image.Width != mFramebufferWidth || it->second.Image.Height != mFramebufferHeight) {
+            IG_LOG(L_DEBUG) << "Resizing all AOVs from " << it->second.Image.Width << "x" << it->second.Image.Height << " to " << mFramebufferWidth << "x" << mFramebufferHeight << std::endl;
 
             // Update properties
             for (auto& p : mDeviceData.aovs) {
-                p.second.Width  = mFramebufferWidth;
-                p.second.Height = mFramebufferHeight;
+                p.second.Image.Width  = mFramebufferWidth;
+                p.second.Image.Height = mFramebufferHeight;
             }
 
             // Resize if needed
-            if (it->second.Data.SizeInBytes < expectedSize * sizeof(float)) {
+            if (it->second.Image.Data.SizeInBytes < expectedSize * sizeof(float)) {
                 for (auto& p : mDeviceData.aovs) {
-                    p.second.Data.release();
-                    p.second.Data = createAOVArray(mDeviceID, expectedSize);
+                    p.second.Image.Data.release();
+                    p.second.Image.Data = createAOVArray(mDeviceID, expectedSize);
                 }
             }
 
             // Clear the framebufer
             // for (auto& p : mDeviceData.aovs) {
-            //     p.second.Data.fillHostWithZero();
+            //     p.second.Image.Data.fillHostWithZero();
             // }
         }
     } else {
@@ -264,7 +274,7 @@ void DeviceInterface::ensureFramebuffer()
                                          .Data   = createAOVArray(mDeviceID, expectedSize),
                                          .Width  = mFramebufferWidth,
                                          .Height = mFramebufferHeight })
-            .first->second.Data.fillHostWithZero();
+            .first->second.Image.Data.fillHostWithZero();
     }
 }
 
@@ -933,60 +943,68 @@ void DeviceInterface::handleDebugOutput()
     }
 }
 
-IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForDevice(const std::string& aov_name, bool willBeModified)
+IDeviceInterface::DeviceAOVProxy<float> DeviceInterface::loadAOVImageForDevice(const std::string& aov_name, AOVFlags flags)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
-        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed between iterations");
-        it->second.Data.syncForDevice();
-        if (willBeModified)
-            it->second.Data.markDirtyOnDevice();
+        IG_ASSERT(it->second.Image.Width == mFramebufferWidth && it->second.Image.Height == mFramebufferHeight, "Size of framebuffer changed between iterations");
+        it->second.Image.Data.syncForDevice();
+        if ((flags & AOVFlags::Readonly) != AOVFlags::Readonly)
+            it->second.Image.Data.markDirtyOnDevice();
+        // Update flags if necessary
+        it->second.Flags = it->second.Flags | (flags & (~AOVFlags::Readonly));
         return mapToProxyDevice(it->second);
     } else {
         const size_t expectedSize = framebufferArea() * 3;
 
-        auto aov = DeviceImage{
-            .Data   = createAOVArray(mDeviceID, expectedSize),
-            .Width  = mFramebufferWidth,
-            .Height = mFramebufferHeight
+        auto aov = DeviceAOV{
+            .Image = DeviceImage{
+                .Data   = createAOVArray(mDeviceID, expectedSize),
+                .Width  = mFramebufferWidth,
+                .Height = mFramebufferHeight },
+            .Flags = flags & (~AOVFlags::Readonly)
         };
 
-        aov.Data.fillHostWithZero();
-        aov.Data.syncForDevice();
-        if (willBeModified)
-            aov.Data.markDirtyOnDevice();
+        aov.Image.Data.fillHostWithZero();
+        aov.Image.Data.syncForDevice();
+        if ((flags & AOVFlags::Readonly) != AOVFlags::Readonly)
+            aov.Image.Data.markDirtyOnDevice();
         return mapToProxyDevice(mDeviceData.aovs.try_emplace(actual_name, std::move(aov)).first->second);
     }
 }
 
-IDeviceInterface::DeviceImageProxy<float> DeviceInterface::loadAOVImageForHost(const std::string& aov_name, bool willBeModified)
+IDeviceInterface::DeviceAOVProxy<float> DeviceInterface::loadAOVImageForHost(const std::string& aov_name, AOVFlags flags)
 {
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     const std::string& actual_name = handleAOVName(aov_name);
 
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end()) {
-        IG_ASSERT(it->second.Width == mFramebufferWidth && it->second.Height == mFramebufferHeight, "Size of framebuffer changed between iterations");
-        it->second.Data.syncForHost();
-        if (willBeModified)
-            it->second.Data.markDirtyOnHost();
+        IG_ASSERT(it->second.Image.Width == mFramebufferWidth && it->second.Image.Height == mFramebufferHeight, "Size of framebuffer changed between iterations");
+        it->second.Image.Data.syncForHost();
+        if ((flags & AOVFlags::Readonly) != AOVFlags::Readonly)
+            it->second.Image.Data.markDirtyOnHost();
+        // Update flags if necessary
+        it->second.Flags = it->second.Flags | (flags & (~AOVFlags::Readonly));
         return mapToProxyHost(it->second);
     } else {
         const size_t expectedSize = framebufferArea() * 3;
 
-        auto aov = DeviceImage{
-            .Data   = createAOVArray(mDeviceID, expectedSize),
-            .Width  = mFramebufferWidth,
-            .Height = mFramebufferHeight
+        auto aov = DeviceAOV{
+            .Image = DeviceImage{
+                .Data   = createAOVArray(mDeviceID, expectedSize),
+                .Width  = mFramebufferWidth,
+                .Height = mFramebufferHeight },
+            .Flags = flags & (~AOVFlags::Readonly)
         };
 
-        if (willBeModified)
-            aov.Data.markDirtyOnHost();
+        if ((flags & AOVFlags::Readonly) != AOVFlags::Readonly)
+            aov.Image.Data.markDirtyOnHost();
         else
-            aov.Data.fillHostWithZero();
+            aov.Image.Data.fillHostWithZero();
         return mapToProxyHost(mDeviceData.aovs.try_emplace(actual_name, std::move(aov)).first->second);
     }
 }
@@ -998,7 +1016,7 @@ void DeviceInterface::clearAOV(const std::string& aov_name)
 
     const std::string& actual_name = handleAOVName(aov_name);
     if (const auto it = mDeviceData.aovs.find(actual_name); it != mDeviceData.aovs.end())
-        it->second.Data.fillHostWithZero();
+        it->second.Image.Data.fillHostWithZero();
 }
 
 /// Clear all aovs and the framebuffer
@@ -1007,7 +1025,17 @@ void DeviceInterface::clearAllAOVs()
     std::lock_guard<std::mutex> _guard(mThreadMutex);
 
     for (auto& p : mDeviceData.aovs)
-        p.second.Data.fillHostWithZero();
+        p.second.Image.Data.fillHostWithZero();
+}
+
+void DeviceInterface::handleAOVSnapshots()
+{
+    std::lock_guard<std::mutex> _guard(mThreadMutex);
+
+    for (auto& p : mDeviceData.aovs) {
+        if ((p.second.Flags & AOVFlags::Snapshot) == AOVFlags::Snapshot)
+            p.second.Image.Data.fillHostWithZero();
+    }
 }
 
 // -------------------------------------------------------- Shader
@@ -1018,6 +1046,9 @@ void DeviceInterface::runDeviceShader(const TechniqueDescriptorShaderSet& shader
     updateSettings(settings);
 
     ensureFramebuffer();
+
+    // Ensure all snapshots are cleared before iteration
+    handleAOVSnapshots();
 
     mCurrentRenderSettings = settings;
 
@@ -1039,7 +1070,7 @@ void DeviceInterface::runDeviceShader(const TechniqueDescriptorShaderSet& shader
         getCurrentThreadData()->stats.endShaderLaunch(ShaderType::Device, {});
 }
 
-void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)
+void DeviceInterface::runTonemapShader(uint32_t* device_out_pixels, const TonemapSettings& settings)
 {
     DeviceGuard _guard(this);
     ensureFramebuffer();
@@ -1061,7 +1092,7 @@ void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pi
     driver_settings.scale           = settings.Scale;
     driver_settings.exposure_factor = settings.ExposureFactor;
     driver_settings.exposure_offset = settings.ExposureOffset;
-    callback(&mCurrentDriverSettings, in_pixels, device_out_pixels, (int)mFramebufferWidth, (int)mFramebufferHeight, &driver_settings);
+    callback(&mCurrentDriverSettings, &driver_settings, device_out_pixels);
 
     handleDebugOutput();
 
@@ -1069,7 +1100,7 @@ void DeviceInterface::runTonemapShader(float* in_pixels, uint32_t* device_out_pi
         getCurrentThreadData()->stats.endShaderLaunch(ShaderType::Tonemap, {});
 }
 
-ImageInfoOutput DeviceInterface::runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings)
+ImageInfoOutput DeviceInterface::runImageInfoShader(const ImageInfoSettings& settings)
 {
     DeviceGuard _guard(this);
     ensureFramebuffer();
@@ -1096,7 +1127,7 @@ ImageInfoOutput DeviceInterface::runImageInfoShader(float* in_pixels, const Imag
     driver_settings.acquire_histogram   = settings.AcquireHistogram;
 
     ::ImageInfoOutput driver_output;
-    callback(&mCurrentDriverSettings, in_pixels, (int)mFramebufferWidth, (int)mFramebufferHeight, &driver_settings, &driver_output);
+    callback(&mCurrentDriverSettings, &driver_settings, &driver_output);
 
     handleDebugOutput();
 

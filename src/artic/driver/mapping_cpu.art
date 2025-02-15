@@ -455,9 +455,9 @@ fn @cpu_splat(id: i32, color: Color, framebuffer: ColorAOVImage, vector_width: i
 fn @cpu_get_framebuffer(spi: i32, vector_width: i32) -> ColorAOVImage {
     let (film_pixels, film_width, film_height) = cpu_get_film_data();
     if vector_width > 1 { 
-        make_rv_aov_image(film_pixels, film_width, film_height, spi)
+        make_rv_aov_image(film_pixels, film_width, film_height, 0, spi)
     } else {
-        make_std_aov_image(film_pixels, film_width, film_height, spi)
+        make_std_aov_image(film_pixels, film_width, film_height, 0, spi)
     }
 }
 
@@ -693,19 +693,21 @@ fn @cpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
     let mut film_height : i32;
-    ignis_get_aov_image("", &mut film_pixels, &mut film_width, &mut film_height);
+    let mut film_flags  : i32 = 0;
+    ignis_get_aov_image("", &mut film_pixels, &mut film_width, &mut film_height, &mut film_flags);
     (film_pixels, film_width, film_height)
 }
 
-fn @cpu_get_aov_image(id: &[u8], spi: i32, vector_width: i32) -> ColorAOVImage {
+fn @cpu_get_aov_image(id: &[u8], spi: i32, vector_width: i32, flags: i32) -> ColorAOVImage {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
     let mut film_height : i32;
-    ignis_get_aov_image(id, &mut film_pixels, &mut film_width, &mut film_height);
+    let mut film_flags  : i32 = flags;
+    ignis_get_aov_image(id, &mut film_pixels, &mut film_width, &mut film_height, &mut film_flags);
     if vector_width > 1 {
-        make_rv_aov_image(film_pixels, film_width, film_height, spi)
+        make_rv_aov_image(film_pixels, film_width, film_height, film_flags, spi)
     } else {
-        make_std_aov_image(film_pixels, film_width, film_height, spi)
+        make_std_aov_image(film_pixels, film_width, film_height, film_flags, spi)
     }
 }
 
@@ -985,8 +987,8 @@ fn @make_cpu_device(config: RenderConfig, vector_compact: bool, single: bool, mi
             make_image_rgba32(@ |x, y| image_rgba_unpack(q(y * width + x), channel_count == 3), width, height)
         }
     },
-    load_aov_image = @|id, spi| {
-        cpu_get_aov_image(id, spi, vector_width)
+    load_aov_image = @|id, spi, flags| {
+        cpu_get_aov_image(id, spi, vector_width, flags)
     },
     load_rays = @ || {
         let mut rays: &[StreamRay];

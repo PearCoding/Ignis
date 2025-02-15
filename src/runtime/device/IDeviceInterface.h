@@ -23,6 +23,15 @@ public:
     };
 
     template <typename T>
+    struct DeviceAOVProxy {
+        T* DataPtr;
+        size_t Width;
+        size_t Height;
+        AOVFlags Flags;
+        inline static DeviceAOVProxy Invalid() { return { .DataPtr = nullptr, .Width = 0, .Height = 0, .Flags = AOVFlags::None }; }
+    };
+
+    template <typename T>
     struct DeviceStreamProxy {
         T* DataPtr;
         size_t BlockSize;
@@ -108,14 +117,14 @@ public:
     virtual bool copyBufferToHost(const std::string& name, void* dst, size_t sizeInBytes)                  = 0;
     virtual bool copyBufferFromHost(const std::string& name, const void* src, size_t sizeInBytes)          = 0;
 
-    virtual DeviceImageProxy<float> loadAOVImageForDevice(const std::string& aov_name, bool willBeModified) = 0;
-    virtual DeviceImageProxy<float> loadAOVImageForHost(const std::string& aov_name, bool willBeModified)   = 0;
-    virtual void clearAOV(const std::string& aov_name)                                                      = 0;
-    virtual void clearAllAOVs()                                                                             = 0;
+    virtual DeviceAOVProxy<float> loadAOVImageForDevice(const std::string& aov_name, AOVFlags flags) = 0;
+    virtual DeviceAOVProxy<float> loadAOVImageForHost(const std::string& aov_name, AOVFlags flags)   = 0;
+    virtual void clearAOV(const std::string& aov_name)                                               = 0;
+    virtual void clearAllAOVs()                                                                      = 0;
 
     virtual void runDeviceShader(const TechniqueDescriptorShaderSet& shaderSet, const Device::RenderSettings& settings) = 0;
-    virtual void runTonemapShader(float* in_pixels, uint32_t* device_out_pixels, const TonemapSettings& settings)       = 0;
-    virtual ImageInfoOutput runImageInfoShader(float* in_pixels, const ImageInfoSettings& settings)                     = 0;
+    virtual void runTonemapShader(uint32_t* device_out_pixels, const TonemapSettings& settings)                         = 0;
+    virtual ImageInfoOutput runImageInfoShader(const ImageInfoSettings& settings)                                       = 0;
 
     virtual void runTraversalShader(TraversalStage stage, int size)                                                            = 0;
     virtual int runRayGenerationShader(int next_id, int size, int xmin, int ymin, int xmax, int ymax)                          = 0;

@@ -158,7 +158,7 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
         exposure_offset = registry::get_local_parameter_f32("_tonemap_exposure_offset", 0)
     };
 
-    ig_tonemap_pipeline2(device, input, output, &tonemapSettings);
+    ig_tonemap_pipeline(device, input, output, &tonemapSettings);
 }
 
 fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
@@ -272,7 +272,7 @@ fn @handle_imageinfo_shader(device: Device, _spi: i32, settings: &Settings) {
         acquire_histogram   = false
     };
 
-    let output = ig_imageinfo_pipeline2(device, input, &imageinfoSettings);
+    let output = ig_imageinfo_pipeline(device, input, &imageinfoSettings);
 
     registry::set_global_parameter_f32("_luminance_max",     output.max);
     registry::set_global_parameter_f32("_luminance_min",     output.min);

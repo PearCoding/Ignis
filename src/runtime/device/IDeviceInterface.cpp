@@ -44,16 +44,21 @@ static inline DynTableData assignDynTable(const IDeviceInterface::DynTableProxy&
 
 using namespace IG;
 extern "C" {
-IG_EXPORT void ignis_get_aov_image(const char* name, float** pixels, int* width, int* height)
+IG_EXPORT void ignis_get_aov_image(const char* name, float** pixels, int* width, int* height, int* flags)
 {
     IDeviceInterface* device = IDeviceInterface::getCurrentDevice();
     IG_ASSERT(device, "Expected valid interface");
 
     const bool willBeModified = !device->currentRenderSettings().getPassInfo().LockFramebuffer; /* Framebuffer will not be modified if it is locked */
-    auto aov = device->loadAOVImageForDevice(name, willBeModified);
+
+    AOVFlags e_flags = willBeModified ? AOVFlags::None : AOVFlags::Readonly;
+    e_flags          = e_flags | (AOVFlags)*flags;
+
+    auto aov = device->loadAOVImageForDevice(name, e_flags);
     *pixels  = aov.DataPtr;
     *width   = (int)aov.Width;
     *height  = (int)aov.Height;
+    *flags   = (int)aov.Flags; // Internal flags might be different
 
     IG_ASSERT(aov.Width == std::get<0>(device->framebufferSize()) && aov.Height == std::get<1>(device->framebufferSize()), "Expected AOV size to be in sync with the actual framebuffer");
 }

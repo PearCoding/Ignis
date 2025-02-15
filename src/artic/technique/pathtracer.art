@@ -43,8 +43,8 @@ fn @init_pt_raypayload(payload: RayPayload) = write_ptraypayload(payload, PTRayP
 fn @make_path_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi: i32, light_selector: LightSelector, clamp_value: f32, enable_nee: bool, enable_aovs: bool) -> Technique {
     let offset : f32  = 0.001;
 
-    let aov_di  = if enable_aovs { device.load_aov_image("BSDF Weights", spi) } else { make_empty_aov_image(0, 0) };
-    let aov_nee = if enable_aovs { device.load_aov_image("NEE Weights", spi) } else { make_empty_aov_image(0, 0) };
+    let aov_di  = if enable_aovs { device.load_aov_image("BSDF Weights", spi, 0) } else { make_empty_aov_image(0, 0) };
+    let aov_nee = if enable_aovs { device.load_aov_image("NEE Weights",  spi, 0) } else { make_empty_aov_image(0, 0) };
 
     let handle_color = make_std_color_handler(clamp_value);
 

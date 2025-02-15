@@ -110,10 +110,10 @@ public:
 
     inline void filterHost(Device* device)
     {
-        const auto color  = device->getFramebufferForHost({});
-        const auto normal = device->getFramebufferForHost("Normals");
-        const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised", true);
+        const auto color  = device->getFramebufferForHost({}, AOVFlags::Readonly);
+        const auto normal = device->getFramebufferForHost("Normals", AOVFlags::Readonly);
+        const auto albedo = device->getFramebufferForHost("Albedo", AOVFlags::Readonly);
+        const auto output = device->getFramebufferForHost("Denoised", AOVFlags::None);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -142,10 +142,10 @@ public:
 
     inline void filterDevice(Device* device)
     {
-        const auto color  = device->getFramebufferForDevice({});
-        const auto normal = device->getFramebufferForDevice("Normals");
-        const auto albedo = device->getFramebufferForDevice("Albedo");
-        const auto output = device->getFramebufferForDevice("Denoised", true);
+        const auto color  = device->getFramebufferForDevice({}, AOVFlags::Readonly);
+        const auto normal = device->getFramebufferForDevice("Normals", AOVFlags::Readonly);
+        const auto albedo = device->getFramebufferForDevice("Albedo", AOVFlags::Readonly);
+        const auto output = device->getFramebufferForDevice("Denoised", AOVFlags::None);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");
@@ -276,10 +276,10 @@ public:
 
     inline void filter(Device* device)
     {
-        const auto color  = device->getFramebufferForHost({});
-        const auto normal = device->getFramebufferForHost("Normals");
-        const auto albedo = device->getFramebufferForHost("Albedo");
-        const auto output = device->getFramebufferForHost("Denoised", true);
+        const auto color  = device->getFramebufferForHost({}, AOVFlags::Readonly);
+        const auto normal = device->getFramebufferForHost("Normals", AOVFlags::Readonly);
+        const auto albedo = device->getFramebufferForHost("Albedo", AOVFlags::Readonly);
+        const auto output = device->getFramebufferForHost("Denoised", AOVFlags::None);
 
         IG_ASSERT(color.Data, "Expected valid color data for denoiser");
         IG_ASSERT(normal.Data, "Expected valid normal data for denoiser");

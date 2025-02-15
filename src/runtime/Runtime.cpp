@@ -451,12 +451,12 @@ void Runtime::resizeFramebuffer(size_t width, size_t height)
 
 AOVAccessor Runtime::getFramebufferForHost(const std::string& name) const
 {
-    return mDevice->getFramebufferForHost(name);
+    return mDevice->getFramebufferForHost(name, AOVFlags::Readonly);
 }
 
 AOVAccessor Runtime::getFramebufferForDevice(const std::string& name) const
 {
-    return mDevice->getFramebufferForDevice(name);
+    return mDevice->getFramebufferForDevice(name, AOVFlags::Readonly);
 }
 
 void Runtime::clearFramebuffer()
@@ -795,12 +795,12 @@ bool Runtime::saveFramebuffer(const Path& path) const
     // Copy data
     for (size_t aov = 0; aov < aov_count; ++aov) {
         const std::string& aov_name = avl_aov_names.at(aov);
+        const auto acc              = getFramebufferForHost(aov_name);
 
         float scale = currentIterationCount() > 0 ? 1.0f / currentIterationCount() : 1.0f;
-        if (aov_name == "Normals" || aov_name == "Albedo")
-            scale = 1; // TODO: Add flags for single use AOVs
+        if ((acc.Flags & AOVFlags::Once) == AOVFlags::Once || (acc.Flags & AOVFlags::Snapshot) == AOVFlags::Snapshot)
+            scale = 1;
 
-        const auto acc   = getFramebufferForHost(aov_name);
         const float* src = acc.Data;
         float* dst_r     = &images[width * height * (3 * aov + 0)];
         float* dst_g     = &images[width * height * (3 * aov + 1)];
@@ -900,7 +900,7 @@ bool Runtime::loadPreviousFramebuffer(const Path& path)
     IG_ASSERT(mDevice, "Expected device to be available");
     mDevice->resize(mFilmWidth, mFilmHeight); // Ensure the device is properly sized
 
-    const auto framebuffer = mDevice->getFramebufferForHost({}, true);
+    const auto framebuffer = mDevice->getFramebufferForHost({}, AOVFlags::None);
     std::memcpy(framebuffer.Data, image.pixels.get(), image.width * image.height * image.channels * sizeof(float));
 
     for (const auto& layerName : metaData.AdditionalLayerNames) {
@@ -917,7 +917,7 @@ bool Runtime::loadPreviousFramebuffer(const Path& path)
         if (layer.channels != 3)
             layer = layer.castTo(3);
 
-        const auto aov = mDevice->getFramebufferForHost(layerName, true);
+        const auto aov = mDevice->getFramebufferForHost(layerName, AOVFlags::None); // TODO: We lose information about the actual aovflags :/
         std::memcpy(aov.Data, layer.pixels.get(), layer.width * layer.height * layer.channels * sizeof(float));
     }
 

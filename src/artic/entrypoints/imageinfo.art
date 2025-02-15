@@ -4,17 +4,7 @@ struct ReduceOutputImageInfo {
     sum: f32
 }
 
-fn @ig_imageinfo_pipeline(device: Device, in_pixels: &[f32], width: i32, height: i32, settings: &ImageInfoSettings, output: &mut ImageInfoOutput) -> () {
-    *output = ig_imageinfo_pipeline2(device, 
-        make_rgb_aov_image_from_buffer(
-            device.get_device_buffer_accessor()(in_pixels, width * height * 3),
-            width,
-            height
-        ),
-        settings);
-}
-
-fn @ig_imageinfo_pipeline2(device: Device, input: ColorAOVImage, settings: &ImageInfoSettings) -> ImageInfoOutput {
+fn @ig_imageinfo_pipeline(device: Device, input: ColorAOVImage, settings: ImageInfoSettings) -> ImageInfoOutput {
     let width  = input.width;
     let height = input.height;
     let size   = width * height;
@@ -165,4 +155,14 @@ fn @ig_imageinfo_pipeline2(device: Device, input: ColorAOVImage, settings: &Imag
     }
 
     output
+}
+
+fn @ig_imageinfo_pipeline_std(device: Device, settings: ImageInfoSettings, output: &mut ImageInfoOutput) -> () {
+    let aov_name = registry::get_global_parameter_string("__internal_imageinfo_aov", "");
+    let aov      = device.load_aov_image(aov_name, 1, AOV_FLAG_READONLY);
+
+    *output = ig_imageinfo_pipeline(device, aov,
+        settings.{
+            scale = if aov_is_once(aov) || aov_is_snapshot(aov) { 1:f32 } else { settings.scale }
+        });
 }

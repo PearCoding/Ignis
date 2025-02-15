@@ -27,21 +27,23 @@ fn @gpu_get_film_data() -> (&mut [f32], i32, i32) {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
     let mut film_height : i32;
-    ignis_get_aov_image("", &mut film_pixels, &mut film_width, &mut film_height);
+    let mut film_flags  : i32 = 0;
+    ignis_get_aov_image("", &mut film_pixels, &mut film_width, &mut film_height, &mut film_flags);
     (film_pixels, film_width, film_height)
 }
 
-fn @gpu_get_aov_image(id: &[u8], spi: i32, atomics: Atomics) -> ColorAOVImage {
+fn @gpu_get_aov_image(id: &[u8], spi: i32, atomics: Atomics, flags: i32) -> ColorAOVImage {
     let mut film_pixels : &mut [f32];
     let mut film_width  : i32;
     let mut film_height : i32;
-    ignis_get_aov_image(id, &mut film_pixels, &mut film_width, &mut film_height);
-    make_atomic_aov_image(film_pixels, film_width, film_height, spi, atomics)
+    let mut film_flags  : i32 = flags;
+    ignis_get_aov_image(id, &mut film_pixels, &mut film_width, &mut film_height, &mut film_flags);
+    make_atomic_aov_image(film_pixels, film_width, film_height, film_flags, spi, atomics)
 }
 
 fn @gpu_get_framebuffer(spi: i32, atomics: Atomics) -> ColorAOVImage {
     let (film_pixels, film_width, film_height) = gpu_get_film_data();
-    let framebuffer = make_atomic_aov_image(film_pixels, film_width, film_height, spi, atomics);
+    let framebuffer = make_atomic_aov_image(film_pixels, film_width, film_height, 0, spi, atomics);
     // TODO: Make this configurable!
     attach_no_filter(framebuffer)
 }
@@ -1058,8 +1060,8 @@ fn @make_gpu_device( dev_id: i32
                               width, height)
         }
     },
-    load_aov_image = @ |id, spi| {
-        gpu_get_aov_image(id, spi, atomics)
+    load_aov_image = @ |id, spi, flags| {
+        gpu_get_aov_image(id, spi, atomics, flags)
     },
     load_rays = @ || {
         let mut rays: &[StreamRay]; // TODO: Alignment?

@@ -2,9 +2,9 @@
 // This technique will be injected around an existing technique
 
 fn @wrap_infobuffer_renderer(device: Device, iter: i32, spi: i32, other: Technique) -> Technique {
-    let aov_normal = device.load_aov_image("Normals", spi);
-    let aov_albedo = device.load_aov_image("Albedo",  spi);
-    // let aov_depth  = device.load_aov_image("Depth",   spi); // Not used for now
+    let aov_normal = device.load_aov_image("Normals", spi, AOV_FLAG_ONCE);
+    let aov_albedo = device.load_aov_image("Albedo",  spi, AOV_FLAG_ONCE);
+    // let aov_depth  = device.load_aov_image("Depth",   spi, AOV_FLAG_ONCE); // Not used for now
 
     fn @on_hit( ctx: ShadingContext
               , payload: RayPayload
