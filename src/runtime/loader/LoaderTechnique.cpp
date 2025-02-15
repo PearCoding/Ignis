@@ -17,7 +17,6 @@
 #include "technique/LightVisibilityTechnique.h"
 #include "technique/PathTechnique.h"
 #include "technique/PhotonMappingTechnique.h"
-#include "technique/SunGuidedPathTechnique.h"
 #include "technique/Technique.h"
 #include "technique/VolumePathTechnique.h"
 #include "technique/WireframeTechnique.h"
@@ -58,10 +57,6 @@ static std::shared_ptr<Technique> lsgpt_loader(const std::shared_ptr<SceneObject
 {
     return std::make_shared<LightGuidedPathTechnique>(obj);
 }
-static std::shared_ptr<Technique> sungpt_loader(const std::shared_ptr<SceneObject>& obj)
-{
-    return std::make_shared<SunGuidedPathTechnique>(obj);
-}
 static std::shared_ptr<Technique> ppm_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<PhotonMappingTechnique>(obj);
@@ -87,7 +82,6 @@ static const struct TechniqueEntry {
     { "path", pt_loader },
     { "lsgpt", lsgpt_loader },
     { "lgpt", lsgpt_loader },
-    { "sungpt", sungpt_loader },
     { "volpath", vpt_loader },
     { "debug", debug_loader },
     { "ppm", ppm_loader },
