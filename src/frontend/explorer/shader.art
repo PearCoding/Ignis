@@ -71,7 +71,7 @@ fn @handle_perspective_shader(device: Device, spi: i32, settings: &Settings) -> 
     let enabled = registry::get_global_parameter_i32("_perspective_enabled", 1) != 0;
 
     let aov_name    = registry::get_global_parameter_string("_aov", "");
-    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
+    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi, AOV_FLAG_READONLY), 3, 3);
     let output      = device.request_buffer("_perspective_output", canvas_width * canvas_height * 3, 0);
 
     fn @run_method(proj: Projector) {
@@ -103,7 +103,7 @@ fn @handle_aov_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let aov_name     = registry::get_global_parameter_string("_aov", "");
     let (canvas_width, canvas_height) = get_canvas_size();
 
-    let framebuffer = device.load_aov_image(aov_name, spi);
+    let framebuffer = device.load_aov_image(aov_name, spi, AOV_FLAG_READONLY);
     let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
 
     fn @run_method(remap: bool, proj: Projector) {
@@ -158,7 +158,7 @@ fn @handle_tonemap_shader(device: Device, _spi: i32, settings: &Settings) -> () 
         exposure_offset = registry::get_local_parameter_f32("_tonemap_exposure_offset", 0)
     };
 
-    ig_tonemap_pipeline(device, input, output, &tonemapSettings);
+    ig_tonemap_pipeline(device, input, tonemapSettings, output);
 }
 
 fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
@@ -166,8 +166,8 @@ fn @handle_glare_shader(device: Device, spi: i32, settings: &Settings) -> () {
     let height = settings.height;
 
     let aov_name = registry::get_global_parameter_string("_aov", "");
-    let input    = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
-    // let input  = device.load_aov_image("", spi);
+    let input    = attach_lanczos_filter(device.load_aov_image(aov_name, spi, AOV_FLAG_READONLY), 3, 3);
+    // let input  = device.load_aov_image("", spi, AOV_FLAG_READONLY);
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
 
     let camera_eye  = registry::get_global_parameter_vec3("__camera_eye", vec3_expand(0));
@@ -191,7 +191,7 @@ fn @handle_overlay_shader(device: Device, spi: i32, settings: &Settings) {
     let (canvas_width, canvas_height) = get_canvas_size();
     
     let aov_name    = registry::get_global_parameter_string("_aov", "");
-    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi), 3, 3);
+    let framebuffer = attach_lanczos_filter(device.load_aov_image(aov_name, spi, AOV_FLAG_READONLY), 3, 3);
     let source_lum  = device.request_buffer("_glare_source_luminance", input_width * input_width, 0);
     let output      = device.request_buffer("_final_output", canvas_width * canvas_height, 0);
 
@@ -272,7 +272,7 @@ fn @handle_imageinfo_shader(device: Device, _spi: i32, settings: &Settings) {
         acquire_histogram   = false
     };
 
-    let output = ig_imageinfo_pipeline(device, input, &imageinfoSettings);
+    let output = ig_imageinfo_pipeline(device, input, imageinfoSettings);
 
     registry::set_global_parameter_f32("_luminance_max",     output.max);
     registry::set_global_parameter_f32("_luminance_min",     output.min);

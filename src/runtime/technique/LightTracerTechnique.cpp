@@ -58,7 +58,7 @@ void LightTracerTechnique::generateBody(const SerializationInput& input) const
     input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
 
     input.Stream << input.Tree.pullHeader()
-                 << "  let framebuffer = device.load_aov_image(\"\", spi);" << std::endl
+                 << "  let framebuffer = device.load_aov_image(\"\", spi, 0);" << std::endl
                  << "  let technique = make_lt_renderer(camera, framebuffer"
                  << ", " << input.Tree.getInline(max_depth)
                  << ", " << input.Tree.getInline(min_depth)

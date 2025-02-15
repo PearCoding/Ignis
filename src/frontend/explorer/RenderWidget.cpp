@@ -36,6 +36,7 @@ public:
               .OverlayMethod     = RenderWidget::OverlayMethod::None,
           })
         , mLoading(false)
+        , mCurrentFPS(0)
         , mCurrentCamera(Vector3f::Zero(), Vector3f::UnitZ(), Vector3f::UnitY())
         , mCurrentTravelSpeed(1)
         , mRequestReset(false)

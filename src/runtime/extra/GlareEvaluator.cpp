@@ -43,7 +43,7 @@ static const char* HandlerSrc = R"(
             make_mono_aov_image_from_buffer_readonly(buffer, width, height)
         }
     } else {
-        make_mono_from_rgb_aov(device.load_aov_image("Color", spi), luminance)
+        make_mono_from_rgb_aov(device.load_aov_image("Color", spi, AOV_FLAG_READONLY), luminance)
     };
 
     let source_luminance = device.request_buffer("_glare_source_luminance", width * height, 0);
