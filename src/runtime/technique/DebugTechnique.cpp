@@ -7,6 +7,7 @@ namespace IG {
 DebugTechnique::DebugTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("debug")
 {
+    IG_UNUSED(obj);
 }
 
 TechniqueInfo DebugTechnique::getInfo(const LoaderContext&) const
