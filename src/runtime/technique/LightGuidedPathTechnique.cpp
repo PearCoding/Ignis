@@ -3,27 +3,46 @@
 #include "loader/LoaderLight.h"
 #include "loader/Parser.h"
 #include "loader/ShadingTree.h"
+#include "shader/ShaderUtils.h"
 
 namespace IG {
 LightGuidedPathTechnique::LightGuidedPathTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("lsgpt")
     , mTechnique(obj)
 {
-    mLightSelector = obj->property("light_selector").getString();
-    mEnableNEE     = obj->property("nee").getBool(true);
-    mMISAOVs       = obj->property("aov_mis").getBool(false);
+    mLightSelector            = obj->property("light_selector").getString();
+    mEnableNEE                = obj->property("nee").getBool(true);
+    mAOVs                     = obj->property("aov").getBool(false);
+    mLearnDefensiveIterations = obj->property("learn_defensive").getInteger(8);
+}
+
+static std::string vgpt_before_iteration_generator(LoaderContext& ctx, int learnDefensiveIterations)
+{
+    std::stringstream stream;
+
+    stream << ShaderUtils::beginCallback(ctx) << std::endl
+           << "  vgpt_handle_before_iteration(device, settings.iter, " << learnDefensiveIterations << ", scene_bbox);" << std::endl
+           << ShaderUtils::endCallback() << std::endl;
+
+    return stream.str();
 }
 
 TechniqueInfo LightGuidedPathTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
 
-    if (mMISAOVs)
+    if (mAOVs)
         info.Passes[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
 
-    info.UsesLights                = true;
-    info.PrimaryPayloadCount       = 8;
-    info.EmitterPayloadInitializer = "make_simple_payload_initializer(init_sgpt_raypayload)";
+    info.UsesLights = true;
+    if (mLearnDefensiveIterations > 0) {
+        info.CallbackGenerators[(int)CallbackType::BeforePass] = [=](LoaderContext& ctx) { return vgpt_before_iteration_generator(ctx, mLearnDefensiveIterations); };
+        info.PrimaryPayloadCount                               = 14;
+        info.EmitterPayloadInitializer                         = "make_simple_payload_initializer(init_vgpt_raypayload)";
+    } else {
+        info.PrimaryPayloadCount       = 8;
+        info.EmitterPayloadInitializer = "make_simple_payload_initializer(init_sgpt_raypayload)";
+    }
     return info;
 }
 
@@ -34,19 +53,26 @@ void LightGuidedPathTechnique::generateBody(const SerializationInput& input) con
     input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
     input.Tree.addNumber("defensive", *mTechnique, 0.3f, ShadingTree::NumberOptions::Dynamic().MakeGlobal());
 
+    const char* renderer = mLearnDefensiveIterations > 0 ? "make_light_vgpt_renderer" : "make_light_sgpt_renderer";
     input.Stream << input.Tree.pullHeader()
                  << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
-                 << "  let technique = make_light_sgpt_renderer(device"
+                 << "  let technique = " << renderer << "(device"
                  << ", " << input.Tree.getInline("max_depth")
                  << ", " << input.Tree.getInline("min_depth")
                  << ", spi"
                  << ", light_selector"
                  << ", " << input.Tree.getInline("clamp")
-                 << ", " << (mEnableNEE ? "true" : "false") 
-                 << ", " << (mMISAOVs ? "true" : "false") 
+                 << ", " << (mEnableNEE ? "true" : "false")
+                 << ", " << (mAOVs ? "true" : "false")
                  << ", infinite_lights.get(0) /*TODO*/"
-                 << ", " << input.Tree.getInline("defensive")
-                 << ");" << std::endl;
+                 << ", " << input.Tree.getInline("defensive");
+
+    if (mLearnDefensiveIterations) {
+        input.Stream << ", settings.iter <= " << mLearnDefensiveIterations
+                     << ", scene_bbox";
+    }
+
+    input.Stream << ");" << std::endl;
 }
 
 } // namespace IG
