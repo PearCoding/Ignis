@@ -6,22 +6,33 @@
 #include "shader/ShaderUtils.h"
 
 namespace IG {
+constexpr int DefaultLearnIterations = 128;
+constexpr float DefaultDecayFactor   = 0.85f;
 LightGuidedPathTechnique::LightGuidedPathTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("lsgpt")
     , mTechnique(obj)
 {
-    mLightSelector            = obj->property("light_selector").getString();
-    mEnableNEE                = obj->property("nee").getBool(true);
-    mAOVs                     = obj->property("aov").getBool(false);
-    mLearnDefensiveIterations = obj->property("learn_defensive").getInteger(8);
+    mLightSelector  = obj->property("light_selector").getString();
+    mEnableNEE      = obj->property("nee").getBool(true);
+    mAOVs           = obj->property("aov").getBool(false);
+    mLearnDefensive = obj->property("learn_defensive").getBool(true);
 }
 
-static std::string vgpt_before_iteration_generator(LoaderContext& ctx, int learnDefensiveIterations)
+static std::string vgpt_before_iteration_generator(LoaderContext& ctx, SceneObject& tech)
 {
-    std::stringstream stream;
+    ShadingTree tree(ctx);
+    tree.addInteger("learn_iterations", tech, DefaultLearnIterations, ShadingTree::IntegerOptions::Zero().MakeGlobal());
+    tree.addNumber("learn_decay_factor", tech, DefaultDecayFactor, ShadingTree::NumberOptions::Dynamic().MakeGlobal());
 
+    std::stringstream stream;
     stream << ShaderUtils::beginCallback(ctx) << std::endl
-           << "  vgpt_handle_before_iteration(device, settings.iter, " << learnDefensiveIterations << ", scene_bbox);" << std::endl
+           << tree.pullHeader()
+           << "  vgpt_handle_before_iteration(device"
+           << ", settings.iter"
+           << ", " << tree.getInline("learn_iterations")
+           << ", scene_bbox"
+           << ", " << tree.getInline("learn_decay_factor")
+           << ");" << std::endl
            << ShaderUtils::endCallback() << std::endl;
 
     return stream.str();
@@ -35,8 +46,8 @@ TechniqueInfo LightGuidedPathTechnique::getInfo(const LoaderContext&) const
         info.Passes[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
 
     info.UsesLights = true;
-    if (mLearnDefensiveIterations > 0) {
-        info.CallbackGenerators[(int)CallbackType::BeforePass] = [=](LoaderContext& ctx) { return vgpt_before_iteration_generator(ctx, mLearnDefensiveIterations); };
+    if (mLearnDefensive) {
+        info.CallbackGenerators[(int)CallbackType::BeforePass] = [=](LoaderContext& ctx) { return vgpt_before_iteration_generator(ctx, *mTechnique); };
         info.PrimaryPayloadCount                               = 14;
         info.EmitterPayloadInitializer                         = "make_simple_payload_initializer(init_vgpt_raypayload)";
     } else {
@@ -52,8 +63,10 @@ void LightGuidedPathTechnique::generateBody(const SerializationInput& input) con
     input.Tree.addInteger("min_depth", *mTechnique, DefaultMinRayDepth, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
     input.Tree.addNumber("clamp", *mTechnique, 0.0f, ShadingTree::NumberOptions::Zero().MakeGlobal());
     input.Tree.addNumber("defensive", *mTechnique, 0.3f, ShadingTree::NumberOptions::Dynamic().MakeGlobal());
+    if (mLearnDefensive)
+        input.Tree.addInteger("learn_iterations", *mTechnique, DefaultLearnIterations, ShadingTree::IntegerOptions::Dynamic().MakeGlobal());
 
-    const char* renderer = mLearnDefensiveIterations > 0 ? "make_light_vgpt_renderer" : "make_light_sgpt_renderer";
+    const char* renderer = mLearnDefensive ? "make_light_vgpt_renderer" : "make_light_sgpt_renderer";
     input.Stream << input.Tree.pullHeader()
                  << input.Tree.context().Lights->generateLightSelector(mLightSelector, input.Tree)
                  << "  let technique = " << renderer << "(device"
@@ -67,8 +80,8 @@ void LightGuidedPathTechnique::generateBody(const SerializationInput& input) con
                  << ", infinite_lights.get(0) /*TODO*/"
                  << ", " << input.Tree.getInline("defensive");
 
-    if (mLearnDefensiveIterations) {
-        input.Stream << ", settings.iter <= " << mLearnDefensiveIterations
+    if (mLearnDefensive) {
+        input.Stream << ", settings.iter <= " << input.Tree.getInline("learn_iterations")
                      << ", scene_bbox";
     }
 

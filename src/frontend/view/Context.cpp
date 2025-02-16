@@ -529,8 +529,6 @@ public:
 
     inline float getIterationScale() const
     {
-        if (CurrentAOV == "Normals" || CurrentAOV == "Albedo")
-            return 1;
         return Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f;
     }
 
@@ -588,7 +586,7 @@ public:
         IG_UNUSED(height);
         const auto acc    = currentPixels();
         const float* film = acc.Data;
-        const float scale = getIterationScale();
+        const float scale = (acc.Flags & AOVFlags::Once) == AOVFlags::Once || (acc.Flags & AOVFlags::Snapshot) == AOVFlags::Snapshot ? 1.0f : getIterationScale();
         const size_t ind  = y * width + x;
 
         return Color(

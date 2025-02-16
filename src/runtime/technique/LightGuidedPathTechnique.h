@@ -15,7 +15,7 @@ private:
     std::string mLightSelector;
     bool mEnableNEE;
     bool mAOVs;
-    int mLearnDefensiveIterations;
+    bool mLearnDefensive;
 
     const std::shared_ptr<SceneObject> mTechnique;
 };

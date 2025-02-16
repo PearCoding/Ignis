@@ -1,7 +1,7 @@
 struct VisibilityCache {
     splat:          fn (Vec3, f32) -> (),          // Add weight to the cell
     get:            fn (Vec3)      -> Option[f32], // Get the normalized weight for the position or none if outside bounds
-    normalize_host: fn ()          -> (),          // Normalize on the host 
+    normalize_host: fn (f32)       -> (),          // Normalize on the host 
     reset_host:     fn ()          -> (),          // Reset on the host 
 }
 static VisibilityCacheCellSize = 4;
@@ -47,25 +47,31 @@ fn @make_vgpt_visibilitycache_voxel(device: Device, buffer: DeviceBuffer, grid: 
         }
     }
 
-    fn @normalize_host() {
+    // fn @map_factor(x: f32) = 4 * math_builtins::pow[f32](x-0.5, 3) + 0.5; // Smooth curve trying to fit into 0, 0.5 and 1
+    fn @map_factor(x: f32) = math_builtins::sqrt(x);
+    // fn @map_factor(x: f32) = x;
+
+    fn @normalize_host(decay_factor: f32) {
         let voxel_area = grid.0 * grid.1 * grid.2;
         for i in device.parallel_range(0, voxel_area) {
             let idx = i * VisibilityCacheCellSize;
             let v = buffer.load_vec4(idx);
+
+            let pf = v.x;
+            let cw = v.y;
             let cc = v.z;
-            if cc > 10 {
-                let cw = v.y;
-                let pf = v.x;
-                let pc = v.w;
-                let decay = 0.25:f32;
+            let pc = v.w;
+            // Only update if enough samples
+            if cc > 0.5 * pc {
+                let tf = pf * pc * decay_factor + cw;
+                let tc = pc * decay_factor + cc;
 
-                let tf = pf * pc * decay + cw;
-                let tc = pc * decay + cc;
-
-                // Only update if enough samples
-                let f = math_builtins::fmax[f32](tf / tc, 0.05);
+                let f = math_builtins::fmax[f32](map_factor(tf / tc), 0.05);
                 buffer.store_vec4(idx, make_vec4(f, 0, 0, tc));
             }
+            
+            // let f = math_builtins::exp(-0.01 * v.z); // Gradually decrease if no signal was found
+            // buffer.store_f32(idx + 0, select(v.y > 0, 1:f32, f));
         }
         device.sync();
     }
@@ -462,19 +468,19 @@ fn @make_light_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i3
         prob_vis    = @|pos:Vec3| from_option(cache.get(pos), 0:f32),
         prob        = @|pos:Vec3| (1 - defensive) * from_option(cache.get(pos), 0:f32),
         record_miss = @|pos:Vec3| if enable_learning { cache.splat(pos, 0) },
-        // record_hit  = @|pos:Vec3, _light_id:i32| cache.splat(pos, 1),
+        // record_hit  = @|pos:Vec3, _light_id:i32| if enable_learning { cache.splat(pos, 1) },
         record_hit  = @|pos:Vec3, light_id:i32| if enable_learning && light_id == light.id { cache.splat(pos, 1) } else { /* Ignore */ },
     };
 
     make_vgpt_renderer(device, max_path_len, min_path_len, spi, light_selector, clamp_value, enable_nee, enable_aovs, guider)
 }
 
-fn @vgpt_handle_before_iteration(device: Device, iter: i32, max_learn_iter: i32, scene_bbox: BBox) -> () {
+fn @vgpt_handle_before_iteration(device: Device, iter: i32, max_learn_iter: i32, scene_bbox: BBox, decay_factor: f32) -> () {
     if iter > max_learn_iter {
         /* Ignore */
     } else if iter == 1 { 
         make_vgpt_visibilitycache(device, scene_bbox).reset_host()
     } else {
-        make_vgpt_visibilitycache(device, scene_bbox).normalize_host()
+        make_vgpt_visibilitycache(device, scene_bbox).normalize_host(decay_factor)
     }
 }
