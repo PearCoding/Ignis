@@ -341,7 +341,7 @@ void ShadingTree::addVector(const std::string& name, SceneObject& obj, const std
         inline_str = acquireVector(name, prop.getVector3(), options);
         break;
     case SceneProperty::PT_STRING:
-        inline_str = handleTexture(name, prop.getString(), TextureReturnType::Color); // TODO: Map options
+        inline_str = handleTexture(name, prop.getString(), TextureReturnType::Vector); // TODO: Map options
         break;
     }
 

@@ -33,9 +33,6 @@ public:
     /// Transpile the given expression to artic code.
     std::optional<Result> transpile(const std::string& expr) const;
 
-    /// Returns true if the expression is evaluated as color (vec4)
-    bool checkIfColor(const std::string& expr) const;
-
     /// Return reference to associated shading tree
     inline const ShadingTree& tree() const { return mTree; }
 

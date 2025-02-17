@@ -1385,23 +1385,6 @@ std::string Transpiler::cast(const std::string& str, ReturnType typeIn, ReturnTy
     return str;
 }
 
-bool Transpiler::checkIfColor(const std::string& expr) const
-{
-    auto ast = mInternal->Environment.parse(expr);
-    if (!ast)
-        return true;
-
-    switch (ast->returnType()) {
-    default:
-    case PExprType::Vec3:
-    case PExprType::Vec4:
-        return true;
-    case PExprType::Number:
-    case PExprType::Integer:
-        return false;
-    }
-}
-
 std::string Transpiler::availableVariables()
 {
     std::stringstream stream;
