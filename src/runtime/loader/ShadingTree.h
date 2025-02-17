@@ -211,7 +211,8 @@ private:
     std::string handlePropertyInteger(const std::string& name, const SceneProperty& prop, const IntegerOptions& options);
     std::string handlePropertyNumber(const std::string& name, const SceneProperty& prop, const NumberOptions& options);
 
-    std::string handleTexture(const std::string& prop_name, const std::string& expr, bool needColor);
+    using TextureReturnType = Transpiler::ReturnType;
+    std::string handleTexture(const std::string& prop_name, const std::string& expr, TextureReturnType returnType);
     std::string acquireInteger(const std::string& prop_name, int number, const IntegerOptions& options);
     std::string acquireNumber(const std::string& prop_name, float number, const NumberOptions& options);
     std::string acquireColor(const std::string& prop_name, const Vector3f& color, const ColorOptions& options);

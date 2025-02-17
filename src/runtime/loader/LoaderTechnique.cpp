@@ -53,7 +53,7 @@ static std::shared_ptr<Technique> pt_loader(const std::shared_ptr<SceneObject>& 
 {
     return std::make_shared<PathTechnique>(obj);
 }
-static std::shared_ptr<Technique> lsgpt_loader(const std::shared_ptr<SceneObject>& obj)
+static std::shared_ptr<Technique> lgpt_loader(const std::shared_ptr<SceneObject>& obj)
 {
     return std::make_shared<LightGuidedPathTechnique>(obj);
 }
@@ -80,8 +80,7 @@ static const struct TechniqueEntry {
     { "ao", ao_loader },
     { "pt", pt_loader },
     { "path", pt_loader },
-    { "lsgpt", lsgpt_loader },
-    { "lgpt", lsgpt_loader },
+    { "lgpt", lgpt_loader },
     { "volpath", vpt_loader },
     { "debug", debug_loader },
     { "ppm", ppm_loader },

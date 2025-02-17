@@ -552,10 +552,17 @@ private:
         techClampParameter->setProperty("value", SceneProperty::fromNumber(1e10f));
         techClampParameter->setProperty("internal", SceneProperty::fromBool(true));
 
+        const auto techLearnIterationsName = SceneProperty::fromString("tech_learn_iterations");
+        auto techLearnIterationsParameter  = std::make_shared<SceneObject>(SceneObject::OT_PARAMETER, "integer", Path{});
+        techLearnIterationsParameter->setProperty("name", techLearnIterationsName);
+        techLearnIterationsParameter->setProperty("value", SceneProperty::fromInteger(64));
+        techLearnIterationsParameter->setProperty("internal", SceneProperty::fromBool(true));
+
         scene->addParameter(techDefensiveName.getString(), std::move(techDefensiveParameter));
         scene->addParameter(techClampName.getString(), std::move(techClampParameter));
+        scene->addParameter(techLearnIterationsName.getString(), std::move(techLearnIterationsParameter));
 
-        auto tech = std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "lsgpt", Path{});
+        auto tech = std::make_shared<SceneObject>(SceneObject::OT_TECHNIQUE, "lgpt", Path{});
         if (prevTechnique && prevTechnique->hasProperty("max_depth"))
             tech->setProperty("max_depth", prevTechnique->property("max_depth"));
         if (prevTechnique && prevTechnique->hasProperty("min_depth"))
@@ -563,6 +570,7 @@ private:
 
         tech->setProperty("clamp", techClampName);
         tech->setProperty("defensive", techDefensiveName);
+        tech->setProperty("learn_iterations", techLearnIterationsName);
 
         scene->setTechnique(tech);
     }

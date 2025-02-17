@@ -35,7 +35,13 @@ void ShadingTree::setupGlobalParameters()
         const auto param       = pair.second;
         const std::string type = param->pluginType();
 
-        if (type == "number" || type == "int" || type == "integer") {
+        if (type == "int" || type == "integer") {
+            const auto prop               = param->property("value");
+            reg.IntParameters[pair.first] = handleGlobalParameterNumber(pair.first, prop);
+            const std::string param_name  = "param_i32_" + whitespace_escaped(pair.first);
+            mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_i32(\"" + pair.first + "\", 0); maybe_unused(" + param_name + ");\n");
+            mTranspiler.registerCustomVariableInteger(pair.first, param_name);
+        } else if (type == "number") {
             const auto prop                 = param->property("value");
             reg.FloatParameters[pair.first] = handleGlobalParameterNumber(pair.first, prop);
             const std::string param_name    = "param_f32_" + whitespace_escaped(pair.first);
@@ -172,9 +178,12 @@ std::string ShadingTree::handlePropertyInteger(const std::string& name, const Sc
         signalError();
         return {};
     case SceneProperty::PT_STRING:
-        IG_LOG(L_ERROR) << "Parameter '" << name << "' expects an integer but a texture was given. Can not cast this" << std::endl;
-        signalError();
-        return {};
+        // FIXME: Meehh, get rid of the cast and handle it properly
+        if (const auto number = bakeSimpleNumber(name, prop.getString()); number.has_value()) {
+            return acquireInteger(name, (int)*number, options);
+        } else {
+            return handleTexture(name, prop.getString(), TextureReturnType::Integer); // TODO: Map options
+        }
     }
 }
 
@@ -225,7 +234,7 @@ std::string ShadingTree::handlePropertyNumber(const std::string& name, const Sce
         if (const auto number = bakeSimpleNumber(name, prop.getString()); number.has_value())
             return acquireNumber(name, *number, options);
         else
-            return handleTexture(name, prop.getString(), false); // TODO: Map options
+            return handleTexture(name, prop.getString(), TextureReturnType::Number); // TODO: Map options
     }
 }
 
@@ -289,7 +298,7 @@ void ShadingTree::addColor(const std::string& name, SceneObject& obj, const std:
         if (const auto color = bakeSimpleColor(name, prop.getString()); color.has_value())
             inline_str = acquireColor(name, *color, options);
         else
-            inline_str = handleTexture(name, prop.getString(), true); // TODO: Map options
+            inline_str = handleTexture(name, prop.getString(), TextureReturnType::Color); // TODO: Map options
         break;
     }
 
@@ -332,7 +341,7 @@ void ShadingTree::addVector(const std::string& name, SceneObject& obj, const std
         inline_str = acquireVector(name, prop.getVector3(), options);
         break;
     case SceneProperty::PT_STRING:
-        inline_str = "color_to_vec3(" + handleTexture(name, prop.getString(), true) + ")"; // TODO: Map options
+        inline_str = handleTexture(name, prop.getString(), TextureReturnType::Color); // TODO: Map options
         break;
     }
 
@@ -399,7 +408,7 @@ void ShadingTree::addTexture(const std::string& name, SceneObject& obj, const st
         inline_str = "make_constant_texture(" + acquireColor(name, prop.getVector3(), mapToColorOptions(options)) + ")";
         break;
     case SceneProperty::PT_STRING: {
-        std::string tex_func = handleTexture(name, prop.getString(), true);
+        std::string tex_func = handleTexture(name, prop.getString(), TextureReturnType::Color);
         inline_str           = "@|ctx:ShadingContext|->Color{maybe_unused(ctx); " + tex_func + "}";
     } break;
     }
@@ -563,9 +572,7 @@ Vector3f ShadingTree::computeConstantColor(const std::string& name, const Transp
     if (potential_number)
         return Vector3f::Constant(*potential_number);
 
-    std::string expr_art = result.Expr;
-    if (result.ScalarOutput)
-        expr_art = "make_gray_color(" + expr_art + ")";
+    const std::string expr_art = Transpiler::cast(result.Expr, result.ReturnType, Transpiler::ReturnType::Color);
 
     // Constant expression with no ctx and textures
     const std::string script = BakeShader::setupConstantColor("  let main_func = @|| {" + pullHeader() + expr_art + "};");
@@ -595,9 +602,7 @@ Image ShadingTree::computeImage(const std::string& name, const Transpiler::Resul
         inner_script << loadTexture(tex);
     inner_script << pullHeader() << std::endl;
 
-    std::string expr_art = result.Expr;
-    if (result.ScalarOutput)
-        expr_art = "make_gray_color(" + expr_art + ")";
+    const std::string expr_art = Transpiler::cast(result.Expr, result.ReturnType, Transpiler::ReturnType::Color);
 
     inner_script << "  let main_func = @|ctx:ShadingContext|->Color{maybe_unused(ctx); " + expr_art + "};" << std::endl;
 
@@ -808,34 +813,31 @@ std::string ShadingTree::loadTexture(const std::string& tex_name)
     return mContext.Textures->generate(tex_name, *this);
 }
 
-std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, bool needColor)
+std::string ShadingTree::handleTexture(const std::string& prop_name, const std::string& expr, TextureReturnType returnType)
 {
     IG_UNUSED(prop_name);
 
     auto res = mTranspiler.transpile(expr);
 
     if (!res.has_value()) {
-        if (needColor)
-            return "color_builtins::pink/*Error*/";
-        else
+        switch (returnType) {
+        case TextureReturnType::Integer:
+            return "0:i32/*Error*/";
+        case TextureReturnType::Number:
             return "0:f32/*Error*/";
+        case TextureReturnType::Color:
+            return "color_builtins::pink/*Error*/";
+        case TextureReturnType::Vector:
+            return "vec3_expand(0)/*Error*/";
+        default:
+            IG_ASSERT(false, "Return type cast not caught.");
+            return "";
+        }
     } else {
         for (const auto& tex : res.value().Textures)
             registerTextureUsage(tex);
 
-        if (needColor) {
-            if (res.value().ScalarOutput)
-                return "make_gray_color(" + res.value().Expr + ")";
-            else
-                return res.value().Expr;
-        } else {
-            if (res.value().ScalarOutput) {
-                return res.value().Expr;
-            } else {
-                IG_LOG(L_WARNING) << "Expected expression '" << expr << "' to return a number but a color was returned. Using average instead" << std::endl;
-                return "color_average(" + res.value().Expr + ")";
-            }
-        }
+        return Transpiler::cast(res->Expr, res->ReturnType, returnType);
     }
 }
 

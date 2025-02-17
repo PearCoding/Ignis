@@ -14,11 +14,17 @@ public:
     explicit Transpiler(ShadingTree& tree);
     ~Transpiler();
 
+    enum class ReturnType {
+        Integer,
+        Number,
+        Color,
+        Vector
+    };
     struct Result {
         std::string Expr;
         std::unordered_set<std::string> Textures;  // Textures used by the expression
         std::unordered_set<std::string> Variables; // Variables used by the expression. Constants will be omitted
-        bool ScalarOutput;                         // Else it is a color
+        Transpiler::ReturnType ReturnType;         // The return type of the expression
         bool UsesSpecialFunctions;                 // Makes use of the ctx structure
 
         bool isSimple() const { return Textures.empty() && Variables.empty() && !UsesSpecialFunctions; }
@@ -34,6 +40,7 @@ public:
     inline const ShadingTree& tree() const { return mTree; }
 
     inline void registerCustomVariableBool(const std::string& name, const std::string& value) { mCustomVariableBool[name] = value; }
+    inline void registerCustomVariableInteger(const std::string& name, const std::string& value) { mCustomVariableInteger[name] = value; }
     inline void registerCustomVariableNumber(const std::string& name, const std::string& value) { mCustomVariableNumber[name] = value; }
     inline void registerCustomVariableVector(const std::string& name, const std::string& value) { mCustomVariableVector[name] = value; }
     inline void registerCustomVariableColor(const std::string& name, const std::string& value) { mCustomVariableColor[name] = value; }
@@ -46,9 +53,12 @@ public:
     /// Return shader to check correctness of all signatures and used functions. Only useful for internal purposes
     static std::string generateTestShader();
 
+    static std::string cast(const std::string& str, ReturnType typeIn, ReturnType typeOut);
+
 private:
     ShadingTree& mTree;
     std::unordered_map<std::string, std::string> mCustomVariableBool;
+    std::unordered_map<std::string, std::string> mCustomVariableInteger;
     std::unordered_map<std::string, std::string> mCustomVariableNumber;
     std::unordered_map<std::string, std::string> mCustomVariableVector;
     std::unordered_map<std::string, std::string> mCustomVariableColor;

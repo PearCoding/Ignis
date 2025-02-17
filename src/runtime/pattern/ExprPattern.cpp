@@ -56,15 +56,11 @@ void ExprPattern::serialize(const SerializationInput& input) const
     bool failed = !res.has_value();
     if (failed) {
         // Mark as failed output
-        res = Transpiler::Result{ "color_builtins::pink", {}, {}, false, false };
+        res = Transpiler::Result{ .Expr = "color_builtins::pink", .Textures = {}, .Variables = {}, .ReturnType = Transpiler::ReturnType::Color, .UsesSpecialFunctions = false };
     }
 
     // Patch output to color
-    std::string output;
-    if (res.value().ScalarOutput)
-        output = "make_gray_color(" + res.value().Expr + ")";
-    else
-        output = res.value().Expr;
+    const std::string output = Transpiler::cast(res->Expr, res->ReturnType, Transpiler::ReturnType::Color);
 
     // Make sure all texture is loaded
     for (const auto& used_tex : res.value().Textures)

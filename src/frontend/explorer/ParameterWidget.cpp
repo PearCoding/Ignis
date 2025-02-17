@@ -376,6 +376,13 @@ void ParameterWidget::onRender(Widget*)
             }
             ImGui::SetItemTooltip("Defensive Sampling Factor for environment map guiding. Set to 1 to disable it.");
 
+            int learn_iter = runtime->parameters().getInt("tech_learn_iterations", 64);
+            if (ImGui::SliderInt("Learn Iterations", &learn_iter, 0, 512)) {
+                runtime->setParameter("tech_learn_iterations", learn_iter);
+                runtime->reset();
+            }
+            ImGui::SetItemTooltip("Iterations to learn the defensive ratio. 0 to disable learning and only rely on the user parameter above.");
+
             if (Runtime::hasDenoiser()) {
                 bool useDenoiser = mRenderWidget->isDenoiserEnabled();
                 if (ImGui::Checkbox("Denoise", &useDenoiser))

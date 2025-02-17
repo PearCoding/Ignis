@@ -973,6 +973,10 @@ public:
             mUsedVariables.insert(var->first);
             return var->second;
         }
+        if (auto var = mParent->mCustomVariableInteger.find(name); expectedType == PExprType::Integer && var != mParent->mCustomVariableInteger.end()) {
+            mUsedVariables.insert(var->first);
+            return var->second;
+        }
         if (auto var = mParent->mCustomVariableNumber.find(name); expectedType == PExprType::Number && var != mParent->mCustomVariableNumber.end()) {
             mUsedVariables.insert(var->first);
             return var->second;
@@ -1222,6 +1226,8 @@ public:
         // Check for custom variables
         if (Parent->mCustomVariableBool.count(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Boolean);
+        if (Parent->mCustomVariableInteger.count(lkp.name()))
+            return PExpr::VariableDef(lkp.name(), PExprType::Integer);
         if (Parent->mCustomVariableNumber.count(lkp.name()))
             return PExpr::VariableDef(lkp.name(), PExprType::Number);
         if (Parent->mCustomVariableVector.count(lkp.name()))
@@ -1285,24 +1291,25 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
     std::string res = mInternal->Environment.transpile(ast, &visitor);
 
     // Patch output
-    bool scalar_output = false;
+    ReturnType returnType;
     switch (ast->returnType()) {
     case PExprType::Number:
-        scalar_output = true;
+        returnType = ReturnType::Number;
         break;
     case PExprType::Integer:
-        scalar_output = true;
-        res           = res + " as f32";
+        returnType = ReturnType::Integer;
         break;
     case PExprType::Vec3:
-        res = "vec3_to_color(" + res + ")";
+        returnType = ReturnType::Vector;
         break;
     case PExprType::Vec4:
-        res = "vec4_to_color(" + res + ")";
+        returnType = ReturnType::Color;
+        res        = "vec4_to_color(" + res + ")";
         break;
     default:
         IG_LOG(L_ERROR) << "Expression does not return a number or color, but '" << PExpr::toString(ast->returnType()) << "' instead" << std::endl;
-        res = "color_builtins::pink";
+        returnType = ReturnType::Color;
+        res        = "color_builtins::pink";
         break;
     }
 
@@ -1312,8 +1319,70 @@ std::optional<Transpiler::Result> Transpiler::transpile(const std::string& expr)
     return Result{ .Expr                 = res,
                    .Textures             = std::move(visitor.usedTextures()),
                    .Variables            = std::move(visitor.usedVariables()),
-                   .ScalarOutput         = scalar_output,
+                   .ReturnType           = returnType,
                    .UsesSpecialFunctions = usesContext };
+}
+
+std::string Transpiler::cast(const std::string& str, ReturnType typeIn, ReturnType typeOut)
+{
+    switch (typeIn) {
+    case ReturnType::Integer:
+        switch (typeOut) {
+        default:
+        case ReturnType::Integer:
+            return str;
+        case ReturnType::Number:
+            return str + " as f32";
+        case ReturnType::Color:
+            return "make_gray_color(" + str + " as f32)";
+        case ReturnType::Vector:
+            return "vec3_expand(" + str + " as f32)";
+        }
+        break;
+    case ReturnType::Number:
+        switch (typeOut) {
+        case ReturnType::Integer:
+            return str + " as i32";
+        default:
+        case ReturnType::Number:
+            return str;
+        case ReturnType::Color:
+            return "make_gray_color(" + str + ")";
+        case ReturnType::Vector:
+            return "vec3_expand(" + str + ")";
+        }
+        break;
+    case ReturnType::Color:
+        switch (typeOut) {
+        case ReturnType::Integer:
+            return "color_average(" + str + ") as i32";
+        case ReturnType::Number:
+            return "color_average(" + str + ")";
+        default:
+        case ReturnType::Color:
+            return str;
+        case ReturnType::Vector:
+            return "color_to_vec3(" + str + ")";
+        }
+        break;
+    case ReturnType::Vector:
+        switch (typeOut) {
+        case ReturnType::Integer:
+            return "vec3_average(" + str + " as f32) as i32";
+        case ReturnType::Number:
+            return "vec3_average(" + str + ")";
+        case ReturnType::Color:
+            return "vec3_to_color(" + str + ")";
+        default:
+        case ReturnType::Vector:
+            return str;
+        }
+        break;
+    default:
+        break;
+    }
+
+    return str;
 }
 
 bool Transpiler::checkIfColor(const std::string& expr) const
@@ -1434,4 +1503,5 @@ std::string Transpiler::generateTestShader()
 
     return stream.str();
 }
+
 } // namespace IG

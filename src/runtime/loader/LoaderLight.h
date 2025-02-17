@@ -27,6 +27,9 @@ public:
     [[nodiscard]] inline bool isEmbedding() const { return mTotalEmbedCount >= 10; }
     [[nodiscard]] inline size_t areaLightCount() const { return mAreaLights.size(); }
 
+    [[nodiscard]] inline const auto& finiteLights() const { return mInfiniteLights; }
+    [[nodiscard]] inline const auto& infiniteLights() const { return mInfiniteLights; }
+
 private:
     void findEmissiveEntities(const LoaderContext& ctx);
 
