@@ -28,7 +28,8 @@ public:
         LuminanceLog,
         GlareSource,
         Normal,
-        Albedo
+        Albedo,
+        GuidingProb
     };
 
     enum class SkyModel {

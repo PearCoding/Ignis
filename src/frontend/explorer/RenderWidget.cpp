@@ -457,6 +457,13 @@ private:
                 return false;
             }
             return updateTexture("_final_output", mAOVPass);
+        } else if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GuidingProb) {
+            mRuntime->setParameter("_aov", "Guided Prob");
+            if (!mAOVPass->run()) {
+                IG_LOG(L_ERROR) << "Failed to run aov pass" << std::endl;
+                return false;
+            }
+            return updateTexture("_final_output", mAOVPass);
         } else {
             if (mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::None
                 || mCurrentParameters.OverlayMethod == RenderWidget::OverlayMethod::GlareSource) {
@@ -571,6 +578,7 @@ private:
         tech->setProperty("clamp", techClampName);
         tech->setProperty("defensive", techDefensiveName);
         tech->setProperty("learn_iterations", techLearnIterationsName);
+        tech->setProperty("aov", SceneProperty::fromBool(true));
 
         scene->setTechnique(tech);
     }
