@@ -1,8 +1,9 @@
 struct VisibilityCache {
-    splat:          fn (Vec3, f32) -> (),          // Add weight to the cell
-    get:            fn (Vec3)      -> Option[f32], // Get the normalized weight for the position or none if outside bounds
-    normalize_host: fn (f32)       -> (),          // Normalize on the host 
-    reset_host:     fn ()          -> (),          // Reset on the host 
+    splat:          fn (i32, f32)   -> (),          // Add weight to the cell
+    get:            fn (i32)        -> f32,         // Get the normalized weight for the position or none if outside bounds
+    index:          fn (Vec3, Vec3) -> Option[i32], // Map the index
+    normalize_host: fn (f32)        -> (),          // Normalize on the host 
+    reset_host:     fn ()           -> (),          // Reset on the host 
 }
 static VisibilityCacheCellSize = 4;
 
@@ -13,7 +14,7 @@ struct VisibilityVoxel {
 
 fn @make_vgpt_visibilitycache(device: Device, scene_bbox: BBox) {
     let grid       = (32, 32, 32);
-    let voxel_area = grid.0 * grid.1 * grid.2;
+    let voxel_area = grid.0 * grid.1 * grid.2 * 8;
     let elem_size  = VisibilityCacheCellSize * voxel_area;
     let buffer = device.request_buffer("__vgpt_vis_cache", elem_size, 0);
     make_vgpt_visibilitycache_voxel(device, buffer, grid, scene_bbox)
@@ -23,7 +24,7 @@ fn @make_vgpt_visibilitycache_voxel(device: Device, buffer: DeviceBuffer, grid: 
     let bigger_box = bbox_grow(scene_bbox, 0.1);
     let scene_size = bbox_size(bigger_box);
 
-    fn @get_index(pos: Vec3) -> i32 {
+    fn @get_index(pos: Vec3, normal: Vec3) -> i32 {
         let o = vec3_sub(pos, bigger_box.min);
         let d = vec3_div(o, scene_size);
         let v = vec3_mul(d, make_vec3(grid.0 as f32, grid.1 as f32, grid.2 as f32));
@@ -32,18 +33,20 @@ fn @make_vgpt_visibilitycache_voxel(device: Device, buffer: DeviceBuffer, grid: 
         let iy = clamp(v.y as i32, 0, grid.1 - 1);
         let iz = clamp(v.z as i32, 0, grid.2 - 1);
 
-        iz * grid.0 * grid.1 + iy * grid.0 + ix
+        let ik = vec3_octant(normal);
+
+        ik * grid.0 * grid.1 * grid.2 + iz * grid.0 * grid.1 + iy * grid.0 + ix
     }
 
-    fn @get_voxel(pos: Vec3) -> VisibilityVoxel {
-        let idx = get_index(pos) * VisibilityCacheCellSize;
+    fn @get_voxel(idx: i32) -> VisibilityVoxel {
+        let midx = idx * VisibilityCacheCellSize;
 
         VisibilityVoxel {
             splat = @|v:f32| {
-                buffer.add_atomic_f32(idx + 1, v);
-                buffer.add_atomic_f32(idx + 2, 1);
+                buffer.add_atomic_f32(midx + 1, v);
+                buffer.add_atomic_f32(midx + 2, 1);
             },
-            get = @|| buffer.load_f32(idx + 0)
+            get = @|| buffer.load_f32(midx + 0)
         }
     }
 
@@ -52,10 +55,10 @@ fn @make_vgpt_visibilitycache_voxel(device: Device, buffer: DeviceBuffer, grid: 
     // fn @map_factor(x: f32) = x;
 
     fn @normalize_host(decay_factor: f32) {
-        let voxel_area = grid.0 * grid.1 * grid.2;
+        let voxel_area = grid.0 * grid.1 * grid.2 * 8;
         for i in device.parallel_range(0, voxel_area) {
-            let idx = i * VisibilityCacheCellSize;
-            let v = buffer.load_vec4(idx);
+            let midx = i * VisibilityCacheCellSize;
+            let v = buffer.load_vec4(midx);
 
             let pf = v.x;
             let cw = v.y;
@@ -67,17 +70,17 @@ fn @make_vgpt_visibilitycache_voxel(device: Device, buffer: DeviceBuffer, grid: 
                 let tc = pc * decay_factor + cc;
 
                 let f = math_builtins::fmax[f32](map_factor(tf / tc), 0.05);
-                buffer.store_vec4(idx, make_vec4(f, 0, 0, tc));
+                buffer.store_vec4(midx, make_vec4(f, 0, 0, tc));
             }
             
             // let f = math_builtins::exp(-0.01 * v.z); // Gradually decrease if no signal was found
-            // buffer.store_f32(idx + 0, select(v.y > 0, 1:f32, f));
+            // buffer.store_f32(midx + 0, select(v.y > 0, 1:f32, f));
         }
         device.sync();
     }
 
     fn @reset_host() {
-        let voxel_area = grid.0 * grid.1 * grid.2;
+        let voxel_area = grid.0 * grid.1 * grid.2 * 8;
         for i in device.parallel_range(0, voxel_area) {
             let idx = i * VisibilityCacheCellSize;
             buffer.store_vec4(idx, make_vec4(1, 0, 0, 0));
@@ -86,17 +89,12 @@ fn @make_vgpt_visibilitycache_voxel(device: Device, buffer: DeviceBuffer, grid: 
     }
 
     VisibilityCache {
-        splat = @ |pos:Vec3, w:f32| {
-            if bbox_check_point(bigger_box, pos) {
-                get_voxel(pos).splat(w)
-            }
-        },
-        get = @ |pos:Vec3| {
-            if bbox_check_point(bigger_box, pos) {
-                make_option(get_voxel(pos).get())
-            } else {
-                Option[f32]::None
-            }
+        splat = @ |idx: i32, w:f32| get_voxel(idx).splat(w),
+        get   = @ |idx: i32| get_voxel(idx).get(),
+        index = @ |pos: Vec3, norm: Vec3| if bbox_check_point(bigger_box, pos) {
+            make_option(get_index(pos, norm))
+        } else {
+            Option[i32]::None
         },
         normalize_host = normalize_host,
         reset_host     = reset_host,
@@ -110,7 +108,7 @@ struct VGPTRayPayload {
     depth:          i32,   // Current depth
     eta:            f32,   // Current eta (n1 / n2)
     gen_technique:  i32,   // Technique which generated the previous vertex (0=BSDF, 1=Guiding)
-    prim_pos:       Vec3,  // Primary position
+    prim_index:     i32,   // Index of the primary cell
 }
 
 fn @write_vgptraypayload(payload: RayPayload, pt: VGPTRayPayload) -> () {
@@ -122,9 +120,7 @@ fn @write_vgptraypayload(payload: RayPayload, pt: VGPTRayPayload) -> () {
     payload.set( 5, pt.depth as f32);
     payload.set( 6, pt.eta);
     payload.set( 7, pt.gen_technique as f32);
-    payload.set( 8, pt.prim_pos.x);
-    payload.set( 9, pt.prim_pos.y);
-    payload.set(10, pt.prim_pos.z);
+    payload.set( 8, pt.prim_index as f32);
 }
 
 fn @unwrap_vgptraypayload(payload: RayPayload) = VGPTRayPayload {
@@ -134,7 +130,7 @@ fn @unwrap_vgptraypayload(payload: RayPayload) = VGPTRayPayload {
     depth          = payload.get(5) as i32,
     eta            = payload.get(6),
     gen_technique  = payload.get(7) as i32,
-    prim_pos       = make_vec3(payload.get(8), payload.get(9), payload.get(10)),
+    prim_index     = payload.get(8) as i32,
 };
 
 fn @init_vgpt_raypayload(payload: RayPayload) = write_vgptraypayload(payload, VGPTRayPayload {
@@ -144,16 +140,17 @@ fn @init_vgpt_raypayload(payload: RayPayload) = write_vgptraypayload(payload, VG
     depth          = 1,
     eta            = 1,
     gen_technique  = 0,
-    prim_pos       = vec3_expand(flt_max),
+    prim_index     = -1,
 });
 
 struct VisibilityGuidingTechnique {
     sample:      fn (RandomGenerator, Vec3) -> (Vec3, f32),
     pdf:         fn (Vec3, Vec3) -> f32,
-    prob_vis:    fn (Vec3) -> f32, // Learned probability to use this guider (without user parameter)
-    prob:        fn (Vec3) -> f32, // Probability to use this guider
-    record_miss: fn (Vec3) -> (),
-    record_hit:  fn (Vec3, i32) -> ()
+    prob_vis:    fn (Vec3, Vec3) -> f32,       // Learned probability to use this guider (without user parameter)
+    prob:        fn (Vec3, Vec3) -> f32, // Probability to use this guider
+    index:       fn (Vec3, Vec3) -> Option[i32],
+    record_miss: fn (i32) -> (),
+    record_hit:  fn (i32, i32) -> ()
 }
 
 fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi: i32, light_selector: LightSelector, clamp_value: f32, enable_nee: bool, enable_aovs: bool, guider: VisibilityGuidingTechnique) -> Technique {
@@ -203,7 +200,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
             let mis = if light.delta { 
                 1:f32
             } else {
-                let guided_prob    = guider.prob(ctx.surf.point);
+                let guided_prob    = guider.prob(ctx.surf.point, ctx.surf.local.col(2));
                 let pdf_e_bsdf_s   = (1 - guided_prob) * mat.bsdf.pdf(in_dir, out_dir); // Pdf to sample the light based on bsdf
                 let pdf_e_guided_s =       guided_prob * guider.pdf(in_dir, out_dir);
                 1 / (1 + pdf_e_bsdf_s / pdf_l_s + pdf_e_guided_s / pdf_l_s)
@@ -270,7 +267,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
         }
         
         if pt.depth == 1 {
-            aov_prob.splat(ctx.pixel, make_gray_color(guider.prob_vis(ctx.surf.point)));
+            aov_prob.splat(ctx.pixel, make_gray_color(guider.prob_vis(ctx.surf.point, ctx.surf.local.col(2))));
         }
 
         Option[Color]::None
@@ -307,7 +304,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
                 color = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
 
                 if pt.gen_technique == 1 {
-                    guider.record_hit(pt.prim_pos, light_id);
+                    guider.record_hit(pt.prim_index, light_id);
                     // guider.record_hit(ctx.ray.org,  light_id);
                 }
             }
@@ -334,8 +331,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
 
         fn @zero_contrib() {
             if (pt.gen_technique == 1) {
-                guider.record_miss(pt.prim_pos );
-                // guider.record_miss(ctx.ray.org );
+                guider.record_miss(pt.prim_index);
             }
         }
         
@@ -347,7 +343,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
         // Bounce
         let out_dir = vec3_neg(ctx.ray.dir);
 
-        let g_prob = if mat.bsdf.is_all_delta { 0:f32 } else { guider.prob(ctx.surf.point) };
+        let g_prob = if mat.bsdf.is_all_delta { 0:f32 } else { guider.prob(ctx.surf.point, ctx.surf.local.col(2)) };
         if rnd.next_f32() < g_prob {
             // Guiding Sampling
             let (in_dir, pdf_g_s) = guider.sample(rnd, out_dir);
@@ -377,7 +373,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
                 depth          = pt.depth + 1,
                 eta            = pt.eta, // * mat_sample.eta (TODO)
                 gen_technique  = 1, /* Guiding */
-                prim_pos       = if pt.depth == 1 { ctx.surf.point } else { pt.prim_pos },
+                prim_index       = if pt.depth == 1 { from_option(guider.index(ctx.surf.point, ctx.surf.local.col(2)), -1) } else { pt.prim_index },
             });
             make_option(
                 make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_bounce)
@@ -408,7 +404,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
                     depth          = pt.depth + 1,
                     eta            = pt.eta * mat_sample.eta,
                     gen_technique  = 0, /* BSDF */
-                    prim_pos       = if pt.depth == 1 { ctx.surf.point } else { pt.prim_pos }
+                    prim_index       = if pt.depth == 1 { from_option(guider.index(ctx.surf.point, ctx.surf.local.col(2)), -1) } else { pt.prim_index }
                 });
                 make_option(
                     make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
@@ -455,11 +451,12 @@ fn @make_light_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i3
     let guider = VisibilityGuidingTechnique {
         sample      = sample,
         pdf         = pdf,
-        prob_vis    = @|pos:Vec3| from_option(cache.get(pos), 0:f32),
-        prob        = @|pos:Vec3| (1 - defensive) * from_option(cache.get(pos), 0:f32),
-        record_miss = @|pos:Vec3| if enable_learning { cache.splat(pos, 0) },
-        // record_hit  = @|pos:Vec3, _light_id:i32| if enable_learning { cache.splat(pos, 1) },
-        record_hit  = @|pos:Vec3, light_id:i32| if enable_learning && light_id == light.id { cache.splat(pos, 1) } else { /* Ignore */ },
+        prob_vis    = @|pos:Vec3, norm: Vec3| if let Option[i32]::Some(idx) = cache.index(pos, norm) { cache.get(idx) } else { 0:f32 },
+        prob        = @|pos:Vec3, norm: Vec3| (1 - defensive) * if let Option[i32]::Some(idx) = cache.index(pos, norm) { cache.get(idx) } else { 0:f32 },
+        index       = @|pos:Vec3, norm: Vec3| cache.index(pos, norm),
+        record_miss = @|idx:i32| if enable_learning && idx >= 0 { cache.splat(idx, 0) },
+        // record_hit  = @|idx:i32, _light_id:i32| if enable_learning && idx >= 0 { cache.splat(idx, 1) },
+        record_hit  = @|idx:i32, light_id:i32| if enable_learning && idx >= 0  && light_id == light.id { cache.splat(idx, 1) } else { /* Ignore */ },
     };
 
     make_vgpt_renderer(device, max_path_len, min_path_len, spi, light_selector, clamp_value, enable_nee, enable_aovs, guider)

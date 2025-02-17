@@ -50,7 +50,7 @@ TechniqueInfo LightGuidedPathTechnique::getInfo(const LoaderContext&) const
     info.UsesLights = true;
     if (mLearnDefensive) {
         info.CallbackGenerators[(int)CallbackType::BeforePass] = [this](LoaderContext& ctx) { return vgpt_before_iteration_generator(ctx, *mTechnique); };
-        info.PrimaryPayloadCount                               = 11;
+        info.PrimaryPayloadCount                               = 9;
         info.EmitterPayloadInitializer                         = "make_simple_payload_initializer(init_vgpt_raypayload)";
     } else {
         info.PrimaryPayloadCount       = 8;

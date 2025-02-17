@@ -71,8 +71,10 @@ fn @transform_norm_ray(ray: Ray, m: Mat3x4) -> Ray {
 }
 
 // Return the respective octant representation of the given ray
-fn @ray_octant(ray: Ray) -> RayOctant {
-    select(math_builtins::signbit(ray.dir.x), 0, 1) |
-    select(math_builtins::signbit(ray.dir.y), 0, 2) |
-    select(math_builtins::signbit(ray.dir.z), 0, 4)
+fn @ray_octant(ray: Ray) = vec3_octant(ray.dir);
+
+fn @vec3_octant(v: Vec3) -> RayOctant {
+    select(math_builtins::signbit(v.x), 0, 1) |
+    select(math_builtins::signbit(v.y), 0, 2) |
+    select(math_builtins::signbit(v.z), 0, 4)
 }
