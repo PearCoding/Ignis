@@ -110,8 +110,7 @@ struct VGPTRayPayload {
     depth:          i32,   // Current depth
     eta:            f32,   // Current eta (n1 / n2)
     gen_technique:  i32,   // Technique which generated the previous vertex (0=BSDF, 1=Guiding)
-    prev_pos:       Vec3,  // Position of the previous node (before ray.org)
-    prev_pos2:      Vec3,  // Position of the previous, previous node (before previous node)
+    prim_pos:       Vec3,  // Primary position
 }
 
 fn @write_vgptraypayload(payload: RayPayload, pt: VGPTRayPayload) -> () {
@@ -123,12 +122,9 @@ fn @write_vgptraypayload(payload: RayPayload, pt: VGPTRayPayload) -> () {
     payload.set( 5, pt.depth as f32);
     payload.set( 6, pt.eta);
     payload.set( 7, pt.gen_technique as f32);
-    payload.set( 8, pt.prev_pos.x);
-    payload.set( 9, pt.prev_pos.y);
-    payload.set(10, pt.prev_pos.z);
-    payload.set(11, pt.prev_pos2.x);
-    payload.set(12, pt.prev_pos2.y);
-    payload.set(13, pt.prev_pos2.z);
+    payload.set( 8, pt.prim_pos.x);
+    payload.set( 9, pt.prim_pos.y);
+    payload.set(10, pt.prim_pos.z);
 }
 
 fn @unwrap_vgptraypayload(payload: RayPayload) = VGPTRayPayload {
@@ -138,8 +134,7 @@ fn @unwrap_vgptraypayload(payload: RayPayload) = VGPTRayPayload {
     depth          = payload.get(5) as i32,
     eta            = payload.get(6),
     gen_technique  = payload.get(7) as i32,
-    prev_pos       = make_vec3(payload.get(8), payload.get(9), payload.get(10)),
-    prev_pos2      = make_vec3(payload.get(11), payload.get(12), payload.get(13)),
+    prim_pos       = make_vec3(payload.get(8), payload.get(9), payload.get(10)),
 };
 
 fn @init_vgpt_raypayload(payload: RayPayload) = write_vgptraypayload(payload, VGPTRayPayload {
@@ -149,8 +144,7 @@ fn @init_vgpt_raypayload(payload: RayPayload) = write_vgptraypayload(payload, VG
     depth          = 1,
     eta            = 1,
     gen_technique  = 0,
-    prev_pos       = vec3_expand(flt_max),
-    prev_pos2      = vec3_expand(flt_max),
+    prim_pos       = vec3_expand(flt_max),
 });
 
 struct VisibilityGuidingTechnique {
@@ -313,9 +307,8 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
                 color = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
 
                 if pt.gen_technique == 1 {
-                    guider.record_hit(pt.prev_pos2, light_id);
-                    guider.record_hit(pt.prev_pos,  light_id);
-                    guider.record_hit(ctx.ray.org,  light_id);
+                    guider.record_hit(pt.prim_pos, light_id);
+                    // guider.record_hit(ctx.ray.org,  light_id);
                 }
             }
         }
@@ -341,9 +334,8 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
 
         fn @zero_contrib() {
             if (pt.gen_technique == 1) {
-                guider.record_miss(pt.prev_pos2);
-                guider.record_miss(pt.prev_pos );
-                guider.record_miss(ctx.ray.org );
+                guider.record_miss(pt.prim_pos );
+                // guider.record_miss(ctx.ray.org );
             }
         }
         
@@ -385,8 +377,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
                 depth          = pt.depth + 1,
                 eta            = pt.eta, // * mat_sample.eta (TODO)
                 gen_technique  = 1, /* Guiding */
-                prev_pos       = ctx.ray.org,
-                prev_pos2      = pt.prev_pos,
+                prim_pos       = if pt.depth == 1 { ctx.surf.point } else { pt.prim_pos },
             });
             make_option(
                 make_ray(ctx.surf.point, in_dir, offset, flt_max, ray_flag_bounce)
@@ -417,8 +408,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
                     depth          = pt.depth + 1,
                     eta            = pt.eta * mat_sample.eta,
                     gen_technique  = 0, /* BSDF */
-                    prev_pos       = ctx.ray.org,
-                    prev_pos2      = pt.prev_pos,
+                    prim_pos       = if pt.depth == 1 { ctx.surf.point } else { pt.prim_pos }
                 });
                 make_option(
                     make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
