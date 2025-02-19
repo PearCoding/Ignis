@@ -18,6 +18,7 @@
 #include "technique/PathTechnique.h"
 #include "technique/PhotonMappingTechnique.h"
 #include "technique/Technique.h"
+#include "technique/VMFGuidedPathTechnique.h"
 #include "technique/VolumePathTechnique.h"
 #include "technique/WireframeTechnique.h"
 
@@ -69,6 +70,10 @@ static std::shared_ptr<Technique> wf_loader(const std::shared_ptr<SceneObject>&)
 {
     return std::make_shared<WireframeTechnique>();
 }
+static std::shared_ptr<Technique> vmf_loader(const std::shared_ptr<SceneObject>& obj)
+{
+    return std::make_shared<VMFGuidedPathTechnique>(obj);
+}
 
 // Will return information about the enabled AOVs
 using TechniqueConstructor = std::shared_ptr<Technique> (*)(const std::shared_ptr<SceneObject>&);
@@ -81,6 +86,7 @@ static const struct TechniqueEntry {
     { "pt", pt_loader },
     { "path", pt_loader },
     { "lgpt", lgpt_loader },
+    { "vmf", vmf_loader },
     { "volpath", vpt_loader },
     { "debug", debug_loader },
     { "ppm", ppm_loader },
