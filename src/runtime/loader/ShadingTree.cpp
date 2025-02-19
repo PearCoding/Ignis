@@ -37,7 +37,7 @@ void ShadingTree::setupGlobalParameters()
 
         if (type == "int" || type == "integer") {
             const auto prop               = param->property("value");
-            reg.IntParameters[pair.first] = handleGlobalParameterNumber(pair.first, prop);
+            reg.IntParameters[pair.first] = (int)handleGlobalParameterNumber(pair.first, prop);
             const std::string param_name  = "param_i32_" + whitespace_escaped(pair.first);
             mHeaderLines.push_back("  let " + param_name + " = registry::get_global_parameter_i32(\"" + pair.first + "\", 0); maybe_unused(" + param_name + ");\n");
             mTranspiler.registerCustomVariableInteger(pair.first, param_name);
