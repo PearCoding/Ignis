@@ -11,7 +11,7 @@ mod vmf {
     fn @compute_normalization(kappa: f32) -> f32 {
         if kappa > 0 {
             let k = math_builtins::exp(-2 * kappa);
-            kappa / (2 * super::flt_pi * (1 - k))
+            super::safe_div(kappa, 2 * super::flt_pi * (1 - k))
         } else {
             super::uniform_sphere_pdf()
         }
