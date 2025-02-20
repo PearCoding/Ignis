@@ -77,10 +77,11 @@ mod vmf {
     }
 
     struct GuidingCache {
-        compute_index:  fn (Vec3, Vec3) -> super::Option[i32],
-        get_from_index: fn (i32, Vec3) -> GuidingCellAccessor,
-        normalize_host: fn (f32) -> (),                  // Normalize on the host 
-        reset_host:     fn () -> (),                     // Reset on the host 
+        compute_index:        fn (Vec3, Vec3) -> super::Option[i32],
+        compute_index_unsafe: fn (Vec3, Vec3) -> i32,
+        get_from_index:       fn (i32, Vec3) -> GuidingCellAccessor,
+        normalize_host:       fn (f32) -> (),                  // Normalize on the host 
+        reset_host:           fn () -> (),                     // Reset on the host 
     }
 
     fn @make_guidingcache(device: super::Device, scene_bbox: super::BBox) -> GuidingCache {
@@ -201,6 +202,7 @@ mod vmf {
         }
 
         GuidingCache {
+            compute_index_unsafe = get_index,
             compute_index = @ |pos: Vec3, norm: Vec3| if super::bbox_check_point(bigger_box, pos) {
                 super::make_option(get_index(pos, norm))
             } else {
@@ -313,16 +315,11 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
             let mis = if light.delta { 
                 1:f32
             } else {
-                let pdf_e_bsdf_s = mat.bsdf.pdf(in_dir, out_dir); // Pdf to sample the light based on bsdf
-                if let Option[i32]::Some(gidx) = cache.compute_index(ctx.surf.point, ctx.surf.local.col(2)) {
-                    let acc          = cache.get_from_index(gidx, ctx.surf.local.col(2));
-                    let guiding_prob = (1 - defensive) * acc.prob();
-                    let pdf_e_s      = (1 - guiding_prob) * pdf_e_bsdf_s + guiding_prob * acc.pdf(in_dir);
-                    1 / (1 + pdf_e_s / pdf_l_s)
-                } else {
-                    1 / (1 + pdf_e_bsdf_s / pdf_l_s)
-                }
-                
+                let gidx         = cache.compute_index_unsafe(ctx.surf.point, ctx.surf.local.col(2));
+                let acc          = cache.get_from_index(gidx, ctx.surf.local.col(2));
+                let guiding_prob = (1 - defensive) * acc.prob();
+                let pdf_e_s      = (1 - guiding_prob) * mat.bsdf.pdf(in_dir, out_dir) + guiding_prob * acc.pdf(in_dir);
+                1 / (1 + pdf_e_s / pdf_l_s)
             };
 
             // The intensity is already divided by the pdf, adapt to the (possible) change of domain
@@ -437,32 +434,68 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
         // Bounce
         let out_dir = vec3_neg(ctx.ray.dir);
 
-        if let Option[i32]::Some(gidx) = cache.compute_index(ctx.surf.point, ctx.surf.local.col(2)) {
-            let cell   = cache.get_from_index(gidx, ctx.surf.local.col(2));
-            let g_prob = if mat.bsdf.is_all_delta { 0:f32 } else { (1 - defensive) * cell.prob() };
+        let gidx   = cache.compute_index_unsafe(ctx.surf.point, ctx.surf.local.col(2));
+        let cell   = cache.get_from_index(gidx, ctx.surf.local.col(2));
+        let g_prob = if mat.bsdf.is_all_delta { 0:f32 } else { (1 - defensive) * cell.prob() };
 
-            if rnd.next_f32() < g_prob {
-                // Guiding Sampling
-                let dir_sample = cell.sample(make_vec2(rnd.next_f32(), rnd.next_f32()));
-                
+        if rnd.next_f32() < g_prob {
+            // Guiding Sampling
+            let dir_sample = cell.sample(make_vec2(rnd.next_f32(), rnd.next_f32()));
+            
+            // This should not really happen, but better be safe 
+            if g_prob * dir_sample.pdf <= flt_eps {
+                return(Option[Ray]::None)
+            }
+
+            let full_pdf = (1 - g_prob) * mat.bsdf.pdf(dir_sample.dir, out_dir) + g_prob * dir_sample.pdf;
+            let inv_pdf  = safe_div(1, full_pdf);
+            let mat_eval = mat.bsdf.eval(dir_sample.dir, out_dir);
+            
+            let contrib = color_mul(pt.contrib, color_mulf(mat_eval, inv_pdf));
+            let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
+            if rnd.next_f32() >= rr_prob {
+                return(Option[Ray]::None)
+            }
+
+            let new_contrib = color_mulf(contrib, 1 / rr_prob);
+
+            // This might happen due to wrong hemisphere, texture, etc
+            if color_average(new_contrib) <= flt_eps {
+                return(Option[Ray]::None)
+            }
+
+            write_vmfraypayload(payload, VMFRayPayload {
+                inv_pdf    = inv_pdf,
+                contrib    = new_contrib,
+                depth      = pt.depth + 1,
+                eta        = pt.eta, // * mat_sample.eta (TODO)
+                prim_index = if pt.prim_index < 0 { gidx } else { pt.prim_index },
+                prim_dir   = if pt.prim_index < 0 { dir_sample.dir } else { pt.prim_dir },
+            });
+            make_option(
+                make_ray(ctx.surf.point, dir_sample.dir, offset, flt_max, ray_flag_bounce)
+            )
+        } else {
+            // BSDF Sampling
+            if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
                 // This should not really happen, but better be safe 
-                if g_prob * dir_sample.pdf <= flt_eps {
+                if mat_sample.pdf <= flt_eps {
                     return(Option[Ray]::None)
                 }
-    
-                let full_pdf = (1 - g_prob) * mat.bsdf.pdf(dir_sample.dir, out_dir) + g_prob * dir_sample.pdf;
+
+                let full_pdf = if mat_sample.is_delta { mat_sample.pdf } else { (1 - g_prob) * mat_sample.pdf + g_prob * cell.pdf(mat_sample.in_dir) };
                 let inv_pdf  = safe_div(1, full_pdf);
-                let mat_eval = mat.bsdf.eval(dir_sample.dir, out_dir);
-                
+                let mat_eval = color_mulf(mat_sample.color, mat_sample.pdf);
+
                 let contrib = color_mul(pt.contrib, color_mulf(mat_eval, inv_pdf));
                 let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
                 if rnd.next_f32() >= rr_prob {
                     return(Option[Ray]::None)
                 }
-    
-                let new_contrib = color_mulf(contrib, 1 / rr_prob);
 
-                // This might happen due to wrong hemisphere, etc
+                let new_contrib = color_mulf(contrib, 1 / rr_prob);
+            
+                // This might happen due to wrong hemisphere, texture, etc
                 if color_average(new_contrib) <= flt_eps {
                     return(Option[Ray]::None)
                 }
@@ -471,56 +504,16 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
                     inv_pdf    = inv_pdf,
                     contrib    = new_contrib,
                     depth      = pt.depth + 1,
-                    eta        = pt.eta, // * mat_sample.eta (TODO)
-                    prim_index = if pt.prim_index < 0 { gidx } else { pt.prim_index },
-                    prim_dir   = if pt.prim_index < 0 { dir_sample.dir } else { pt.prim_dir },
+                    eta        = pt.eta * mat_sample.eta,
+                    prim_index = if pt.prim_index < 0 && !mat_sample.is_delta { gidx } else { pt.prim_index },
+                    prim_dir   = if pt.prim_index < 0 && !mat_sample.is_delta { mat_sample.in_dir } else { pt.prim_dir },
                 });
                 make_option(
-                    make_ray(ctx.surf.point, dir_sample.dir, offset, flt_max, ray_flag_bounce)
+                    make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
                 )
             } else {
-                // BSDF Sampling
-                if let Option[BsdfSample]::Some(mat_sample) = mat.bsdf.sample(rnd, out_dir, false) {
-                    // This should not really happen, but better be safe 
-                    if mat_sample.pdf <= flt_eps {
-                        return(Option[Ray]::None)
-                    }
-    
-                    let full_pdf = if mat_sample.is_delta { mat_sample.pdf } else { (1 - g_prob) * mat_sample.pdf + g_prob * cell.pdf(mat_sample.in_dir) };
-                    let inv_pdf  = safe_div(1, full_pdf);
-                    let mat_eval = color_mulf(mat_sample.color, mat_sample.pdf);
-
-                    let contrib = color_mul(pt.contrib, color_mulf(mat_eval, inv_pdf));
-                    let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
-                    if rnd.next_f32() >= rr_prob {
-                        return(Option[Ray]::None)
-                    }
-    
-                    let new_contrib = color_mulf(contrib, 1 / rr_prob);
-                
-                    // This might happen due to wrong hemisphere, etc
-                    if color_average(new_contrib) <= flt_eps {
-                        return(Option[Ray]::None)
-                    }
-
-                    write_vmfraypayload(payload, VMFRayPayload {
-                        inv_pdf    = inv_pdf,
-                        contrib    = new_contrib,
-                        depth      = pt.depth + 1,
-                        eta        = pt.eta * mat_sample.eta,
-                        prim_index = if pt.prim_index < 0 && !mat_sample.is_delta { gidx } else { pt.prim_index },
-                        prim_dir   = if pt.prim_index < 0 && !mat_sample.is_delta { mat_sample.in_dir } else { pt.prim_dir },
-                    });
-                    make_option(
-                        make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)
-                    )
-                } else {
-                    Option[Ray]::None
-                }
+                Option[Ray]::None
             }
-        } else {
-            // Should never happen as the cache is over the entire scene!
-            Option[Ray]::None
         }
     }
 
