@@ -257,16 +257,8 @@ fn @sum_of_prod(a: f32, b: f32, c: f32, d: f32) -> f32 {
     sum + err
 }
 
-fn @positive_cos(a: Vec3, b: Vec3) -> f32 {
-    let cos = vec3_dot(a, b);
-    select(cos >= 0, cos, 0:f32)
-}
-
-fn @negative_cos(a: Vec3, b: Vec3) -> f32 {
-    let cos = vec3_dot(a, b);
-    select(cos <= 0, cos, 0:f32)
-}
-
+fn @positive_cos(a: Vec3, b: Vec3) = math_builtins::fmax(vec3_dot(a, b), 0:f32);
+fn @negative_cos(a: Vec3, b: Vec3) = math_builtins::fmin(vec3_dot(a, b), 0:f32);
 fn @absolute_cos(a: Vec3, b: Vec3) = math_builtins::fabs(vec3_dot(a, b));
 
 fn @swap[T](a: &mut T, b: &mut T) -> () {

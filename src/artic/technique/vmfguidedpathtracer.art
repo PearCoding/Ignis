@@ -43,6 +43,21 @@ mod vmf {
 
     fn @vmf_pdf(dir: Vec3, mean: Vec3, kappa: f32, norm: f32) = vmf_pdf_1(super::vec3_dot(dir, mean), kappa, norm);
 
+    fn @vmf_product(mean1: Vec3, kappa1: f32, mean2: Vec3, kappa2: f32) -> (Vec3, f32, f32) {
+        let newMeanOpt  = super::vec3_add(super::vec3_mulf(mean1, kappa1), super::vec3_mulf(mean2, kappa2));
+        let newKappaOpt = super::vec3_len(newMeanOpt);
+
+        let kappaGood = newKappaOpt > 1e-3;
+    
+        let newKappa = super::select(kappaGood, newKappaOpt, 0:f32);
+        let newMean  = super::select(kappaGood, super::vec3_mulf(newMeanOpt, 1 / newKappaOpt), mean1);
+        let newNorm  = super::select(kappaGood, compute_normalization(newKappaOpt), compute_normalization(0));
+
+        (newMean, newKappa, newNorm)
+    }
+
+    fn @vmf_cosine_product(mean: Vec3, kappa: f32, normal: Vec3) = vmf_product(mean, kappa, normal, 2.18853);
+
     struct GuidingCell {
         accum_mean:   Vec3,
         accum_weight: f32,
@@ -63,7 +78,7 @@ mod vmf {
 
     struct GuidingCache {
         compute_index:  fn (Vec3, Vec3) -> super::Option[i32],
-        get_from_index: fn (i32) -> GuidingCellAccessor,
+        get_from_index: fn (i32, Vec3) -> GuidingCellAccessor,
         normalize_host: fn (f32) -> (),                  // Normalize on the host 
         reset_host:     fn () -> (),                     // Reset on the host 
     }
@@ -94,21 +109,34 @@ mod vmf {
             ik * grid.0 * grid.1 * grid.2 + iz * grid.0 * grid.1 + iy * grid.0 + ix
         }
 
-        fn @get_accessor(idx: i32) -> GuidingCellAccessor {
+        fn @load_cell_raw(midx: i32) {
+            let v0 = buffer.load_vec4(midx + 0);
+            let v1 = buffer.load_vec4(midx + 4);
+            
+            GuidingCell {
+                accum_mean   = super::vec4_to_3(v0),
+                accum_weight = v0.w,
+                mean         = super::vec4_to_3(v1),
+                kappa        = v1.w,
+                norm         = buffer.load_f32(midx + 8)
+            }
+        }
+
+        fn @get_accessor(idx: i32, normal: Vec3) -> GuidingCellAccessor {
             let midx = idx * GuidingCellMemoryFootprint;
 
             fn @load_cell() {
-                let v0 = buffer.load_vec4(midx + 0);
-                let v1 = buffer.load_vec4(midx + 4);
+                let cell = load_cell_raw(midx);
+                let (newMean, newKappa, newNorm) = vmf_cosine_product(cell.mean, cell.kappa, normal);
                 
-                GuidingCell {
-                    accum_mean   = super::vec4_to_3(v0),
-                    accum_weight = v0.w,
-                    mean         = super::vec4_to_3(v1),
-                    kappa        = v1.w,
-                    norm         = buffer.load_f32(midx + 8)
+                cell.{
+                    mean  = newMean,
+                    kappa = newKappa,
+                    norm  = newNorm
                 }
             }
+            
+            // fn @load_cell() = load_cell_raw(midx);
 
             GuidingCellAccessor {
                 cell = load_cell,
@@ -128,21 +156,21 @@ mod vmf {
                     let cell = load_cell();
                     vmf_sample(uv, cell.mean, cell.kappa, cell.norm)
                 },
-                prob = @|| {
-                    let cell = load_cell();
-                    super::clampf(1 - math_builtins::exp(-cell.kappa), 0, 1) // Does this make sense? I don't know... Does it kinda work? Sometimes
-                }
+                prob = @|| 1:f32,
+                // prob = @|| {
+                //     let cell = load_cell();
+                //     super::clampf(1 - math_builtins::exp(-cell.kappa), 0, 1) // Does this make sense? I don't know... Does it kinda work? Sometimes
+                // }
             }
         }
 
         fn @normalize_host(decay_factor: f32) {
             let voxel_area = grid.0 * grid.1 * grid.2 * NormalOctant;
             for i in device.parallel_range(0, voxel_area) {
-                let cell = get_accessor(i).cell();
+                let midx = i * GuidingCellMemoryFootprint;
+                let cell = load_cell_raw(midx);
                 
                 if cell.accum_weight > super::flt_eps {
-                    let midx = i * GuidingCellMemoryFootprint;
-
                     // Decay previous statistics
                     buffer.store_vec4(midx + 0, super::vec4_mulf(super::make_vec4(cell.accum_mean.x, cell.accum_mean.y, cell.accum_mean.z, cell.accum_weight), decay_factor));
 
@@ -187,51 +215,43 @@ mod vmf {
 
 static VMFTechniqueLastGuiding = 0x1;
 struct VMFRayPayload {
-    inv_bsdf_pdf:   f32,   // Inverse BSDF pdf
-    inv_guided_pdf: f32,   // Inverse Guided pdf
-    contrib:        Color, // Current contribution
-    depth:          i32,   // Current depth
-    eta:            f32,   // Current eta (n1 / n2)
-    flags:          i32,   // Technique
-    prim_index:     i32,   // Index of the primary cell
-    prim_dir:       Vec3,  // Direction from the primary hit towards the light
+    inv_pdf:    f32,   // Inverse BSDF+Guiding pdf
+    contrib:    Color, // Current contribution
+    depth:      i32,   // Current depth
+    eta:        f32,   // Current eta (n1 / n2)
+    prim_index: i32,   // Index of the primary cell
+    prim_dir:   Vec3,  // Direction from the primary hit towards the light
 }
 
 fn @write_vmfraypayload(payload: RayPayload, pt: VMFRayPayload) -> () {
-    payload.set( 0, pt.inv_bsdf_pdf);
-    payload.set( 1, pt.inv_guided_pdf);
-    payload.set( 2, pt.contrib.r);
-    payload.set( 3, pt.contrib.g);
-    payload.set( 4, pt.contrib.b);
-    payload.set( 5, pt.depth as f32);
-    payload.set( 6, pt.eta);
-    payload.set( 7, pt.flags as f32);
-    payload.set( 8, pt.prim_index as f32);
-    payload.set( 9, pt.prim_dir.x);
-    payload.set(10, pt.prim_dir.y);
-    payload.set(11, pt.prim_dir.z);
+    payload.set( 0, pt.inv_pdf);
+    payload.set( 1, pt.contrib.r);
+    payload.set( 2, pt.contrib.g);
+    payload.set( 3, pt.contrib.b);
+    payload.set( 4, pt.depth as f32);
+    payload.set( 5, pt.eta);
+    payload.set( 6, pt.prim_index as f32);
+    payload.set( 7, pt.prim_dir.x);
+    payload.set( 8, pt.prim_dir.y);
+    payload.set( 9, pt.prim_dir.z);
 }
 
 fn @unwrap_vmfraypayload(payload: RayPayload) = VMFRayPayload {
-    inv_bsdf_pdf   = payload.get(0),
-    inv_guided_pdf = payload.get(1),
-    contrib        = make_color(payload.get(2), payload.get(3), payload.get(4), 1),
-    depth          = payload.get(5) as i32,
-    eta            = payload.get(6),
-    flags          = payload.get(7) as i32,
-    prim_index     = payload.get(8) as i32,
-    prim_dir       = make_vec3(payload.get(9), payload.get(10), payload.get(11)),
+    inv_pdf    = payload.get(0),
+    contrib    = make_color(payload.get(1), payload.get(2), payload.get(3), 1),
+    depth      = payload.get(4) as i32,
+    eta        = payload.get(5),
+    prim_index = payload.get(6) as i32,
+    prim_dir   = make_vec3(payload.get(7), payload.get(8), payload.get(9)),
 };
 
 fn @init_vmf_raypayload(payload: RayPayload) = write_vmfraypayload(payload, VMFRayPayload {
-    inv_bsdf_pdf   = 0,
-    inv_guided_pdf = 0,
-    contrib        = color_builtins::white,
-    depth          = 1,
-    eta            = 1,
-    flags          = 0,
-    prim_index     = -1,
-    prim_dir       = vec3_expand(0),
+    inv_pdf    = 0,
+    contrib    = color_builtins::white,
+    depth      = 1,
+    eta        = 1,
+    prim_index = -1,
+    prim_dir   = vec3_expand(0),
 });
 
 fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi: i32, light_selector: LightSelector, clamp_value: f32, enable_nee: bool, enable_aovs: bool, defensive: f32, enable_training: bool, scene_bbox: BBox) -> Technique {
@@ -295,10 +315,10 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
             } else {
                 let pdf_e_bsdf_s = mat.bsdf.pdf(in_dir, out_dir); // Pdf to sample the light based on bsdf
                 if let Option[i32]::Some(gidx) = cache.compute_index(ctx.surf.point, ctx.surf.local.col(2)) {
-                    let acc            = cache.get_from_index(gidx);
-                    let guiding_prob   = (1 - defensive) * acc.prob();
-                    let pdf_e_guided_s = acc.pdf(in_dir);
-                    1 / (1 +  (1 - guiding_prob) * pdf_e_bsdf_s / pdf_l_s + guiding_prob * pdf_e_guided_s / pdf_l_s)
+                    let acc          = cache.get_from_index(gidx, ctx.surf.local.col(2));
+                    let guiding_prob = (1 - defensive) * acc.prob();
+                    let pdf_e_s      = (1 - guiding_prob) * pdf_e_bsdf_s + guiding_prob * acc.pdf(in_dir);
+                    1 / (1 + pdf_e_s / pdf_l_s)
                 } else {
                     1 / (1 + pdf_e_bsdf_s / pdf_l_s)
                 }
@@ -341,22 +361,14 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
         if mat.is_emissive && ctx.surf.is_entering {
             let dot = -vec3_dot(ctx.ray.dir, ctx.surf.local.col(2));
             if dot > flt_eps { // Only contribute proper aligned directions
-                let emit    = mat.emission(ctx);
-                let pdf_s   = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
-
-                let mis_denom = 1 + if (pt.flags & VMFTechniqueLastGuiding) == 0 { safe_div(pt.inv_bsdf_pdf, pt.inv_guided_pdf) } else { safe_div(pt.inv_guided_pdf, pt.inv_bsdf_pdf) };
-                let mis       = if enable_nee { 
-                    let inv_pdf_b = if (pt.flags & VMFTechniqueLastGuiding) == 0 { pt.inv_bsdf_pdf } else { pt.inv_guided_pdf }; // The actual (inverse) pdf used for the previous vertex
-                    let pdf_l_s   = light_selector.pdf(mat.light, ctx.ray.org) * pdf_s;
-                    1 / (mis_denom + inv_pdf_b * pdf_l_s)
-                } else {
-                    1 / mis_denom
-                };
+                let emit  = mat.emission(ctx);
+                let pdf_s = emit.pdf.as_solid(dot, ctx.hit.distance * ctx.hit.distance);
+                let mis   = if enable_nee { 1 / (1 + pt.inv_pdf * light_selector.pdf(mat.light, ctx.ray.org) * pdf_s) } else { 1:f32 };
 
                 let contrib = handle_color(color_mulf(color_mul(pt.contrib, emit.intensity), mis));
 
                 if enable_training && pt.prim_index >= 0 {
-                    cache.get_from_index(pt.prim_index).splat(pt.prim_dir, contrib);
+                    cache.get_from_index(pt.prim_index, ctx.surf.local.col(2)).splat(pt.prim_dir, contrib);
                 }
                 
                 return(make_option(contrib))
@@ -365,7 +377,7 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
         
         if pt.depth == 1 {
             if let Option[i32]::Some(gidx) = cache.compute_index(ctx.surf.point, ctx.surf.local.col(2)) {
-                let cell = cache.get_from_index(gidx).cell();
+                let cell = cache.get_from_index(gidx, ctx.surf.local.col(2)).cell();
 
                 aov_accum.splat(ctx.pixel,   map_scaled_normal_to_color(cell.accum_mean));
                 aov_counter.splat(ctx.pixel, make_gray_color(cell.accum_weight));
@@ -395,15 +407,7 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
             
                 let pdf   = light.pdf_direct(ctx.ray, make_invalid_surface_element());
                 let pdf_s = pdf.as_solid(1, 1/* We assume infinite lights are always given in solid angle measure */);
-                
-                let mis_denom = 1 + if (pt.flags & VMFTechniqueLastGuiding) == 0 { safe_div(pt.inv_bsdf_pdf, pt.inv_guided_pdf) } else { safe_div(pt.inv_guided_pdf, pt.inv_bsdf_pdf) };
-                let mis       = if enable_nee { 
-                    let inv_pdf_b = if (pt.flags & VMFTechniqueLastGuiding) == 0 { pt.inv_bsdf_pdf } else { pt.inv_guided_pdf }; // The actual (inverse) pdf used for the previous vertex
-                    let pdf_l_s   = light_selector.pdf(light, ctx.ray.org) * pdf_s;
-                    1 / (mis_denom + inv_pdf_b * pdf_l_s)
-                } else {
-                    1 / mis_denom
-                };
+                let mis   = if enable_nee { 1 / (1 + pt.inv_pdf * light_selector.pdf(light, ctx.ray.org) * pdf_s) } else { 1:f32 };
 
                 color = color_add(color, handle_color(color_mulf(color_mul(pt.contrib, emit), mis)));
             }
@@ -411,7 +415,7 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
 
         if inflights > 0 {
             if enable_training && pt.prim_index >= 0 {
-                cache.get_from_index(pt.prim_index).splat(pt.prim_dir, color);
+                cache.get_from_index(pt.prim_index, ctx.surf.local.col(2)).splat(pt.prim_dir, color);
             }
             make_option(color)
         } else {
@@ -434,7 +438,7 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
         let out_dir = vec3_neg(ctx.ray.dir);
 
         if let Option[i32]::Some(gidx) = cache.compute_index(ctx.surf.point, ctx.surf.local.col(2)) {
-            let cell   = cache.get_from_index(gidx);
+            let cell   = cache.get_from_index(gidx, ctx.surf.local.col(2));
             let g_prob = if mat.bsdf.is_all_delta { 0:f32 } else { (1 - defensive) * cell.prob() };
 
             if rnd.next_f32() < g_prob {
@@ -446,27 +450,30 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
                     return(Option[Ray]::None)
                 }
     
-                let inv_guided_pdf = 1 / (g_prob * dir_sample.pdf);
-                let mat_eval       = mat.bsdf.eval(dir_sample.dir, out_dir);
+                let full_pdf = (1 - g_prob) * mat.bsdf.pdf(dir_sample.dir, out_dir) + g_prob * dir_sample.pdf;
+                let inv_pdf  = safe_div(1, full_pdf);
+                let mat_eval = mat.bsdf.eval(dir_sample.dir, out_dir);
                 
-                let contrib = color_mul(pt.contrib, color_mulf(mat_eval, inv_guided_pdf));
+                let contrib = color_mul(pt.contrib, color_mulf(mat_eval, inv_pdf));
                 let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
                 if rnd.next_f32() >= rr_prob {
                     return(Option[Ray]::None)
                 }
     
-                let inv_bsdf_pdf = safe_div(1, (1 - g_prob) * mat.bsdf.pdf(dir_sample.dir, out_dir));
-                let new_contrib  = color_mulf(contrib, 1 / rr_prob);
-    
+                let new_contrib = color_mulf(contrib, 1 / rr_prob);
+
+                // This might happen due to wrong hemisphere, etc
+                if color_average(new_contrib) <= flt_eps {
+                    return(Option[Ray]::None)
+                }
+
                 write_vmfraypayload(payload, VMFRayPayload {
-                    inv_bsdf_pdf   = inv_bsdf_pdf,
-                    inv_guided_pdf = inv_guided_pdf,
-                    contrib        = new_contrib,
-                    depth          = pt.depth + 1,
-                    eta            = pt.eta, // * mat_sample.eta (TODO)
-                    flags          = VMFTechniqueLastGuiding, /* Guiding */
-                    prim_index     = if pt.prim_index < 0 { gidx } else { pt.prim_index },
-                    prim_dir       = if pt.prim_index < 0 { dir_sample.dir } else { pt.prim_dir },
+                    inv_pdf    = inv_pdf,
+                    contrib    = new_contrib,
+                    depth      = pt.depth + 1,
+                    eta        = pt.eta, // * mat_sample.eta (TODO)
+                    prim_index = if pt.prim_index < 0 { gidx } else { pt.prim_index },
+                    prim_dir   = if pt.prim_index < 0 { dir_sample.dir } else { pt.prim_dir },
                 });
                 make_option(
                     make_ray(ctx.surf.point, dir_sample.dir, offset, flt_max, ray_flag_bounce)
@@ -479,25 +486,30 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
                         return(Option[Ray]::None)
                     }
     
-                    let contrib = color_mul(pt.contrib, mat_sample.color/* Pdf and cosine are already applied!*/);
+                    let full_pdf = if mat_sample.is_delta { mat_sample.pdf } else { (1 - g_prob) * mat_sample.pdf + g_prob * cell.pdf(mat_sample.in_dir) };
+                    let inv_pdf  = safe_div(1, full_pdf);
+                    let mat_eval = color_mulf(mat_sample.color, mat_sample.pdf);
+
+                    let contrib = color_mul(pt.contrib, color_mulf(mat_eval, inv_pdf));
                     let rr_prob = if pt.depth + 1 > min_path_len { russian_roulette_pbrt(color_mulf(contrib, pt.eta * pt.eta), 0.95) } else { 1.0 };
                     if rnd.next_f32() >= rr_prob {
                         return(Option[Ray]::None)
                     }
     
-                    let inv_bsdf_pdf   = if mat_sample.is_delta { 0 } else { 1 / ((1 - g_prob) * mat_sample.pdf) };
-                    let inv_guided_pdf = if mat_sample.is_delta { 0 } else { safe_div(1, g_prob * cell.pdf(mat_sample.in_dir)) };
-                    let new_contrib    = color_mulf(contrib, 1 / (rr_prob * (1 - g_prob)));
-                    
+                    let new_contrib = color_mulf(contrib, 1 / rr_prob);
+                
+                    // This might happen due to wrong hemisphere, etc
+                    if color_average(new_contrib) <= flt_eps {
+                        return(Option[Ray]::None)
+                    }
+
                     write_vmfraypayload(payload, VMFRayPayload {
-                        inv_bsdf_pdf   = inv_bsdf_pdf,
-                        inv_guided_pdf = inv_guided_pdf,
-                        contrib        = new_contrib,
-                        depth          = pt.depth + 1,
-                        eta            = pt.eta * mat_sample.eta,
-                        flags          = 0, /* No flags */
-                        prim_index     = if pt.prim_index < 0 && !mat_sample.is_delta { gidx } else { pt.prim_index },
-                        prim_dir       = if pt.prim_index < 0 && !mat_sample.is_delta { mat_sample.in_dir } else { pt.prim_dir },
+                        inv_pdf    = inv_pdf,
+                        contrib    = new_contrib,
+                        depth      = pt.depth + 1,
+                        eta        = pt.eta * mat_sample.eta,
+                        prim_index = if pt.prim_index < 0 && !mat_sample.is_delta { gidx } else { pt.prim_index },
+                        prim_dir   = if pt.prim_index < 0 && !mat_sample.is_delta { mat_sample.in_dir } else { pt.prim_dir },
                     });
                     make_option(
                         make_ray(ctx.surf.point, mat_sample.in_dir, offset, flt_max, ray_flag_bounce)

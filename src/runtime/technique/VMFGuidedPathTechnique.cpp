@@ -43,12 +43,9 @@ TechniqueInfo VMFGuidedPathTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
 
-    if (mAOVs)
-        info.Passes[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
-
     info.UsesLights                                        = true;
     info.CallbackGenerators[(int)CallbackType::BeforePass] = [this](LoaderContext& ctx) { return vmf_before_iteration_generator(ctx, *mTechnique); };
-    info.PrimaryPayloadCount                               = 12;
+    info.PrimaryPayloadCount                               = 10;
     info.EmitterPayloadInitializer                         = "make_simple_payload_initializer(init_vmf_raypayload)";
     return info;
 }
