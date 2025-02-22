@@ -373,14 +373,13 @@ fn @make_vmf_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi:
         }
         
         if pt.depth == 1 {
-            if let Option[i32]::Some(gidx) = cache.compute_index(ctx.surf.point, ctx.surf.local.col(2)) {
-                let cell = cache.get_from_index(gidx, ctx.surf.local.col(2)).cell();
+            let gidx = cache.compute_index_unsafe(ctx.surf.point, ctx.surf.local.col(2));
+            let cell = cache.get_from_index(gidx, ctx.surf.local.col(2)).cell();
 
-                aov_accum.splat(ctx.pixel,   map_scaled_normal_to_color(cell.accum_mean));
-                aov_counter.splat(ctx.pixel, make_gray_color(cell.accum_weight));
-                aov_mean.splat(ctx.pixel,    map_normal_to_color(cell.mean));
-                aov_kappa.splat(ctx.pixel,   make_gray_color(cell.kappa));
-            }
+            aov_accum.splat(ctx.pixel,   map_scaled_normal_to_color(cell.accum_mean));
+            aov_counter.splat(ctx.pixel, make_gray_color(cell.accum_weight));
+            aov_mean.splat(ctx.pixel,    map_normal_to_color(cell.mean));
+            aov_kappa.splat(ctx.pixel,   make_gray_color(cell.kappa));
         }
 
         Option[Color]::None

@@ -44,16 +44,13 @@ TechniqueInfo LightGuidedPathTechnique::getInfo(const LoaderContext&) const
 {
     TechniqueInfo info;
 
-    if (mAOVs)
-        info.Passes[0].ShadowHandlingMode = ShadowHandlingMode::Advanced;
-
     info.UsesLights = true;
     if (mLearnDefensive) {
         info.CallbackGenerators[(int)CallbackType::BeforePass] = [this](LoaderContext& ctx) { return vgpt_before_iteration_generator(ctx, *mTechnique); };
-        info.PrimaryPayloadCount                               = 9;
+        info.PrimaryPayloadCount                               = 8;
         info.EmitterPayloadInitializer                         = "make_simple_payload_initializer(init_vgpt_raypayload)";
     } else {
-        info.PrimaryPayloadCount       = 8;
+        info.PrimaryPayloadCount       = 7;
         info.EmitterPayloadInitializer = "make_simple_payload_initializer(init_sgpt_raypayload)";
     }
     return info;
@@ -93,7 +90,7 @@ void LightGuidedPathTechnique::generateBody(const SerializationInput& input) con
                  << ", " << input.Tree.getInline("clamp")
                  << ", " << (mEnableNEE ? "true" : "false")
                  << ", " << (mAOVs ? "true" : "false")
-                 << ", infinite_lights.get(" << id.value_or(0) << ") /*TODO*/"
+                 << ", infinite_lights.get(" << id.value_or(0) << ")"
                  << ", " << input.Tree.getInline("defensive");
 
     if (mLearnDefensive) {
