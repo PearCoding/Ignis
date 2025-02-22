@@ -184,7 +184,7 @@ fn @make_sgpt_renderer(_device: Device, max_path_len: i32, min_path_len: i32, _s
             let (in_dir, pdf_g_s) = guider.sample(rnd, out_dir);
             
             // This should not really happen, but better be safe 
-            if g_prob * pdf_g_s <= flt_eps {
+            if pdf_g_s <= flt_eps {
                 return(Option[Ray]::None)
             }
 

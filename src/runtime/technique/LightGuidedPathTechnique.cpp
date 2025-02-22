@@ -9,7 +9,7 @@
 
 namespace IG {
 constexpr int DefaultLearnIterations = 128;
-constexpr float DefaultDecayFactor   = 0.85f;
+constexpr float DefaultDecayFactor   = 0.995f;
 LightGuidedPathTechnique::LightGuidedPathTechnique(const std::shared_ptr<SceneObject>& obj)
     : Technique("lgpt")
     , mTechnique(obj)

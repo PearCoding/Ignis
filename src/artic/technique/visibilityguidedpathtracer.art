@@ -56,27 +56,18 @@ fn @make_vgpt_visibilitycache_voxel(device: Device, buffer: DeviceBuffer, grid: 
         }
     }
 
-    // fn @map_factor(x: f32) = 4 * math_builtins::pow[f32](x-0.5, 3) + 0.5; // Smooth curve trying to fit into 0, 0.5 and 1
-    fn @map_factor(x: f32) = math_builtins::sqrt(x);
-    // fn @map_factor(x: f32) = x;
-
     fn @normalize_host(decay_factor: f32) {
         let voxel_area = grid.0 * grid.1 * grid.2 * VisibilityCacheNormalOctant;
         for i in device.parallel_range(0, voxel_area) {
             let midx = i * VisibilityCacheCellSize;
             let v = buffer.load_vec4(midx);
 
+            let PowerFactor = 8:f32;
             let cw = v.y;
             let cc = v.z;
 
-            // Only update if enough samples
-            if cc > 0 {
-                let f = math_builtins::fmax[f32](map_factor(cw / cc), 0.05);
-                buffer.store_vec4(midx, make_vec4(f, cw * decay_factor, cc * decay_factor, 0));
-            }
-            
-            // let f = math_builtins::exp(-0.01 * v.z); // Gradually decrease if no signal was found
-            // buffer.store_f32(midx + 0, select(v.y > 0, 1:f32, f));
+            let f = math_builtins::fmax[f32](math_builtins::pow(cw / (cc+1), 1/PowerFactor), 0.05);
+            buffer.store_vec4(midx, make_vec4(f, cw * decay_factor, cc * decay_factor, 0));
         }
         device.sync();
     }
@@ -333,7 +324,7 @@ fn @make_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i32, spi
             let (in_dir, pdf_g_s) = guider.sample(rnd, out_dir);
             
             // This should not really happen, but better be safe 
-            if g_prob * pdf_g_s <= flt_eps {
+            if pdf_g_s <= flt_eps {
                 zero_contrib();
                 return(Option[Ray]::None)
             }
@@ -440,8 +431,8 @@ fn @make_light_vgpt_renderer(device: Device, max_path_len: i32, min_path_len: i3
     let guider = VisibilityGuidingTechnique {
         sample       = sample,
         pdf          = pdf,
-        get_vis      = @|pos:Vec3, norm: Vec3| if let Option[i32]::Some(idx) = cache.index(pos, norm) { cache.get_vis(idx) } else { (0:f32, 0:f32, 0:f32) },
-        prob         = @|pos:Vec3, norm: Vec3| (1 - defensive) * if let Option[i32]::Some(idx) = cache.index(pos, norm) { cache.get(idx) } else { 0:f32 },
+        get_vis      = @|pos:Vec3, norm: Vec3| cache.get_vis(cache.index_unsafe(pos, norm)),
+        prob         = @|pos:Vec3, norm: Vec3| (1 - defensive) * cache.get(cache.index_unsafe(pos, norm)),
         index        = @|pos:Vec3, norm: Vec3| cache.index(pos, norm),
         index_unsafe = @|pos:Vec3, norm: Vec3| cache.index_unsafe(pos, norm),
         record_miss  = @|idx:i32| if enable_learning && idx >= 0 { cache.splat(idx, 0) },
