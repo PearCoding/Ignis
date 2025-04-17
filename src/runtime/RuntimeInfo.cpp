@@ -156,7 +156,7 @@ Path RuntimeInfo::readonlyDataPath()
         return dataPath;
 
     const Path sharePath = root / "share" / "Ignis";
-    if (std::filesystem::exists(dataPath) && std::filesystem::is_directory(sharePath))
+    if (std::filesystem::exists(sharePath) && std::filesystem::is_directory(sharePath))
         return sharePath;
     else
         return {};
