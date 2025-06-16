@@ -23,6 +23,12 @@ struct ObjIndexHash {
 
 TriMesh load(const Path& path, const std::optional<size_t>& shape_index)
 {
+    std::fstream stream(path, std::ios::in | std::ios::binary);
+    if (!stream) {
+        IG_LOG(L_ERROR) << "Given file '" << path << "' can not be opened." << std::endl;
+        return TriMesh{};
+    }
+
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -30,7 +36,7 @@ TriMesh load(const Path& path, const std::optional<size_t>& shape_index)
     std::string warn;
     std::string err;
 
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.generic_string().c_str());
+    const bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, &stream, nullptr, true, false);
 
     if (!warn.empty())
         IG_LOG(L_WARNING) << "ObjFile " << path << ": " << warn << std::endl;
