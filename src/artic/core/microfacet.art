@@ -386,7 +386,7 @@ fn @sample_vndf_ggx(rnd: RandomGenerator, local: Mat3x3, vN: Vec3, alpha_u: f32,
     let x = sinTheta * math_builtins::cos(phi);
     let y = sinTheta * math_builtins::sin(phi);
 
-    let h = all::vec3_add(all::make_vec3(x,y,z), vL);
+    let h = all::vec3_add(all::make_vec3(x,y,z), sL);
 
     // Unstretch    
     let Nh = all::vec3_normalize(all::make_vec3(h.x * alpha_u, h.y * alpha_v, h.z));
