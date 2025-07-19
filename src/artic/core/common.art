@@ -173,8 +173,8 @@ fn @decode_oct_proj(vec: Vec2) -> Vec3 {
 
     // Reflect
     let (ox, oy) = if oz < 0 {
-        (1 - math_builtins::fabs(vec.y) * select(vec.x >= 0, 1 : f32, -1 : f32),
-         1 - math_builtins::fabs(vec.x) * select(vec.y >= 0, 1 : f32, -1 : f32))
+        ((1 - math_builtins::fabs(vec.y)) * select(vec.x >= 0, 1 : f32, -1 : f32),
+         (1 - math_builtins::fabs(vec.x)) * select(vec.y >= 0, 1 : f32, -1 : f32))
     } else {
         (vec.x, vec.y)
     };
