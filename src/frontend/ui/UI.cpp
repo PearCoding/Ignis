@@ -156,7 +156,7 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 
     const float font_scaling_factor = getFontScale(window, renderer);
     if (!std::filesystem::exists(fontFile)) {
-        io.FontGlobalScale = font_scaling_factor;
+        // io.FontGlobalScale = font_scaling_factor;
     } else {
         constexpr int DefaultFontSize = 13;
         ImFontConfig config;
@@ -166,10 +166,6 @@ static void setupStandardFont(SDL_Window* window, SDL_Renderer* renderer)
 
         // TODO: Load to memory for unicode paths and load via AddFontFromMemoryTTF
         io.Fonts->AddFontFromFileTTF(fontFile.generic_string().c_str(), config.SizePixels, &config);
-#ifdef IG_OS_WINDOWS
-        // Why is this needed on Windows but not on other systems??
-        io.FontGlobalScale = 1 / font_scaling_factor;
-#endif
     }
 }
 
@@ -193,8 +189,6 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
 #else
     IG_UNUSED(useDocking);
 #endif
-
-    setupStandardFont(window, renderer);
 
     ImGuiStyle& style  = ImGui::GetStyle();
     style.GrabRounding = 3;
@@ -222,6 +216,8 @@ void setup(SDL_Window* window, SDL_Renderer* renderer, bool useDocking, float dp
         ImGuiSDL::Initialize(renderer, width, height);
     }
 #endif
+
+    setupStandardFont(window, renderer);
 }
 
 void shutdown()
