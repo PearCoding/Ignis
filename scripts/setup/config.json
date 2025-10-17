@@ -15,7 +15,7 @@
     "LLVM" : {
         "ENABLED": true,
         "BUILD_TYPE": "Release",
-        "BRANCH": "llvmorg-18.1.8",
+        "BRANCH": "llvmorg-20.1.5",
         "GIT": "https://github.com/llvm/llvm-project.git",
         "TARGETS": "AMDGPU;NVPTX;X86",
         "EXTRA_ARGS": []
