@@ -65,6 +65,10 @@ static inline int computeTargetID(const Target& target)
         return ANYDSL_DEVICE(ANYDSL_CUDA, (int)target.device());
     case GPUArchitecture::AMD_HSA:
         return ANYDSL_DEVICE(ANYDSL_HSA, (int)target.device());
+    case GPUArchitecture::OpenCL:
+        return ANYDSL_DEVICE(ANYDSL_OPENCL, (int)target.device());
+    // case GPUArchitecture::Vulkan:
+    //     return ANYDSL_DEVICE(ANYDSL_Vulkan, (int)target.device());
     }
 }
 

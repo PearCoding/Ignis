@@ -71,6 +71,9 @@ if(IG_WITH_DEVICE_GPU_AMD_HSA)
     list(APPEND VARIANTS hsa)
 endif()
 
+list(APPEND VARIANTS opencl)
+# list(APPEND VARIANTS vulkan)
+
 ###########################################################
 set(_targets)
 

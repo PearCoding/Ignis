@@ -47,6 +47,12 @@ std::string ShaderUtils::constructDevice(const LoaderOptions& opts)
         case GPUArchitecture::Nvidia:
             stream << "make_nvvm_device(settings.device, render_config, make_default_gpu_kernel_config());";
             break;
+        case GPUArchitecture::OpenCL:
+            stream << "make_opencl_device(settings.device, render_config, make_default_gpu_kernel_config());";
+            break;
+        case GPUArchitecture::Vulkan:
+            stream << "make_vulkan_device(settings.device, render_config, make_default_gpu_kernel_config());";
+            break;
         }
     }
 

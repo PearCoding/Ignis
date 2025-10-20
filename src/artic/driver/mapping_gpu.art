@@ -991,14 +991,12 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_image(filename, &mut pixel_data, &mut width, &mut height, channel_count);
 
         let stride = width; // Drop mutable attribute
-        let q = pixel_data as &addrspace(1)[f32];
+        let q = accs(pixel_data, 0 /* Ignored */);
         if channel_count == 1 {
-            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
-                            else { @ |x, y| q(y * stride + x) },
+            make_image_mono(@ |x, y| q.load_f32(y*stride + x),
                             width, height)
         } else {
-            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
-                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+            make_image_rgba32(@ |x, y| q.load_vec4(y*stride * channel_count + x * channel_count),
                               width, height)
         }
     },
@@ -1009,14 +1007,12 @@ fn @make_gpu_device( dev_id: i32
         ignis_load_image_by_id(id, &mut pixel_data, &mut width, &mut height, channel_count);
 
         let stride = width; // Drop mutable attribute
-        let q = pixel_data as &addrspace(1)[f32];
+        let q = accs(pixel_data, 0 /* Ignored */);
         if channel_count == 1 {
-            make_image_mono(if is_nvvm { @ |x, y| nvvm_ldg_f32(&q(y * stride + x)) } 
-                            else { @ |x, y| q(y * stride + x) },
+            make_image_mono(@ |x, y| q.load_f32(y*stride + x),
                             width, height)
         } else {
-            make_image_rgba32(if is_nvvm { @ |x, y| nvvm_load_vec4(q, y * stride + x) } 
-                              else { @ |x, y| amdgpu_load_vec4(q, y * stride + x) },
+            make_image_rgba32(@ |x, y| q.load_vec4(y*stride * channel_count + x * channel_count),
                               width, height)
         }
     },
@@ -1188,3 +1184,78 @@ fn @make_amdgpu_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConf
         false
     )
 }
+
+#[import(cc = "device", name = "atomic_max")]        fn opencl_atomic_max_global(&mut addrspace(1)i32, i32) -> i32;
+#[import(cc = "device", name = "atomic_max")]        fn opencl_atomic_max_shared(&mut addrspace(3)i32, i32) -> i32;
+
+fn @make_opencl_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConfiguration) -> Device {
+    let dev_id  = runtime_device(2, dev);
+    let atomics = Atomics {
+        add_global_i32 = @ |p, i| opencl_atomic_add_global(p as &mut addrspace(1)i32, i),
+        add_global_f32 = @ |p, i| opencl_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
+        min_global_i32 = @ |p, i| opencl_atomic_min_global(p as &mut addrspace(1)i32, i),
+        max_global_i32 = @ |_p, _i| 0:i32, // opencl_atomic_max_global(p as &mut addrspace(1)i32, i), //< TODO
+        add_shared_i32 = @ |p, i| opencl_atomic_add_shared(p, i),
+        add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "wavefront")
+    };
+    let accessor = DeviceBufferGlobalElementAccessor {
+        load_f32  = @|p: &addrspace(1)[f32], i: i32| p(i),
+        load_i32  = @|p: &addrspace(1)[i32], i: i32| p(i),
+        load_vf32 = @|p: &addrspace(1)[f32], i: i32| {
+            let v = (p as &addrspace(1)[simd[f32 * 4]])(i);
+            (v(0), v(1), v(2), v(3))
+        },
+        load_vi32 = @|p: &addrspace(1)[i32], i: i32| {
+            let v = (p as &addrspace(1)[simd[i32 * 4]])(i);
+            (v(0), v(1), v(2), v(3))
+        }
+    };
+
+    make_gpu_device(
+        dev_id,
+        config,
+        opencl_spirv_accelerator(dev),
+        gpu_config,
+        make_default_min_max(),
+        @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
+        @ |ptr, size| make_gpu_shallow_buffer(ptr as &addrspace(1)[f32], size, accessor),
+        atomics,
+        false
+    )
+}
+
+// fn @make_vulkan_device(dev: i32, config: RenderConfig, gpu_config: GPUKernelConfiguration) -> Device {
+//     let dev_id  = runtime_device(6, dev);
+//     let atomics = Atomics {
+//         add_global_i32 = @ |p, i| opencl_atomic_add_global(p as &mut addrspace(1)i32, i),
+//         add_global_f32 = @ |p, i| opencl_atomic_add_global_f32(p as &mut addrspace(1)f32, i),
+//         min_global_i32 = @ |p, i| opencl_atomic_min_global(p as &mut addrspace(1)i32, i),
+//         max_global_i32 = @ |p, i| opencl_atomic_max_global(p as &mut addrspace(1)i32, i),
+//         add_shared_i32 = @ |p, i| opencl_atomic_add_shared(p, i),
+//         add_shared_f32 = @ |p, i| atomic_p3(11:u32, p, i, 2:u32, "wavefront")
+//     };
+//     let accessor = DeviceBufferGlobalElementAccessor {
+//         load_f32  = @|p: &addrspace(1)[f32], i: i32| p(i),
+//         load_i32  = @|p: &addrspace(1)[i32], i: i32| p(i),
+//         load_vf32 = @|p: &addrspace(1)[f32], i: i32| {
+//             let v = (p as &addrspace(1)[simd[f32 * 4]])(i);
+//             (v(0), v(1), v(2), v(3))
+//         },
+//         load_vi32 = @|p: &addrspace(1)[i32], i: i32| {
+//             let v = (p as &addrspace(1)[simd[i32 * 4]])(i);
+//             (v(0), v(1), v(2), v(3))
+//         }
+//     };
+
+//     make_gpu_device(
+//         dev_id,
+//         config,
+//         vulkan_accelerator(dev),
+//         gpu_config,
+//         make_default_min_max(),
+//         @ |ptr, size| make_gpu_buffer(dev_id, ptr as &addrspace(1)[f32], size, atomics, accessor),
+//         @ |ptr, size| make_gpu_shallow_buffer(ptr as &addrspace(1)[f32], size, accessor),
+//         atomics,
+//         false
+//     )
+// }

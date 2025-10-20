@@ -9,6 +9,8 @@ enum class GPUArchitecture {
     // AMD_PAL, // TODO
     Intel, // TODO: Only listed here, no support at the moment
     Nvidia,
+    OpenCL,
+    Vulkan,
     Unknown
 };
 

@@ -25,6 +25,10 @@ namespace IG {
 #define CLASS_NAME DeviceInterface_AMD_PAL
 #elif defined(IG_BUILD_DEVICE_INTEL)
 #define CLASS_NAME DeviceInterface_INTEL
+#elif defined(IG_BUILD_DEVICE_OPENCL)
+#define CLASS_NAME DeviceInterface_OPENCL
+#elif defined(IG_BUILD_DEVICE_VULKAN)
+#define CLASS_NAME DeviceInterface_VULKAN
 #else
 #error Unknown device architecture
 #endif
@@ -58,6 +62,10 @@ public:
         return GPUArchitecture::AMD_PAL;
 #elif defined(IG_BUILD_DEVICE_INTEL)
         return GPUArchitecture::Intel;
+#elif defined(IG_BUILD_DEVICE_OPENCL)
+        return GPUArchitecture::OpenCL;
+#elif defined(IG_BUILD_DEVICE_VULKAN)
+        return GPUArchitecture::Vulkan;
 #else
 #error Unknown device architecture
 #endif

@@ -49,6 +49,10 @@ GPUArchitecture Target::getGPUArchitectureFromString(const std::string& str)
         return GPUArchitecture::Intel;
     else if (lstr == "nvidia")
         return GPUArchitecture::Nvidia;
+    else if (lstr == "opencl")
+        return GPUArchitecture::OpenCL;
+    else if (lstr == "vulkan")
+        return GPUArchitecture::Vulkan;
     else
         return GPUArchitecture::Unknown;
 }
@@ -77,6 +81,10 @@ std::string_view Target::toString(GPUArchitecture arch)
         return "Intel";
     case GPUArchitecture::Nvidia:
         return "Nvidia";
+    case GPUArchitecture::OpenCL:
+        return "OpenCL";
+    case GPUArchitecture::Vulkan:
+        return "Vulkan";
     default:
     case GPUArchitecture::Unknown:
         return "Unknown";
@@ -98,7 +106,7 @@ std::vector<std::string> Target::getAvailableCPUArchitectureNames()
 
 std::vector<std::string> Target::getAvailableGPUArchitectureNames()
 {
-    return { "AMD", "Intel", "Nvidia" };
+    return { "AMD", "Intel", "Nvidia", "OpenCL", "Vulkan" };
 }
 
 static inline CPUArchitecture getCPUArchitecture()

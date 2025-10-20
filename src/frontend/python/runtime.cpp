@@ -216,6 +216,8 @@ void runtime_module(nb::module_& m)
         .value("AMD", GPUArchitecture::AMD_HSA)
         .value("Intel", GPUArchitecture::Intel)
         .value("Nvidia", GPUArchitecture::Nvidia)
+        .value("OpenCL", GPUArchitecture::OpenCL)
+        .value("Vulkan", GPUArchitecture::Vulkan)
         .value("Unknown", GPUArchitecture::Unknown);
 
     nb::class_<Target>(m, "Target", "Target specification the runtime is using")
