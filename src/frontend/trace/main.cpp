@@ -109,7 +109,7 @@ int main(int argc, char** argv)
         opts.OverrideFilmSize = { (uint32)rays.size(), 1 };
         std::unique_ptr<Runtime> runtime;
         try {
-            runtime = std::make_unique<Runtime>(opts);
+            runtime = Runtime::create(opts);
         } catch (const std::exception& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
             return EXIT_FAILURE;

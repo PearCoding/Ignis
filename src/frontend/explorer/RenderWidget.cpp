@@ -192,7 +192,7 @@ public:
         injectCamera(scene);
         injectSkyModel(scene);
 
-        mRuntime = std::make_unique<Runtime>(options);
+        mRuntime = Runtime::create(options);
         if (mRuntime->loadFromScene(scene.get())) {
             setupPass("perspective", path, scene.get(), mPerspectivePass, ShaderGenerator::generatePerspective);
             setupPass("imageinfo", path, scene.get(), mImageInfoPass, ShaderGenerator::generateImageInfo);

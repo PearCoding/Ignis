@@ -33,6 +33,11 @@ public:
     explicit Runtime(const RuntimeOptions& opts);
     ~Runtime();
 
+    /// Construct a Runtime, automatically retrying on the CPU if a GPU target fails to
+    /// initialize (e.g. no usable GPU or device driver present). Throws if construction
+    /// fails on the CPU as well.
+    [[nodiscard]] static std::unique_ptr<Runtime> create(const RuntimeOptions& opts);
+
     /// Load from file and initialize
     [[nodiscard]] bool loadFromFile(const Path& path);
 

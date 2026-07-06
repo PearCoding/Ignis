@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 
     std::unique_ptr<Runtime> runtime;
     try {
-        runtime = std::make_unique<Runtime>(opts);
+        runtime = Runtime::create(opts);
     } catch (const std::exception& e) {
         IG_LOG(L_ERROR) << e.what() << std::endl;
         return EXIT_FAILURE;

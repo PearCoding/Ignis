@@ -101,7 +101,7 @@ protected:
     virtual Runtime* createInstance() override
     {
         try {
-            return new Runtime(mOptions);
+            return Runtime::create(mOptions).release();
         } catch (const std::exception& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
             flush_io();
@@ -134,7 +134,7 @@ protected:
 
         Runtime* runtime;
         try {
-            runtime = new Runtime(mOptions);
+            runtime = Runtime::create(mOptions).release();
         } catch (const std::exception& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
             flush_io();
@@ -171,7 +171,7 @@ protected:
     {
         Runtime* runtime;
         try {
-            runtime = new Runtime(mOptions);
+            runtime = Runtime::create(mOptions).release();
         } catch (const std::exception& e) {
             IG_LOG(L_ERROR) << e.what() << std::endl;
             flush_io();

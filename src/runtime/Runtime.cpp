@@ -146,6 +146,25 @@ Runtime::Runtime(const RuntimeOptions& opts)
     IDeviceInterface::setCurrentDevice(mInterface.get());
 }
 
+std::unique_ptr<Runtime> Runtime::create(const RuntimeOptions& opts)
+{
+    try {
+        return std::make_unique<Runtime>(opts);
+    } catch (const std::exception& e) {
+        // Only a GPU target has something to fall back to
+        if (!opts.Target.isGPU())
+            throw;
+
+        IG_LOG(L_WARNING) << "Could not initialize the GPU device (" << e.what()
+                          << "). Falling back to the CPU." << std::endl;
+
+        RuntimeOptions cpuOpts = opts;
+        cpuOpts.Target         = Target::pickCPU();
+        cpuOpts.Target.setThreadCount(opts.Target.threadCount());
+        return std::make_unique<Runtime>(cpuOpts);
+    }
+}
+
 Runtime::~Runtime()
 {
     if (IDeviceInterface::getCurrentDevice() == mInterface.get())
