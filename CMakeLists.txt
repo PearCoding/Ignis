@@ -162,6 +162,11 @@ if(IG_WITH_PYTHON_API)
 	if (WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.26 AND Python_INTERPRETER_ID STREQUAL "Python")
 		# Windows stable ABI builds for CPython require Development.SABIModule provided by CMake>=3.26
 		find_package(Python 3.8 COMPONENTS Interpreter Development.Module Development.SABIModule)
+	elseif (CMAKE_VERSION VERSION_GREATER_EQUAL 3.26)
+		# Request Development.SABIModule (optional) so nanobind produces a stable-ABI (abi3)
+		# module. A single abi3 build then imports into any CPython >= the build version,
+		# instead of a version-locked cpython-3XX module.
+		find_package(Python 3.8 COMPONENTS Interpreter Development OPTIONAL_COMPONENTS Development.SABIModule)
 	else()
 		# The following suffices in all other cases
 		find_package(Python 3.8 COMPONENTS Interpreter Development)
