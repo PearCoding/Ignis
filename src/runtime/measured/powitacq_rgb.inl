@@ -847,6 +847,10 @@ Tensor::Tensor(const std::string& filename)
             uint64_t size_value;
             SAFE_READ(&size_value, sizeof(size_value), 1);
             shape[j] = (size_t)size_value;
+            // A field's data is read from the file, so it can never be larger than the file itself.
+            // This bound also guards the multiplication below against overflowing size_t, which would
+            // otherwise allocate a small buffer for a huge shape and read out of bounds later.
+            ASSERT(shape[j] == 0 || total_size <= m_size / shape[j], "Invalid tensor file: field size out of bounds.");
             total_size *= shape[j];
         }
 
