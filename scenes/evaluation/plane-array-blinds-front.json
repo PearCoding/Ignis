@@ -1,0 +1,11 @@
+{
+	"externals": [
+		{"filename": "plane-array-base.json"}
+	],
+	"bsdfs": [
+		{"type":"tensortree", "name": "windowBL", "up":[0,1,0], "filename":"radiance/blinds_20deg_t45.xml"},
+		{"type":"tensortree", "name": "windowBR", "up":[0,1,0], "filename":"radiance/blinds_20deg_t45.xml"},
+		{"type":"tensortree", "name": "windowTL", "up":[0,1,0], "filename":"radiance/blinds_20deg_t45.xml"},
+		{"type":"tensortree", "name": "windowTR", "up":[0,1,0], "filename":"radiance/blinds_20deg_t45.xml"}
+	]
+}

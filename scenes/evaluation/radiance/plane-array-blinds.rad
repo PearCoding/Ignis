@@ -1,0 +1,19 @@
+void BSDF window_bsdf_bl
+6 0 blinds_20deg_t45.xml 0 1 0 .
+0
+0
+
+void BSDF window_bsdf_br
+6 0 blinds_20deg_t45.xml 0 1 0 .
+0
+0
+
+void BSDF window_bsdf_tl
+6 0 blinds_20deg_t45.xml 0 1 0 .
+0
+0
+
+void BSDF window_bsdf_tr
+6 0 blinds_20deg_t45.xml 0 1 0 .
+0
+0
