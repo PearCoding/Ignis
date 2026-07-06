@@ -137,7 +137,7 @@ Path RuntimeInfo::libdevicePath()
     if (root.empty())
         return {};
 
-    const Path libPath = root.parent_path() / "bin" / "libdevice.10.bc";
+    const Path libPath = root / "bin" / "libdevice.10.bc";
 
     if (std::filesystem::exists(libPath))
         return libPath;
