@@ -67,14 +67,43 @@ static constexpr int gltfMaxNodeDepth = 1024;
 // #define IG_GLTF_MAP_UNLIT_AS_LIGHT
 
 namespace IG {
-static bool imageLoader(tinygltf::Image* img, const int, std::string*,
+static bool imageLoader(tinygltf::Image* img, const int, std::string* err,
                         std::string*, int, int,
-                        const unsigned char* ptr, int size, void*)
+                        const unsigned char* ptr, int size, void* user_data)
 {
-    // Do nothing, except copy if necessary
-    // This will only be called for embedded data uris
-    img->image.resize(size);
-    std::memcpy(img->image.data(), ptr, size);
+    // Called for embedded data uris (size matches the decoded buffer) and for bufferView-backed
+    // images. For the latter tinygltf validates the bufferView's byteOffset but not
+    // byteOffset + byteLength, so it can hand us a size that runs past the backing buffer. Validate
+    // it against the real buffer extent before copying to avoid an out-of-bounds read.
+    if (size < 0) {
+        if (err)
+            *err += "glTF image has a negative data size.\n";
+        return false;
+    }
+
+    if (img->bufferView >= 0 && user_data != nullptr) {
+        const auto& model = *reinterpret_cast<const tinygltf::Model*>(user_data);
+        if (static_cast<size_t>(img->bufferView) >= model.bufferViews.size()) {
+            if (err)
+                *err += "glTF image references an out-of-range bufferView.\n";
+            return false;
+        }
+        const tinygltf::BufferView& view = model.bufferViews[img->bufferView];
+        if (view.buffer < 0 || static_cast<size_t>(view.buffer) >= model.buffers.size()) {
+            if (err)
+                *err += "glTF image references an out-of-range buffer.\n";
+            return false;
+        }
+        const tinygltf::Buffer& buffer = model.buffers[view.buffer];
+        if (view.byteOffset > buffer.data.size() || static_cast<size_t>(size) > buffer.data.size() - view.byteOffset) {
+            if (err)
+                *err += "glTF image bufferView range exceeds its buffer.\n";
+            return false;
+        }
+    }
+
+    img->image.resize(static_cast<size_t>(size));
+    std::memcpy(img->image.data(), ptr, static_cast<size_t>(size));
 
     return true;
 }
@@ -1097,7 +1126,7 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
     std::string err;
     std::string warn;
 
-    loader.SetImageLoader(imageLoader, nullptr);
+    loader.SetImageLoader(imageLoader, &model);
 
     bool ok = false;
     if (path.extension() == ".glb")
