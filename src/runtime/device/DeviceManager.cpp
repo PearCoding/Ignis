@@ -31,22 +31,34 @@ inline static void split_env(const std::string& str, path_set& data)
 {
     constexpr char _IG_ENV_DELIMITER = ':';
 
+    const auto add = [&](const std::string& entry) {
+        if (entry.empty())
+            return;
+        std::error_code ec;
+        const auto canonical = std::filesystem::canonical(entry, ec);
+        if (ec) {
+            IG_LOG(L_WARNING) << "Ignoring invalid " << _IG_DEVICE_ENV_PATH_NAME << " entry '" << entry << "': " << ec.message() << std::endl;
+            return;
+        }
+        data.insert(canonical);
+    };
+
     size_t start = 0U;
     size_t end   = str.find(_IG_ENV_DELIMITER);
     while (end != std::string::npos) {
-        data.insert(std::filesystem::canonical(str.substr(start, end - start)));
+        add(str.substr(start, end - start));
         start = end + 1;
         end   = str.find(_IG_ENV_DELIMITER, start);
     }
 
-    if (end != start)
-        data.insert(std::filesystem::canonical(str.substr(start, end)));
+    add(str.substr(start));
 }
 
 static path_set getDevicesFromPath(const std::filesystem::path& path)
 {
     path_set drivers;
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(path, ec)) {
         if (!entry.is_regular_file())
             continue;
         if (SharedLibrary::isSharedLibrary(entry.path())
@@ -58,6 +70,9 @@ static path_set getDevicesFromPath(const std::filesystem::path& path)
             && string_starts_with(entry.path().stem().string(), _IG_DEVICE_LIB_PREFIX))
             drivers.insert(entry.path());
     }
+
+    if (ec)
+        IG_LOG(L_DEBUG) << "Could not scan device path " << path << ": " << ec.message() << std::endl;
 
     return drivers;
 }
@@ -97,8 +112,14 @@ bool DeviceManager::init(const Path& dir, bool ignoreEnv, bool force)
         paths.insert(rootPath / "bin");
     }
 
-    if (!dir.empty())
-        paths.insert(std::filesystem::canonical(dir));
+    if (!dir.empty()) {
+        std::error_code ec;
+        const auto canonical = std::filesystem::canonical(dir, ec);
+        if (ec)
+            IG_LOG(L_WARNING) << "Could not resolve device directory " << dir << ": " << ec.message() << std::endl;
+        else
+            paths.insert(canonical);
+    }
 
     for (auto& path : paths) {
         IG_LOG(L_DEBUG) << "Searching for devices in " << path << std::endl;
@@ -202,7 +223,12 @@ bool DeviceManager::addModule(const Path& path)
             return false;
 
         const IPluginInterface* interface = func();
-        const auto target                 = checkModule(path, interface);
+        if (!interface) {
+            IG_LOG(L_WARNING) << "Module " << path << " returned a null interface" << std::endl;
+            return false;
+        }
+
+        const auto target = checkModule(path, interface);
         if (!target.has_value())
             return false;
 
@@ -226,7 +252,12 @@ bool DeviceManager::loadModule(const Path& path)
             return false;
 
         const IPluginInterface* interface = func();
-        const auto target                 = checkModule(path, interface);
+        if (!interface) {
+            IG_LOG(L_ERROR) << "Module " << path << " returned a null interface" << std::endl;
+            return false;
+        }
+
+        const auto target = checkModule(path, interface);
         if (!target.has_value())
             return false;
 
