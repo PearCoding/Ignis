@@ -75,17 +75,22 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.21)
 	option(IG_INSTALL_RUNTIME_DEPENDENCIES "Install runtime libraries together with Ignis" ${_default})
 endif()
 
+# Make the install relocatable: resolve co-located libraries relative to the binary/module
+# ($ORIGIN) instead of baking in an absolute prefix. Covers bin/ -> ../lib and the python
+# module api/ignis/ -> ../../lib (or a co-located runtime in a wheel).
+if(APPLE)
+	set(_ig_origin "@loader_path")
+else()
+	set(_ig_origin "$ORIGIN")
+endif()
+set(CMAKE_INSTALL_RPATH "${_ig_origin}" "${_ig_origin}/../lib" "${_ig_origin}/../../lib")
+set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+
 if(SKBUILD)
 	find_package(PythonExtensions REQUIRED)
-    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-	# set(CMAKE_SKIP_BUILD_RPATH FALSE)
-	# set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-	# set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-	set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
 	set(_IG_RUNTIME_SET RUNTIME_DEPENDENCY_SET ignis_runtime_set)
-    message(STATUS "Using scikit-build, rpath=${CMAKE_INSTALL_RPATH}")
+	message(STATUS "Using scikit-build")
 elseif(IG_INSTALL_RUNTIME_DEPENDENCIES)
-	set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 	set(_IG_RUNTIME_SET RUNTIME_DEPENDENCY_SET ignis_runtime_set)
 endif()
 
