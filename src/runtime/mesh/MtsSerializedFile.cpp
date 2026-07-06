@@ -138,13 +138,16 @@ void extractMeshVertices(TriMesh& tri_mesh, CompressedStream& cin, uint32_t flag
 template <typename T>
 void extractMeshIndices(TriMesh& tri_mesh, CompressedStream& cin)
 {
-    size_t tricount = tri_mesh.indices.size() / 4;
+    const size_t vertexCount = tri_mesh.vertices.size();
+    size_t tricount          = tri_mesh.indices.size() / 4;
     // Indices
     for (size_t i = 0; i < tricount; ++i) {
         T x, y, z;
         cin.read(&x);
         cin.read(&y);
         cin.read(&z);
+        if ((size_t)x >= vertexCount || (size_t)y >= vertexCount || (size_t)z >= vertexCount)
+            throw std::runtime_error("Serialized mesh references a vertex index out of range");
         tri_mesh.indices[i * 4 + 0] = (uint32)x;
         tri_mesh.indices[i * 4 + 1] = (uint32)y;
         tri_mesh.indices[i * 4 + 2] = (uint32)z;
