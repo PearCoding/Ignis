@@ -5,7 +5,9 @@ add_executable(ig_test_fuzzer ${SRC_FILES})
 target_link_libraries(ig_test_fuzzer PRIVATE ig_runtime)
 ig_add_extra_options(ig_test_fuzzer)
 
-set(SANITIZER_FLAGS -fsanitize=address -g -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=memory -fsanitize=undefined)
+# AddressSanitizer and MemorySanitizer are mutually exclusive, so requesting both made the
+# whole flag check fail and no sanitizer was ever applied. Use ASan + UBSan.
+set(SANITIZER_FLAGS -fsanitize=address -g -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=undefined)
 check_cxx_compiler_flag("${SANITIZER_FLAGS}" COMPILER_SUPPORTS_SANITIZER)
 if(COMPILER_SUPPORTS_SANITIZER)
     message(STATUS "Fuzzer is using additional compiler flags: ${SANITIZER_FLAGS}")
@@ -13,4 +15,4 @@ if(COMPILER_SUPPORTS_SANITIZER)
     target_link_options(ig_test_fuzzer PRIVATE ${SANITIZER_FLAGS})
 endif()
 
-# add_test(NAME ignis_test_fuzzer COMMAND ig_test_fuzzer 1000)
+add_test(NAME ignis_test_fuzzer COMMAND ig_test_fuzzer 1000)

@@ -165,6 +165,22 @@ if(CMAKE_VERSION VERSION_GREATER 3.9)
     endif()
 endif()
 
+option(IG_WITH_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+if(IG_WITH_SANITIZERS)
+    include(CheckCXXCompilerFlag)
+    set(IG_SANITIZER_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined)
+    # The sanitizer flag must be present on the link line too, otherwise the check's test
+    # executable fails to link and reports a false negative.
+    set(CMAKE_REQUIRED_LINK_OPTIONS -fsanitize=address,undefined)
+    check_cxx_compiler_flag("-fsanitize=address,undefined" IG_HAS_SANITIZER_FLAGS)
+    unset(CMAKE_REQUIRED_LINK_OPTIONS)
+    if(IG_HAS_SANITIZER_FLAGS)
+        message(STATUS "Building with sanitizers: ${IG_SANITIZER_FLAGS}")
+    else()
+        message(WARNING "IG_WITH_SANITIZERS is ON but the compiler does not support -fsanitize=address,undefined; sanitizers disabled")
+    endif()
+endif()
+
 function(ig_add_extra_options TARGET)
     set(options NO_DEFAULT_CONSOLE NO_LTO NO_CHECKS)
     cmake_parse_arguments(PARSE_ARGV 1 ARG "${options}" "" "")
@@ -173,6 +189,11 @@ function(ig_add_extra_options TARGET)
 
     if(HAS_NEW_RPATH_FLAGS)
         target_link_options(${TARGET} PRIVATE ${NEW_RPATH_FLAGS})
+    endif()
+
+    if(IG_WITH_SANITIZERS AND IG_HAS_SANITIZER_FLAGS AND NOT target_type STREQUAL "STATIC_LIBRARY")
+        target_compile_options(${TARGET} PRIVATE ${IG_SANITIZER_FLAGS})
+        target_link_options(${TARGET} PRIVATE ${IG_SANITIZER_FLAGS})
     endif()
 
     if(target_type STREQUAL "EXECUTABLE")
