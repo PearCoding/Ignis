@@ -53,6 +53,16 @@ static const std::vector<std::string_view> gltf_supported_extensions = {
     KHR_texture_transform,
 };
 
+// glTF indices are file-controlled and only partially validated by tinygltf; bound-check
+// before indexing to avoid out-of-bounds reads on malformed or truncated models.
+template <typename T>
+static inline bool gltfValidIndex(int index, const std::vector<T>& vec)
+{
+    return index >= 0 && static_cast<size_t>(index) < vec.size();
+}
+
+static constexpr int gltfMaxNodeDepth = 1024;
+
 // Uncomment this to map unlit materials to area lights. This can explode shading complexity and is therefore not really recommended
 // #define IG_GLTF_MAP_UNLIT_AS_LIGHT
 
@@ -468,6 +478,11 @@ std::string handleTexture(const tinygltf::Value& parent, const std::string& name
 
 static void addNodeMesh(Scene& scene, const tinygltf::Material& defaultMaterial, const Path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& transform)
 {
+    if (!gltfValidIndex(node.mesh, model.meshes)) {
+        IG_LOG(L_WARNING) << "glTF: Node references invalid mesh index " << node.mesh << std::endl;
+        return;
+    }
+
     size_t primCount           = 0;
     const tinygltf::Mesh& mesh = model.meshes[node.mesh];
     for (const auto& prim : mesh.primitives) {
@@ -561,6 +576,11 @@ static void addNodeCamera(Scene& scene, const Path& baseDir, const tinygltf::Mod
 
     cameraTransform.scale(Vector3f(1, 1, -1)); // Flip -z to z
 
+    if (!gltfValidIndex(node.camera, model.cameras)) {
+        IG_LOG(L_WARNING) << "glTF: Node references invalid camera index " << node.camera << std::endl;
+        return;
+    }
+
     const tinygltf::Camera& camera = model.cameras[node.camera];
     if (camera.type == "orthographic") {
         auto obj = std::make_shared<SceneObject>(SceneObject::OT_CAMERA, "orthographic", baseDir);
@@ -630,8 +650,13 @@ static void addNodePunctualLight(Scene& scene, const Path& baseDir, const tinygl
     }
 }
 
-static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, const Path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent)
+static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, const Path& baseDir, const tinygltf::Model& model, const tinygltf::Node& node, const Transformf& parent, int depth = 0)
 {
+    if (depth > gltfMaxNodeDepth) {
+        IG_LOG(L_WARNING) << "glTF: Node hierarchy exceeds maximum depth " << gltfMaxNodeDepth << " (possible cycle); skipping deeper nodes." << std::endl;
+        return;
+    }
+
     Transformf transform = parent;
     if (node.matrix.size() == 16)
         transform *= Eigen::Map<Eigen::Matrix4d>(const_cast<double*>(node.matrix.data())).cast<float>();
@@ -654,14 +679,22 @@ static void addNode(Scene& scene, const tinygltf::Material& defaultMaterial, con
     if (node.extensions.count(KHR_lights_punctual.data()) > 0)
         addNodePunctualLight(scene, baseDir, model, node, transform);
 
-    for (int child : node.children)
-        addNode(scene, defaultMaterial, baseDir, model, model.nodes[child], transform);
+    for (int child : node.children) {
+        if (!gltfValidIndex(child, model.nodes))
+            continue;
+        addNode(scene, defaultMaterial, baseDir, model, model.nodes[child], transform, depth + 1);
+    }
 }
 
 static void loadTextures(Scene& scene, const tinygltf::Model& model, const Path& directory, const Path& cache_dir)
 {
     std::unordered_map<int, Path> loaded_images;
     for (const auto& tex : model.textures) {
+        if (!gltfValidIndex(tex.source, model.images)) {
+            IG_LOG(L_WARNING) << "glTF: Texture references invalid image source " << tex.source << std::endl;
+            continue;
+        }
+
         Path img_path;
         if (loaded_images.count(tex.source) > 0) {
             img_path = loaded_images[tex.source];
@@ -675,7 +708,7 @@ static void loadTextures(Scene& scene, const tinygltf::Model& model, const Path&
         auto obj = std::make_shared<SceneObject>(SceneObject::OT_TEXTURE, "image", directory);
         obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(img_path).generic_string()));
 
-        if (tex.sampler >= 0) {
+        if (gltfValidIndex(tex.sampler, model.samplers)) {
             const tinygltf::Sampler& sampler = model.samplers[tex.sampler];
             switch (sampler.magFilter) {
             case TINYGLTF_TEXTURE_FILTER_NEAREST:
@@ -1071,9 +1104,21 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
         ++meshCount;
     }
 
-    const tinygltf::Scene& gltf_scene = model.scenes[model.defaultScene];
-    for (int nodeId : gltf_scene.nodes)
-        addNode(*scene, defaultMaterial, directory, model, model.nodes[nodeId], Transformf::Identity());
+    // "scene" is optional in glTF (defaultScene == -1 when absent); fall back to the first scene.
+    int sceneId = model.defaultScene;
+    if (!gltfValidIndex(sceneId, model.scenes))
+        sceneId = 0;
+
+    if (gltfValidIndex(sceneId, model.scenes)) {
+        const tinygltf::Scene& gltf_scene = model.scenes[sceneId];
+        for (int nodeId : gltf_scene.nodes) {
+            if (!gltfValidIndex(nodeId, model.nodes))
+                continue;
+            addNode(*scene, defaultMaterial, directory, model, model.nodes[nodeId], Transformf::Identity());
+        }
+    } else {
+        IG_LOG(L_WARNING) << "glTF '" << path << "': No valid scene to instantiate." << std::endl;
+    }
 
     return scene;
 }
