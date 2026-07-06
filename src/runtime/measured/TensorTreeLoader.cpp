@@ -86,8 +86,10 @@ bool TensorTreeLoader::load(const Path& in_xml, TensorTree& tree)
                 stream.ignore();
                 node_stack.emplace_back(node_stack.back()->Children.emplace_back(std::make_unique<TensorTreeNode>()).get());
             } else if (c == '}') {
-                if (node_stack.empty()) {
-                    IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Misformed scatter data" << std::endl;
+                // Never pop the root: a '}' with only the root left is unbalanced, and popping it
+                // would leave the stack empty for the following back() dereferences.
+                if (node_stack.size() <= 1) {
+                    IG_LOG(L_ERROR) << "Could not parse " << in_xml << ": Misformed scatter data (unbalanced '}')" << std::endl;
                     return false;
                 }
 
