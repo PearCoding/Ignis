@@ -728,18 +728,18 @@ public:
                     ImPlot::SetupFinish();
 
                     constexpr double BarWidth = 0.67;
-                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
-                    ImPlot::SetNextFillStyle(ImVec4(1, 0, 0, 1), 0.25f);
-                    ImPlot::PlotBars("R", Histogram.data() + 0 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
-                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
-                    ImPlot::SetNextFillStyle(ImVec4(0, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("G", Histogram.data() + 1 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
-                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
-                    ImPlot::SetNextFillStyle(ImVec4(0, 0, 1, 1), 0.25f);
-                    ImPlot::PlotBars("B", Histogram.data() + 2 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
-                    ImPlot::SetNextLineStyle(ImVec4(0, 0, 0, 0), 0); // No lines
-                    ImPlot::SetNextFillStyle(ImVec4(1, 1, 0, 1), 0.25f);
-                    ImPlot::PlotBars("L", Histogram.data() + 3 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, ImPlotBarsFlags_None);
+                    // ImPlot 1.1 replaced SetNextLineStyle/SetNextFillStyle with a per-item ImPlotSpec.
+                    const auto barSpec = [](const ImVec4& color) {
+                        ImPlotSpec spec;
+                        spec.LineWeight = 0; // No bar edges
+                        spec.FillColor  = color;
+                        spec.FillAlpha  = 0.25f;
+                        return spec;
+                    };
+                    ImPlot::PlotBars("R", Histogram.data() + 0 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, barSpec(ImVec4(1, 0, 0, 1)));
+                    ImPlot::PlotBars("G", Histogram.data() + 1 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, barSpec(ImVec4(0, 1, 0, 1)));
+                    ImPlot::PlotBars("B", Histogram.data() + 2 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, barSpec(ImVec4(0, 0, 1, 1)));
+                    ImPlot::PlotBars("L", Histogram.data() + 3 * HISTOGRAM_SIZE, HISTOGRAM_SIZE, BarWidth, 0, barSpec(ImVec4(1, 1, 0, 1)));
 
                     ImPlot::EndPlot();
                 }
