@@ -126,21 +126,51 @@ static Path exportImage(const tinygltf::Image& img, const tinygltf::Model& model
     }
 }
 
-static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, const tinygltf::Primitive& primitive)
+// Validate that an accessor's element range lies fully within its backing buffer and return the
+// base data pointer (or nullptr if any bufferView/buffer index, offset, stride or count is out of
+// bounds). Guards against malformed glTF whose accessors would otherwise read past the buffer.
+static const uint8* gltfAccessorData(const tinygltf::Model& model, const tinygltf::Accessor& accessor, size_t elementSize, int& byteStride)
+{
+    byteStride = 0;
+    if (!gltfValidIndex(accessor.bufferView, model.bufferViews))
+        return nullptr;
+    const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
+    if (!gltfValidIndex(view.buffer, model.buffers))
+        return nullptr;
+    const tinygltf::Buffer& buffer = model.buffers[view.buffer];
+
+    byteStride = accessor.ByteStride(view);
+    if (byteStride <= 0 || static_cast<size_t>(byteStride) < elementSize || accessor.count == 0)
+        return nullptr;
+
+    const size_t base     = view.byteOffset + accessor.byteOffset;
+    const size_t lastByte = base + static_cast<size_t>(accessor.count - 1) * static_cast<size_t>(byteStride) + elementSize;
+    if (base >= buffer.data.size() || lastByte > buffer.data.size())
+        return nullptr;
+
+    return buffer.data.data() + base;
+}
+
+static bool exportMeshPrimitive(const Path& path, const tinygltf::Model& model, const tinygltf::Primitive& primitive)
 {
     if (!primitive.attributes.contains("POSITION")) {
         IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as it does not contain a valid POSITION attribute" << std::endl;
-        return;
+        return false;
     }
 
     if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
         // TODO: Could export more
         IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as it is not a simple list of triangles" << std::endl;
-        return;
+        return false;
     }
 
-    bool hasNormal  = primitive.attributes.contains("NORMAL");
-    bool hasTexture = primitive.attributes.contains("TEXCOORD_0");
+    if (!gltfValidIndex(primitive.attributes.at("POSITION"), model.accessors)) {
+        IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as its POSITION accessor index is out of bounds" << std::endl;
+        return false;
+    }
+
+    bool hasNormal  = primitive.attributes.contains("NORMAL") && gltfValidIndex(primitive.attributes.at("NORMAL"), model.accessors);
+    bool hasTexture = primitive.attributes.contains("TEXCOORD_0") && gltfValidIndex(primitive.attributes.at("TEXCOORD_0"), model.accessors);
     bool hasIndices = primitive.indices >= 0 && primitive.indices < (int)model.accessors.size();
 
     const tinygltf::Accessor* vertices = &model.accessors[primitive.attributes.at("POSITION")];
@@ -150,13 +180,13 @@ static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, 
 
     if (vertices->type != TINYGLTF_TYPE_VEC3 || vertices->componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
         IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as it does contain an invalid POSITION attribute accessor" << std::endl;
-        return;
+        return false;
     }
 
     if (indices && indices->type != TINYGLTF_TYPE_SCALAR) {
         // TODO: Why not unsigned int, short or more?
         IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as it does contain an invalid index accessor" << std::endl;
-        return;
+        return false;
     }
 
     if (hasNormal) {
@@ -173,26 +203,44 @@ static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, 
         }
     }
 
-    const tinygltf::BufferView* vertexBufferView = &model.bufferViews[vertices->bufferView];
-    const tinygltf::Buffer* vertexBuffer         = &model.buffers[vertexBufferView->buffer];
-    const uint8* vertexData                      = (vertexBuffer->data.data() + vertexBufferView->byteOffset + vertices->byteOffset);
-
-    const tinygltf::BufferView* normalBufferView = nullptr;
-    const tinygltf::Buffer* normalBuffer         = nullptr;
-    const uint8* normalData                      = nullptr;
-    if (hasNormal) {
-        normalBufferView = &model.bufferViews[normals->bufferView];
-        normalBuffer     = &model.buffers[normalBufferView->buffer];
-        normalData       = (normalBuffer->data.data() + normalBufferView->byteOffset + normals->byteOffset);
+    int vertexByteStride    = 0;
+    const uint8* vertexData = gltfAccessorData(model, *vertices, 3 * sizeof(float), vertexByteStride);
+    if (!vertexData) {
+        IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as its POSITION accessor reads out of bounds" << std::endl;
+        return false;
     }
 
-    const tinygltf::BufferView* texBufferView = nullptr;
-    const tinygltf::Buffer* texBuffer         = nullptr;
-    const uint8* texData                      = nullptr;
+    int normalByteStride    = 0;
+    const uint8* normalData = nullptr;
+    if (hasNormal) {
+        normalData = gltfAccessorData(model, *normals, 3 * sizeof(float), normalByteStride);
+        if (!normalData) {
+            IG_LOG(L_WARNING) << "glTF: Skipping normals for mesh primitive " << path << " (NORMAL accessor reads out of bounds)" << std::endl;
+            hasNormal = false;
+        }
+    }
+
+    int texByteStride    = 0;
+    const uint8* texData = nullptr;
     if (hasTexture) {
-        texBufferView = &model.bufferViews[textures->bufferView];
-        texBuffer     = &model.buffers[texBufferView->buffer];
-        texData       = (texBuffer->data.data() + texBufferView->byteOffset + textures->byteOffset);
+        texData = gltfAccessorData(model, *textures, 2 * sizeof(float), texByteStride);
+        if (!texData) {
+            IG_LOG(L_WARNING) << "glTF: Skipping textures for mesh primitive " << path << " (TEXCOORD_0 accessor reads out of bounds)" << std::endl;
+            hasTexture = false;
+        }
+    }
+
+    int indexByteStride    = 0;
+    const uint8* indexData = nullptr;
+    if (indices) {
+        size_t indexElemSize = (size_t)tinygltf::GetComponentSizeInBytes((uint32_t)indices->componentType);
+        if (indexElemSize == 0)
+            indexElemSize = sizeof(int32); // matches the INT fallback in the read switch below
+        indexData = gltfAccessorData(model, *indices, indexElemSize, indexByteStride);
+        if (!indexData) {
+            IG_LOG(L_ERROR) << "glTF: Can not export mesh primitive " << path << " as its index accessor reads out of bounds" << std::endl;
+            return false;
+        }
     }
 
     std::ofstream out(path, std::ios::binary);
@@ -219,43 +267,35 @@ static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, 
     out << "end_header\n";
 
     for (size_t i = 0; i < vertices->count; ++i) {
-        int vertexByteStride = vertices->ByteStride(*vertexBufferView);
-        float vx             = *(reinterpret_cast<const float*>(vertexData + vertexByteStride * i) + 0);
-        float vy             = *(reinterpret_cast<const float*>(vertexData + vertexByteStride * i) + 1);
-        float vz             = *(reinterpret_cast<const float*>(vertexData + vertexByteStride * i) + 2);
+        float vx = *(reinterpret_cast<const float*>(vertexData + vertexByteStride * i) + 0);
+        float vy = *(reinterpret_cast<const float*>(vertexData + vertexByteStride * i) + 1);
+        float vz = *(reinterpret_cast<const float*>(vertexData + vertexByteStride * i) + 2);
         out.write(reinterpret_cast<const char*>(&vx), sizeof(vx));
         out.write(reinterpret_cast<const char*>(&vy), sizeof(vy));
         out.write(reinterpret_cast<const char*>(&vz), sizeof(vz));
 
         if (hasNormal) {
-            int normalByteStride = normals->ByteStride(*normalBufferView);
-            float nx             = *(reinterpret_cast<const float*>(normalData + normalByteStride * i) + 0);
-            float ny             = *(reinterpret_cast<const float*>(normalData + normalByteStride * i) + 1);
-            float nz             = *(reinterpret_cast<const float*>(normalData + normalByteStride * i) + 2);
+            float nx = *(reinterpret_cast<const float*>(normalData + normalByteStride * i) + 0);
+            float ny = *(reinterpret_cast<const float*>(normalData + normalByteStride * i) + 1);
+            float nz = *(reinterpret_cast<const float*>(normalData + normalByteStride * i) + 2);
             out.write(reinterpret_cast<const char*>(&nx), sizeof(nx));
             out.write(reinterpret_cast<const char*>(&ny), sizeof(ny));
             out.write(reinterpret_cast<const char*>(&nz), sizeof(nz));
         }
 
         if (hasTexture) {
-            int texByteStride = textures->ByteStride(*texBufferView);
-            float u           = *(reinterpret_cast<const float*>(texData + texByteStride * i) + 0);
-            float v           = 1 - *(reinterpret_cast<const float*>(texData + texByteStride * i) + 1);
+            float u = *(reinterpret_cast<const float*>(texData + texByteStride * i) + 0);
+            float v = 1 - *(reinterpret_cast<const float*>(texData + texByteStride * i) + 1);
             out.write(reinterpret_cast<const char*>(&u), sizeof(u));
             out.write(reinterpret_cast<const char*>(&v), sizeof(v));
         }
     }
 
     if (indices) {
-        const tinygltf::BufferView* indexBufferView = &model.bufferViews[indices->bufferView];
-        const tinygltf::Buffer* indexBuffer         = &model.buffers[indexBufferView->buffer];
-        const uint8* indexData                      = (indexBuffer->data.data() + indexBufferView->byteOffset + indices->byteOffset);
-
         for (size_t i = 0; i < triangleCount; ++i) {
-            int byteStride    = indices->ByteStride(*indexBufferView);
-            const uint8* p_i0 = indexData + byteStride * (3 * i + 0);
-            const uint8* p_i1 = indexData + byteStride * (3 * i + 1);
-            const uint8* p_i2 = indexData + byteStride * (3 * i + 2);
+            const uint8* p_i0 = indexData + indexByteStride * (3 * i + 0);
+            const uint8* p_i1 = indexData + indexByteStride * (3 * i + 1);
+            const uint8* p_i2 = indexData + indexByteStride * (3 * i + 2);
 
             int i0 = 0, i1 = 0, i2 = 0;
             switch (indices->componentType) {
@@ -310,6 +350,8 @@ static void exportMeshPrimitive(const Path& path, const tinygltf::Model& model, 
             out.write(reinterpret_cast<const char*>(&i2), sizeof(i2));
         }
     }
+
+    return true;
 }
 
 static std::string getMaterialName(const tinygltf::Material& mat, size_t id)
@@ -1094,10 +1136,11 @@ std::shared_ptr<Scene> glTFSceneParser::loadFromFile(const Path& path)
             const std::string name = mesh.name + "_" + std::to_string(meshCount) + "_" + std::to_string(primCount);
             const Path ply_path    = cache_dir / "meshes" / (name + ".ply");
 
-            exportMeshPrimitive(ply_path, model, prim);
-            auto obj = std::make_shared<SceneObject>(SceneObject::OT_SHAPE, "ply", directory);
-            obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(ply_path).generic_string()));
-            scene->addShape(name, obj);
+            if (exportMeshPrimitive(ply_path, model, prim)) {
+                auto obj = std::make_shared<SceneObject>(SceneObject::OT_SHAPE, "ply", directory);
+                obj->setProperty("filename", SceneProperty::fromString(std::filesystem::canonical(ply_path).generic_string()));
+                scene->addShape(name, obj);
+            }
 
             ++primCount;
         }
