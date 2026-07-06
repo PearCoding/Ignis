@@ -199,7 +199,7 @@ inline void Serializer::read(int16& v)
 {
     uint16 tmp;
     read(tmp);
-    v = static_cast<int8>(tmp);
+    v = static_cast<int16>(tmp);
 }
 
 inline void Serializer::read(uint16& v)
@@ -211,7 +211,7 @@ inline void Serializer::read(int32& v)
 {
     uint32 tmp;
     read(tmp);
-    v = static_cast<int8>(tmp);
+    v = static_cast<int32>(tmp);
 }
 
 inline void Serializer::read(uint32& v)
@@ -223,7 +223,7 @@ inline void Serializer::read(int64& v)
 {
     uint64 tmp;
     read(tmp);
-    v = static_cast<int8>(tmp);
+    v = static_cast<int64>(tmp);
 }
 
 inline void Serializer::read(uint64& v)

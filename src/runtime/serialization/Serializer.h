@@ -16,7 +16,7 @@ using is_trivial_serializable = std::integral_constant<
         && !std::is_same<T, bool>::value>;
 
 /* Major reason for own serialization class is the 'non' use of templates in the members. */
-class Serializer {
+class IG_LIB Serializer {
 public:
     explicit Serializer(bool readmode);
     virtual ~Serializer() = default;

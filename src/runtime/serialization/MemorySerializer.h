@@ -3,7 +3,7 @@
 #include "Serializer.h"
 
 namespace IG {
-class MemorySerializer : public Serializer {
+class IG_LIB MemorySerializer : public Serializer {
 public:
     MemorySerializer();
     MemorySerializer(uint8* buffer, size_t size, bool readmode);
