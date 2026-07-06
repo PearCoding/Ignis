@@ -245,22 +245,19 @@ inline void Serializer::read(std::string& v)
 {
     v.clear();
 
-    uint8 c;
-    read(c);
-    for (; c != 0; read(c)) {
-        v += static_cast<uint8>(c);
-    }
+    // Stop on the terminating zero or on EOF/short read, so a truncated stream can not loop forever.
+    uint8 c = 0;
+    while (readRaw(&c, sizeof(c)) == sizeof(c) && c != 0)
+        v += static_cast<char>(c);
 }
 
 inline void Serializer::read(std::wstring& v)
 {
     v.clear();
 
-    uint32 c;
-    read(c);
-    for (; c != 0; read(c)) {
+    uint32 c = 0;
+    while (readRaw(reinterpret_cast<uint8*>(&c), sizeof(c)) == sizeof(c) && c != 0)
         v += static_cast<wchar_t>(c);
-    }
 }
 
 inline void Serializer::read(ISerializable& v)

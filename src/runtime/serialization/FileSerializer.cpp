@@ -77,9 +77,10 @@ size_t FileSerializer::readRaw(uint8* data, size_t size)
     IG_ASSERT(isValid(), "Trying to read from a close buffer!");
     IG_ASSERT(isReadMode(), "Trying to read from a write serializer!");
 
-    mInternal->MemoryFootprint += size;
     mInternal->File.read(reinterpret_cast<char*>(data), size);
-    return size; // TODO: Really??
+    const size_t read = static_cast<size_t>(mInternal->File.gcount());
+    mInternal->MemoryFootprint += read;
+    return read; // Actual number of bytes read; 0 or short on EOF/truncation
 }
 
 } // namespace IG

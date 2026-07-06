@@ -77,3 +77,31 @@ TEST_CASE("Serializer round-trips unsigned integers and floats", "[Serializer]")
     CHECK(rf == f);
     CHECK(rd == d);
 }
+
+TEST_CASE("Serializer round-trips strings", "[Serializer]")
+{
+    std::array<uint8, 64> buffer{};
+
+    const std::string in = "hello world";
+    {
+        MemorySerializer writer(buffer.data(), buffer.size(), false);
+        writer.write(in);
+    }
+
+    MemorySerializer reader(buffer.data(), buffer.size(), true);
+    std::string out;
+    reader.read(out);
+    CHECK(out == in);
+}
+
+// Regression: read(std::string) on a stream with no terminating zero must stop at end of
+// buffer instead of looping forever.
+TEST_CASE("Serializer string read stops at end of buffer", "[Serializer]")
+{
+    std::array<uint8, 4> buffer{ 'a', 'b', 'c', 'd' }; // no null terminator
+
+    MemorySerializer reader(buffer.data(), buffer.size(), true);
+    std::string out;
+    reader.read(out); // must terminate at EOF, not hang
+    CHECK(out == "abcd");
+}
