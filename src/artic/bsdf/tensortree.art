@@ -112,7 +112,7 @@ fn @tt_eval_component(wi: Vec3, wo: Vec3, component: TensorTreeComponentLookup) 
         // Climb the tree
         let (leaf, pos) = tt_climb_tree(io_pos, component);
         let leaf_value  = component.value(leaf);
-        
+
         if tt_is_leaf_single_value(leaf_value) {
             -leaf_value
         } else {
@@ -254,8 +254,13 @@ fn @tt_transform_matrix(normal: Vec3, up: Vec3) {
     if vec3_len2(right) <= flt_eps {
         mat3x3_identity()
     } else {
-        let nup = vec3_cross(normal, right);
-        make_mat3x3(right, nup, normal)
+        // Normalize the frame: cross(up, normal) is only unit length when up is perpendicular to
+        // the normal. Without this the basis is orthogonal but scaled, which shrinks the outgoing
+        // disk coordinate fed to the tensor tree and turns sampled directions into non-unit (near
+        // zero for near-parallel up/normal) vectors.
+        let nright = vec3_normalize(right);
+        let nup    = vec3_cross(normal, nright);
+        make_mat3x3(nright, nup, normal)
     }
 }
 
