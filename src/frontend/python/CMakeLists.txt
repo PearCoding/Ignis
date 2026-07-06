@@ -1,7 +1,7 @@
 CPMAddPackage(
     NAME nanobind
     GITHUB_REPOSITORY wjakob/nanobind
-    GIT_TAG v2.5.0
+    GIT_TAG ${IG_NANOBIND_GIT_TAG}
     EXCLUDE_FROM_ALL YES
     SYSTEM
 )

@@ -1,7 +1,7 @@
 CPMAddPackage(
     NAME cli11
     GITHUB_REPOSITORY CLIUtils/CLI11
-    GIT_TAG main
+    GIT_TAG ${IG_CLI11_GIT_TAG}
     DOWNLOAD_ONLY YES
 )
 

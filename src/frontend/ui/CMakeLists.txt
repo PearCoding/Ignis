@@ -1,28 +1,28 @@
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
-    GIT_TAG v1.92.4-docking
+    GIT_TAG ${IG_IMGUI_GIT_TAG}
     DOWNLOAD_ONLY YES
 )
 
 CPMAddPackage(
     NAME implot
     GITHUB_REPOSITORY epezent/implot
-    GIT_TAG master
+    GIT_TAG ${IG_IMPLOT_GIT_TAG}
     DOWNLOAD_ONLY YES
 )
 
 CPMAddPackage(
     NAME imgui_markdown
-    GITHUB_REPOSITORY PearCoding/imgui_markdown 
-    GIT_TAG main
+    GITHUB_REPOSITORY PearCoding/imgui_markdown
+    GIT_TAG ${IG_IMGUI_MARKDOWN_GIT_TAG}
     DOWNLOAD_ONLY YES
 )
 
 CPMAddPackage(
     NAME portable_file_dialogs
     GITHUB_REPOSITORY samhocevar/portable-file-dialogs
-    GIT_TAG main
+    GIT_TAG ${IG_PFD_GIT_TAG}
     DOWNLOAD_ONLY YES
 )
 

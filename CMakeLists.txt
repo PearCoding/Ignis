@@ -123,6 +123,7 @@ if(IG_WITH_DENOISER)
 	find_package(OpenImageDenoise)
 endif()
 
+include(cmake/Dependencies.cmake)
 include(cmake/GetDependencies.cmake)
 include(cmake/Bash.cmake)
 include(cmake/ExtraUtils.cmake)

@@ -9,8 +9,8 @@ target_include_directories(igutil PRIVATE ${stb_SOURCE_DIR})
 if(IG_WITH_CONVERTER_MITSUBA)
     CPMAddPackage(
         NAME tinyparsermitsuba
-        GITHUB_REPOSITORY PearCoding/TinyParser-Mitsuba 
-        GIT_TAG master
+        GITHUB_REPOSITORY PearCoding/TinyParser-Mitsuba
+        GIT_TAG ${IG_TINYPARSERMITSUBA_GIT_TAG}
         EXCLUDE_FROM_ALL YES
     )
 
