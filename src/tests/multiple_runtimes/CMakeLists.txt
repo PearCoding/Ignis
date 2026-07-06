@@ -6,3 +6,4 @@ target_link_libraries(ig_test_multiple_runtimes PRIVATE ig_common)
 
 set(scenes ${PROJECT_SOURCE_DIR}/scenes/diamond_scene.json ${PROJECT_SOURCE_DIR}/scenes/furnance.json ${PROJECT_SOURCE_DIR}/scenes/primitives.json)
 add_test(NAME ignis_test_multiple_runtimes COMMAND ig_test_multiple_runtimes ${scenes})
+set_tests_properties(ignis_test_multiple_runtimes PROPERTIES LABELS "integration")

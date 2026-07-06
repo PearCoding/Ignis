@@ -16,3 +16,4 @@ if(COMPILER_SUPPORTS_SANITIZER)
 endif()
 
 add_test(NAME ignis_test_fuzzer COMMAND ig_test_fuzzer 1000)
+set_tests_properties(ignis_test_fuzzer PROPERTIES LABELS "cpu")

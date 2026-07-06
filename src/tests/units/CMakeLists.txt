@@ -18,6 +18,7 @@ macro(push_test name files)
     ig_add_extra_options(${TARGET} NO_LTO)
 	if(NOT __args_NO_ADD)
 		add_test(NAME ${name} COMMAND ${TARGET})
+		set_tests_properties(${name} PROPERTIES LABELS "cpu")
 	endif()
 endmacro(push_test)
 

@@ -1,5 +1,6 @@
 if(IG_HAS_PYTHON_API)
     add_test(NAME ignis_test_integrator COMMAND ${Python_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR})
+    set_tests_properties(ignis_test_integrator PROPERTIES LABELS "integration")
 else()
     message(WARNING "Integration tests require the Python API which is disabled or not available.")
 endif()
