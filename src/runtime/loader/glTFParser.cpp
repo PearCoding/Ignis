@@ -472,7 +472,8 @@ inline Transformf getTextureTransform(const tinygltf::TextureInfo& info, bool& h
 
 std::string handleTexture(const tinygltf::TextureInfo& info, Scene& scene, const tinygltf::Model& model, const Path& directory)
 {
-    IG_ASSERT(info.index >= 0, "Expected valid texture info");
+    if (!gltfValidIndex(info.index, model.textures))
+        return "";
 
     const tinygltf::Texture& tex = model.textures[info.index];
 
@@ -496,7 +497,7 @@ std::string handleTexture(const tinygltf::TextureInfo& info, Scene& scene, const
 std::string handleTexture(const tinygltf::Value& parent, const std::string& name, Scene& scene, const tinygltf::Model& model, const Path& directory)
 {
     int id = getTextureIndex(parent, name);
-    if (id < 0)
+    if (!gltfValidIndex(id, model.textures))
         return "";
 
     const tinygltf::Texture& tex = model.textures[id];
@@ -1038,7 +1039,7 @@ static void loadMaterials(Scene& scene, const tinygltf::Model& model, const Path
             // TODO: Apply factor to emission for "darkening" by the cosine term
         }
 
-        if (mat.normalTexture.index >= 0) {
+        if (gltfValidIndex(mat.normalTexture.index, model.textures)) {
             scene.addBSDF(name + "_normal_inner", bsdf);
             const tinygltf::Texture& tex = model.textures[mat.normalTexture.index];
 
