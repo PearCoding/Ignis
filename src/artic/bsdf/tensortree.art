@@ -203,7 +203,7 @@ fn @tt_check_peak_transmission(wo: Vec3, component: TensorTreeComponent) -> bool
     }
 }
 
-fn @make_tensortree_component(wo_func : fn (Vec3)->Vec3, wi_func : fn (Vec3)->Vec3, spec: TensorTreeComponentSpecification, buffer: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
+fn @make_tensortree_component(canon : fn (Vec3, Vec3) -> (Vec3, Vec3), spec: TensorTreeComponentSpecification, buffer: DeviceBuffer, off: i32) -> (TensorTreeComponent, i32) {
     let node_count  = spec.node_count;
     let value_count = spec.value_count;
     let lookup = TensorTreeComponentLookup {
@@ -212,7 +212,7 @@ fn @make_tensortree_component(wo_func : fn (Vec3)->Vec3, wi_func : fn (Vec3)->Ve
         value         = @|i| buffer.load_f32(off + 4 + node_count + i),
     };
 
-    let eval_f = @|wi:Vec3, wo:Vec3| tt_eval_component(wi_func(wi), wo_func(wo), lookup);
+    let eval_f = @|wi:Vec3, wo:Vec3| { let (in_v, out_v) = canon(wi, wo); tt_eval_component(in_v, out_v, lookup) };
 
     let comp = TensorTreeComponent {
         specification = spec,
@@ -223,14 +223,18 @@ fn @make_tensortree_component(wo_func : fn (Vec3)->Vec3, wi_func : fn (Vec3)->Ve
 }
 
 fn @make_tensortree_model(buffer: DeviceBuffer, specification: TensorTreeSpecification) -> TensorTreeModel {
-    // Map to a standard coordinate system
-    let positive = shading::make_positive_hemisphere;
-    let negative = @|v:Vec3| vec3_neg(positive(v));
+    // Assign the two directions to the tree's (incident, exitant) slots. Reflection keeps them by
+    // role (wi -> incident, wo -> exitant), matching Radiance's FREFL/BREFL query. Transmission is
+    // canonicalized by hemisphere like Radiance's SDqueryTre swap: the front (+z) vector is the
+    // incident slot and the back (-z) vector the exitant slot, so both view sides index the tree
+    // consistently instead of sending half the hemisphere into empty cells.
+    let refl  = @|wi:Vec3, wo:Vec3| (wi, wo);
+    let trans = @|wi:Vec3, wo:Vec3| if wi.z >= 0 { (wi, wo) } else { (wo, wi) };
 
-    let (front_reflection,   front_reflection_off)   = make_tensortree_component(positive, positive, specification.front_reflection,   buffer, 0);
-    let (front_transmission, front_transmission_off) = make_tensortree_component(positive, negative, specification.front_transmission, buffer, front_reflection_off);
-    let (back_reflection,    back_reflection_off)    = make_tensortree_component(negative, negative, specification.back_reflection,    buffer, front_reflection_off + front_transmission_off);
-    let (back_transmission,  _)                      = make_tensortree_component(positive, negative, specification.back_transmission,  buffer, front_reflection_off + front_transmission_off + back_reflection_off);
+    let (front_reflection,   front_reflection_off)   = make_tensortree_component(refl,  specification.front_reflection,   buffer, 0);
+    let (front_transmission, front_transmission_off) = make_tensortree_component(trans, specification.front_transmission, buffer, front_reflection_off);
+    let (back_reflection,    back_reflection_off)    = make_tensortree_component(refl,  specification.back_reflection,    buffer, front_reflection_off + front_transmission_off);
+    let (back_transmission,  _)                      = make_tensortree_component(trans, specification.back_transmission,  buffer, front_reflection_off + front_transmission_off + back_reflection_off);
 
     let has_front_refl = front_reflection.specification.total   > 0;
     let has_front_tran = front_transmission.specification.total > 0;
