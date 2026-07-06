@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 #include <zlib.h>
 
@@ -44,14 +45,14 @@ public:
         while (size > 0) {
             if (mStream.avail_in == 0) {
                 size_t remaining = mSize - mPos;
+                if (remaining == 0)
+                    throw std::runtime_error("Serialized mesh is truncated (not enough compressed data)");
                 mStream.next_in  = mBuffer.data();
                 mStream.avail_in = (uInt)std::min(remaining, mBuffer.size());
-                if (mStream.avail_in == 0)
-                    IG_LOG(L_ERROR) << "Read less data than expected (" << FormatMemory(size) << " missing)" << std::endl;
                 mIn.read(reinterpret_cast<char*>(mBuffer.data()), mStream.avail_in);
 
                 if (!mIn.good())
-                    IG_LOG(L_ERROR) << "Could not read " << FormatMemory(mStream.avail_in) << std::endl;
+                    throw std::runtime_error("Could not read serialized mesh data");
 
                 mPos += mStream.avail_in;
             }
@@ -59,28 +60,19 @@ public:
             mStream.avail_out = (uInt)size;
             mStream.next_out  = targetPtr;
 
-            int retval = inflate(&mStream, Z_NO_FLUSH);
-            switch (retval) {
-            case Z_STREAM_ERROR:
-                IG_LOG(L_ERROR) << "inflate(): stream error!" << std::endl;
-                break;
-            case Z_NEED_DICT:
-                IG_LOG(L_ERROR) << "inflate(): need dictionary!" << std::endl;
-                break;
-            case Z_DATA_ERROR:
-                IG_LOG(L_ERROR) << "inflate(): data error!" << std::endl;
-                break;
-            case Z_MEM_ERROR:
-                IG_LOG(L_ERROR) << "inflate(): memory error!" << std::endl;
-                break;
-            };
+            const uInt availInBefore = mStream.avail_in;
+            const int retval         = inflate(&mStream, Z_NO_FLUSH);
+            if (retval != Z_OK && retval != Z_STREAM_END && retval != Z_BUF_ERROR)
+                throw std::runtime_error("Failed to decompress serialized mesh (corrupt file)");
 
             size_t outputSize = size - (size_t)mStream.avail_out;
             targetPtr += outputSize;
             size -= outputSize;
 
-            if (size > 0 && retval == Z_STREAM_END)
-                IG_LOG(L_ERROR) << "inflate(): attempting to read past the end of the stream!" << std::endl;
+            // A finished stream with data still expected, or an iteration that made no forward
+            // progress at all, means the input is corrupt/truncated. Bail instead of spinning.
+            if (size > 0 && (retval == Z_STREAM_END || (outputSize == 0 && mStream.avail_in == availInBefore)))
+                throw std::runtime_error("Serialized mesh ended before all data was read (corrupt or truncated file)");
         }
     }
 
@@ -160,7 +152,19 @@ void extractMeshIndices(TriMesh& tri_mesh, CompressedStream& cin)
     }
 }
 
+static TriMesh loadImpl(const Path& path, size_t shapeIndex);
+
 TriMesh load(const Path& path, size_t shapeIndex)
+{
+    try {
+        return loadImpl(path, shapeIndex);
+    } catch (const std::exception& e) {
+        IG_LOG(L_ERROR) << "Could not load serialized mesh '" << path << "': " << e.what() << std::endl;
+        return TriMesh{};
+    }
+}
+
+static TriMesh loadImpl(const Path& path, size_t shapeIndex)
 {
     std::fstream stream(path, std::ios::in | std::ios::binary);
     if (!stream) {
