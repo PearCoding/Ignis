@@ -1,7 +1,9 @@
 #pragma once
 
 #include "serialization/Serializer.h"
+#include <limits>
 #include <numeric>
+#include <stdexcept>
 
 namespace IG {
 struct KlemsComponentSpecification {
@@ -53,15 +55,20 @@ public:
         std::sort(mThetaBasis.begin(), mThetaBasis.end(),
                   [](const KlemsThetaBasis& a, const KlemsThetaBasis& b) { return a.UpperTheta < b.UpperTheta; });
 
-        // Construct linear offsets
+        // Construct linear offsets. Accumulate in a wide type: the per-basis PhiCount is
+        // file-controlled, and letting the running offset overflow the 32-bit entry count would
+        // size mPermutation too small while the fill loop below still writes PhiCount entries.
         mThetaLinearOffset.resize(mThetaBasis.size());
-        uint32 off = 0;
+        size_t off = 0;
         for (size_t i = 0; i < mThetaBasis.size(); ++i) {
-            mThetaLinearOffset[i] = off;
+            mThetaLinearOffset[i] = static_cast<uint32>(off);
             off += mThetaBasis[i].PhiCount;
         }
 
-        mEntryCount = off;
+        if (off > std::numeric_limits<uint32>::max())
+            throw std::runtime_error("Klems: angle basis entry count exceeds the supported range");
+
+        mEntryCount = static_cast<uint32>(off);
 
         // Enlarge for faster access
         mPermutation.resize(mEntryCount);
