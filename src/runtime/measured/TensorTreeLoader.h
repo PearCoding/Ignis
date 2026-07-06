@@ -33,17 +33,24 @@ struct TensorTreeNode {
         std::swap(Children[0]->Children, Children);
     }
 
-    inline float computeTotal(size_t depth) const
+    // Projected-solid-angle-weighted integral of the leaf values over the parameterization domain.
+    // Each interior node splits its cell into equal children and a leaf covers its cell with either
+    // a single value or 2^ndim equal sub-cells, so weighting every value by the fraction of the
+    // domain it covers (cellMeasure) yields an energy-like total.
+    inline float computeTotal(float cellMeasure) const
     {
-        const float area = 1.0f / (depth * (Values.size() + Children.size()));
+        if (isLeaf()) {
+            const float per = cellMeasure / static_cast<float>(Values.size());
+            float total     = 0;
+            for (float val : Values)
+                total += Pi * val * per;
+            return total;
+        }
 
-        float total = 0;
+        const float childMeasure = cellMeasure / static_cast<float>(Children.size());
+        float total              = 0;
         for (const auto& child : Children)
-            total += child->computeTotal(depth + 1);
-
-        for (float val : Values)
-            total += Pi * val * area;
-
+            total += child->computeTotal(childMeasure);
         return total;
     }
 
@@ -102,7 +109,7 @@ public:
         mRoot = std::move(node);
         addNode(*mRoot, std::nullopt);
 
-        mTotal     = mRoot->computeTotal(1);
+        mTotal     = mRoot->computeTotal(1.0f);
         mMaxDepth  = mRoot->computeMaxDepth(1);
         mMinProjSA = Pi / (float)((1 << mMaxDepth) * (1 << mMaxDepth)); // TODO: Validate (Correct for anisotropic)
     }
