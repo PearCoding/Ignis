@@ -90,15 +90,27 @@ fn @tt_climb_tree(mut pos: Vec4, component: TensorTreeComponentLookup) -> (i32, 
 
 // Evaluates whole component and returns corresponding leaf value
 fn @tt_eval_component(wi: Vec3, wo: Vec3, component: TensorTreeComponentLookup) -> TensorTreeEvalResult {
-    let out_pos = concentric_disk_to_square(vec3_to_2(wo));
-
-    let io_pos = if component.specification.ndim == 3 {
+    let raw_pos = if component.specification.ndim == 3 {
+        // Isotropic BSDF: the tree is indexed by the outgoing azimuth measured relative to the
+        // incoming one. Rotate wo around z by -atan2(-wi.y, -wi.x) before mapping it to the square
+        // (Radiance's spinvector in bsdf_t.c SDqueryTre); without it the absolute azimuth is used.
+        let ang  = -math_builtins::atan2(-wi.y, -wi.x);
+        let ca   = math_builtins::cos(ang);
+        let sa   = math_builtins::sin(ang);
+        let out_pos = concentric_disk_to_square(make_vec2(wo.x * ca - wo.y * sa, wo.x * sa + wo.y * ca));
         let in_t = (0.5 - flt_eps) - 0.5 * math_builtins::sqrt(wi.x * wi.x + wi.y * wi.y);
         make_vec4(in_t, out_pos.x, out_pos.y, 0)
     } else {
-        let in_pos = concentric_disk_to_square(vec2_neg(vec3_to_2(wi)));
+        let in_pos  = concentric_disk_to_square(vec2_neg(vec3_to_2(wi)));
+        let out_pos = concentric_disk_to_square(vec3_to_2(wo));
         make_vec4(in_pos.x, in_pos.y, out_pos.x, out_pos.y)
     };
+
+    // Keep the grid coordinates strictly inside [0,1); a grazing direction maps the disk to radius 1,
+    // where disk2square yields exactly 1 and the leaf index would run past the 2^ndim values (an
+    // out-of-bounds read producing NaN/Inf). Radiance guards the same way via its 0.9999999999999 factor.
+    let clamp_unit = @|x: f32| math_builtins::fmin[f32](math_builtins::fmax[f32](x, 0), 0.99999994:f32);
+    let io_pos = make_vec4(clamp_unit(raw_pos.x), clamp_unit(raw_pos.y), clamp_unit(raw_pos.z), clamp_unit(raw_pos.w));
 
     let factor = if component.specification.root_is_leaf {
         let value0 = component.value(0);
