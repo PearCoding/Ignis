@@ -51,7 +51,10 @@ fn @k_theta_index(theta: f32, basis: KlemsBasis) {
 }
 
 fn @k_phi_index(phi: f32, basis: KlemsThetaBasis) {
-    let idx = max(0, (phi * (basis.phi_count as f32) * flt_inv_pi / 2 + 0.5) as i32);
+    // spherical_from_dir returns phi in (-pi, pi]; wrap negative azimuths into [0, 2pi) so they
+    // map to the correct phi bin instead of collapsing onto bin 0.
+    let phi2 = if phi < 0 { phi + 2 * flt_pi } else { phi };
+    let idx  = (phi2 * (basis.phi_count as f32) * flt_inv_pi / 2 + 0.5) as i32;
     select(idx >= basis.phi_count, 0, idx)
 }
 
