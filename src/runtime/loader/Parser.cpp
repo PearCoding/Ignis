@@ -70,6 +70,8 @@ inline bool checkArrayIsAllInteger(const rapidjson::GenericArray<true, rapidjson
 
 inline static Vector2f getVector2f(const rapidjson::Value& obj)
 {
+    if (!obj.IsArray())
+        throw std::runtime_error("Expected a JSON array of numbers");
     const auto& array = obj.GetArray();
     const size_t len  = array.Size();
     if (len != 2)
@@ -81,6 +83,8 @@ inline static Vector2f getVector2f(const rapidjson::Value& obj)
 
 inline static Vector3f getVector3f(const rapidjson::Value& obj, bool allow2d = false)
 {
+    if (!obj.IsArray())
+        throw std::runtime_error("Expected a JSON array of numbers");
     const auto& array = obj.GetArray();
     const size_t len  = array.Size();
     if (allow2d && len == 2) {
@@ -98,6 +102,8 @@ inline static Vector3f getVector3f(const rapidjson::Value& obj, bool allow2d = f
 // [w, x, y, z]
 inline static Quaternionf getQuaternionf(const rapidjson::Value& obj)
 {
+    if (!obj.IsArray())
+        throw std::runtime_error("Expected a JSON array of numbers");
     const auto& array = obj.GetArray();
     const size_t len  = array.Size();
     if (len != 4)
@@ -109,6 +115,8 @@ inline static Quaternionf getQuaternionf(const rapidjson::Value& obj)
 
 inline static Matrix3f getMatrix3f(const rapidjson::Value& obj)
 {
+    if (!obj.IsArray())
+        throw std::runtime_error("Expected a JSON array of numbers");
     const auto& array = obj.GetArray();
     const size_t len  = array.Size();
     if (len != 9)
@@ -126,6 +134,8 @@ inline static Matrix3f getMatrix3f(const rapidjson::Value& obj)
 
 inline static Matrix4f getMatrix4f(const rapidjson::Value& obj)
 {
+    if (!obj.IsArray())
+        throw std::runtime_error("Expected a JSON array of numbers");
     const auto& array = obj.GetArray();
     const size_t len  = array.Size();
     const size_t rows = len == 12 ? 3 : 4;
@@ -219,6 +229,8 @@ inline static void applyTransformProperty(Transformf& transform, const rapidjson
             } else
                 throw std::runtime_error("Expected transform lookat property to be an object with origin, target and optional up vector");
         } else if (val->name == "matrix") {
+            if (!val->value.IsArray())
+                throw std::runtime_error("Expected transform matrix property to be an array");
             const size_t len = val->value.GetArray().Size();
             if (len == 9)
                 transform = transform * Transformf(getMatrix3f(val->value));
@@ -292,6 +304,8 @@ inline static SceneProperty getProperty(const rapidjson::Value& obj)
     else if (obj.IsNumber())
         return SceneProperty::fromNumber(obj.GetFloat());
     else if (obj.IsArray()) {
+        if (!obj.IsArray())
+            throw std::runtime_error("Expected a JSON array of numbers");
         const auto& array = obj.GetArray();
         const size_t len  = array.Size();
 
