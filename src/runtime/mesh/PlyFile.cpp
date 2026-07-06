@@ -217,6 +217,10 @@ static TriMesh read(const Path& path, std::istream& stream, const Header& header
             for (uint32_t elem = 0; elem < elems; ++elem) {
                 uint32_t index = 0;
                 sstream >> index;
+                if (index >= tri_mesh.vertices.size()) {
+                    IG_LOG(L_ERROR) << "PlyFile " << path << ": Face vertex index " << index << " is out of range" << std::endl;
+                    return TriMesh{}; // Failed
+                }
                 tmp_indices[elem]  = index;
                 tmp_vertices[elem] = tri_mesh.vertices[index];
             }
@@ -236,7 +240,11 @@ static TriMesh read(const Path& path, std::istream& stream, const Header& header
             tmp_vertices.resize(elems);
 
             for (uint32_t elem = 0; elem < elems; ++elem) {
-                uint32_t index     = readIdx();
+                uint32_t index = readIdx();
+                if (index >= tri_mesh.vertices.size()) {
+                    IG_LOG(L_ERROR) << "PlyFile " << path << ": Face vertex index " << index << " is out of range" << std::endl;
+                    return TriMesh{}; // Failed
+                }
                 tmp_indices[elem]  = index;
                 tmp_vertices[elem] = tri_mesh.vertices[index];
             }
