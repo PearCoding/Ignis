@@ -25,13 +25,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             ninja-build libtbb-dev zlib1g-dev libsdl2-dev libpython3-dev
-          # Use the runner's system LLVM if present, otherwise install it.
-          # The version must match LLVM.SYSTEM_DIR in scripts/setup/config.json.
-          if [ ! -d /usr/lib/llvm-20/lib/cmake/llvm ]; then
-            wget -qO llvm.sh https://apt.llvm.org/llvm.sh
-            sudo bash llvm.sh 20
-            sudo apt-get install -y --no-install-recommends llvm-20-dev clang-20 lld-20
-          fi
+
+      # A complete, self-consistent LLVM + Clang dev toolchain (static libs and
+      # cmake config), which the distribution packages do not provide.
+      - name: Setup LLVM/Clang toolchain
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: llvm
+          create-args: >-
+            llvmdev=20.1
+            clangdev=20.1
+            lld=20.1
+          init-shell: bash
+          cache-environment: true
 
       - name: Cache AnyDSL toolchain (thorin/artic/runtime)
         uses: actions/cache@v4
@@ -42,18 +48,23 @@ jobs:
             anydsl-deps-${{ runner.os }}-
 
       - name: Generate CI setup config
-        shell: pwsh
+        shell: bash -el {0}
         run: |
-          $cfg = Get-Content scripts/setup/config.json -Raw | ConvertFrom-Json
-          # Keep the dependency tree inside the workspace so it can be cached.
-          # The cuda/amd_hsa runtime devices skip themselves on a GPU-less runner
-          # (see scripts/setup/setup_runtime.ps1).
-          $cfg.LOCATION = "$env:GITHUB_WORKSPACE/deps"
-          $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
+          pwsh -NoProfile -Command '
+            $cfg = Get-Content scripts/setup/config.json -Raw | ConvertFrom-Json
+            $cfg.LOCATION = "$env:GITHUB_WORKSPACE/deps"
+            $cfg.LLVM.SYSTEM_DIR = "$env:CONDA_PREFIX"
+            $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
+          '
 
       - name: Setup dependencies and build Ignis
-        shell: pwsh
-        run: ./scripts/setup/setup.ps1 -config_file scripts/setup/config.ci.json
+        shell: bash -el {0}
+        run: |
+          export CMAKE_PREFIX_PATH="$CONDA_PREFIX:$CMAKE_PREFIX_PATH"
+          pwsh ./scripts/setup/setup.ps1 -config_file scripts/setup/config.ci.json
 
       - name: Run tests
-        run: ctest --test-dir build/Release --output-on-failure -E "(ignis_test_integrator)|(ignis_test_multiple_runtimes)"
+        shell: bash -el {0}
+        run: |
+          export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+          ctest --test-dir build/Release --output-on-failure -E "(ignis_test_integrator)|(ignis_test_multiple_runtimes)"
