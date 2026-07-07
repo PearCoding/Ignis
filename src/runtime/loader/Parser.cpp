@@ -322,7 +322,7 @@ inline static SceneProperty getProperty(const rapidjson::Value& obj)
     } else if (obj.IsObject()) {
         const auto innerObj = obj.GetObject();
         if (innerObj.HasMember("values")) {
-            return handleArrayProperty(innerObj);
+            return handleArrayProperty(obj);
         } else {
             // Deprecated way of handling transforms
             Transformf transform = Transformf::Identity();
@@ -560,7 +560,7 @@ public:
 };
 #undef _CHECK_FLAG
 
-constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag | rapidjson::kParseEscapedApostropheFlag;
+constexpr auto JsonFlags = rapidjson::kParseDefaultFlags | rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag | rapidjson::kParseNanAndInfFlag;
 
 std::shared_ptr<Scene> SceneParser::loadFromFile(const Path& path, uint32 flags)
 {

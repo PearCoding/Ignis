@@ -21,6 +21,6 @@
 
 // Ensure the following are explicitly instantiated
 namespace ImGui {
-template float ScaleRatioFromValueT<float, float, float>(ImGuiDataType data_type, float v, float v_min, float v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size);
+template float ScaleRatioFromValueT<float, float, float>(ImGuiDataType data_type, float v, float v_min, float v_max, float logarithmic_zero_epsilon, float zero_deadzone_size);
 template float RoundScalarWithFormatT<float>(const char* format, ImGuiDataType data_type, float v);
 } // namespace ImGui

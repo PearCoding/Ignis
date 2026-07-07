@@ -64,7 +64,7 @@ static inline Vector2f composePoint(float theta, float phi, bool isotropic)
     const float r = theta / Pi2;
 
     if (isotropic) {
-        const float proj = (0.5f - FltEps) - 0.5f * r; //TODO: Missing rotation of the outgoing direction based on the theta
+        const float proj = (0.5f - FltEps) - 0.5f * r; // TODO: Missing rotation of the outgoing direction based on the theta
         return concentricDiskToSquare(Vector2f(proj, 0));
     } else {
         const float x = r * std::cos(phi);
@@ -175,7 +175,7 @@ static inline void drawPatch(const Vector4f& color, const Vector2f& minPos, cons
     drawLineSegment(drawList, maxPos, Vector2f(maxPos.x(), minPos.y()), transform2, segments);
     drawLineSegment(drawList, Vector2f(maxPos.x(), minPos.y()), minPos, transform2, segments);
     drawList.AddConvexPolyFilled(drawList._Path.Data, drawList._Path.Size, ImColor(color.x(), color.y(), color.z()));
-    drawList.PathStroke(LineColor, ImDrawFlags_Closed, 1.0f);
+    drawList.PathStroke(LineColor, 1.0f, ImDrawFlags_Closed);
 }
 
 template <typename TransformF>

@@ -97,7 +97,7 @@ void ui_inspect_image(int px, int py, size_t width, size_t height, float scale, 
 
     // center quad
     const ImVec2 pos = rectMin + ImVec2(float(ZoomSize), float(ZoomSize)) * quadSize;
-    draw_list->AddRect(pos, pos + quadSize, 0xFF0000FF, 0.f, 15, 2.f);
+    draw_list->AddRect(pos, pos + quadSize, 0xFF0000FF, 0.f, 2.f);
 
     ImGui::EndGroup();
 

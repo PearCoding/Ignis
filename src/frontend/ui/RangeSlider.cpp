@@ -6,7 +6,7 @@
 
 // Based on: https://github.com/ocornut/imgui/issues/76
 namespace ImGui {
-extern template float ScaleRatioFromValueT<float, float, float>(ImGuiDataType data_type, float v, float v_min, float v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size);
+extern template float ScaleRatioFromValueT<float, float, float>(ImGuiDataType data_type, float v, float v_min, float v_max, float logarithmic_zero_epsilon, float zero_deadzone_size);
 extern template float RoundScalarWithFormatT<float>(const char* format, ImGuiDataType data_type, float v);
 } // namespace ImGui
 
@@ -60,7 +60,7 @@ static bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, f
                 } else {
                     const float mouse_abs_pos = g.IO.MousePos[axis];
                     if (g.ActiveIdIsJustActivated) {
-                        float grab_t = ScaleRatioFromValueT<float, float, float>(ImGuiDataType_Float, *vals[i], v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+                        float grab_t = ScaleRatioFromValueT<float, float, float>(ImGuiDataType_Float, *vals[i], v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
                         if (axis == ImGuiAxis_Y)
                             grab_t = 1.0f - grab_t;
                         const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
@@ -92,7 +92,7 @@ static bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, f
                 if (g.IO.MouseDown[0]) {
                     const float mouse_abs_pos = g.IO.MousePos[axis];
                     if (g.ActiveIdIsJustActivated) {
-                        float grab_t = ScaleRatioFromValueT<float, float, float>(ImGuiDataType_Float, *vals[sSlider2Selection], v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+                        float grab_t = ScaleRatioFromValueT<float, float, float>(ImGuiDataType_Float, *vals[sSlider2Selection], v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
                         if (axis == ImGuiAxis_Y)
                             grab_t = 1.0f - grab_t;
                         const float grab_pos           = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
@@ -108,7 +108,7 @@ static bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, f
             }
 
             if (set_new_value) {
-                float v_new = ScaleValueFromRatioT<float, float, float>(ImGuiDataType_Float, clicked_t, v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+                float v_new = ScaleValueFromRatioT<float, float, float>(ImGuiDataType_Float, clicked_t, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
 
                 // Round to user desired precision based on format string
                 if (!(flags & ImGuiSliderFlags_NoRoundToFormat))
@@ -133,7 +133,7 @@ static bool RangeSliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v1, f
         ImRect* rects[] = { out_grab_bb1, out_grab_bb2 };
         for (int i = 0; i < 2; ++i) {
             // Output grab position so it can be displayed by the caller
-            float grab_t = ScaleRatioFromValueT<float, float, float>(ImGuiDataType_Float, *vals[i], v_min, v_max, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+            float grab_t = ScaleRatioFromValueT<float, float, float>(ImGuiDataType_Float, *vals[i], v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize);
             if (axis == ImGuiAxis_Y)
                 grab_t = 1.0f - grab_t;
             const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
