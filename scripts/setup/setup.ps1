@@ -28,7 +28,7 @@ if ($null -eq $Config.CMAKE.PARALLEL_JOBS) {
 }
 
 if ($Config.CMAKE.PARALLEL_JOBS -le 0) {
-    $Config.CMAKE.PARALLEL_JOBS = [System.Environment].ProcessorCount
+    $Config.CMAKE.PARALLEL_JOBS = [System.Environment]::ProcessorCount
 }
 
 Write-Output "Config:"
