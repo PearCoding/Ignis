@@ -30,8 +30,18 @@ jobs:
             llvmdev=20.1
             clangdev=20.1
             lld=20.1
+            zlib
+            zstd
+            libxml2-devel
           init-shell: powershell
           cache-environment: true
+
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          variant: sccache
+          key: ${{ github.job }}-${{ runner.os }}
+          max-size: 2G
 
       - name: Cache AnyDSL toolchain (thorin/artic/runtime)
         uses: actions/cache@v4
@@ -40,6 +50,14 @@ jobs:
           key: anydsl-deps-${{ runner.os }}-${{ hashFiles('scripts/setup/config.json', 'scripts/setup/*.ps1') }}
           restore-keys: |
             anydsl-deps-${{ runner.os }}-
+
+      - name: Cache CPM sources
+        uses: actions/cache@v4
+        with:
+          path: .cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
 
       - name: Generate CI setup config
         shell: pwsh
@@ -54,12 +72,15 @@ jobs:
           # prefix on the search path for every sub-build that re-runs
           # find_package(LLVM) via thorin.
           $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_PREFIX_PATH=$env:CONDA_PREFIX/Library"
+          $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+          $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
           $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
 
       - name: Setup dependencies and build Ignis
         shell: pwsh
         run: |
           $env:CMAKE_PREFIX_PATH = "$env:CONDA_PREFIX/Library;$env:CMAKE_PREFIX_PATH"
+          $env:CPM_SOURCE_CACHE = "$env:GITHUB_WORKSPACE/.cpm-cache"
           ./scripts/setup/setup.ps1 -config_file scripts/setup/config.ci.json
 
       - name: Run tests

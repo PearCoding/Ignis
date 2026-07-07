@@ -38,8 +38,17 @@ jobs:
             llvmdev=20.1
             clangdev=20.1
             lld=20.1
+            zlib
+            zstd
+            libxml2-devel
           init-shell: bash
           cache-environment: true
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
+          max-size: 2G
 
       - name: Cache AnyDSL toolchain (thorin/artic/runtime)
         uses: actions/cache@v4
@@ -49,6 +58,14 @@ jobs:
           restore-keys: |
             anydsl-deps-${{ runner.os }}-
 
+      - name: Cache CPM sources
+        uses: actions/cache@v4
+        with:
+          path: .cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
       - name: Generate CI setup config
         shell: bash -el {0}
         run: |
@@ -56,6 +73,8 @@ jobs:
             $cfg = Get-Content scripts/setup/config.json -Raw | ConvertFrom-Json
             $cfg.LOCATION = "$env:GITHUB_WORKSPACE/deps"
             $cfg.LLVM.SYSTEM_DIR = "$env:CONDA_PREFIX"
+            $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
+            $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
             $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
           '
 
@@ -63,6 +82,7 @@ jobs:
         shell: bash -el {0}
         run: |
           export CMAKE_PREFIX_PATH="$CONDA_PREFIX:$CMAKE_PREFIX_PATH"
+          export CPM_SOURCE_CACHE="$GITHUB_WORKSPACE/.cpm-cache"
           pwsh ./scripts/setup/setup.ps1 -config_file scripts/setup/config.ci.json
 
       - name: Run tests
