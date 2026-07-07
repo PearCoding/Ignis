@@ -29,7 +29,7 @@ If ($IsLinux) {
         Write-Warning 'The CUDA toolkit was not found. Proceeding will build without Nvidia GPU support'
     }
 } else {
-    $CUDA = $(Get-ChildItem env: | Where-Object { $_.Name -like "CUDA_PATH*" })[0].Value
+    $CUDA = (Get-ChildItem env: | Where-Object { $_.Name -like "CUDA_PATH*" } | Select-Object -First 1).Value
     $CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/").Replace(" ", "` ")
     If ([string]::IsNullOrEmpty($CUDA) -or !(Test-Path -Path "$CUDA")) {
         Write-Warning 'The CUDA directory is not valid. Proceeding will install without Nvidia GPU support'
