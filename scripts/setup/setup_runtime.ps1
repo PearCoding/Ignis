@@ -22,7 +22,12 @@ If (!$IsLinux -and !(Test-Path -Path "$TBB")) {
 $BUILD_TYPE = $Config.RUNTIME.BUILD_TYPE
 
 If ($IsLinux) {
-    $HasCuda = $true
+    # Without a CUDA toolkit the runtime's cuda backend cannot be built, so detect
+    # it here and let the cuda device be skipped instead of failing to configure.
+    $HasCuda = ($null -ne (Get-Command nvcc -ErrorAction SilentlyContinue)) -or (Test-Path -Path "/usr/local/cuda")
+    If (!$HasCuda) {
+        Write-Warning 'The CUDA toolkit was not found. Proceeding will build without Nvidia GPU support'
+    }
 } else {
     $CUDA = $(Get-ChildItem env: | Where-Object { $_.Name -like "CUDA_PATH*" })[0].Value
     $CUDAToolkit_NVVM_LIBRARY = "$CUDA\nvvm\lib\x64\nvvm.lib".Replace("\", "/").Replace(" ", "` ")
@@ -75,16 +80,17 @@ function CompileRuntime {
     $CMAKE_Args += '-DAnyDSL_runtime_TARGET_NAME=' + $runtime_name
 
     if (($Device -eq 'default') -or ($Device -eq 'cuda')) {
-        if (!$IsLinux){
-            If ($HasCuda) {
+        If ($HasCuda) {
+            if (!$IsLinux) {
                 $CMAKE_Args += '-DCUDAToolkit_NVVM_LIBRARY:PATH=' + $CUDAToolkit_NVVM_LIBRARY
             }
-            else {
-                Write-Warning 'No CUDA support. Proceeding will not build the runtime with Nvidia GPU support'
-                if ($Device -ne 'default') {
-                    return
-                }
+        }
+        else {
+            Write-Warning 'No CUDA support. Proceeding will not build the runtime with Nvidia GPU support'
+            if ($Device -ne 'default') {
+                return
             }
+            $CMAKE_Args += '-DCMAKE_DISABLE_FIND_PACKAGE_CUDAToolkit:BOOL=ON'
         }
     }
     else {
