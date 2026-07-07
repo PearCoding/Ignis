@@ -49,6 +49,11 @@ jobs:
           $cfg.LOCATION = "$env:GITHUB_WORKSPACE/deps"
           # conda places packages under <prefix>/Library on Windows.
           $cfg.LLVM.SYSTEM_DIR = "$env:CONDA_PREFIX/Library"
+          # conda's LLVM exports transitive imported targets (ZLIB::ZLIB, zstd,
+          # LibXml2). Unlike Linux there are no system copies, so put the conda
+          # prefix on the search path for every sub-build that re-runs
+          # find_package(LLVM) via thorin.
+          $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_PREFIX_PATH=$env:CONDA_PREFIX/Library"
           $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
 
       - name: Setup dependencies and build Ignis
