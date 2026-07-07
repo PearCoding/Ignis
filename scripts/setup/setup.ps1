@@ -109,10 +109,6 @@ try {
         & $PSScriptRoot\setup_runtime.ps1
     }
 
-    If ($Config.SDL2 -and (GetPD $Config.SDL2.ENABLED $true)) {
-        & $PSScriptRoot\setup_sdl2.ps1
-    }
-
     If ($Config.OIDN -and (GetPD $Config.OIDN.ENABLED $true)) {
         & $PSScriptRoot\setup_oidn.ps1
     }

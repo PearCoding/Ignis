@@ -1,8 +1,3 @@
-#ifndef SDL_MAIN_HANDLED
-#define SDL_MAIN_HANDLED
-#endif
-#include <SDL.h>
-
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #define IMGUI_DISABLE_OBSOLETE_KEYIO
 
@@ -13,11 +8,12 @@
 #include "imgui_tables.cpp"
 #include "imgui_widgets.cpp"
 
-// TODO: Switch to sdl2 (or sdl3) in future imgui versions
-#if SDL_VERSION_ATLEAST(2, 0, 17)
-#include "backends/imgui_impl_sdl2.cpp"
-#include "backends/imgui_impl_sdlrenderer2.cpp"
-#endif
+// Order matters: imgui_impl_opengl3.cpp ships its own GL loader that must be
+// parsed before imgui_impl_glfw.cpp pulls in the system GL headers.
+// clang-format off
+#include "backends/imgui_impl_opengl3.cpp"
+#include "backends/imgui_impl_glfw.cpp"
+// clang-format on
 
 // Include implementation of implot
 #include "implot.cpp"

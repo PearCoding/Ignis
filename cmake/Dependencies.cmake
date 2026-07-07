@@ -21,6 +21,7 @@ set(IG_PEXPR_GIT_TAG             "87d31b9ab7dc8e41a92f666c819bd9d4f5d820aa" CACH
 set(IG_CPPTRACE_GIT_TAG          "v0.7.5" CACHE STRING "cpptrace version")
 
 # --- UI (src/frontend/ui) ---
+set(IG_GLFW_GIT_TAG              "3.4" CACHE STRING "GLFW release tag")
 set(IG_IMGUI_GIT_TAG             "v1.92.4-docking" CACHE STRING "imgui version")
 set(IG_IMPLOT_GIT_TAG            "d65a2bef53d32502407de3a4be80f191e2f412d7" CACHE STRING "implot version (ImPlot 1.1 API)")
 set(IG_IMGUI_MARKDOWN_GIT_TAG    "64a56194772cef166ea7e2b9cdf7cb2a7f5447ca" CACHE STRING "imgui_markdown version")

@@ -59,7 +59,7 @@ void HelpAboutWidget::onRender(Widget*)
             ImGui::CloseCurrentPopup();
         ImGui::SameLine();
         if (ImGui::Button("Copy"))
-            SDL_SetClipboardText(Markdown.c_str());
+            ImGui::SetClipboardText(Markdown.c_str());
         ImGui::EndPopup();
     }
 }

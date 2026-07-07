@@ -146,12 +146,12 @@ endif()
 # Optional GUI
 # set(IG_HAS_UI OFF)
 if(IG_WITH_VIEWER OR IG_WITH_EXPLORER)
-    find_package(SDL2)
+    find_package(OpenGL)
 
-    if(SDL2_FOUND)
+    if(OpenGL_FOUND)
         set(IG_HAS_UI ON)
 	else()
-    	message(WARNING "Interactive viewer was requested but no SDL2 libraries were found. Disabling viewer")
+    	message(WARNING "Interactive viewer was requested but no OpenGL libraries were found. Disabling viewer")
     endif()
 endif()
 

@@ -10,9 +10,11 @@
 #include "skysun/ElevationAzimuth.h"
 #include "skysun/SunLocation.h"
 
+#include "GLTexture.h"
 #include "UI.h"
 
 #include <thread>
+#include <vector>
 
 extern const char* ig_shader[];
 
@@ -55,9 +57,6 @@ public:
             mLoading = false;
             mLoadingThread->join();
         }
-
-        if (mTexture)
-            SDL_DestroyTexture(mTexture);
     }
 
     void openFile(const Path& path)
@@ -148,7 +147,7 @@ public:
 
                 if (mTexture) {
                     runPipeline();
-                    ImGui::Image((ImTextureID)(intptr_t)mTexture, ImVec2((float)mWidth, (float)mHeight));
+                    ImGui::Image(mTexture->id(), ImVec2((float)mWidth, (float)mHeight));
                 }
 
                 if (mShowColorbar && mCurrentParameters.allowColorbar()) {
@@ -389,35 +388,15 @@ private:
 
     inline bool updateTexture(const char* aov, std::shared_ptr<RenderPass>& pass)
     {
-        void* pixels;
-        int pitch;
-        if (SDL_LockTexture(mTexture, nullptr, &pixels, &pitch) != 0) {
-            IG_LOG(L_ERROR) << "Cannot lock SDL texture: " << SDL_GetError() << std::endl;
+        if (!mTexture || mBuffer.size() < mWidth * mHeight)
             return false;
-        }
 
-        if (pitch != (int)(mWidth * sizeof(uint32))) {
-            SDL_UnlockTexture(mTexture);
-            IG_LOG(L_ERROR) << "Locked texture has an unsupported pitch" << std::endl;
-            return false;
-        }
-
-        if (!pass->copyOutputToHost(aov, pixels, mHeight * mWidth * sizeof(uint32))) {
-            SDL_UnlockTexture(mTexture);
+        if (!pass->copyOutputToHost(aov, mBuffer.data(), mHeight * mWidth * sizeof(uint32))) {
             IG_LOG(L_ERROR) << "Failed to copy buffer" << std::endl;
             return false;
         }
 
-        // TODO: Add support for different pitches
-
-        SDL_UnlockTexture(mTexture);
-
-        // IG_ASSERT(mBuffer.size() >= mWidth * mHeight, "Invalid buffer");
-        // if (SDL_UpdateTexture(mTexture, nullptr, mBuffer.data(), (int)(mWidth * sizeof(uint32))) != 0) {
-        //     IG_LOG(L_ERROR) << "Cannot update SDL texture: " << SDL_GetError() << std::endl;
-        //     return false;
-        // }
-
+        mTexture->update(mBuffer.data());
         return true;
     }
 
@@ -518,16 +497,11 @@ private:
         if (width == 0 || height == 0)
             return false;
 
-        if (mTexture)
-            SDL_DestroyTexture(mTexture);
+        if (!mTexture)
+            mTexture = std::make_unique<ui::GLTexture>();
+        mTexture->resize((int)width, (int)height);
 
-        mTexture = SDL_CreateTexture(Application::getRenderer(), SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, (int)width, (int)height);
-        if (!mTexture) {
-            IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
-            return false;
-        }
-
-        // mBuffer.resize(width * height);
+        mBuffer.resize(width * height);
         return true;
     }
 
@@ -684,7 +658,8 @@ private:
         envPtr->setProperty("ground", groundName);
     }
 
-    SDL_Texture* mTexture = nullptr;
+    std::unique_ptr<ui::GLTexture> mTexture;
+    std::vector<uint32_t> mBuffer;
     // std::vector<uint32> mBuffer;
     size_t mWidth, mHeight;
     RenderWidget::Parameters mCurrentParameters;

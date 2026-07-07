@@ -1,9 +1,11 @@
 #include "ColorbarGizmo.h"
-#include "Application.h"
 #include "Colormap.h"
 #include "Logger.h"
 
 #include "UI.h"
+
+#include <algorithm>
+#include <vector>
 
 namespace IG {
 
@@ -11,16 +13,11 @@ constexpr int ColorbarWidth  = 16;
 constexpr int ColorbarHeight = 128;
 
 ColorbarGizmo::ColorbarGizmo()
-    : mTexture(nullptr)
 {
     setupTexture();
 }
 
-ColorbarGizmo::~ColorbarGizmo()
-{
-    if (mTexture)
-        SDL_DestroyTexture((SDL_Texture*)mTexture);
-}
+ColorbarGizmo::~ColorbarGizmo() = default;
 
 void ColorbarGizmo::render(float min, float max)
 {
@@ -29,7 +26,7 @@ void ColorbarGizmo::render(float min, float max)
 
     if (ImGui::BeginChild("#colormap", ImVec2(0, 0), false, ImGuiWindowFlags_NoInputs)) {
         const ImVec2 sz = ImGui::CalcTextSize("TEST");
-        ImGui::Image((ImTextureID)(intptr_t)mTexture, ImVec2(ColorbarWidth, ColorbarHeight));
+        ImGui::Image(mTexture->id(), ImVec2(ColorbarWidth, ColorbarHeight));
         ImGui::SetCursorPos(ImVec2(ColorbarWidth + 5, 0));
         ImGui::Text("%.2f lx", max);
         ImGui::SetCursorPos(ImVec2(ColorbarWidth + 5, ColorbarHeight - sz.y));
@@ -40,41 +37,25 @@ void ColorbarGizmo::render(float min, float max)
 
 void ColorbarGizmo::setupTexture()
 {
-    auto texture = SDL_CreateTexture(Application::getRenderer(), SDL_PIXELFORMAT_ARGB32, SDL_TEXTUREACCESS_STREAMING, ColorbarWidth, ColorbarHeight);
-    if (!texture) {
-        IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
-        return;
-    }
+    mTexture = std::make_unique<ui::GLTexture>();
+    mTexture->resize(ColorbarWidth, ColorbarHeight);
 
-    uint8* pixels;
-    int pitch = ColorbarWidth * 4;
-
-    if (SDL_LockTexture(texture, nullptr, (void**)&pixels, &pitch) != 0) {
-        IG_LOG(L_FATAL) << "Cannot lock SDL texture: " << SDL_GetError() << std::endl;
-        SDL_DestroyTexture(texture);
-        return;
-    }
-
+    std::vector<uint32_t> buffer((size_t)ColorbarWidth * ColorbarHeight);
     for (int y = 0; y < ColorbarHeight; ++y) {
         const float t        = 1 - y / float(ColorbarHeight - 1);
         const Vector4f color = colormap::inferno(t);
 
-        const uint8 r = static_cast<uint8>(std::clamp(color.x(), 0.0f, 1.0f) * 255);
-        const uint8 g = static_cast<uint8>(std::clamp(color.y(), 0.0f, 1.0f) * 255);
-        const uint8 b = static_cast<uint8>(std::clamp(color.z(), 0.0f, 1.0f) * 255);
-        const uint8 a = 255;
+        const uint32_t r = static_cast<uint32_t>(std::clamp(color.x(), 0.0f, 1.0f) * 255);
+        const uint32_t g = static_cast<uint32_t>(std::clamp(color.y(), 0.0f, 1.0f) * 255);
+        const uint32_t b = static_cast<uint32_t>(std::clamp(color.z(), 0.0f, 1.0f) * 255);
+        const uint32_t a = 255;
 
-        uint8* row = pixels + y * pitch;
-        for (int x = 0; x < ColorbarWidth; ++x) {
-            *(row++) = a;
-            *(row++) = r;
-            *(row++) = g;
-            *(row++) = b;
-        }
+        // Packed as 0xAARRGGBB to match ui::GLTexture::update
+        const uint32_t px = (a << 24) | (r << 16) | (g << 8) | b;
+        for (int x = 0; x < ColorbarWidth; ++x)
+            buffer[(size_t)y * ColorbarWidth + x] = px;
     }
 
-    SDL_UnlockTexture(texture);
-
-    mTexture = texture;
+    mTexture->update(buffer.data());
 }
 }; // namespace IG

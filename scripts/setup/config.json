@@ -69,11 +69,6 @@
         "ENABLED": true,
         "URL": "https://github.com/oneapi-src/oneTBB/releases/download/v2022.0.0/oneapi-tbb-2022.0.0-win.zip"
     },
-    "SDL2": {
-        // Only on Windows
-        "ENABLED": true,
-        "URL": "https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-devel-2.30.9-VC.zip"
-    },
     "OIDN": {
         // Only on Windows
         "ENABLED": true,

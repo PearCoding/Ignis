@@ -3,6 +3,7 @@
 #include "Pose.h"
 #include "Runtime.h"
 
+#include "GLTexture.h"
 #include "Inspector.h"
 #include "PropertyView.h"
 #include "UI.h"
@@ -47,12 +48,16 @@ enum class ScreenshotRequestMode {
 
 class ContextInternal {
 public:
-    IG::Runtime* Runtime   = nullptr;
-    Context* Parent        = nullptr;
-    SDL_Window* Window     = nullptr;
-    SDL_Renderer* Renderer = nullptr;
-    SDL_Texture* Texture   = nullptr;
+    IG::Runtime* Runtime = nullptr;
+    Context* Parent      = nullptr;
+    GLFWwindow* Window   = nullptr;
+    std::unique_ptr<ui::GLTexture> Texture;
     std::vector<uint32_t> Buffer;
+
+    // Placement of the rendered image inside the ImGui "Render" window (screen space)
+    ImVec2 RenderImageMin  = ImVec2(0, 0);
+    ImVec2 RenderImageSize = ImVec2(0, 0);
+    bool RenderHovered     = false;
 
     int PoseRequest                         = -1;
     bool PoseResetRequest                   = false;
@@ -92,14 +97,9 @@ public:
     // Buffer stuff
     bool setupTextureBuffer(size_t width, size_t height)
     {
-        if (Texture)
-            SDL_DestroyTexture(Texture);
-
-        Texture = SDL_CreateTexture(Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, (int)width, (int)height);
-        if (!Texture) {
-            IG_LOG(L_FATAL) << "Cannot create SDL texture: " << SDL_GetError() << std::endl;
-            return false;
-        }
+        if (!Texture)
+            Texture = std::make_unique<ui::GLTexture>();
+        Texture->resize((int)width, (int)height);
 
         Buffer.resize(width * height);
         return true;
@@ -116,24 +116,47 @@ public:
         }
     }
 
-    void handleFramebufferResize(int width, int height)
+    bool handleFramebufferResize(int width, int height)
     {
         // Expect a useful minimum!
         if (width <= 5 || height <= 5)
-            return;
+            return false;
 
         // Check if something changed
         if (Width == (size_t)width && Height == (size_t)height)
-            return;
-
-        IG_LOG(L_INFO) << "Resizing framebuffer to " << width << "x" << height << std::endl;
+            return false;
 
         Runtime->resizeFramebuffer((size_t)width, (size_t)height);
         setupTextureBuffer((size_t)width, (size_t)height);
         Width  = width;
         Height = height;
+        return true;
+    }
 
-        ui::notifyResize(Window, Renderer);
+    // Draw the rendered framebuffer into a dockable "Render" window and remember its
+    // on-screen placement (for the inspector). Returns true if the framebuffer was
+    // resized to match the window, in which case the render should reset.
+    bool drawRenderWindow()
+    {
+        RenderHovered   = false;
+        RenderImageSize = ImVec2(0, 0);
+
+        bool resized = false;
+        if (ImGui::Begin("Render", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+            const ImVec2 avail = ImGui::GetContentRegionAvail();
+            resized            = handleFramebufferResize((int)avail.x, (int)avail.y);
+
+            updateSurface(); // tonemap the current framebuffer into the GL texture
+
+            if (Texture && Width > 0 && Height > 0) {
+                RenderImageMin  = ImGui::GetCursorScreenPos();
+                RenderImageSize = ImVec2((float)Width, (float)Height);
+                ImGui::Image(Texture->id(), RenderImageSize);
+                RenderHovered = ImGui::IsItemHovered();
+            }
+        }
+        ImGui::End();
+        return resized;
     }
 
     [[nodiscard]] inline AOVAccessor currentPixels() const
@@ -152,12 +175,6 @@ public:
         CurrentAOV          = names.at(((pos + delta_aov) % rem + rem) % rem);
     }
 
-    enum MouseMode {
-        MM_None,
-        MM_Look,
-        MM_Pan
-    };
-
     // Events
     Context::InputResult handleEvents(CameraProxy& cam)
     {
@@ -169,14 +186,25 @@ public:
             first_call = false;
         }
 
+        // Pump window events and begin the ImGui frame. Camera input is polled from
+        // ImGui IO below; the actual widgets are drawn later in update().
+        glfwPollEvents();
+        ui::newFrame();
+        ImGui::DockSpaceOverViewport();
+
+        if (glfwWindowShouldClose(Window))
+            return Context::InputResult::Quit;
+
         ImGuiIO& io = ImGui::GetIO();
 
-        static MouseMode mouse_mode        = MM_None;
-        static std::array<bool, 12> arrows = { false, false, false, false, false, false, false, false, false, false, false, false };
-        static bool speed[2]               = { false, false };
-        constexpr float RSPEED             = 0.005f;
+        constexpr float RSPEED  = 0.005f;
+        constexpr float KRSPEED = 10 * RSPEED;
 
         const bool canInteract = !LockInteraction && Running;
+        const bool keyActive   = canInteract && !io.WantTextInput;
+        // The mouse only drives the camera while hovering the rendered image
+        // (state captured last frame while drawing the "Render" window).
+        const bool mouseActive = canInteract && RenderHovered && !io.WantTextInput;
 
         const auto handleRotation = [&](float xmotion, float ymotion) {
             if (io.KeyCtrl && io.KeyAlt) {
@@ -192,332 +220,179 @@ public:
         };
 
         bool reset = false;
-        SDL_Event event;
-        const bool hover = isAnyWindowShown() && (ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
-        while (SDL_PollEvent(&event)) {
-            ui::processSDLEvent(event);
 
-            // First handle ImGui stuff
-            bool key_down = event.type == SDL_KEYDOWN;
-            switch (event.type) {
-            case SDL_KEYUP:
-                switch (event.key.keysym.sym) {
-                case SDLK_ESCAPE:
-                    return Context::InputResult::Quit;
-                case SDLK_t:
-                    if (!io.WantTextInput)
-                        ToneMapping_Automatic = !ToneMapping_Automatic;
-                    break;
-                case SDLK_g:
-                    if (!ToneMapping_Automatic && !io.WantTextInput) {
-                        ToneMapping_Exposure = 0.0f;
-                        ToneMapping_Offset   = 0.0f;
-                    }
-                    break;
-                case SDLK_f:
-                    if (!ToneMapping_Automatic && !io.WantTextInput) {
-                        const float delta = io.KeyCtrl ? 0.05f : 0.5f;
-                        ToneMapping_Exposure += io.KeyShift ? -delta : delta;
-                    }
-                    break;
-                case SDLK_v:
-                    if (!ToneMapping_Automatic && !io.WantTextInput) {
-                        const float delta = io.KeyCtrl ? 0.05f : 0.5f;
-                        ToneMapping_Offset += io.KeyShift ? -delta : delta;
-                    }
-                    break;
-                case SDLK_p:
-                    if (!io.WantTextInput) {
-                        if (Running) {
-                            Running = false;
-                            return Context::InputResult::Pause;
-                        } else {
-                            Running = true;
-                            return Context::InputResult::Resume;
-                        }
-                    }
-                    break;
-                case SDLK_n:
-                    if (!io.WantTextInput)
-                        changeAOV(-1);
-                    break;
-                case SDLK_m:
-                    if (!io.WantTextInput)
-                        changeAOV(1);
-                    break;
-                case SDLK_i:
-                    if (!io.WantTextInput)
-                        ShowInspector = !ShowInspector;
-                    break;
-                case SDLK_F1:
-                    ShowHelp = !ShowHelp;
-                    break;
-                case SDLK_F2:
-                    ShowControl = !ShowControl;
-                    break;
-                case SDLK_F3:
-                    LockInteraction = !LockInteraction;
-                    break;
-                case SDLK_F4:
-                    ShowProperties = !ShowProperties;
-                    break;
-                case SDLK_F11:
-                    if (io.KeyCtrl)
-                        ScreenshotRequest = ScreenshotRequestMode::Full;
-                    else
-                        ScreenshotRequest = ScreenshotRequestMode::Framebuffer;
-                    break;
-                default:
-                    break;
-                }
-                break;
-            case SDL_QUIT:
-                return Context::InputResult::Quit;
-            case SDL_WINDOWEVENT: {
-                switch (event.window.event) {
-                case SDL_WINDOWEVENT_RESIZED:
-                    handleFramebufferResize(event.window.data1, event.window.data2);
-                    reset = true;
-                    break;
-                default:
-                    break;
-                }
+        // --- One-shot keys: quit / tonemapping / AOV / pause (blocked while typing) ---
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false))
+            return Context::InputResult::Quit;
+
+        if (!io.WantTextInput) {
+            if (ImGui::IsKeyPressed(ImGuiKey_T, false))
+                ToneMapping_Automatic = !ToneMapping_Automatic;
+            if (ImGui::IsKeyPressed(ImGuiKey_G, false) && !ToneMapping_Automatic) {
+                ToneMapping_Exposure = 0.0f;
+                ToneMapping_Offset   = 0.0f;
             }
-            default:
-                break;
+            if (ImGui::IsKeyPressed(ImGuiKey_F, false) && !ToneMapping_Automatic) {
+                const float delta = io.KeyCtrl ? 0.05f : 0.5f;
+                ToneMapping_Exposure += io.KeyShift ? -delta : delta;
             }
-
-            // Skip application input if any ImGui window is captured
-            if (isAnyWindowShown() && (io.WantCaptureKeyboard || io.WantCaptureMouse || io.WantTextInput))
-                continue;
-
-            // Handle application input
-            switch (event.type) {
-            case SDL_KEYUP:
-            case SDL_KEYDOWN: {
-                switch (event.key.keysym.sym) {
-                case SDLK_KP_PLUS:
-                    speed[0] = key_down;
-                    break;
-                case SDLK_KP_MINUS:
-                    speed[1] = key_down;
-                    break;
-                case SDLK_UP:
-                    arrows[0] = key_down;
-                    break;
-                case SDLK_w:
-                    arrows[0] = key_down;
-                    break;
-                case SDLK_DOWN:
-                    arrows[1] = key_down;
-                    break;
-                case SDLK_s:
-                    arrows[1] = key_down;
-                    break;
-                case SDLK_LEFT:
-                    arrows[2] = key_down;
-                    break;
-                case SDLK_a:
-                    arrows[2] = key_down;
-                    break;
-                case SDLK_RIGHT:
-                    arrows[3] = key_down;
-                    break;
-                case SDLK_d:
-                    arrows[3] = key_down;
-                    break;
-                case SDLK_e:
-                    arrows[4] = key_down;
-                    break;
-                case SDLK_q:
-                    arrows[5] = key_down;
-                    break;
-                case SDLK_PAGEUP:
-                    arrows[6] = key_down;
-                    break;
-                case SDLK_PAGEDOWN:
-                    arrows[7] = key_down;
-                    break;
-                case SDLK_KP_2:
-                    arrows[8] = key_down;
-                    break;
-                case SDLK_KP_8:
-                    arrows[9] = key_down;
-                    break;
-                case SDLK_KP_4:
-                    arrows[10] = key_down;
-                    break;
-                case SDLK_KP_6:
-                    arrows[11] = key_down;
-                    break;
+            if (ImGui::IsKeyPressed(ImGuiKey_V, false) && !ToneMapping_Automatic) {
+                const float delta = io.KeyCtrl ? 0.05f : 0.5f;
+                ToneMapping_Offset += io.KeyShift ? -delta : delta;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_N, false))
+                changeAOV(-1);
+            if (ImGui::IsKeyPressed(ImGuiKey_M, false))
+                changeAOV(1);
+            if (ImGui::IsKeyPressed(ImGuiKey_I, false))
+                ShowInspector = !ShowInspector;
+            if (ImGui::IsKeyPressed(ImGuiKey_P, false)) {
+                if (Running) {
+                    Running = false;
+                    return Context::InputResult::Pause;
+                } else {
+                    Running = true;
+                    return Context::InputResult::Resume;
                 }
-
-                // Followings should only be handled once
-                if (event.type == SDL_KEYUP) {
-                    const bool capture = io.KeyCtrl;
-                    if (canInteract) {
-                        switch (event.key.keysym.sym) {
-                        case SDLK_KP_1:
-                            cam.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
-                            reset = true;
-                            break;
-                        case SDLK_KP_3:
-                            cam.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
-                            reset = true;
-                            break;
-                        case SDLK_KP_7:
-                            cam.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
-                            reset = true;
-                            break;
-                        case SDLK_KP_9:
-                            cam.update_dir(-cam.Direction, cam.Up);
-                            reset = true;
-                            break;
-                        case SDLK_1:
-                            handlePoseInput(0, capture, cam);
-                            break;
-                        case SDLK_2:
-                            handlePoseInput(1, capture, cam);
-                            break;
-                        case SDLK_3:
-                            handlePoseInput(2, capture, cam);
-                            break;
-                        case SDLK_4:
-                            handlePoseInput(3, capture, cam);
-                            break;
-                        case SDLK_5:
-                            handlePoseInput(4, capture, cam);
-                            break;
-                        case SDLK_6:
-                            handlePoseInput(5, capture, cam);
-                            break;
-                        case SDLK_7:
-                            handlePoseInput(6, capture, cam);
-                            break;
-                        case SDLK_8:
-                            handlePoseInput(7, capture, cam);
-                            break;
-                        case SDLK_9:
-                            handlePoseInput(8, capture, cam);
-                            break;
-                        case SDLK_0:
-                            handlePoseInput(9, capture, cam);
-                            break;
-                        case SDLK_o:
-                            cam.snap_up();
-                            reset = true;
-                            break;
-                        case SDLK_r:
-                            PoseResetRequest = true;
-                            break;
-                        }
-                    }
-                }
-            } break;
-            case SDL_MOUSEBUTTONDOWN:
-                if (!hover && canInteract) {
-                    if (event.button.button == SDL_BUTTON_LEFT) {
-#ifndef IG_DEBUG
-                        SDL_SetRelativeMouseMode(SDL_TRUE);
-#endif
-                        mouse_mode = MM_Look;
-                    } else if (event.button.button == SDL_BUTTON_RIGHT) {
-#ifndef IG_DEBUG
-                        SDL_SetRelativeMouseMode(SDL_TRUE);
-#endif
-                        mouse_mode = MM_Pan;
-                    }
-                }
-                break;
-            case SDL_MOUSEBUTTONUP:
-#ifndef IG_DEBUG
-                SDL_SetRelativeMouseMode(SDL_FALSE);
-#endif
-                mouse_mode = MM_None;
-                break;
-            case SDL_MOUSEMOTION:
-                if (!hover && canInteract) {
-                    switch (mouse_mode) {
-                    default:
-                    case MM_None:
-                        break;
-                    case MM_Look: {
-                        const float aspeed  = RSPEED;
-                        const float xmotion = event.motion.xrel * aspeed;
-                        const float ymotion = event.motion.yrel * aspeed;
-                        handleRotation(xmotion, ymotion);
-                        reset = true;
-                    } break;
-                    case MM_Pan: {
-                        const float aspeed  = CurrentTravelSpeed / 10;
-                        const float xmotion = event.motion.xrel * aspeed;
-                        const float ymotion = -event.motion.yrel * aspeed;
-                        cam.move(xmotion, ymotion, 0);
-                        reset = true;
-                    } break;
-                    }
-                }
-                break;
-            case SDL_MOUSEWHEEL:
-                if (!hover && canInteract) {
-                    if (event.wheel.y != 0) {
-                        if (ZoomIsScale)
-                            CurrentZoom *= (event.wheel.y < 0) ? -event.wheel.y * 1.05f : event.wheel.y * 0.95f;
-                        else
-                            cam.move(0, 0, event.wheel.y * CurrentTravelSpeed);
-                        reset = true;
-                    }
-                }
-                break;
-            default:
-                break;
             }
         }
 
-        if (canInteract) {
-            if (std::any_of(arrows.begin(), arrows.end(), [](bool b) { return b; }))
-                reset = true;
+        // --- Window / lock toggles (always active) ---
+        if (ImGui::IsKeyPressed(ImGuiKey_F1, false))
+            ShowHelp = !ShowHelp;
+        if (ImGui::IsKeyPressed(ImGuiKey_F2, false))
+            ShowControl = !ShowControl;
+        if (ImGui::IsKeyPressed(ImGuiKey_F3, false))
+            LockInteraction = !LockInteraction;
+        if (ImGui::IsKeyPressed(ImGuiKey_F4, false))
+            ShowProperties = !ShowProperties;
+        if (ImGui::IsKeyPressed(ImGuiKey_F11, false))
+            ScreenshotRequest = io.KeyCtrl ? ScreenshotRequestMode::Full : ScreenshotRequestMode::Framebuffer;
 
-            constexpr float KRSPEED = 10 * RSPEED;
-            if (arrows[0])
-                cam.move(0, 0, CurrentTravelSpeed);
-            if (arrows[1])
-                cam.move(0, 0, -CurrentTravelSpeed);
-            if (arrows[2])
-                cam.move(-CurrentTravelSpeed, 0, 0);
-            if (arrows[3])
-                cam.move(CurrentTravelSpeed, 0, 0);
-            if (arrows[4])
-                cam.roll(KRSPEED);
-            if (arrows[5])
-                cam.roll(-KRSPEED);
-            if (arrows[6])
-                cam.move(0, CurrentTravelSpeed, 0);
-            if (arrows[7])
-                cam.move(0, -CurrentTravelSpeed, 0);
-            if (arrows[8])
-                handleRotation(0, KRSPEED);
-            if (arrows[9])
-                handleRotation(0, -KRSPEED);
-            if (arrows[10])
-                handleRotation(-KRSPEED, 0);
-            if (arrows[11])
-                handleRotation(KRSPEED, 0);
-            if (speed[0])
-                CurrentTravelSpeed *= 1.1f;
-            if (speed[1])
-                CurrentTravelSpeed *= 0.9f;
-
-            if (PoseResetRequest || PoseRequest >= 0) {
-                auto pose = PoseResetRequest ? PoseManager.initialPose() : PoseManager.pose(PoseRequest);
-                cam.Eye   = pose.Eye;
-                cam.update_dir(pose.Dir, pose.Up);
-                CurrentZoom      = 1;
-                PoseRequest      = -1;
-                PoseResetRequest = false;
-
+        // --- One-shot view directions and pose slots ---
+        if (keyActive) {
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad1, false)) {
+                cam.update_dir(Vector3f(0, 0, 1), Vector3f(0, 1, 0));
                 reset = true;
             }
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad3, false)) {
+                cam.update_dir(Vector3f(1, 0, 0), Vector3f(0, 1, 0));
+                reset = true;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad7, false)) {
+                cam.update_dir(Vector3f(0, 1, 0), Vector3f(0, 0, 1));
+                reset = true;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_Keypad9, false)) {
+                cam.update_dir(-cam.Direction, cam.Up);
+                reset = true;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_O, false)) {
+                cam.snap_up();
+                reset = true;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_R, false))
+                PoseResetRequest = true;
+
+            const bool capture                     = io.KeyCtrl;
+            static constexpr ImGuiKey NumberKeys[] = { ImGuiKey_0, ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4, ImGuiKey_5, ImGuiKey_6, ImGuiKey_7, ImGuiKey_8, ImGuiKey_9 };
+            for (int i = 0; i < 10; ++i) {
+                if (ImGui::IsKeyPressed(NumberKeys[i], false))
+                    handlePoseInput((size_t)((i + 9) % 10), capture, cam); // keys 1..9 -> slots 0..8, key 0 -> slot 9
+            }
+        }
+
+        // --- Continuous movement / rotation (held keys) ---
+        if (keyActive) {
+            const auto down = [](ImGuiKey k) { return ImGui::IsKeyDown(k); };
+
+            if (down(ImGuiKey_W) || down(ImGuiKey_UpArrow)) {
+                cam.move(0, 0, CurrentTravelSpeed);
+                reset = true;
+            }
+            if (down(ImGuiKey_S) || down(ImGuiKey_DownArrow)) {
+                cam.move(0, 0, -CurrentTravelSpeed);
+                reset = true;
+            }
+            if (down(ImGuiKey_A) || down(ImGuiKey_LeftArrow)) {
+                cam.move(-CurrentTravelSpeed, 0, 0);
+                reset = true;
+            }
+            if (down(ImGuiKey_D) || down(ImGuiKey_RightArrow)) {
+                cam.move(CurrentTravelSpeed, 0, 0);
+                reset = true;
+            }
+            if (down(ImGuiKey_E)) {
+                cam.roll(KRSPEED);
+                reset = true;
+            }
+            if (down(ImGuiKey_Q)) {
+                cam.roll(-KRSPEED);
+                reset = true;
+            }
+            if (down(ImGuiKey_PageUp)) {
+                cam.move(0, CurrentTravelSpeed, 0);
+                reset = true;
+            }
+            if (down(ImGuiKey_PageDown)) {
+                cam.move(0, -CurrentTravelSpeed, 0);
+                reset = true;
+            }
+            if (down(ImGuiKey_Keypad2)) {
+                handleRotation(0, KRSPEED);
+                reset = true;
+            }
+            if (down(ImGuiKey_Keypad8)) {
+                handleRotation(0, -KRSPEED);
+                reset = true;
+            }
+            if (down(ImGuiKey_Keypad4)) {
+                handleRotation(-KRSPEED, 0);
+                reset = true;
+            }
+            if (down(ImGuiKey_Keypad6)) {
+                handleRotation(KRSPEED, 0);
+                reset = true;
+            }
+            if (down(ImGuiKey_KeypadAdd))
+                CurrentTravelSpeed *= 1.1f;
+            if (down(ImGuiKey_KeypadSubtract))
+                CurrentTravelSpeed *= 0.9f;
+        }
+
+        // --- Mouse look / pan / zoom over the rendered image ---
+        if (mouseActive) {
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                const ImVec2 d = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+                handleRotation(d.x * RSPEED, d.y * RSPEED);
+                reset = true;
+            } else if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
+                const ImVec2 d = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right, 0.0f);
+                ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
+                const float aspeed = CurrentTravelSpeed / 10;
+                cam.move(d.x * aspeed, -d.y * aspeed, 0);
+                reset = true;
+            }
+
+            if (io.MouseWheel != 0) {
+                if (ZoomIsScale)
+                    CurrentZoom *= (io.MouseWheel < 0) ? -io.MouseWheel * 1.05f : io.MouseWheel * 0.95f;
+                else
+                    cam.move(0, 0, io.MouseWheel * CurrentTravelSpeed);
+                reset = true;
+            }
+        }
+
+        if (canInteract && (PoseResetRequest || PoseRequest >= 0)) {
+            auto pose = PoseResetRequest ? PoseManager.initialPose() : PoseManager.pose(PoseRequest);
+            cam.Eye   = pose.Eye;
+            cam.update_dir(pose.Dir, pose.Up);
+            CurrentZoom      = 1;
+            PoseRequest      = -1;
+            PoseResetRequest = false;
+
+            reset = true;
         }
 
         LastCameraPose = CameraPose(cam);
@@ -530,6 +405,23 @@ public:
     inline float getIterationScale() const
     {
         return Runtime->currentIterationCount() > 0 ? 1.0f / Runtime->currentIterationCount() : 1.0f;
+    }
+
+    // Mouse position in framebuffer pixel space, or (-1,-1) if outside the render image.
+    void imageMousePixel(int& px, int& py) const
+    {
+        px = py = -1;
+        if (RenderImageSize.x <= 0 || RenderImageSize.y <= 0)
+            return;
+
+        const ImVec2 m = ImGui::GetMousePos();
+        const float u  = (m.x - RenderImageMin.x) / RenderImageSize.x;
+        const float v  = (m.y - RenderImageMin.y) / RenderImageSize.y;
+        if (u < 0 || u >= 1 || v < 0 || v >= 1)
+            return;
+
+        px = (int)(u * (float)Width);
+        py = (int)(v * (float)Height);
     }
 
     void analyzeLuminance()
@@ -578,7 +470,7 @@ public:
                              .ExposureFactor = ToneMapping_Automatic ? 1 / LastLum.Est : std::pow(2.0f, ToneMapping_Exposure),
                              .ExposureOffset = ToneMapping_Automatic ? 0 : ToneMapping_Offset });
 
-        SDL_UpdateTexture(Texture, nullptr, buf, static_cast<int>(Width * sizeof(uint32_t)));
+        Texture->update(buf);
     }
 
     [[nodiscard]] inline Color getFilmData(size_t width, size_t height, uint32_t x, uint32_t y)
@@ -615,61 +507,32 @@ public:
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
         out_file << "screenshot_full_" << std::put_time(std::localtime(&in_time_t), "%Y_%m_%d_%H_%M_%S") << ".exr";
 
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-        Uint32 rmask = 0xff000000;
-        Uint32 gmask = 0x00ff0000;
-        Uint32 bmask = 0x0000ff00;
-        Uint32 amask = 0x000000ff;
-#else
-        Uint32 rmask = 0x000000ff;
-        Uint32 gmask = 0x0000ff00;
-        Uint32 bmask = 0x00ff0000;
-        Uint32 amask = 0xff000000;
-#endif
-
-        SDL_Surface* sshot = SDL_CreateRGBSurface(0, (int)Width, (int)Height, 32,
-                                                  rmask, gmask, bmask, amask);
-
-        if (!sshot) {
-            IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
+        // Read back the composited window (image + UI) from the front buffer.
+        int fbw = 0, fbh = 0;
+        glfwGetFramebufferSize(Window, &fbw, &fbh);
+        if (fbw <= 0 || fbh <= 0)
             return;
-        }
 
-        int ret = SDL_LockSurface(sshot);
-        if (ret != 0) {
-            IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
-            return;
-        }
+        std::vector<uint8_t> pixels((size_t)fbw * (size_t)fbh * 4);
+        glReadBuffer(GL_FRONT);
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, fbw, fbh, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
 
-        ret = SDL_RenderReadPixels(Renderer, nullptr, sshot->format->format,
-                                   sshot->pixels, sshot->pitch);
-        if (ret != 0) {
-            IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "': " << SDL_GetError() << std::endl;
-            return;
-        }
-
-        float* rgba = new float[Width * Height * 4];
-        for (size_t y = 0; y < Height; ++y) {
-            const uint8* src = reinterpret_cast<const uint8*>(sshot->pixels) + y * sshot->pitch;
-            float* dst       = rgba + y * Width * 4;
-            for (size_t x = 0; x < Width; ++x) {
-                uint32 pixel = *reinterpret_cast<const uint32*>(&src[x * sshot->format->BytesPerPixel]);
-
-                uint8 r, g, b, a;
-                SDL_GetRGBA(pixel, sshot->format, &r, &g, &b, &a);
-
+        float* rgba = new float[(size_t)fbw * (size_t)fbh * 4];
+        for (int y = 0; y < fbh; ++y) {
+            // OpenGL's origin is bottom-left, so flip vertically into the output.
+            const uint8* src = pixels.data() + (size_t)(fbh - 1 - y) * (size_t)fbw * 4;
+            float* dst       = rgba + (size_t)y * (size_t)fbw * 4;
+            for (int x = 0; x < fbw; ++x) {
                 // EXR is linear, so remove gamma part
-                dst[x * 4 + 0] = std::pow(r / 255.0f, 2.2f);
-                dst[x * 4 + 1] = std::pow(g / 255.0f, 2.2f);
-                dst[x * 4 + 2] = std::pow(b / 255.0f, 2.2f);
-                dst[x * 4 + 3] = a / 255.0f; // Do not map alpha channel (which should be 1 99% of the time)
+                dst[x * 4 + 0] = std::pow(src[x * 4 + 0] / 255.0f, 2.2f);
+                dst[x * 4 + 1] = std::pow(src[x * 4 + 1] / 255.0f, 2.2f);
+                dst[x * 4 + 2] = std::pow(src[x * 4 + 2] / 255.0f, 2.2f);
+                dst[x * 4 + 3] = src[x * 4 + 3] / 255.0f; // Do not map alpha channel (which should be 1 99% of the time)
             }
         }
 
-        SDL_UnlockSurface(sshot);
-        SDL_FreeSurface(sshot);
-
-        if (!saveImageRGBA(out_file.str(), rgba, Width, Height, 1))
+        if (!saveImageRGBA(out_file.str(), rgba, (size_t)fbw, (size_t)fbh, 1))
             IG_LOG(L_ERROR) << "Failed to save EXR file '" << out_file.str() << "'" << std::endl;
         else
             IG_LOG(L_INFO) << "Screenshot saved to '" << out_file.str() << "'" << std::endl;
@@ -689,9 +552,9 @@ public:
         if (ImGui::Begin("Control", &ShowControl, WindowFlags)) {
             if (ImGui::CollapsingHeader("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
                 int mouse_x, mouse_y;
-                SDL_GetMouseState(&mouse_x, &mouse_y);
+                imageMousePixel(mouse_x, mouse_y);
                 Color rgb;
-                if (mouse_x >= 0 && mouse_x < (int)Width && mouse_y >= 0 && mouse_y < (int)Height)
+                if (mouse_x >= 0 && mouse_y >= 0)
                     rgb = getFilmData(Width, Height, (uint32)mouse_x, (uint32)mouse_y);
 
                 ImGui::Text("Iter %zu", Runtime->currentIterationCount());
@@ -846,7 +709,7 @@ public:
 
         if (ShowInspector) {
             int mouse_x, mouse_y;
-            SDL_GetMouseState(&mouse_x, &mouse_y);
+            imageMousePixel(mouse_x, mouse_y);
             const auto acc = currentPixels();
             ui_inspect_image(mouse_x, mouse_y, Width, Height, getIterationScale(), acc.Data, Buffer.data());
         }
@@ -861,15 +724,6 @@ Context::Context(SPPMode sppmode, Runtime* runtime, float dpi)
     : mSPPMode(sppmode)
     , mInternal(std::make_unique<ContextInternal>())
 {
-#ifdef IG_OS_WINDOWS
-    SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
-#endif
-
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-        IG_LOG(L_FATAL) << "Cannot initialize SDL: " << SDL_GetError() << std::endl;
-        throw std::runtime_error("Could not setup UI");
-    }
-
     mInternal->Runtime     = runtime;
     mInternal->Parent      = this;
     mInternal->Width       = runtime->framebufferWidth();
@@ -879,30 +733,12 @@ Context::Context(SPPMode sppmode, Runtime* runtime, float dpi)
     if (auto it = runtime->parameters().FloatParameters.find("__camera_scale"); it != runtime->parameters().FloatParameters.end())
         mInternal->DefaultCameraScale = it->second;
 
-    mInternal->Window = SDL_CreateWindow(
-        "Ignis",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        (int)mInternal->Width,
-        (int)mInternal->Height,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-
-    if (!mInternal->Window) {
-        IG_LOG(L_FATAL) << "Cannot create SDL window: " << SDL_GetError() << std::endl;
+    if (!ui::setup(mInternal->Window, (int)mInternal->Width, (int)mInternal->Height, "Ignis", true, dpi))
         throw std::runtime_error("Could not setup UI");
-    }
-    SDL_SetWindowMinimumSize(mInternal->Window, 64, 64);
 
-    mInternal->Renderer = SDL_CreateRenderer(mInternal->Window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-    if (!mInternal->Renderer) {
-        IG_LOG(L_FATAL) << "Cannot create SDL renderer: " << SDL_GetError() << std::endl;
-        throw std::runtime_error("Could not setup UI");
-    }
-
+    // Requires an active GL context (created by ui::setup above)
     if (!mInternal->setupTextureBuffer(mInternal->Width, mInternal->Height))
         throw std::runtime_error("Could not setup UI");
-
-    ui::setup(mInternal->Window, mInternal->Renderer, false, dpi);
 
     mInternal->PoseManager.load(POSE_FILE);
 
@@ -917,16 +753,9 @@ Context::Context(SPPMode sppmode, Runtime* runtime, float dpi)
 
 Context::~Context()
 {
-    ui::shutdown();
-
-    if (mInternal->Texture)
-        SDL_DestroyTexture(mInternal->Texture);
-    if (mInternal->Renderer)
-        SDL_DestroyRenderer(mInternal->Renderer);
-    if (mInternal->Window)
-        SDL_DestroyWindow(mInternal->Window);
-    SDL_Quit();
-
+    // The GL texture must be released while the context is still current.
+    mInternal->Texture.reset();
+    ui::shutdown(mInternal->Window);
     mInternal->Buffer.clear();
 }
 
@@ -949,7 +778,7 @@ void Context::setTitle(const std::string& str)
         sstream << " [Continuous]";
         break;
     }
-    SDL_SetWindowTitle(mInternal->Window, sstream.str().c_str());
+    glfwSetWindowTitle(mInternal->Window, sstream.str().c_str());
 }
 
 Context::InputResult Context::handleInput(CameraProxy& cam)
@@ -1011,7 +840,6 @@ static void handleHelp()
 
 Context::UpdateResult Context::update()
 {
-    mInternal->updateSurface();
     switch (mInternal->ScreenshotRequest) {
     case ScreenshotRequestMode::Framebuffer:
         mInternal->makeScreenshot();
@@ -1025,24 +853,18 @@ Context::UpdateResult Context::update()
         break;
     }
 
-    if (SDL_RenderClear(mInternal->Renderer) != 0)
-        IG_LOG(L_ERROR) << SDL_GetError() << std::endl;
+    // The ImGui frame was begun in handleInput(); draw the docked render image and panels.
+    const bool resized  = mInternal->drawRenderWindow();
+    UpdateResult result = resized ? UpdateResult::Reset : UpdateResult::Continue;
 
-    if (SDL_RenderCopy(mInternal->Renderer, mInternal->Texture, nullptr, nullptr) != 0)
-        IG_LOG(L_ERROR) << SDL_GetError() << std::endl;
-
-    ui::newFrame();
-
-    UpdateResult result = UpdateResult::Continue;
     if (mInternal->isAnyWindowShown()) {
-        result = mInternal->handleImgui();
+        if (mInternal->handleImgui() == UpdateResult::Reset)
+            result = UpdateResult::Reset;
         if (mInternal->ShowHelp)
             handleHelp();
     }
 
-    ui::renderFrame(mInternal->Renderer);
-
-    SDL_RenderPresent(mInternal->Renderer);
+    ui::renderFrame(mInternal->Window);
     return result;
 }
 

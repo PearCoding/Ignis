@@ -1,6 +1,9 @@
 #pragma once
 
+#include "GLTexture.h"
 #include "Widget.h"
+
+#include <memory>
 
 namespace IG {
 class ColorbarGizmo {
@@ -12,6 +15,6 @@ public:
 
 private:
     void setupTexture();
-    void* mTexture;
+    std::unique_ptr<ui::GLTexture> mTexture;
 };
 } // namespace IG

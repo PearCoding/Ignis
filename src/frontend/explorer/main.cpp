@@ -108,7 +108,7 @@ private:
 
         helpMenu->add(std::make_shared<MenuItem>("Controls", [&](MenuItem*) { mHelpControlWidget->show(); }));
         helpMenu->add(std::make_shared<MenuSeparator>());
-        helpMenu->add(std::make_shared<MenuItem>("Website", [](MenuItem*) { SDL_OpenURL("https://github.com/PearCoding/Ignis"); }));
+        helpMenu->add(std::make_shared<MenuItem>("Website", [](MenuItem*) { ui::openURL("https://github.com/PearCoding/Ignis"); }));
         helpMenu->add(std::make_shared<MenuSeparator>());
         helpMenu->add(std::make_shared<MenuItem>("About", [&](MenuItem*) { mHelpAboutWidget->show(); }));
 
