@@ -33,12 +33,9 @@ target_include_directories(ig_runtime PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_
 target_compile_definitions(ig_runtime PUBLIC "$<$<CONFIG:Debug>:IG_DEBUG>" PRIVATE $<BUILD_INTERFACE:IG_BUILD_LIB>)
 add_dependencies(ig_runtime artic_c_interface)
 
-# There is a weird behaviour in multi-config generators and the git checker. It is fixed with the following line
-get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-
-if(is_multi_config)
-  add_dependencies(ig_runtime check_git)
-endif()
+# ig_runtime compiles config/Build.cpp which includes the generated config/Git.h,
+# so it must always wait for the git checker, regardless of the generator.
+add_dependencies(ig_runtime check_git)
 
 if(IG_WITH_ASSERTS)
   target_compile_definitions(ig_runtime PUBLIC "IG_WITH_ASSERTS")

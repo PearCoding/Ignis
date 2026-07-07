@@ -185,9 +185,18 @@ function(GetGitState _working_dir)
     if ("$ENV{GIT_IS_DIRTY}" STREQUAL "true")
         RunGitCommand(status -s)
         if(exit_code EQUAL 0)
-            string(REPLACE "\n" ";" output_2 "${output}")
-            string(REGEX REPLACE " *(M|\\?) *" "" output_2 "${output_2}")
-            set(ENV{GIT_MODIFIED_FILES} "${output_2}")
+            # git status -s emits one line per change as "XY filename"
+            # (X = index status, Y = worktree status, each a single char).
+            # Strip that fixed 3-char prefix per entry to recover the name.
+            string(REPLACE "\n" ";" _modified "${output}")
+            set(_cleaned "")
+            foreach(_line ${_modified})
+                if(NOT "${_line}" STREQUAL "")
+                    string(SUBSTRING "${_line}" 3 -1 _line)
+                    list(APPEND _cleaned "${_line}")
+                endif()
+            endforeach()
+            set(ENV{GIT_MODIFIED_FILES} "${_cleaned}")
         endif()
     endif()
 
@@ -344,13 +353,21 @@ endfunction()
 # Description: this function sets up custom commands that make the build system
 #              check the state of git before every build. If the state has
 #              changed, then a file is configured.
+#
+# check_git is driven by an `add_custom_command` so ninja applies
+# `restat = 1`: the script runs every build (via the always-missing
+# `.git-check-tick` output), but `CheckGit()` rewrites POST_CONFIGURE_FILE /
+# GIT_STATE_FILE only when the hashed git state changed. Ninja restats those
+# outputs afterwards, so dependents like Build.cpp.obj recompile only when
+# Git.h actually changes. Dirty-tree edits flow through too: GIT_IS_DIRTY and
+# GIT_MODIFIED_FILES feed the hash, so a state change rewrites Git.h.
 function(SetupGitMonitoring)
-    add_custom_target(check_git
-        ALL
-        DEPENDS ${PRE_CONFIGURE_FILE}
-        BYPRODUCTS
+    add_custom_command(
+        OUTPUT
             ${POST_CONFIGURE_FILE}
             ${GIT_STATE_FILE}
+            "${CMAKE_BINARY_DIR}/.git-check-tick"
+        DEPENDS ${PRE_CONFIGURE_FILE}
         COMMENT "Checking the git repository for changes..."
         COMMAND
             ${CMAKE_COMMAND}
@@ -362,7 +379,15 @@ function(SetupGitMonitoring)
             -DPOST_CONFIGURE_FILE=${POST_CONFIGURE_FILE}
             -DGIT_FAIL_IF_NONZERO_EXIT=${GIT_FAIL_IF_NONZERO_EXIT}
             -DGIT_IGNORE_UNTRACKED=${GIT_IGNORE_UNTRACKED}
-            -P "${CMAKE_CURRENT_LIST_FILE}")
+            -P "${CMAKE_CURRENT_LIST_FILE}"
+        VERBATIM)
+    # `.git-check-tick` is intentionally never written by the COMMAND,
+    # so ninja considers it perpetually missing -- which keeps this rule
+    # dirty every build and forces the script to re-run. The real
+    # outputs (POST_CONFIGURE_FILE / GIT_STATE_FILE) only get touched
+    # when their content changes; restat handles the rest.
+    add_custom_target(check_git ALL
+        DEPENDS "${CMAKE_BINARY_DIR}/.git-check-tick")
 endfunction()
 
 
