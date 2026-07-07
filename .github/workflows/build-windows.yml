@@ -2,23 +2,61 @@ name: Build Windows
 
 on:
   push:
+    branches: [ master, development ]
   pull_request:
 
-env:
-  DEV_DOWNLOAD: #TODO
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   build:
 
     runs-on: windows-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      # TODO: Get anydsl package
-      # - name: Download dev environment
-      #   run: wget -O dev_env.7z ${{ env.DEV_DOWNLOAD }}
+      # A complete, self-consistent LLVM + Clang dev toolchain (static libs and
+      # cmake config), which the distribution installers do not provide.
+      - name: Setup LLVM/Clang toolchain
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: llvm
+          create-args: >-
+            llvmdev=20.1
+            clangdev=20.1
+            lld=20.1
+          init-shell: powershell
+          cache-environment: true
 
-      # - name: Extract dev environment
-      #   run: 7z x archive.zip
+      - name: Cache AnyDSL toolchain (thorin/artic/runtime)
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: anydsl-deps-${{ runner.os }}-${{ hashFiles('scripts/setup/config.json', 'scripts/setup/*.ps1') }}
+          restore-keys: |
+            anydsl-deps-${{ runner.os }}-
+
+      - name: Generate CI setup config
+        shell: pwsh
+        run: |
+          $cfg = Get-Content scripts/setup/config.json -Raw | ConvertFrom-Json
+          # Keep the dependency tree inside the workspace so it can be cached.
+          $cfg.LOCATION = "$env:GITHUB_WORKSPACE/deps"
+          # conda places packages under <prefix>/Library on Windows.
+          $cfg.LLVM.SYSTEM_DIR = "$env:CONDA_PREFIX/Library"
+          $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
+
+      - name: Setup dependencies and build Ignis
+        shell: pwsh
+        run: |
+          $env:CMAKE_PREFIX_PATH = "$env:CONDA_PREFIX/Library;$env:CMAKE_PREFIX_PATH"
+          ./scripts/setup/setup.ps1 -config_file scripts/setup/config.ci.json
+
+      - name: Run tests
+        shell: pwsh
+        run: ctest --test-dir build/Release --output-on-failure -E "(ignis_test_integrator)|(ignis_test_multiple_runtimes)"
