@@ -41,7 +41,7 @@ if ($IsWindows) {
     $ZLIB_LIB = "$DEPS_ROOT\zlib\lib\zlib.lib".Replace("\", "/")
     $ZLIB_INCLUDE = "$DEPS_ROOT\zlib\include".Replace("\", "/")
 
-    $OIDN_DIR = Get-ChildItem -Path "$DEPS_ROOT/oidn/lib/cmake" -Directory | Sort-Object -Descending | Select-Object -First 1
+    $OIDN_DIR = Get-ChildItem -Path "$DEPS_ROOT/oidn/lib/cmake" -Directory -ErrorAction SilentlyContinue | Sort-Object -Descending | Select-Object -First 1
 }
 
 $BUILD_TYPE = $Config.Ignis.BUILD_TYPE
@@ -60,7 +60,9 @@ if ($IsWindows) {
     $CMAKE_Args += '-DTBB_DIR:PATH=' + $TBB_DIR
     $CMAKE_Args += '-DZLIB_LIBRARY:FILEPATH=' + $ZLIB_LIB
     $CMAKE_Args += '-DZLIB_INCLUDE_DIR:PATH=' + $ZLIB_INCLUDE
-    $CMAKE_Args += '-DOpenImageDenoise_DIR:PATH=' + $($OIDN_DIR.FullName)
+    if ($OIDN_DIR) {
+        $CMAKE_Args += '-DOpenImageDenoise_DIR:PATH=' + $OIDN_DIR.FullName
+    }
 }
 $CMAKE_Args += '-DIG_WITH_ASSERTS:BOOL=ON'
 $CMAKE_Args += '-DBUILD_TESTING:BOOL=ON'

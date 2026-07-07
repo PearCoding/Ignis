@@ -20,7 +20,10 @@ If (!(Test-Path "$OIDN_ROOT")) {
     mkdir "$OIDN_ROOT" > $null
 }
 
-$EX_DIR = Get-ChildItem -Path "oidn*" -Directory
+$EX_DIR = Get-ChildItem -Path "oidn*" -Directory | Select-Object -First 1
+if ($null -eq $EX_DIR) {
+    throw "OIDN archive did not extract to an 'oidn*' directory in $(Get-Location)"
+}
 
 robocopy "$($EX_DIR.FullName)\include" "$OIDN_ROOT\include" /mir  > $null
 robocopy "$($EX_DIR.FullName)\lib" "$OIDN_ROOT\lib" /mir > $null
