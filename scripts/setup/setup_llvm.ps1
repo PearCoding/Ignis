@@ -2,6 +2,11 @@ $CURRENT = Get-Location
 
 # TODO: RV
 
+if (UseSystemLLVM) {
+    Write-Host "Using system LLVM at $($Config.LLVM.SYSTEM_DIR); skipping LLVM download/build. Set LLVM.SYSTEM_DIR to \"\" or LLVM.FORCE_BUILD=true to build from source."
+    return
+}
+
 if ((!(GetPD $Config.LLVM.FORCE $false)) -and (Test-Path -Path 'llvm-install/bin/lld*')) {
     Write-Host "Skipping LLVM as it seems to be already installed. Use LLVM.FORCE=true to proceed with LLVM."
     return

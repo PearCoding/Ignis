@@ -1,7 +1,7 @@
 $CURRENT = Get-Location
 
 # Clone or update if necessary
-HandleGIT "artic" $Config.ARTIC.BRANCH $Config.ARTIC.GIT
+HandleGIT "artic" $Config.ARTIC.BRANCH $Config.ARTIC.GIT $Config.ARTIC.COMMIT
 
 $THORIN = "$DEPS_ROOT\thorin".Replace("\", "/").Replace(" ", "` ")
 

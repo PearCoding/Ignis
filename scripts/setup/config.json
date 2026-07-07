@@ -14,6 +14,15 @@
     },
     "LLVM" : {
         "ENABLED": true,
+        // Prefer a system/prebuilt LLVM (must be built with RTTI and provide the
+        // targets below). When SYSTEM_DIR/lib/cmake/llvm exists and FORCE_BUILD is
+        // false, the from-source LLVM build is skipped entirely. Set SYSTEM_DIR to
+        // "" (or FORCE_BUILD to true) to build LLVM from source instead. On Windows
+        // SYSTEM_DIR usually does not exist, so the source build is used.
+        // Note: a system LLVM cannot carry nvptx_feature.patch, so pre-Volta
+        // (sm_30-sm_62) CUDA targets are unsupported in that mode.
+        "SYSTEM_DIR": "/usr/lib/llvm-20",
+        "FORCE_BUILD": false,
         "BUILD_TYPE": "Release",
         "BRANCH": "llvmorg-20.1.5",
         "GIT": "https://github.com/llvm/llvm-project.git",
@@ -34,19 +43,24 @@
     "THORIN": {
         "ENABLED": true,
         "BUILD_TYPE": "Release",
+        // Pinned to a specific commit for reproducibility. Set COMMIT to "" to
+        // track the BRANCH tip instead.
         "BRANCH": "master",
+        "COMMIT": "d60f0e31e70270bb1242d12c050563d0befa8ad2",
         "GIT": "https://github.com/AnyDSL/thorin.git"
     },
     "ARTIC": {
         "ENABLED": true,
         "BUILD_TYPE": "Release",
         "BRANCH": "master",
+        "COMMIT": "3aba9f8fdd997ad949e89269e9168ba891f8ceeb",
         "GIT": "https://github.com/AnyDSL/artic.git"
     },
     "RUNTIME": {
         "ENABLED": true,
         "BUILD_TYPE": "Release",
         "BRANCH": "master",
+        "COMMIT": "664de176b25b2cdea3747cc1296d90e9a8150257",
         "GIT": "https://github.com/AnyDSL/runtime.git",
         "DEVICES": ["cpu", "cuda", "amd_hsa"]
     },

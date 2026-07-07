@@ -4,20 +4,33 @@ $BUILD_DIR = $Config.IGNIS.BUILD_DIR.Replace("{BUILD_TYPE}", $Config.IGNIS.BUILD
 
 Set-Location $IGNIS_ROOT
 
-$CLANG_BIN_DIR = "$DEPS_ROOT\llvm-install\$($Config.AnyDSL_BUILD_TYPE)\bin"
-if (Test-Path "$CLANG_BIN_DIR") {
-    $CLANG_BIN_DIR = $CLANG_BIN_DIR.Replace("\", "/")
+$LLVM_ROOT = (GetLLVMRoot).Replace("\", "/")
+$CLANG_BIN_DIR = "$LLVM_ROOT/bin"
+
+# Locate a clang binary for the AnyDSL toolchain: prefer the one next to the
+# selected LLVM, then a versioned clang on the PATH. It is only invoked for the
+# optional AOT object output (Ignis emits just the C interface), so the exact
+# version is not critical; an empty result lets the runtime config search itself.
+if ($IsWindows) { $clang_exe = "clang.exe" } else { $clang_exe = "clang" }
+$CLANG_BIN = ""
+$clang_candidates = @("$CLANG_BIN_DIR/$clang_exe")
+if (!$IsWindows) {
+    foreach ($v in 20, 19, 18, 17) { $clang_candidates += "$CLANG_BIN_DIR/clang-$v" }
 }
-Else {
-    $CLANG_BIN_DIR = "$DEPS_ROOT\llvm-install\bin".Replace("\", "/")
+foreach ($c in $clang_candidates) {
+    if (Test-Path -Path $c) { $CLANG_BIN = $c.Replace("\", "/"); break }
+}
+if ([string]::IsNullOrEmpty($CLANG_BIN)) {
+    foreach ($name in @($clang_exe, "clang-20", "clang-19", "clang-18", "clang-17")) {
+        $found = Get-Command $name -ErrorAction SilentlyContinue
+        if ($found) { $CLANG_BIN = $found.Source.Replace("\", "/"); break }
+    }
 }
 
 $ARTIC_BIN_DIR = $BIN_ROOT
 if ($IsWindows) {
     $ARTIC_BIN = "$BIN_ROOT\artic.exe".Replace("\", "/")
-    $CLANG_BIN = "$CLANG_BIN_DIR\clang.exe".Replace("\", "/")
 } else {
-    $CLANG_BIN = "$CLANG_BIN_DIR\clang".Replace("\", "/")
     $ARTIC_BIN = "$BIN_ROOT\artic".Replace("\", "/")
 }
 
@@ -39,7 +52,9 @@ $CMAKE_Args = @()
 $CMAKE_Args += $Config.CMAKE.EXTRA_ARGS
 $CMAKE_Args += $Config.IGNIS.EXTRA_ARGS
 $CMAKE_Args += '-DCMAKE_BUILD_TYPE:STRING=' + $BUILD_TYPE
-$CMAKE_Args += '-DClang_BIN:FILEPATH=' + $CLANG_BIN
+if (![string]::IsNullOrEmpty($CLANG_BIN)) {
+    $CMAKE_Args += '-DClang_BIN:FILEPATH=' + $CLANG_BIN
+}
 $CMAKE_Args += '-DAnyDSL_runtime_DIR:PATH=' + $RUNTIME_DIR # Default variant
 if ($IsWindows) {
     $CMAKE_Args += '-DArtic_BINARY_DIR:PATH=' + $ARTIC_BIN_DIR

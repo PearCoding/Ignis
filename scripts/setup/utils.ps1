@@ -10,33 +10,72 @@ function GetPD {
     return ($null -ne $object) ? $object : $default
 }
 
+function UseSystemLLVM {
+    # True when a usable system/prebuilt LLVM is configured and we are not asked
+    # to build from source. Requires <SYSTEM_DIR>/lib/cmake/llvm to exist.
+    $sysdir = $Config.LLVM.SYSTEM_DIR
+    if ([string]::IsNullOrEmpty($sysdir)) { return $false }
+    if (GetPD $Config.LLVM.FORCE_BUILD $false) { return $false }
+    return (Test-Path -Path (Join-Path $sysdir "lib/cmake/llvm"))
+}
+
+function GetLLVMRoot {
+    # Root of the LLVM install to build the AnyDSL stack against: the system one
+    # when available, otherwise the from-source install under deps.
+    if (UseSystemLLVM) {
+        return $Config.LLVM.SYSTEM_DIR
+    }
+    return "$DEPS_ROOT/llvm-install"
+}
+
 function HandleGIT {
     param(
         [Parameter(Mandatory)] [string] $Directory,
         [Parameter(Mandatory)] [string] $Branch,
-        [Parameter(Mandatory)] [string] $URL
+        [Parameter(Mandatory)] [string] $URL,
+        [string] $Commit
     )
 
     If (!(Test-Path -Path $Directory)) {
-        & $GIT_BIN clone --depth 1 --branch $Branch $URL $Directory
-        Set-Location $Directory
+        if (![string]::IsNullOrEmpty($Commit)) {
+            # Pinned commit: fetch exactly that object shallowly.
+            & $GIT_BIN init --quiet $Directory
+            Set-Location $Directory
+            & $GIT_BIN remote add origin $URL
+            & $GIT_BIN fetch --depth 1 origin $Commit
+            & $GIT_BIN checkout --quiet FETCH_HEAD
+        }
+        else {
+            & $GIT_BIN clone --depth 1 --branch $Branch $URL $Directory
+            Set-Location $Directory
+        }
     }
     else {
         Set-Location $Directory
-        & $GIT_BIN pull origin
-
-        # Check if it is a named ref and can be pulled
-        $ref = (& $GIT_BIN show-ref refs/remotes/origin/$Branch)
-        if ([string]::IsNullOrEmpty($ref)) {
-            $is_shallow = (& $GIT_BIN rev-parse --is-shallow-repository)
-            if ($is_shallow -eq "true") {
-                & $GIT_BIN fetch --unshallow --quiet
+        if (![string]::IsNullOrEmpty($Commit)) {
+            # Fetch the pinned commit if it is not present yet, then check it out.
+            & $GIT_BIN cat-file -e "$Commit^{commit}" 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                & $GIT_BIN fetch --depth 1 origin $Commit
             }
-            else {
-                & $GIT_BIN fetch --quiet
-            }
+            & $GIT_BIN checkout --quiet $Commit
         }
-        & $GIT_BIN checkout --quiet $Branch
+        else {
+            & $GIT_BIN pull origin
+
+            # Check if it is a named ref and can be pulled
+            $ref = (& $GIT_BIN show-ref refs/remotes/origin/$Branch)
+            if ([string]::IsNullOrEmpty($ref)) {
+                $is_shallow = (& $GIT_BIN rev-parse --is-shallow-repository)
+                if ($is_shallow -eq "true") {
+                    & $GIT_BIN fetch --unshallow --quiet
+                }
+                else {
+                    & $GIT_BIN fetch --quiet
+                }
+            }
+            & $GIT_BIN checkout --quiet $Branch
+        }
     }
 }
 

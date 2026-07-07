@@ -2,7 +2,7 @@ $CURRENT = Get-Location
 
 # Some predefined locations
 $ARTIC = "$DEPS_ROOT\artic".Replace("\", "/").Replace(" ", "` ")
-$LLVM = "$DEPS_ROOT\llvm-install".Replace("\", "/").Replace(" ", "` ")
+$LLVM = (GetLLVMRoot).Replace("\", "/").Replace(" ", "` ")
 $TBB = "$DEPS_ROOT\tbb".Replace("\", "/")
 
 # Check for some possible mistakes beforehand
@@ -40,7 +40,7 @@ If ($IsLinux) {
 }
 
 # Clone or update if necessary
-HandleGIT runtime $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT
+HandleGIT runtime $Config.RUNTIME.BRANCH $Config.RUNTIME.GIT $Config.RUNTIME.COMMIT
 
 function CompileRuntime {
     param (

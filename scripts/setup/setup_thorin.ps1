@@ -1,10 +1,10 @@
 $CURRENT = Get-Location
 
 # Clone or update if necessary
-HandleGIT "thorin" $Config.THORIN.BRANCH $Config.THORIN.GIT
+HandleGIT "thorin" $Config.THORIN.BRANCH $Config.THORIN.GIT $Config.THORIN.COMMIT
 
 $HALF = "$DEPS_ROOT\half".Replace("\", "/").Replace(" ", "` ")
-$LLVM = "$DEPS_ROOT\llvm-install".Replace("\", "/").Replace(" ", "` ")
+$LLVM = (GetLLVMRoot).Replace("\", "/").Replace(" ", "` ")
 
 # Check for some possible mistakes beforehand
 
