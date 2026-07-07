@@ -15,5 +15,11 @@ if(COMPILER_SUPPORTS_SANITIZER)
     target_link_options(ig_test_fuzzer PRIVATE ${SANITIZER_FLAGS})
 endif()
 
-add_test(NAME ignis_test_fuzzer COMMAND ig_test_fuzzer 1000)
-set_tests_properties(ignis_test_fuzzer PROPERTIES LABELS "cpu")
+# The fuzzer runs many randomized iterations and is slow, so it is kept out of the
+# automatic ctest run by default. The ig_test_fuzzer binary is always built and can
+# be run directly; enable IG_WITH_FUZZER_TEST to also register it as a ctest test.
+option(IG_WITH_FUZZER_TEST "Register the slow fuzzer as an automatic ctest test" OFF)
+if(IG_WITH_FUZZER_TEST)
+    add_test(NAME ignis_test_fuzzer COMMAND ig_test_fuzzer 1000)
+    set_tests_properties(ignis_test_fuzzer PROPERTIES LABELS "cpu")
+endif()
