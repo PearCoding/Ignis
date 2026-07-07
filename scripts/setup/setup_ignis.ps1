@@ -40,8 +40,6 @@ if ($IsWindows) {
     $TBB_DIR = "$DEPS_ROOT\tbb\lib\cmake\tbb".Replace("\", "/")
     $ZLIB_LIB = "$DEPS_ROOT\zlib\lib\zlib.lib".Replace("\", "/")
     $ZLIB_INCLUDE = "$DEPS_ROOT\zlib\include".Replace("\", "/")
-    $SDL2_LIB = "$DEPS_ROOT\SDL2\lib\x64\SDL2.lib".Replace("\", "/")
-    $SDL2_INCLUDE = "$DEPS_ROOT\SDL2\include".Replace("\", "/")
 
     $OIDN_DIR = Get-ChildItem -Path "$DEPS_ROOT/oidn/lib/cmake" -Directory | Sort-Object -Descending | Select-Object -First 1
 }
@@ -62,8 +60,6 @@ if ($IsWindows) {
     $CMAKE_Args += '-DTBB_DIR:PATH=' + $TBB_DIR
     $CMAKE_Args += '-DZLIB_LIBRARY:FILEPATH=' + $ZLIB_LIB
     $CMAKE_Args += '-DZLIB_INCLUDE_DIR:PATH=' + $ZLIB_INCLUDE
-    $CMAKE_Args += '-DSDL2_LIBRARY:FILEPATH=' + $SDL2_LIB
-    $CMAKE_Args += '-DSDL2_INCLUDE_DIR:PATH=' + $SDL2_INCLUDE
     $CMAKE_Args += '-DOpenImageDenoise_DIR:PATH=' + $($OIDN_DIR.FullName)
 }
 $CMAKE_Args += '-DIG_WITH_ASSERTS:BOOL=ON'
