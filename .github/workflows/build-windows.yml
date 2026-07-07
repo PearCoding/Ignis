@@ -74,6 +74,9 @@ jobs:
           $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_PREFIX_PATH=$env:CONDA_PREFIX/Library"
           $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
           $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+          # zlib ships in the conda toolchain env (see create-args), so skip the
+          # flaky from-source build; Ignis resolves it via CMAKE_PREFIX_PATH.
+          $cfg.ZLIB.ENABLED = $false
           $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
 
       - name: Setup dependencies and build Ignis

@@ -58,8 +58,10 @@ if ($IsWindows) {
     $CMAKE_Args += '-DArtic_BINARY_DIR:PATH=' + $ARTIC_BIN_DIR
     $CMAKE_Args += '-DArtic_BIN:FILEPATH=' + $ARTIC_BIN
     $CMAKE_Args += '-DTBB_DIR:PATH=' + $TBB_DIR
-    $CMAKE_Args += '-DZLIB_LIBRARY:FILEPATH=' + $ZLIB_LIB
-    $CMAKE_Args += '-DZLIB_INCLUDE_DIR:PATH=' + $ZLIB_INCLUDE
+    if (Test-Path $ZLIB_LIB) {
+        $CMAKE_Args += '-DZLIB_LIBRARY:FILEPATH=' + $ZLIB_LIB
+        $CMAKE_Args += '-DZLIB_INCLUDE_DIR:PATH=' + $ZLIB_INCLUDE
+    }
     if ($OIDN_DIR) {
         $CMAKE_Args += '-DOpenImageDenoise_DIR:PATH=' + $OIDN_DIR.FullName
     }
