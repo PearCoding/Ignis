@@ -20,22 +20,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      # A complete, self-consistent LLVM + Clang dev toolchain (static libs and
-      # cmake config), which the distribution installers do not provide.
-      - name: Setup LLVM/Clang toolchain
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-name: llvm
-          create-args: >-
-            llvmdev=20.1
-            clangdev=20.1
-            lld=20.1
-            zlib
-            zstd
-            libxml2-devel
-          init-shell: powershell
-          cache-environment: true
-
+      # The LLVM/Clang dev toolchain is provisioned by setup.ps1 itself
+      # (LLVM.PREBUILT, see scripts/setup/setup_llvm.ps1) into deps/llvm-conda,
+      # which the deps cache below picks up.
       - name: Setup sccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -65,24 +52,17 @@ jobs:
           $cfg = Get-Content scripts/setup/config.json -Raw | ConvertFrom-Json
           # Keep the dependency tree inside the workspace so it can be cached.
           $cfg.LOCATION = "$env:GITHUB_WORKSPACE/deps"
-          # conda places packages under <prefix>/Library on Windows.
-          $cfg.LLVM.SYSTEM_DIR = "$env:CONDA_PREFIX/Library"
-          # conda's LLVM exports transitive imported targets (ZLIB::ZLIB, zstd,
-          # LibXml2). Unlike Linux there are no system copies, so put the conda
-          # prefix on the search path for every sub-build that re-runs
-          # find_package(LLVM) via thorin.
-          $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_PREFIX_PATH=$env:CONDA_PREFIX/Library"
           $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
           $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
-          # zlib ships in the conda toolchain env (see create-args), so skip the
-          # flaky from-source build; Ignis resolves it via CMAKE_PREFIX_PATH.
+          # zlib ships in the prebuilt LLVM env (LLVM.PREBUILT_PACKAGES), so skip
+          # the flaky from-source build; setup_llvm.ps1 puts the env on
+          # CMAKE_PREFIX_PATH and Ignis resolves it from there.
           $cfg.ZLIB.ENABLED = $false
           $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
 
       - name: Setup dependencies and build Ignis
         shell: pwsh
         run: |
-          $env:CMAKE_PREFIX_PATH = "$env:CONDA_PREFIX/Library;$env:CMAKE_PREFIX_PATH"
           $env:CPM_SOURCE_CACHE = "$env:GITHUB_WORKSPACE/.cpm-cache"
           ./scripts/setup/setup.ps1 -config_file scripts/setup/config.ci.json
 
