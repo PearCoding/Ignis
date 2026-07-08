@@ -42,9 +42,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: deps
-          key: anydsl-deps-${{ runner.os }}-${{ hashFiles('scripts/setup/config.json', 'scripts/setup/*.ps1') }}
+          # v2: setup.ps1 provisions LLVM into deps/llvm-conda itself; caches
+          # from the setup-micromamba era bake dead env paths into the AnyDSL
+          # cmake exports and must never be restored.
+          key: anydsl-deps-v2-${{ runner.os }}-${{ hashFiles('scripts/setup/config.json', 'scripts/setup/*.ps1') }}
           restore-keys: |
-            anydsl-deps-${{ runner.os }}-
+            anydsl-deps-v2-${{ runner.os }}-
 
       - name: Cache CPM sources
         uses: actions/cache@v4
