@@ -14,14 +14,29 @@
     },
     "LLVM" : {
         "ENABLED": true,
-        // Prefer a system/prebuilt LLVM (must be built with RTTI and provide the
-        // targets below). When SYSTEM_DIR/lib/cmake/llvm exists and FORCE_BUILD is
-        // false, the from-source LLVM build is skipped entirely. Set SYSTEM_DIR to
-        // "" (or FORCE_BUILD to true) to build LLVM from source instead. On Windows
-        // SYSTEM_DIR usually does not exist, so the source build is used.
-        // Note: a system LLVM cannot carry nvptx_feature.patch, so pre-Volta
+        // Prefer a system/prebuilt LLVM (must provide the targets below). When
+        // SYSTEM_DIR/lib/cmake/llvm exists and FORCE_BUILD is false, the from-source
+        // LLVM build is skipped entirely. Set SYSTEM_DIR to "" (or FORCE_BUILD to
+        // true) to build LLVM from source instead.
+        //
+        // On Windows SYSTEM_DIR usually does not exist; PREBUILT=true (the default)
+        // then provisions a prebuilt conda-forge LLVM via micromamba into
+        // deps/llvm-conda instead of building from source.
+        //
+        // NOTE: an LLVM built WITHOUT RTTI is totally fine -- verified empirically:
+        // thorin and artic compile AND link cleanly against the no-RTTI official
+        // llvm.org archives. Do not trap over the RTTI myth again. The official
+        // llvm.org Windows archives are still unusable here for a different reason:
+        // they link the static CRT (/MT + rpmalloc), which cannot back the
+        // DLL-based (/MD) AnyDSL runtime JIT (unresolved __imp_* CRT symbols), and
+        // they hardcode a DIA SDK path from the LLVM release bot. conda-forge
+        // builds use the dynamic CRT and work.
+        //
+        // Note: a prebuilt LLVM cannot carry nvptx_feature.patch, so pre-Volta
         // (sm_30-sm_62) CUDA targets are unsupported in that mode.
         "SYSTEM_DIR": "/usr/lib/llvm-20",
+        "PREBUILT": true,
+        "PREBUILT_PACKAGES": ["llvmdev=20.1", "clangdev=20.1", "lld=20.1", "zlib", "zstd", "libxml2-devel"],
         "FORCE_BUILD": false,
         "BUILD_TYPE": "Release",
         "BRANCH": "llvmorg-20.1.5",

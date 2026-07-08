@@ -21,9 +21,13 @@ function UseSystemLLVM {
 
 function GetLLVMRoot {
     # Root of the LLVM install to build the AnyDSL stack against: the system one
-    # when available, otherwise the from-source install under deps.
+    # when available, then the prebuilt conda one (Windows default), otherwise
+    # the from-source install under deps.
     if (UseSystemLLVM) {
         return $Config.LLVM.SYSTEM_DIR
+    }
+    if ($IsWindows -and (GetPD $Config.LLVM.PREBUILT $true) -and (Test-Path -Path "$DEPS_ROOT/llvm-conda/Library/lib/cmake/llvm")) {
+        return "$DEPS_ROOT/llvm-conda/Library"
     }
     return "$DEPS_ROOT/llvm-install"
 }

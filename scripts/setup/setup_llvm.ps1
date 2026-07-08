@@ -7,6 +7,36 @@ if (UseSystemLLVM) {
     return
 }
 
+# On Windows, default to a prebuilt LLVM from conda-forge instead of the long
+# from-source build. conda-forge's llvmdev is built with the dynamic CRT (/MD),
+# which the DLL-based AnyDSL runtime requires. The official llvm.org release
+# archives do NOT work here: they are static-CRT (/MT + rpmalloc) builds and
+# fail to link into runtime.dll. (Their lack of RTTI is NOT the problem --
+# thorin and artic compile and link fine against a no-RTTI LLVM.)
+if ($IsWindows -and (GetPD $Config.LLVM.PREBUILT $true) -and (!(GetPD $Config.LLVM.FORCE_BUILD $false))) {
+    $CONDA_LLVM = "$DEPS_ROOT\llvm-conda"
+    if (Test-Path -Path "$CONDA_LLVM\Library\lib\cmake\llvm") {
+        Write-Host "Using prebuilt conda LLVM at $CONDA_LLVM. Set LLVM.PREBUILT=false or LLVM.FORCE_BUILD=true to build from source."
+    }
+    else {
+        $MM_BIN = "$DEPS_ROOT\mm\micromamba.exe"
+        if (!(Test-Path -Path $MM_BIN)) {
+            if (!(Test-Path -Path "$DEPS_ROOT\mm")) { mkdir "$DEPS_ROOT\mm" > $null }
+            Invoke-WebRequest -Uri "https://github.com/mamba-org/micromamba-releases/releases/latest/download/micromamba-win-64" -OutFile $MM_BIN
+        }
+        $env:MAMBA_ROOT_PREFIX = "$DEPS_ROOT\mm\root"
+        $packages = GetPD $Config.LLVM.PREBUILT_PACKAGES @("llvmdev=20.1", "clangdev=20.1", "lld=20.1", "zlib", "zstd", "libxml2-devel")
+        & $MM_BIN create -y -p $CONDA_LLVM -c conda-forge @packages
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to provision the prebuilt LLVM via micromamba"
+        }
+    }
+    # Make the conda packages (zlib, zstd, libxml2) visible to every sub-build
+    # that re-runs find_package(LLVM), e.g. through thorin.
+    $env:CMAKE_PREFIX_PATH = "$CONDA_LLVM\Library;$env:CMAKE_PREFIX_PATH"
+    return
+}
+
 if ((!(GetPD $Config.LLVM.FORCE $false)) -and (Test-Path -Path 'llvm-install/bin/lld*')) {
     Write-Host "Skipping LLVM as it seems to be already installed. Use LLVM.FORCE=true to proceed with LLVM."
     return

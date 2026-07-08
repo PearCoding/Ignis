@@ -40,4 +40,11 @@ if ($LASTEXITCODE -ne 0) {
 # Install binaries
 Copy-Item -Path "build/bin/*" -Destination "$BIN_ROOT\" > $null
 
+# artic.exe links against the prebuilt LLVM's shared zlib/zstd -- ship them
+# next to the binary so it runs outside an activated conda environment.
+if ($IsWindows) {
+    $LLVM_ROOT = GetLLVMRoot
+    Copy-Item -Path "$LLVM_ROOT\bin\zlib.dll", "$LLVM_ROOT\bin\zstd.dll" -Destination "$BIN_ROOT\" -ErrorAction SilentlyContinue > $null
+}
+
 Set-Location $CURRENT
