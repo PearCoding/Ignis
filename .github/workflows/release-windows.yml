@@ -1,0 +1,95 @@
+name: Release Windows
+
+on:
+  push:
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installer:
+
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # The CUDA toolkit is needed so the installer ships the CUDA device
+      # runtime (runtime_cuda + bundled nvrtc/nvvm). A network install with
+      # just the required sub-packages keeps this reasonably small: nvcc
+      # carries libnvvm, cudart the driver stub, nvrtc the runtime compiler.
+      - name: Setup CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: "13.2.0"
+          method: network
+          sub-packages: '["nvcc", "cudart", "nvrtc", "nvrtc_dev"]'
+
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          variant: sccache
+          key: ${{ github.job }}-${{ runner.os }}
+          max-size: 2G
+
+      - name: Cache AnyDSL toolchain (thorin/artic/runtime)
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: anydsl-deps-${{ runner.os }}-${{ hashFiles('scripts/setup/config.json', 'scripts/setup/*.ps1') }}
+          restore-keys: |
+            anydsl-deps-${{ runner.os }}-
+
+      - name: Cache CPM sources
+        uses: actions/cache@v4
+        with:
+          path: .cpm-cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
+      - name: Generate release setup config
+        shell: pwsh
+        run: |
+          $cfg = Get-Content scripts/setup/config.json -Raw | ConvertFrom-Json
+          # Keep the dependency tree inside the workspace so it can be cached.
+          $cfg.LOCATION = "$env:GITHUB_WORKSPACE/deps"
+          $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+          $cfg.CMAKE.EXTRA_ARGS += "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+          # zlib ships in the prebuilt LLVM env (LLVM.PREBUILT_PACKAGES), so skip
+          # the flaky from-source build; setup_llvm.ps1 puts the env on
+          # CMAKE_PREFIX_PATH and Ignis resolves it from there.
+          $cfg.ZLIB.ENABLED = $false
+          # Have setup_ignis.ps1 run cpack -G NSIS after the build.
+          $cfg.IGNIS.BUILD_INSTALLER = $true
+          $cfg | ConvertTo-Json -Depth 16 | Set-Content scripts/setup/config.ci.json
+
+      - name: Setup dependencies, build Ignis and package installer
+        shell: pwsh
+        run: |
+          $env:CPM_SOURCE_CACHE = "$env:GITHUB_WORKSPACE/.cpm-cache"
+          ./scripts/setup/setup.ps1 -config_file scripts/setup/config.ci.json
+
+      - name: Run tests
+        shell: pwsh
+        run: ctest --test-dir build/Release --output-on-failure -E "(ignis_test_integrator)|(ignis_test_multiple_runtimes)"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ignis-installer-win64
+          path: build/Release/Ignis-*-win64.exe
+          if-no-files-found: error
+
+      - name: Attach installer to GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/Release/Ignis-*-win64.exe
+          generate_release_notes: true
