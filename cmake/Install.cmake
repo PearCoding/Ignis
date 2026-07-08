@@ -64,7 +64,11 @@ if(IG_INSTALL_RUNTIME_DEPENDENCIES)
 
     find_package(CUDAToolkit)
     if(CUDAToolkit_FOUND)
-        list(APPEND search_dirs "${CUDAToolkit_BIN_DIR}")
+        # CUDA 13 moved the DLLs from bin/ into bin/x64/; nvvm ships its DLL
+        # in a separate tree next to the library root.
+        list(APPEND search_dirs
+            "${CUDAToolkit_BIN_DIR}" "${CUDAToolkit_BIN_DIR}/x64"
+            "${CUDAToolkit_LIBRARY_ROOT}/nvvm/bin" "${CUDAToolkit_LIBRARY_ROOT}/nvvm/bin/x64")
     endif()
 
     install(RUNTIME_DEPENDENCY_SET ignis_runtime_set
