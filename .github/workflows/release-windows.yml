@@ -32,6 +32,12 @@ jobs:
           method: network
           sub-packages: '["nvcc", "nvvm", "cudart", "nvrtc", "nvrtc_dev"]'
 
+      # The windows-2025 images do not ship NSIS anymore, so cpack cannot find
+      # makensis. The installer registers HKLM\SOFTWARE\NSIS, which is where the
+      # cpack generator looks first, so no PATH entry is needed.
+      - name: Setup NSIS
+        run: choco install nsis -y --no-progress
+
       - name: Setup sccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
