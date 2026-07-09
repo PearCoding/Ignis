@@ -120,6 +120,8 @@ try {
 catch {
     Write-Host "Setup failed:" -ForegroundColor red
     Write-Host $_ -ForegroundColor red
+    Set-Location $CURRENT
+    exit 1
 }
 
 Set-Location $CURRENT
