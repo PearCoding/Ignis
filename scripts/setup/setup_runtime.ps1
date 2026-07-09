@@ -40,7 +40,12 @@ If ($IsLinux) {
     }
 
     If ($HasCuda) {
-        Copy-Item "$CUDA\nvvm\bin\nvvm*.dll" "$BIN_ROOT/" > $null
+        # CUDA 13 moved the nvvm dll into an x64 subdirectory and split nvvm off the nvcc component
+        $NVVM_BIN = @("$CUDA\nvvm\bin\x64", "$CUDA\nvvm\bin") | Where-Object { Test-Path -Path "$_\nvvm*.dll" } | Select-Object -First 1
+        If ($null -eq $NVVM_BIN) {
+            throw "No nvvm library found in '$CUDA\nvvm'. Since CUDA 13 it is provided by the separate 'nvvm' toolkit component."
+        }
+        Copy-Item "$NVVM_BIN\nvvm*.dll" "$BIN_ROOT/" > $null
     }
 }
 

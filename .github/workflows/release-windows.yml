@@ -22,14 +22,15 @@ jobs:
 
       # The CUDA toolkit is needed so the installer ships the CUDA device
       # runtime (runtime_cuda + bundled nvrtc/nvvm). A network install with
-      # just the required sub-packages keeps this reasonably small: nvcc
-      # carries libnvvm, cudart the driver stub, nvrtc the runtime compiler.
+      # just the required sub-packages keeps this reasonably small: cudart
+      # provides the driver stub, nvrtc the runtime compiler. Since CUDA 13
+      # libnvvm is no longer part of nvcc and needs its own sub-package.
       - name: Setup CUDA toolkit
         uses: Jimver/cuda-toolkit@v0.2.35
         with:
           cuda: "13.2.0"
           method: network
-          sub-packages: '["nvcc", "cudart", "nvrtc", "nvrtc_dev"]'
+          sub-packages: '["nvcc", "nvvm", "cudart", "nvrtc", "nvrtc_dev"]'
 
       - name: Setup sccache
         uses: hendrikmuhs/ccache-action@v1.2
