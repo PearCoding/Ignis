@@ -17,8 +17,8 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!-- 
-    this give us a css class that will be invisible only if js is disabled 
+  <!--
+    this give us a css class that will be invisible only if js is disabled
   -->
   <noscript>
     <style>
@@ -28,8 +28,8 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -38,18 +38,19 @@
     <link rel="stylesheet" type="text/css" href="../../_static/css/lightbox.css?v=1a4ee0e0" />
   
   <!-- So that users can add custom icons -->
-  <script src="../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <script defer src="../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
 
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/design-tabs.js?v=36754332"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'src/scene/techniques';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../../_static/js/lightbox.js?v=ef67d018"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -59,20 +60,26 @@
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
     <meta name="docbuild:last-update" content="Sep 05, 2023"/>
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
+  
+  
+  
   
   <dialog id="pst-search-dialog">
     
@@ -98,7 +105,7 @@
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
   <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
@@ -175,11 +182,18 @@
       
         <div class="navbar-item">
 
-<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
-  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
-</button></div>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -192,8 +206,7 @@
           
           
           
-          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">GitHub</span></a>
+          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
         </li>
 </ul></div>
       
@@ -275,11 +288,18 @@
         
           <div class="navbar-item">
 
-<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
-  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
-</button></div>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -292,8 +312,7 @@
           
           
           
-          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">GitHub</span></a>
+          <a href="https://github.com/PearCoding/Ignis" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
         </li>
 </ul></div>
         
@@ -303,6 +322,7 @@
   
     <div class="sidebar-primary-items__start sidebar-primary__section">
         <div class="sidebar-primary-item">
+
 <nav class="bd-docs-nav bd-links"
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
@@ -325,9 +345,14 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -431,7 +456,7 @@ The type has to be one of the techniques listed at this section below.</p>
 If participating media is used, it is recommended to use the volumetric path tracer instead.</p>
 <div class="figure subfigure compound align-center" id="fig-path-technique">
 <figure class="align-center subsubfigure lightbox-image align-default" id="id1" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_path.jpg" style="width: 60%" data-lightbox="3049709703525273549" data-title=""><img alt="../../_images/technique_path.jpg" src="../../_images/technique_path.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_path.jpg" style="width: 60%" data-lightbox="-1211025903149348489" data-title=""><img alt="../../_images/technique_path.jpg" src="../../_images/technique_path.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the path technique</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id1" title="Link to this image">#</a></p>
@@ -480,7 +505,7 @@ If participating media is used, it is recommended to use the volumetric path tra
 <p>A simple volumetric path tracer. It calculates the full global illumination in the scene.</p>
 <div class="figure subfigure compound align-center" id="fig-volpath-technique">
 <figure class="align-center subsubfigure lightbox-image align-default" id="id2" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_volpath.jpg" style="width: 60%" data-lightbox="8868718763618342895" data-title=""><img alt="../../_images/technique_volpath.jpg" src="../../_images/technique_volpath.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_volpath.jpg" style="width: 60%" data-lightbox="4464733260477148556" data-title=""><img alt="../../_images/technique_volpath.jpg" src="../../_images/technique_volpath.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using the volumetric path technique. In this picture no volumes were used, converging to the same result as the standard path tracer.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id2" title="Link to this image">#</a></p>
@@ -532,7 +557,7 @@ If participating media is used, it is recommended to use the volumetric path tra
 </div>
 <div class="figure subfigure compound align-center" id="fig-lt-technique">
 <figure class="align-center subsubfigure lightbox-image align-default" id="id3" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_lt.jpg" style="width: 60%" data-lightbox="5420141268668772373" data-title=""><img alt="../../_images/technique_lt.jpg" src="../../_images/technique_lt.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_lt.jpg" style="width: 60%" data-lightbox="-3554641500487997775" data-title=""><img alt="../../_images/technique_lt.jpg" src="../../_images/technique_lt.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using light tracing. It fails to display fully specular paths, as a path starting from a light source through a perfect specular path can <strong>not</strong> hit a virtual camera randomly.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id3" title="Link to this image">#</a></p>
@@ -595,7 +620,7 @@ If participating media is used, it is recommended to use the volumetric path tra
 </div>
 <div class="figure subfigure compound align-center" id="fig-ppm-technique">
 <figure class="align-center subsubfigure lightbox-image align-default" id="id4" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ppm.jpg" style="width: 60%" data-lightbox="-1942538670093672964" data-title=""><img alt="../../_images/technique_ppm.jpg" src="../../_images/technique_ppm.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ppm.jpg" style="width: 60%" data-lightbox="7245867230885525829" data-title=""><img alt="../../_images/technique_ppm.jpg" src="../../_images/technique_ppm.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample render using photon mapping. The footprint of each photon is clearly visible. However, the technique exceeds in displaying the caustics, whom are missing in the standard path tracing technique.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id4" title="Link to this image">#</a></p>
@@ -607,7 +632,7 @@ If participating media is used, it is recommended to use the volumetric path tra
 <p>This technique calculates the ambient occlusion in the scene. Currently no parameters are available to tinkle around.</p>
 <div class="figure subfigure compound align-center" id="fig-ao-technique">
 <figure class="align-center subsubfigure lightbox-image align-default" id="id5" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ao.jpg" style="width: 60%" data-lightbox="9111351202730980109" data-title=""><img alt="../../_images/technique_ao.jpg" src="../../_images/technique_ao.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_ao.jpg" style="width: 60%" data-lightbox="-1383840060816595059" data-title=""><img alt="../../_images/technique_ao.jpg" src="../../_images/technique_ao.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">A low-sample ambient occlusion rendering. The images looks almost converged, which is due to the grayscale appearance and large number of samples within each bounce.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id5" title="Link to this image">#</a></p>
@@ -619,7 +644,7 @@ If participating media is used, it is recommended to use the volumetric path tra
 <p>This technique renders the scene in wireframe. Currently no parameters are available to tinkle around.</p>
 <div class="figure subfigure compound align-center" id="fig-wireframe-technique">
 <figure class="align-center subsubfigure lightbox-image align-default" id="id6" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_wireframe.jpg" style="width: 60%" data-lightbox="-5819488378939862027" data-title=""><img alt="../../_images/technique_wireframe.jpg" src="../../_images/technique_wireframe.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_wireframe.jpg" style="width: 60%" data-lightbox="5505349333805620504" data-title=""><img alt="../../_images/technique_wireframe.jpg" src="../../_images/technique_wireframe.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">A basic visualization of the scene using wireframes.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id6" title="Link to this image">#</a></p>
@@ -648,7 +673,7 @@ If participating media is used, it is recommended to use the volumetric path tra
 <p>This is a special technique only usable with the <span class="monosp">igview</span> frontend. It displays scene specific information on the screen.</p>
 <div class="figure subfigure compound align-center" id="fig-debug-technique">
 <figure class="align-center subsubfigure lightbox-image align-default" id="id7" style="width: 60%">
-<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_debug.jpg" style="width: 60%" data-lightbox="1766595675715480349" data-title=""><img alt="../../_images/technique_debug.jpg" src="../../_images/technique_debug.jpg" style="width: 90%;" />
+<a class="align-center subsubfigure lightbox-image reference internal image-reference" href="../../_images/technique_debug.jpg" style="width: 60%" data-lightbox="-8027287104837344080" data-title=""><img alt="../../_images/technique_debug.jpg" src="../../_images/technique_debug.jpg" style="width: 90%;" />
 </a>
 <figcaption>
 <p><span class="align-center subsubfigure lightbox-image caption-text">Debug visualization of the scene displaying the shading normals.</span><a class="align-center subsubfigure lightbox-image headerlink" href="#id7" title="Link to this image">#</a></p>
@@ -706,8 +731,8 @@ If participating media is used, it is recommended to use the volumetric path tra
     class="page-toc tocsection onthispage">
     <i class="fa-solid fa-list"></i> On this page
   </div>
-  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
-    <ul class="visible nav section-nav flex-column">
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#path-tracer-path">Path Tracer (<span class="monosp">path</span>)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#volume-path-tracer-volpath">Volume Path Tracer (<span class="monosp">volpath</span>)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#light-tracer-lighttracer">Light Tracer (<span class="monosp">lighttracer</span>)</a></li>
@@ -735,8 +760,8 @@ If participating media is used, it is recommended to use the volumetric path tra
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -756,7 +781,7 @@ If participating media is used, it is recommended to use the volumetric path tra
         <div class="footer-item">
 
   <p class="sphinx-version">
-    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
     <br/>
   </p>
 </div>
@@ -769,7 +794,8 @@ If participating media is used, it is recommended to use the volumetric path tra
       
         <div class="footer-item">
 <p class="theme-version">
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
 </p></div>
       
     </div>
