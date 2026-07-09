@@ -42,6 +42,8 @@ public:
 
     ~ApplicationInternal()
     {
+        // Widgets may own OpenGL resources, which must be released while the context is still current
+        mChildren.clear();
         ui::shutdown(mWindow);
     }
 

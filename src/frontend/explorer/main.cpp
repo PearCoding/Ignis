@@ -58,6 +58,21 @@ public:
         app->setDropCallback(openFileCallback);
     }
 
+    // Must be called while the Application, and therefore the OpenGL context, is still alive
+    void teardown()
+    {
+        mRegistryWidget.reset();
+        mRegistryMenuItem.reset();
+        mOverviewWidget.reset();
+        mOverviewMenuItem.reset();
+        mParameterWidget.reset();
+        mParameterMenuItem.reset();
+        mHelpControlWidget.reset();
+        mHelpAboutWidget.reset();
+        mRenderWidget.reset();
+        mApplication = nullptr;
+    }
+
     static inline Context& instance()
     {
         static Context sContext;
@@ -190,6 +205,7 @@ int main(int argc, char** argv)
 
         const int exitcode = app.exec() ? EXIT_SUCCESS : EXIT_FAILURE;
         Context::instance().renderWidget()->cleanup();
+        Context::instance().teardown();
 
         return exitcode;
     } catch (const std::exception& e) {
